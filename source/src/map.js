@@ -341,6 +341,96 @@ function rawText(i) {
   // One point per line keeps it readable.
   return JSON.stringify(rawTrip(i), null, 1).replace(/\[\n\s+(-?[\d.]+),\n\s+(-?[\d.]+)(?:,\n\s+(-?[\d.]+))?\n\s+\]/g, function (_, a, b, c) { return '[' + a + ', ' + b + (c != null ? ', ' + c : '') + ']'; });
 }
+function saveFile(name, parts, type) {
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(parts, { type: type }));
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+}
+
+// ---------- export what the filters show ----------
+// The trips and stays that pass every filter, the trips in the same format as a trip's Raw data.
+// The time slider only plays the trips back, so it doesn't narrow the export.
+function syncExport() {
+  var n = sel.length, nv = selV.length;
+  var what = [n ? tripsText(n) : '', nv ? fmt(nv) + ' stay' + (nv === 1 ? '' : 's') : ''].filter(Boolean).join(' and ');
+  $('exportText').textContent = n || nv ? 'Download the ' + what +
+    ' that match these filters (' + filterText() + '). The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip.' : 'No trips match these filters.';
+  $('exportJson').disabled = $('exportCsv').disabled = !n && !nv;
+  $('exportCsv').disabled = !n;
+}
+function exportName(ext) {
+  var t = F.dm === 'all' ? 'all-time' : F.dm === 'one' ? (F.unit === 'day' ? isoDay(F.one) : isoDay(periodStart(F.one, F.unit)) + '-to-' + isoDay(periodEnd(F.one, F.unit)))
+    : F.from === F.to ? isoDay(F.from) : isoDay(F.from) + '-to-' + isoDay(F.to);
+  return 'timeliner-' + t + (activeFilters() - (F.dm !== 'all' ? 1 : 0) ? '-filtered' : '') + '.' + ext;
+}
+// The filters in words, leaving out the ones that let everything through.
+function exportFilters() {
+  var o = {};
+  o.days = F.dm === 'all' ? 'All time' : F.dm === 'one' ? { from: isoDay(F.unit === 'day' ? F.one : periodStart(F.one, F.unit)), to: isoDay(F.unit === 'day' ? F.one : periodEnd(F.one, F.unit)) }
+    : { from: isoDay(F.from), to: isoDay(F.to) };
+  if (F.years.size !== M.years.length) o.years = M.years.filter(function (y) { return F.years.has(y); });
+  if (F.months.size !== 12) o.months = MONTHS.filter(function (m, k) { return F.months.has(k); });
+  if (F.dows.size !== 7) o.daysOfWeek = DOW_ORDER.filter(function (d) { return F.dows.has(d); }).map(function (d) { return DOW[d]; });
+  if (F.h0 !== 0 || F.h1 !== 24) o.hours = { from: F.h0, until: F.h1 };
+  if (F.modes.size !== M.modes.length || F.sports.size !== M.sports.length) {
+    o.transport = M.modes.filter(function (m) { return F.modes.has(m); });
+    if (M.sports.length) o.sports = M.sports.filter(function (s) { return F.sports.has(s); }).map(function (s) { return SPORTS[s][0]; });
+  }
+  if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
+  if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
+  if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
+  return o;
+}
+function rawStay(v) {
+  function iso(ms) { return new Date(ms).toISOString(); }
+  var lat = D.vll[2 * v], lng = D.vll[2 * v + 1];
+  return {
+    start: iso(D.vs[v]), end: iso(D.ve[v]), utcOffsetMin: D.voff[v] === NO_OFF ? null : D.voff[v], localDay: isoDay(D.vday[v]),
+    name: D.vname && D.vname[v] || null, tag: D.vtype[v] === 1 ? 'home' : D.vtype[v] === 2 ? 'work' : null,
+    country: D.ccList[D.vcc[v]] ? ccName(D.ccList[D.vcc[v]]) : null,
+    at: isFinite(lat) ? [+lat.toFixed(6), +lng.toFixed(6)] : null
+  };
+}
+function exportJson() {
+  // Newest first, as in Timeline. Built in pieces so a large export doesn't need one huge string.
+  var head = JSON.stringify({ app: 'Timeliner', exported: new Date().toISOString(), filters: exportFilters(), tripCount: sel.length, stayCount: selV.length }, null, 1);
+  var parts = [head.slice(0, -2) + ',\n "trips": ['], k;
+  for (k = sel.length - 1; k >= 0; k--) parts.push((k < sel.length - 1 ? ',\n' : '\n') + rawText(sel[k]));
+  parts.push('\n],\n "stays": [');
+  for (k = selV.length - 1; k >= 0; k--) parts.push((k < selV.length - 1 ? ',\n' : '\n') + JSON.stringify(rawStay(selV[k])));
+  parts.push('\n]\n}\n');
+  saveFile(exportName('json'), parts, 'application/json');
+}
+function csvCell(v) {
+  if (v == null) return '';
+  var s = String(v);
+  return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function exportCsv() {
+  var cols = ['start', 'end', 'localStart', 'localEnd', 'utcOffsetMin', 'localDay', 'durationMin', 'type', 'mode', 'sport', 'source', 'km', 'fileKm',
+    'route', 'fromCountry', 'toCountry', 'fromLat', 'fromLng', 'toLat', 'toLng', 'co2Kg', 'gpsPoints', 'flags'];
+  var rows = [cols.join(',')];
+  function local(ms, off) { return off === NO_OFF ? '' : new Date(ms + off * 60000).toISOString().slice(0, 16).replace('T', ' '); }
+  for (var k = sel.length - 1; k >= 0; k--) {
+    var i = sel[k], o = rawTrip(i);
+    rows.push([o.start, o.end, local(D.start[i], D.off[i]), local(D.end[i], D.off[i]), o.utcOffsetMin, o.localDay, Math.round((D.end[i] - D.start[i]) / 6e4),
+      o.type, o.mode, o.sport, o.source, o.km, o.fileKm, tripRoute(i).replace(/&amp;/g, '&'),
+      D.ccList[D.cs[i]] ? ccName(D.ccList[D.cs[i]]) : '', D.ccList[D.ce[i]] ? ccName(D.ccList[D.ce[i]]) : '',
+      o.from && o.from[0], o.from && o.from[1], o.to && o.to[0], o.to && o.to[1], +tripKg(i).toFixed(3), o.points.length, o.flags.join('; ')].map(csvCell).join(','));
+  }
+  // The byte order mark lets Excel read the accents and arrows.
+  saveFile(exportName('csv'), ['﻿' + rows.join('\r\n') + '\r\n'], 'text/csv');
+}
+function runExport(fn) {
+  busy('Preparing the export…');
+  setTimeout(function () {
+    try { fn(); toast('Export ready'); } catch (e) { toast('Export failed: ' + e.message); } finally { busy(''); }
+  }, 30);
+}
+$('exportJson').addEventListener('click', function () { runExport(exportJson); });
+$('exportCsv').addEventListener('click', function () { runExport(exportCsv); });
 function openList(list) {
   listBack = list;
   $('tripSheetTitle').textContent = fmt(list.length) + ' trips here';
@@ -372,11 +462,7 @@ $('tripBody').addEventListener('click', function (ev) {
       var r = document.createRange(); r.selectNodeContents($('rawPre')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected: copy it from here');
     });
   } else if (b.dataset.act === 'save') {
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([rawText(i)], { type: 'application/json' }));
-    a.download = 'trip-' + new Date(D.start[i]).toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    saveFile('trip-' + new Date(D.start[i]).toISOString().slice(0, 16).replace(/[:T]/g, '-') + '.json', [rawText(i)], 'application/json');
   } else openTrip(i, true);
 });
 $('tripBack').addEventListener('click', function () { if (listBack) openList(listBack); });

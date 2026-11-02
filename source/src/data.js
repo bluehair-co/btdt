@@ -326,6 +326,7 @@ function syncFilterUI() {
   $('h0').value = F.h0; $('h1').value = F.h1;
   var k = activeFilters();
   $('filterBadge').hidden = !k; $('filterBadge').textContent = k;
+  syncExport();
 }
 
 $('filtersSheet').addEventListener('click', function (ev) {
