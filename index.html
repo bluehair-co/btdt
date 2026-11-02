@@ -4715,15 +4715,16 @@ function evPos(ms, off) {
 // Visits: the selected trips and stays in time order, cut wherever the country changes.
 // A visit with others before and after it that lasted under a day is a short stop, and a
 // layover when you both flew in and flew out: a true layover when you stayed by the
-// airport (nothing over 3 km from where you landed or took off), and a layover with a visit
+// airport (nothing over 5 km from where you landed or took off; big hubs and their terminals
+// spread over a few km), and a layover with a visit
 // when you went further, into town or to another airport.
-var STOP_MS = 864e5;
+var STOP_MS = 864e5, LAYOVER_KM = 5;
 function countryVisits() {
   var ev = [], fly = MODES.indexOf('FLYING'), j, i, v;
   for (j = 0; j < sel.length; j++) {
     i = sel[j];
     var air = D.mode[i] === fly;
-    ev.push({ t: D.start[i], cc: D.ccList[D.cs[i]], off: D.off[i], dep: air, ll: [D.from[2 * i], D.from[2 * i + 1]] }, { t: D.end[i], cc: D.ccList[D.ce[i]], off: D.off[i], arr: air, ll: [D.to[2 * i], D.to[2 * i + 1]] });
+    ev.push({ t: D.start[i], cc: D.ccList[D.cs[i]], off: D.off[i], trip: 1, dep: air, ll: [D.from[2 * i], D.from[2 * i + 1]] }, { t: D.end[i], cc: D.ccList[D.ce[i]], off: D.off[i], trip: 1, arr: air, ll: [D.to[2 * i], D.to[2 * i + 1]] });
   }
   for (j = 0; j < selV.length; j++) {
     v = selV[j];
@@ -4744,14 +4745,17 @@ function countryVisits() {
     x.off = x.first.arr ? x.last.off : x.first.off;
     x.ms = x.t1 - x.t0;
     x.short = k > 0 && k < out.length - 1 && x.ms < STOP_MS;
-    x.layover = x.short && !!x.first.arr && !!x.last.dep;
+    // How you got there and left: the first and last trips in the visit. A stay can end at the
+    // same second the next flight starts, so the last event isn't always the departure.
+    var trips = x.ev.filter(function (e) { return e.trip; }), tIn = trips[0], tOut = trips[trips.length - 1];
+    x.layover = x.short && trips.length > 1 && !!tIn.arr && !!tOut.dep;
     if (x.layover) {
-      var a = x.first.ll, b = x.last.ll;
+      var a = tIn.ll, b = tOut.ll;
       x.away = x.ev.reduce(function (m, e) {
         var d = Math.min(haversine(e.ll, a), haversine(e.ll, b));
         return isFinite(d) ? Math.max(m, d) : m;
       }, 0);
-      x.visit = x.away > 3;
+      x.visit = x.away > LAYOVER_KM;
     }
     delete x.ev;
   });
@@ -4793,7 +4797,7 @@ function renderCountries() {
   renderCcTimeline(list, perDay, visits);
   var many = list.length > 1;
   var passed = list.filter(function (c) { return c.kind; }).length;
-  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over 3 km from the airport).' : '';
+  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over 5 km from the airport).' : '';
   var max = list.length ? list[0].n : 1;
   $('ccList').innerHTML = list.length ? list.slice(0, 30).map(function (c) {
     return '<div class="hit-row" style="cursor:default"><span class="flag" aria-hidden="true" style="font-size:22px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
