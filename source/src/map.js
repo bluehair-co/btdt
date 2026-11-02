@@ -677,7 +677,10 @@ function legend() {
   for (var k = 0; k < sel.length; k++) seen[groupOf(modeOf(sel[k])).key] = 1;
   var h = PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
-  if (PREFS.cc) h += '<span><i style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
+  if (PREFS.cc) {
+    h += '<span><i style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
+    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
+  }
   $('mapLegend').innerHTML = h;
   $('mapLegend').hidden = !h || !sel.length && !selV.length;
 }
@@ -700,15 +703,28 @@ function visitedCountries() {
   for (var v = 0; v < r.nv; v++) { var w = selV[v]; add(D.vcc[w], D.vday[w]); if (D.ve[w] <= r.t) add(D.vcc[w], evDay(D.ve[w], D.voff[w])); }
   // Days between records count too, as in Insights; with the slider back in time, only up to then.
   gapDays(isFinite(r.t) ? evDay(r.t, NO_OFF) - 1 : Infinity, add);
-  return Object.keys(by).map(function (k) { return { cc: D.ccList[k], days: Object.keys(by[k]).length }; }).filter(function (c) { return c.cc; });
+  // Countries where every visit reached so far was a true layover (flew in and out, stayed at
+  // the airport), by the same rule as the Insights country timeline.
+  var stays = {}, air = {};
+  ccVisits().forEach(function (x) {
+    if (x.t0 > r.t) return;
+    if (x.layover && !x.visit) air[x.cc] = 1; else stays[x.cc] = 1;
+  });
+  return Object.keys(by).map(function (k) { var cc = D.ccList[k]; return { cc: cc, days: Object.keys(by[k]).length, layover: !!air[cc] && !stays[cc] }; }).filter(function (c) { return c.cc; });
+}
+var ccVisitCache = null;
+function ccVisits() {
+  var key = selVer();
+  if (!ccVisitCache || ccVisitCache.key !== key || ccVisitCache.D !== D) ccVisitCache = { key: key, D: D, list: countryVisits() };
+  return ccVisitCache.list;
 }
 function buildCC() {
   ccLayer.clearLayers();
   ccLayer._ver = ccVer();
   if (!CB) decodeCountries();
-  var list = visitedCountries(), maxD = list.reduce(function (m, c) { return Math.max(m, c.days); }, 1), color = cssVar('--accent');
+  var list = visitedCountries(), maxD = list.reduce(function (m, c) { return Math.max(m, c.days); }, 1), green = cssVar('--accent'), blue = cssVar('--cc-air');
   list.forEach(function (c) {
-    var rings = CB.rings[c.cc];
+    var rings = CB.rings[c.cc], color = c.layover ? blue : green;
     if (!rings) return;
     var latlngs = rings.map(function (ring) { var o = []; for (var j = 0; j < ring.length; j += 2) o.push([ring[j + 1], ring[j]]); return o; });
     var op = 0.18 + 0.32 * Math.log(1 + c.days) / Math.log(1 + maxD);
@@ -1156,10 +1172,11 @@ function paintProj(fast) {
   });
   if (PREFS.cc) {
     var list = visitedCountries(), maxD = list.reduce(function (m, c) { return Math.max(m, c.days); }, 1);
-    ctx.fillStyle = cssVar('--accent');
+    var green = cssVar('--accent'), blue = cssVar('--cc-air');
     list.forEach(function (c) {
       var polys = P.landBy[c.cc];
       if (!polys) return;
+      ctx.fillStyle = c.layover ? blue : green;
       ctx.globalAlpha = 0.18 + 0.32 * Math.log(1 + c.days) / Math.log(1 + maxD);
       ctx.beginPath(); polys.forEach(function (poly) { path(poly); }); ctx.fill('evenodd');
     });
