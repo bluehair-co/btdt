@@ -114,9 +114,9 @@
           <div class="records" id="records"></div>
         </section>
         <section class="card wide" id="cctlCard">
-          <div class="card-head"><h2>Countries over time</h2><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Pins are stops of under a day, ✈︎ for layovers: dashed ring if you stayed at the airport, double ring if you went out. Faded stretches have no records and are guessed from before and after.</span></div>
+          <div class="card-head"><h2>Countries over time</h2><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out (✈︎ when you flew in and out). Faded stretches have no records and are guessed from before and after.</span></div>
           <div class="cctl-off" id="cctlOff" hidden><p>The country timeline needs every kind of transport, since leaving some trips out would leave holes in where you were.</p><button type="button" class="btn" id="cctlAllModes">Show all transport</button></div>
-          <div class="cctl-scroll" id="cctlScroll"><div class="cctl-track" id="cctlTrack"><div class="cctl-pins" id="cctlPins"></div><div class="cctl-bars" id="cctlBars"></div><div class="cctl-axis" id="cctlAxis"></div></div></div>
+          <div class="cctl-scroll" id="cctlScroll"><div class="cctl-track" id="cctlTrack"><div class="cctl-pins" id="cctlPins"></div><div class="cctl-bars" id="cctlBars"></div><div class="cctl-pins low" id="cctlPinsLow"></div><div class="cctl-axis" id="cctlAxis"></div></div></div>
           <p class="cctl-info" id="cctlInfo" aria-live="polite"></p>
           <div class="cctl-legend" id="cctlLegend"></div>
         </section>

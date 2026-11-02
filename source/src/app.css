@@ -364,13 +364,13 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 
 /* countries over time */
 .cctl-scroll { overflow-x: auto; overflow-y: hidden; overscroll-behavior-x: contain; touch-action: pan-x; border-radius: 8px; background: var(--grid); scrollbar-width: thin; }
-.cctl-track { position: relative; height: 100px; min-width: 100%; }
+.cctl-track { position: relative; height: 126px; min-width: 100%; }
 .cctl-bars { position: absolute; left: 0; right: 0; top: 26px; height: 44px; }
 .cctl-bars b { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center; gap: 3px; overflow: hidden; font-weight: 600; font-size: 12px; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .55); cursor: pointer; white-space: nowrap; }
 .cctl-bars b.g { box-shadow: inset -2px 0 0 var(--grid); }
 .cctl-bars b.on { outline: 2px solid var(--fg); outline-offset: -2px; z-index: 1; }
 .cctl-bars b .f { font-size: 15px; text-shadow: none; }
-.cctl-axis { position: absolute; left: 0; right: 0; top: 70px; bottom: 0; border-top: 1px solid var(--line); }
+.cctl-axis { position: absolute; left: 0; right: 0; top: 96px; bottom: 0; border-top: 1px solid var(--line); }
 .cctl-axis i { position: absolute; top: 0; height: 6px; border-left: 1px solid var(--muted); font-style: normal; }
 .cctl-axis i.major { height: 12px; border-left-color: var(--fg); }
 .cctl-axis span { position: absolute; top: 12px; font-size: 11px; color: var(--muted); white-space: nowrap; padding-left: 3px; font-variant-numeric: tabular-nums; }
@@ -382,12 +382,18 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .cctl-sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
 #cctlCard .card-head .seg button { padding: 5px 12px; font-size: 14px; }
 .cctl-pins { position: absolute; left: 0; right: 0; top: 0; height: 26px; z-index: 2; }
-.cctl-pins button { position: absolute; top: 2px; width: 22px; height: 22px; margin-left: -11px; padding: 0; border-radius: 50%; border: 2px solid var(--c); background: var(--panel); font-size: 12px; line-height: 18px; text-align: center; cursor: pointer; }
-.cctl-pins button::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 46px; margin-left: -1px; background: var(--c); opacity: .9; pointer-events: none; }
-.cctl-pins button.air { border-style: dashed; }
-.cctl-pins button.air.visit { border-style: solid; box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--c); }
-.cctl-pins button.air::before { content: "✈︎"; position: absolute; right: -7px; top: -5px; font-size: 10px; line-height: 1; color: var(--fg); }
-.cctl-pins button.on { outline: 2px solid var(--fg); outline-offset: 1px; }
+.cctl-pins.low { top: 70px; }
+.cctl-pins button { position: absolute; top: 1px; width: 22px; height: 24px; margin-left: -11px; padding: 0; border: 0; background: none; font-size: 12px; line-height: 1; cursor: pointer; }
+.cctl-pins button span { position: relative; }
+/* Got out (layover with a visit, short stop): a downward pentagon above the strip. */
+.cctl-pins button.pent i { position: absolute; inset: 0; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); }
+.cctl-pins button.pent span { top: -3px; }
+.cctl-pins button.pent::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 45px; margin-left: -1px; background: var(--c); opacity: .9; pointer-events: none; }
+/* True layover (stayed at the airport): a circle under the strip. */
+.cctl-pins.low button.dot { top: 3px; height: 22px; border-radius: 50%; border: 2px solid var(--c); background: var(--panel); }
+.cctl-pins.low button.dot::after { content: ""; position: absolute; left: 50%; bottom: 100%; width: 2px; height: 47px; margin-left: -1px; background: var(--c); opacity: .9; pointer-events: none; }
+.cctl-pins button.air.pent::before { content: "✈︎"; position: absolute; right: -10px; top: 1px; font-size: 10px; line-height: 1; color: var(--fg); }
+.cctl-pins button.on { filter: drop-shadow(0 0 1.5px var(--fg)) drop-shadow(0 0 1px var(--fg)); }
 .cc-stop { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--muted); font-size: 11px; font-weight: 500; vertical-align: 1px; }
 .cc-stop svg.ic { width: 12px; height: 12px; fill: currentColor; }
 .cctl-bars b.q { opacity: .45; }
