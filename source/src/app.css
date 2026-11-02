@@ -18,7 +18,7 @@
   --m-bike: #6250d6;
   --m-water: #e87ba4;
   --m-other: #9aa49d;
-  --cc1: #2a78d6; --cc2: #eb6834; --cc3: #1baf7a; --cc4: #eda100; --cc5: #e87ba4; --cc6: #008300; --cc7: #6250d6; --cc8: #e34948;
+  --cc-air: #2a78d6; --cc1: #2a78d6; --cc2: #eb6834; --cc3: #1baf7a; --cc4: #eda100; --cc5: #e87ba4; --cc6: #008300; --cc7: #6250d6; --cc8: #e34948;
   --dot: #d0342c;
   --shadow: 0 8px 28px rgba(20, 40, 25, .16);
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
@@ -35,7 +35,7 @@
     --bg: #0f1411; --panel: #161c18; --glass: rgba(22, 28, 24, .92); --fg: #e8eee9; --muted: #9aa69d; --line: #26302a; --grid: #222b25;
     --chip: #1d2520; --chip-on-bg: #1f3a29; --chip-on-fg: #9fe0b7; --accent: #5cc48a; --accent-fg: #08140d;
     --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
-    --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
+    --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
     --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
@@ -44,7 +44,7 @@
   --bg: #0f1411; --panel: #161c18; --glass: rgba(22, 28, 24, .92); --fg: #e8eee9; --muted: #9aa69d; --line: #26302a; --grid: #222b25;
   --chip: #1d2520; --chip-on-bg: #1f3a29; --chip-on-fg: #9fe0b7; --accent: #5cc48a; --accent-fg: #08140d;
   --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
-    --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
+    --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
   --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
   color-scheme: dark;
 }
