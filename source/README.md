@@ -44,6 +44,13 @@ A place's country comes from the built-in borders (Natural Earth, simplified to 
 - **Insights:** the same navigator as the map, in the same place (the period is shared, so stepping on any tab moves them all, and it stays put as you switch tabs), then summary, how you travel, weekly rhythm, change over time, top routes, places, records, countries over time (a strip you can scroll and zoom, one colour per country; days in two countries are split once zoomed in far enough, and stops of under a day are marked: a true layover, where you flew in and out and stayed within 3 km of the airport, is a circle below the strip (shown once the axis names the months), and a stop where you got out, a layover with a visit or a short stop on the ground, is a downward pentagon above it; stretches with no records are drawn faded in the country you were in before and after, or half each when those differ, and are left out of the day counts; it only shows with every kind of transport selected, and otherwise offers a button to show all transport), countries and CO₂.
 - **Timeline:** the same navigator, then every trip in the filter range, newest first. Tap a trip to see it on a map at the top of the list.
 
+## Export
+
+At the bottom of Filters, *Export* downloads what the filters currently show (every filter applies: days, years, months, days of the week, time of day, transport, guessed types, source and countries; the map's time slider doesn't narrow it).
+
+- **Raw data (JSON):** the filters in words, then every matching trip, newest first, in the same format as a trip's *{ } Raw data* (GPS points included), then the matching stays (times, place name, home or work tag, country and position).
+- **Table (CSV):** one row per trip, without the GPS points: UTC and local times, duration, type, source, distance, route, countries, start and end positions, CO₂, number of GPS points and flags. It opens in Excel or Numbers.
+
 ## Rebuild
 
 Run `python3 build.py`. It assembles `dist/index.html` from `src/` and copies `static/` (the manifest, service worker and icons).
