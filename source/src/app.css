@@ -392,7 +392,6 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* True layover (stayed at the airport): a circle under the strip. */
 .cctl-pins.low button.dot { top: 3px; height: 22px; border-radius: 50%; border: 2px solid var(--c); background: var(--panel); }
 .cctl-pins.low button.dot::after { content: ""; position: absolute; left: 50%; bottom: 100%; width: 2px; height: 47px; margin-left: -1px; background: var(--c); opacity: .9; pointer-events: none; }
-.cctl-pins button.air.pent::before { content: "✈︎"; position: absolute; right: -10px; top: 1px; font-size: 10px; line-height: 1; color: var(--fg); }
 .cctl-pins button.on { filter: drop-shadow(0 0 1.5px var(--fg)) drop-shadow(0 0 1px var(--fg)); }
 .cc-stop { display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; padding: 1px 7px; border-radius: 999px; background: var(--chip); color: var(--muted); font-size: 11px; font-weight: 500; vertical-align: 1px; }
 .cc-stop svg.ic { width: 12px; height: 12px; fill: currentColor; }
