@@ -837,21 +837,26 @@ function saveData(R) {
   var keep = {};
   ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'pathPts', 'pathT', 'pathOff',
     'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
-  return withStore('timeliner', 'readwrite', function (s) { return s.put(keep, 'trips'); }).catch(function () { /* this visit still works */ });
+  return withStore('btdt', 'readwrite', function (s) { return s.put(keep, 'trips'); }).catch(function () { /* this visit still works */ });
 }
 function loadSaved() {
   var get = function (s) { return s.get('trips'); };
-  return withStore('timeliner', 'readonly', get).catch(function () { return null; }).then(function (R) {
+  var load = function (name) { return withStore(name, 'readonly', get).catch(function () { return null; }); };
+  return load('btdt').then(function (R) {
     if (R && R.day) return R;
-    // Trips saved by Transport Footprint 1.0 on this device.
-    return withStore('footprint', 'readonly', get).catch(function () { return null; }).then(function (old) {
-      if (old && old.day) { saveData(upgrade(old)); return old; }
-      return null;
+    // Trips saved while the app was called Timeliner: same format, so they are copied over as they are.
+    return load('timeliner').then(function (prev) {
+      if (prev && prev.day) { saveData(prev); return prev; }
+      // Trips saved by Transport Footprint 1.0 on this device.
+      return load('footprint').then(function (old) {
+        if (old && old.day) { saveData(upgrade(old)); return old; }
+        return null;
+      });
     });
   });
 }
 $('forgetBtn').addEventListener('click', function () {
   var del = function (s) { return s.delete('trips'); };
-  Promise.all([withStore('timeliner', 'readwrite', del).catch(function () {}), withStore('footprint', 'readwrite', del).catch(function () {})])
+  Promise.all([withStore('btdt', 'readwrite', del).catch(function () {}), withStore('timeliner', 'readwrite', del).catch(function () {}), withStore('footprint', 'readwrite', del).catch(function () {})])
     .then(function () { location.reload(); });
 });

@@ -88,14 +88,14 @@ function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>
 function badge(m, small, strava) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(m) + (strava ? STRAVA_MARK : '') + '</span>'; }
 
 // ---------- preferences ----------
-var PREFS_KEY = 'timeliner.prefs';
+var PREFS_KEY = 'btdt.prefs';
 var PREFS = {
   unit: 'km', theme: 'system', proj: 'merc', paths: true, heat: false, cc: false,
   heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', timeM: 'km', timeU: 'year', speed: 1,
   // The time slider starts hidden on phones.
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
 };
-try { Object.assign(PREFS, JSON.parse(localStorage.getItem(PREFS_KEY) || '{}')); } catch (e) { /* storage unavailable */ }
+try { Object.assign(PREFS, JSON.parse(localStorage.getItem(PREFS_KEY) || localStorage.getItem('timeliner.prefs') || '{}')); } catch (e) { /* storage unavailable */ }
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch (e) { /* ignore */ } }
 function applyTheme() {
   if (PREFS.theme === 'system') document.documentElement.removeAttribute('data-theme');
@@ -120,12 +120,12 @@ var A = loadFactors();
 function loadFactors() {
   var a = JSON.parse(JSON.stringify(DEFAULTS));
   try {
-    var s = JSON.parse(localStorage.getItem('timeliner.co2') || localStorage.getItem('footprint.assumptions') || 'null');
+    var s = JSON.parse(localStorage.getItem('btdt.co2') || localStorage.getItem('timeliner.co2') || localStorage.getItem('footprint.assumptions') || 'null');
     if (s && s.g) { a.car = s.car || a.car; a.occ = s.occ || 1; a.rf = s.rf !== false; Object.keys(s.g).forEach(function (k) { if (isFinite(s.g[k])) a.g[k] = s.g[k]; }); }
   } catch (e) { /* storage unavailable */ }
   return a;
 }
-function saveFactors() { try { localStorage.setItem('timeliner.co2', JSON.stringify({ car: A.car, occ: A.occ, rf: A.rf, g: A.g })); } catch (e) { /* ignore */ } }
+function saveFactors() { try { localStorage.setItem('btdt.co2', JSON.stringify({ car: A.car, occ: A.occ, rf: A.rf, g: A.g })); } catch (e) { /* ignore */ } }
 function gPerKm(m, kmv) {
   if (m === 'FLYING') { var band = kmv < 500 ? 'dom' : kmv < 3700 ? 'short' : 'long'; return A.fly[band][A.rf ? 0 : 1]; }
   if (m === 'CAR' || m === 'MOTORCYCLE') return (A.g[m] || 0) / Math.max(1, A.occ);
