@@ -4824,11 +4824,11 @@ function renderCountries() {
   var passed = list.filter(function (c) { return c.kind; }).length;
   $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over 5 km from the airport).' : '';
   var max = list.length ? list[0].n : 1;
-  $('ccList').innerHTML = list.length ? list.slice(0, 30).map(function (c) {
+  $('ccList').innerHTML = list.length ? list.map(function (c) {   // always every country, never cut short
     return '<div class="hit-row" style="cursor:default"><span class="flag" aria-hidden="true" style="font-size:22px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
       '<span class="t"><b>' + esc(ccName(c.cc)) + '</b>' + (c.kind ? ' <span class="cc-stop">' + (c.kind === 'layover' ? icon('FLYING') : '') + stopText(c) + ' · ' + duration(c.stopMs) + '</span>' : '') + '<small>' + (c.first === c.last ? niceDate(c.first) : niceDate(c.first) + ' – ' + niceDate(c.last)) + '</small><span class="meter" style="display:block;margin-top:6px"><i style="width:' + (c.n / max * 100).toFixed(1) + '%' + (many ? ';background:' + c.color : '') + '"></i></span></span>' +
       '<span class="r num">' + fmt(c.n) + '<small>day' + (c.n > 1 ? 's' : '') + '</small></span></div>';
-  }).join('') + (list.length > 30 ? '<p class="fine" style="margin-top:8px">And ' + fmt(list.length - 30) + ' more.</p>' : '') : '<p class="empty">No countries in this selection.</p>';
+  }).join('') : '<p class="empty">No countries in this selection.</p>';
 }
 // ---------- countries over time ----------
 // A colour per country, by days there in this selection: the eight chart hues, then the
