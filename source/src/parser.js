@@ -1,4 +1,4 @@
-// Timeliner parser: turns Google Timeline exports into a flat list of trips
+// BT;DT parser: turns Google Timeline exports into a flat list of trips
 // {start, end, day, mode, km, est} with their GPS trails, plus the places stayed.
 // Runs inside a Web Worker (or on the main thread as a fallback).
 // Supported: on-device Timeline.json (Android), iPhone Timeline export,
@@ -818,7 +818,7 @@ function addStrava(c, type, a, meta) {
     inner.map(function (i) { return pts[i]; }), inner.map(function (i) { return ts[i]; }));
   if (c.start.length === before) return false;
   (c.sport || (c.sport = [])).push(st.sport);
-  // A type Timeliner doesn't know is kept by name, to show on the trip.
+  // A type BT;DT doesn't know is kept by name, to show on the trip.
   (c.stype || (c.stype = [])).push(st.sport ? '' : String(type == null || /^\d+$/.test(String(type).trim()) ? '' : type).trim());
   // What the export said about the activity, for the trip's raw data.
   (c.smeta || (c.smeta = [])).push(Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {}));
