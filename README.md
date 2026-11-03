@@ -1,4 +1,4 @@
-# Timeliner
+# BT;DT (Been There · Done That)
 
 See where you've been and how you get around, from your Google Timeline. Your Timeline file is read on your device and is never uploaded.
 

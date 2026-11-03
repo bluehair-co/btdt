@@ -1,6 +1,6 @@
-# Timeliner
+# BT;DT (Been There · Done That)
 
-Timeliner 2.0 shows where you've been and how you get around, using your Google Timeline. It is the successor to Transport Footprint, which is frozen as v1.0 in `../versions/v1.0/`.
+BT;DT 2.0 shows where you've been and how you get around, using your Google Timeline. It is the successor to Transport Footprint, which is frozen as v1.0 in `../versions/v1.0/`.
 
 ## Open it
 
@@ -54,3 +54,5 @@ At the bottom of Filters, *Export* downloads what the filters currently show (ev
 ## Rebuild
 
 Run `python3 build.py`. It assembles `dist/index.html` from `src/` and copies `static/` (the manifest, service worker and icons).
+
+The app icons in `static/` are made from `icons/logo-source.jpg` by `python3 icons/make_icons.py`. The repository and the storage keys on the device still use the old name, Timeliner, so existing installs keep their data.
