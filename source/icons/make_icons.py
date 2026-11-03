@@ -8,13 +8,16 @@ logo-source.jpg is cut to the dark rounded square and its corners are made truly
 (or filled with the same navy, for icons the platform masks itself).
 """
 import os
-from PIL import Image, ImageDraw
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'static')
 NAVY = (18, 33, 67)
 # Corner radius of the rounded square, as a share of its side.
 RADIUS = 0.23
+# A point inside the pin of the semicolon, in logo-source.jpg.
+PIN_SEED = (808, 760)
 
 
 def rounded_mask(size, inset=0.0):
@@ -47,6 +50,26 @@ def full_bleed(size, scale):
     return canvas
 
 
+def pin(size):
+    """Just the location pin from the semicolon, on a transparent background: the
+    browser-tab icon, where the whole logo is too small to read."""
+    src = Image.open(os.path.join(HERE, 'logo-source.jpg')).convert('RGB')
+    a = np.asarray(src).astype(float).max(axis=2)
+    # The pin is the bright shape around this point; the letters beside it are not joined to it.
+    solid = Image.fromarray(((a > 170) * 255).astype('uint8')).copy()
+    ImageDraw.floodfill(solid, PIN_SEED, 128)
+    shape = Image.fromarray(((np.array(solid) == 128) * 255).astype('uint8')).filter(ImageFilter.MaxFilter(5))
+    # Soft edge from brightness, so the outline stays smooth against the navy glow.
+    soft = np.clip((a - 110) / 90, 0, 1) * (np.array(shape) / 255)
+    rgba = src.convert('RGBA')
+    rgba.putalpha(Image.fromarray((soft * 255).astype('uint8')))
+    x0, y0, x1, y1 = Image.fromarray((soft > 0.5).astype('uint8') * 255).getbbox()
+    side = max(x1 - x0, y1 - y0) + 6
+    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
+    box = tuple(round(v) for v in (cx - side / 2, cy - side / 2, cx + side / 2, cy + side / 2))
+    return rgba.crop(box).resize((size, size), Image.LANCZOS)
+
+
 def main():
     for s in (192, 512):
         rounded(s).save(os.path.join(OUT, 'icon-%d.png' % s), optimize=True)
@@ -55,8 +78,10 @@ def main():
     full_bleed(512, 0.78).save(os.path.join(OUT, 'icon-maskable-512.png'), optimize=True)
     full_bleed(192, 0.78).save(os.path.join(OUT, 'icon-maskable-192.png'), optimize=True)
     full_bleed(180, 0.94).convert('RGB').save(os.path.join(OUT, 'apple-touch-icon.png'), optimize=True)
-    rounded(32).save(os.path.join(OUT, 'favicon-32.png'), optimize=True)
-    rounded(48).save(os.path.join(OUT, 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48)])
+    # Browser tabs get just the pin.
+    pin(32).save(os.path.join(OUT, 'favicon-32.png'), optimize=True)
+    pin(96).save(os.path.join(OUT, 'favicon-96.png'), optimize=True)
+    pin(48).save(os.path.join(OUT, 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48)])
     print('Icons written to', os.path.normpath(OUT))
 
 
