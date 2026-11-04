@@ -1,7 +1,7 @@
 // Offline support for BT;DT. The page and its libraries are cached so the
 // app opens without a connection; map tiles are cached as you look at them.
 // Timeline files are never fetched or cached here: they are read straight from the device.
-var VERSION = 'btdt-v4';
+var VERSION = 'btdt-v5';
 var SHELL = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './favicon.ico'];
 var LIBS = [
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js',

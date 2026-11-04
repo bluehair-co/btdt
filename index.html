@@ -427,6 +427,19 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 #cctlCard.off .card-head .seg, #cctlCard.off .card-head .fine, #cctlCard.off .cctl-scroll, #cctlCard.off .cctl-info, #cctlCard.off .cctl-legend { display: none; }
 .cctl-off { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 16px; border-radius: 8px; background: var(--grid); }
 .cctl-off p { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Place page */
+.place-h { margin: 18px 0 4px; font-size: 14px; }
+.mini-bars { display: grid; gap: 2px; height: 56px; align-items: end; margin-top: 8px; }
+.mini-bars div { height: 100%; display: flex; align-items: flex-end; background: var(--grid); border-radius: 3px; }
+.mini-bars i { display: block; width: 100%; background: var(--accent); border-radius: 3px; }
+.mini-axis { display: grid; font-size: 11px; color: var(--muted); margin: 3px 0 4px; }
+.spot-row { flex-wrap: wrap; cursor: default; }
+.spot-acts { display: flex; gap: 2px; width: 100%; justify-content: flex-end; margin-top: -4px; }
+
+div.hit-row { cursor: default; }
+div.hit-row:hover { background: none; }
+.spot-acts a.btn { text-decoration: none; }
 </style>
 </head>
 <body>
@@ -870,11 +883,12 @@ function dayOf(t) {
 // Each trip's GPS trail is kept as lat/lng pairs in one flat list (pathPts),
 // with pathOff[i]..pathOff[i+1] marking trip i's slice, and pathT holding each
 // point's time in seconds after the trip started.
-// Places stayed (visits) are kept alongside: start, end, position, kind (1 home, 2 work).
+// Places stayed (visits) are kept alongside: start, end, position, kind (1 home, 2 work),
+// name (Takeout only) and Google's place ID (the same ID every time you're at that place).
 function Collector() {
   this.start = []; this.end = []; this.day = []; this.mode = []; this.km = []; this.est = []; this.off = []; this.orig = []; this.from = []; this.to = [];
   this.pathPts = []; this.pathT = []; this.pathOff = [0];
-  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = [];
+  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = []; this.vpid = [];
 }
 // Trips Timeline couldn't classify get a mode guessed from their average speed,
 // marked with the GUESSED bit in est.
@@ -972,13 +986,13 @@ function fillTimes(pts, t, dur) {
   }
 }
 var HOME = 1, WORK = 2;
-Collector.prototype.visit = function (st, et, ll, type, name) {
+Collector.prototype.visit = function (st, et, ll, type, name, pid) {
   if (!st || !et || !ll || !(et.ms > st.ms)) return;
   var d = dayOf(st);
   if (d == null || !isFinite(d)) return;
   var k = String(type || '').toUpperCase();
   this.vs.push(st.ms); this.ve.push(et.ms); this.vday.push(d); this.voff.push(st.off != null ? st.off : NO_OFF);
-  this.vll.push(ll[0], ll[1]); this.vtype.push(/HOME/.test(k) ? HOME : /WORK/.test(k) ? WORK : 0); this.vname.push(name || '');
+  this.vll.push(ll[0], ll[1]); this.vtype.push(/HOME/.test(k) ? HOME : /WORK/.test(k) ? WORK : 0); this.vname.push(name || ''); this.vpid.push(pid ? String(pid) : '');
 };
 function pathKm(pts) {
   var t = 0;
@@ -1358,7 +1372,7 @@ function parseAndroid(o, c) {
     var st = parseTime(s.startTime), et = parseTime(s.endTime);
     if (s.visit) {
       var tc = s.visit.topCandidate || {};
-      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '');
+      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '', tc.placeId || tc.placeID);
     }
     if (!s.activity) continue;
     var a = s.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -1454,7 +1468,7 @@ function parseIos(arr, c) {
     var st = parseTime(it.startTime), et = parseTime(it.endTime);
     if (it.visit) {
       var tc = it.visit.topCandidate || {};
-      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '');
+      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '', tc.placeId || tc.placeID);
     }
     if (!it.activity) continue;
     var a = it.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -1469,7 +1483,7 @@ function parseSemantic(o, c) {
     if (v) {
       var vd = v.duration || {}, loc = v.location || {};
       c.visit(parseTime(vd.startTimestamp || vd.startTimestampMs), parseTime(vd.endTimestamp || vd.endTimestampMs),
-        parseLL(loc) || parseLL(v.centerLatE7 != null ? { latE7: v.centerLatE7, lngE7: v.centerLngE7 } : null), loc.semanticType, loc.name);
+        parseLL(loc) || parseLL(v.centerLatE7 != null ? { latE7: v.centerLatE7, lngE7: v.centerLngE7 } : null), loc.semanticType, loc.name, loc.placeId);
     }
     var a = objs[i].activitySegment;
     if (!a) continue;
@@ -1685,7 +1699,7 @@ function dropDuplicateFlights(c) {
   }
   if (!any) return c;
   var o = new Collector();
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname'].forEach(function (k) { o[k] = c[k]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid'].forEach(function (k) { o[k] = c[k]; });
   for (i = 0; i < c.mode.length; i++) {
     if (drop[i]) continue;
     o.start.push(c.start[i]); o.end.push(c.end[i]); o.day.push(c.day[i]); o.mode.push(c.mode[i]); o.km.push(c.km[i]); o.est.push(c.est[i]); o.off.push(c.off[i]); o.orig.push(c.orig[i]);
@@ -1705,7 +1719,7 @@ function finish(c, src) {
     from: Float32Array.from(c.from), to: Float32Array.from(c.to),
     pathPts: Float32Array.from(c.pathPts), pathT: Float32Array.from(c.pathT), pathOff: Uint32Array.from(c.pathOff),
     vs: Float64Array.from(c.vs), ve: Float64Array.from(c.ve), vday: Int32Array.from(c.vday), voff: Int16Array.from(c.voff),
-    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname
+    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid
   };
 }
 var NOT_TIMELINE = "This file doesn't look like Google Timeline data. Pick Timeline.json from your phone, or Records.json / Semantic Location History files from Google Takeout.";
@@ -2598,6 +2612,8 @@ function upgrade(R) {
     R.vs = new Float64Array(0); R.ve = new Float64Array(0); R.vday = new Int32Array(0); R.voff = new Int16Array(0);
     R.vll = new Float32Array(0); R.vtype = new Uint8Array(0); R.vname = []; R.vsrcs = new Uint8Array(0);
   }
+  // Google's place ID for each stay; data saved before it was kept has none until the file is loaded again.
+  if (!R.vpid) R.vpid = [];
   if (!R.files) R.files = [];
   // Bad GPS jumps come out of trips saved before BT;DT looked for them too (it changes nothing the second time).
   cleanJumps(R);
@@ -3215,13 +3231,13 @@ function merge(base, parts) {
   var vout = vidx.filter(function (x, j) { return !j || x[2] !== vidx[j - 1][2]; });
   var nv = vout.length;
   var R = gather(all, out, src);
-  R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vsrcs = new Uint8Array(nv);
+  R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vpid = []; R.vsrcs = new Uint8Array(nv);
   R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind }; }));
   vout.forEach(function (x, j) {
     var p = all[x[0]], i = x[1];
     R.vs[j] = x[2]; R.ve[j] = x[3]; R.voff[j] = p.voff[i];
     R.vday[j] = x[2] === p.vs[i] ? p.vday[i] : dayOf({ ms: x[2], off: p.voff[i] === NO_OFF ? null : p.voff[i] });
-    R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vsrcs[j] = vsrc(p, i);
+    R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vpid.push(p.vpid && p.vpid[i] || ''); R.vsrcs[j] = vsrc(p, i);
   });
   // Records points give the Timeline trips their full GPS trail (see withTrack).
   var track = mergeTracks(all.map(function (p) { return p.track; }));
@@ -3327,7 +3343,7 @@ function withStrava(R) {
     O.est[j] |= STRAVA;
     if (off[k_] !== NO_OFF) { O.off[j] = off[k_]; O.day[j] = Math.floor((S.start[k_] + off[k_] * 60000) / 864e5); }
   });
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
   O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched };
   return O;
 }
@@ -3418,7 +3434,7 @@ function saveData(R) {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
   var keep = {};
   ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'pathPts', 'pathT', 'pathOff',
-    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
+    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
   return withStore('btdt', 'readwrite', function (s) { return s.put(keep, 'trips'); }).catch(function () { /* this visit still works */ });
 }
 function loadSaved() {
@@ -3838,7 +3854,7 @@ function rawStay(v) {
   var lat = D.vll[2 * v], lng = D.vll[2 * v + 1];
   return {
     start: iso(D.vs[v]), end: iso(D.ve[v]), utcOffsetMin: D.voff[v] === NO_OFF ? null : D.voff[v], localDay: isoDay(D.vday[v]),
-    name: D.vname && D.vname[v] || null, tag: D.vtype[v] === 1 ? 'home' : D.vtype[v] === 2 ? 'work' : null,
+    name: D.vname && D.vname[v] || null, placeId: D.vpid && D.vpid[v] || null, tag: D.vtype[v] === 1 ? 'home' : D.vtype[v] === 2 ? 'work' : null,
     country: D.ccList[D.vcc[v]] ? ccName(D.ccList[D.vcc[v]]) : null,
     at: isFinite(lat) ? [+lat.toFixed(6), +lng.toFixed(6)] : null
   };
@@ -5024,7 +5040,7 @@ function renderPlaces() {
   for (var k in by) list.push(by[k]);
   list.sort(function (a, b) { return useStays ? b.h - a.h : b.n - a.n; });
   $('placesTitle').textContent = useStays ? 'Where you spent time' : 'Where you went';
-  $('placesNote').textContent = useStays ? 'Places you stayed, by total time there. Tap one to see it on the map.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
+  $('placesNote').textContent = useStays ? 'Places you stayed, by total time there. Tap one for its visits, spots and a Google Maps link.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
   if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
   $('topPlaces').innerHTML = list.slice(0, 8).map(function (o) {
     var q = D.places[o.p], cc = countryAt(q.lat, q.lng), home = o.p === D.home;
@@ -5477,12 +5493,113 @@ document.querySelector('#insightsPage .cards').addEventListener('click', functio
   if (!b) return;
   if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
   else if (b.dataset.day) { setTab('map'); showDay(+b.dataset.day); }
-  else {
+  else if (!openPlace(+b.dataset.place)) {
+    // A place you only reached by trip (no stays there) has no page: show it on the map.
     var q = D.places[+b.dataset.place];
     if (PREFS.proj !== 'merc') setProj('merc');
     setTab('map');
     if (map) map.setView([q.lat, q.lng], 15);
   }
+});
+
+// ---------- place page ----------
+// Everything about one place in the Places list, over your whole history (not just the filters):
+// how often and when you go, and the spots inside it. A place in the list is everything with the
+// same name (often a town); Google gives each spot you stay at its own place ID, so the spots are
+// told apart by that ID even when they're a few metres apart. Stays without an ID (Takeout files
+// before IDs, or data saved before BT;DT kept them) fall back to the 300 m grouping.
+// Nothing is looked up: the Google Maps buttons are plain links you choose to open.
+function mapsUrl(lat, lng, pid) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + lat.toFixed(6) + '%2C' + lng.toFixed(6) + (pid ? '&query_place_id=' + encodeURIComponent(pid) : '');
+}
+function mapsLink(lat, lng, pid, text) {
+  return '<a class="btn" href="' + esc(mapsUrl(lat, lng, pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + (text || 'Open in Google Maps') + '</a>';
+}
+function placeStays(lbl) {
+  var out = [];
+  for (var v = 0; v < D.vs.length; v++) if (D.pv[v] >= 0 && placeLabel(D.pv[v]) === lbl) out.push(v);
+  return out;
+}
+function miniBars(vals, labels, aria) {
+  var max = Math.max.apply(null, vals) || 1;
+  return '<div class="mini-bars" role="img" aria-label="' + aria + '" style="grid-template-columns:repeat(' + vals.length + ',minmax(0,1fr))">' +
+    vals.map(function (x, k) { return '<div title="' + labels[k] + ': ' + fmt(x) + '"><i style="height:' + (x ? Math.max(6, x / max * 100) : 0).toFixed(1) + '%"></i></div>'; }).join('') + '</div>';
+}
+var placeOpen = null;
+function openPlace(p) {
+  needPlaces(); findHome();
+  var lbl = placeLabel(p), vs = placeStays(lbl);
+  if (!vs.length) return false;
+  placeOpen = p;
+  var q = D.places[p], cc = countryAt(q.lat, q.lng), h = 0, first = Infinity, last = -Infinity, fv = -1, lv = -1;
+  var byDow = [0, 0, 0, 0, 0, 0, 0], byHour = new Array(24).fill(0), spots = {}, order = [];
+  vs.forEach(function (v) {
+    var dur = D.ve[v] - D.vs[v];
+    h += dur / 36e5;
+    if (D.vs[v] < first) { first = D.vs[v]; fv = v; }
+    if (D.vs[v] > last) { last = D.vs[v]; lv = v; }
+    byDow[dayToDate(D.vday[v]).getUTCDay()]++;
+    byHour[localHour(D.vs[v], D.voff[v])]++;
+    var pid = D.vpid && D.vpid[v] || '', key = pid || 'p' + D.pv[v], s = spots[key];
+    if (!s) { s = spots[key] = { pid: pid, lat: D.vll[2 * v], lng: D.vll[2 * v + 1], n: 0, h: 0, last: 0, lv: v, name: '', type: 0, home: false }; order.push(s); }
+    s.n++; s.h += dur / 36e5; if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
+    if (D.vname[v] && !s.name) s.name = D.vname[v];
+    if (D.vtype[v]) s.type = D.vtype[v];
+    if (D.pv[v] === D.home) s.home = true;
+  });
+  order.sort(function (a, b) { return b.h - a.h; });
+  var n = vs.length, top = order[0];
+  // The busiest weekday and hour, in words.
+  var bd = DOW_ORDER.reduce(function (b, d) { return byDow[d] > byDow[b] ? d : b; }, DOW_ORDER[0]);
+  var bh = byHour.reduce(function (b, x, k) { return x > byHour[b] ? k : b; }, 0);
+  var dows = DOW_ORDER.map(function (d) { return byDow[d]; }), dlab = DOW_ORDER.map(function (d) { return DOW_LONG[d]; });
+  var hlab = byHour.map(function (x, k) { return pad2(k) + ':00'; });
+  var withIds = order.filter(function (s) { return s.pid; }).length;
+  function spotName(s, k) {
+    return s.name || (s.home ? 'Home' : s.type === 1 ? 'Home (Timeline)' : s.type === 2 ? 'Work' : 'Spot ' + (k + 1));
+  }
+  var recent = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; }).slice(0, 10);
+  var html = '<div class="trip-head"><span class="mode-badge" style="background:' + (p === D.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(p === D.home ? 'home' : 'pin') + '</span><div><h3>' + esc(lbl) + '</h3><p>' +
+    (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · all your history</p></div></div>' +
+    '<dl class="kv" style="margin-top:12px">' + [
+      ['Visits', fmt(n)], ['Time there', hoursLabel(h).replace(/ \d+ min$/, '')],
+      ['Average stay', hoursLabel(h / n)], ['Spots', fmt(order.length)],
+      ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
+    ].map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
+    '<h4 class="place-h">When you go</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + pad2(bh) + ':00.</p>' +
+    miniBars(dows, dlab, 'Visits by day of the week') + '<div class="mini-axis" style="grid-template-columns:repeat(7,minmax(0,1fr))">' + DOW_ORDER.map(function (d) { return '<span>' + DOW[d] + '</span>'; }).join('') + '</div>' +
+    miniBars(byHour, hlab, 'Arrivals by hour') + '<div class="mini-axis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>' +
+    '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
+    ' Open one in Google Maps to see what it is; only that one spot is sent to Google, and only when you tap.</p>' +
+    '<div class="list-rows">' + order.slice(0, 15).map(function (s, k) {
+      return '<div class="hit-row spot-row"><span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
+        '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span>' +
+        '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
+        '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
+    }).join('') + '</div>' + (order.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '') +
+    '<h4 class="place-h">Latest visits</h4><div class="list-rows">' + recent.map(function (v) {
+      return '<div class="hit-row"><span class="t"><b>' + longDate(D.vday[v]) + '</b><small>' + clock(D.vs[v], D.voff[v]) + '–' + clock(D.ve[v], D.voff[v]) + '</small></span><span class="r num">' + duration(D.ve[v] - D.vs[v]) + '</span></div>';
+    }).join('') + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + q.lat + ',' + q.lng + '">' + icon('fit') + 'Show on the map</button>' +
+    mapsLink(top.lat, top.lng, top.pid) + '</div>';
+  $('tripSheetTitle').textContent = 'Place';
+  $('tripBack').hidden = true;
+  $('tripBody').innerHTML = html;
+  openSheet('tripSheet');
+  $('tripBody').scrollTop = 0;
+  return true;
+}
+function showPlaceOnMap(lat, lng) {
+  closeSheets();
+  if (PREFS.proj !== 'merc') setProj('merc');
+  setTab('map');
+  if (map) map.setView([lat, lng], 16);
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-pmap]');
+  if (!b) return;
+  var ll = b.dataset.pmap.split(',');
+  showPlaceOnMap(+ll[0], +ll[1]);
 });
 
 // ---------- timeline ----------

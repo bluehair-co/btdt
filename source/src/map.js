@@ -393,7 +393,7 @@ function rawStay(v) {
   var lat = D.vll[2 * v], lng = D.vll[2 * v + 1];
   return {
     start: iso(D.vs[v]), end: iso(D.ve[v]), utcOffsetMin: D.voff[v] === NO_OFF ? null : D.voff[v], localDay: isoDay(D.vday[v]),
-    name: D.vname && D.vname[v] || null, tag: D.vtype[v] === 1 ? 'home' : D.vtype[v] === 2 ? 'work' : null,
+    name: D.vname && D.vname[v] || null, placeId: D.vpid && D.vpid[v] || null, tag: D.vtype[v] === 1 ? 'home' : D.vtype[v] === 2 ? 'work' : null,
     country: D.ccList[D.vcc[v]] ? ccName(D.ccList[D.vcc[v]]) : null,
     at: isFinite(lat) ? [+lat.toFixed(6), +lng.toFixed(6)] : null
   };

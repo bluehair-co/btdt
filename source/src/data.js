@@ -31,6 +31,8 @@ function upgrade(R) {
     R.vs = new Float64Array(0); R.ve = new Float64Array(0); R.vday = new Int32Array(0); R.voff = new Int16Array(0);
     R.vll = new Float32Array(0); R.vtype = new Uint8Array(0); R.vname = []; R.vsrcs = new Uint8Array(0);
   }
+  // Google's place ID for each stay; data saved before it was kept has none until the file is loaded again.
+  if (!R.vpid) R.vpid = [];
   if (!R.files) R.files = [];
   // Bad GPS jumps come out of trips saved before BT;DT looked for them too (it changes nothing the second time).
   cleanJumps(R);
@@ -648,13 +650,13 @@ function merge(base, parts) {
   var vout = vidx.filter(function (x, j) { return !j || x[2] !== vidx[j - 1][2]; });
   var nv = vout.length;
   var R = gather(all, out, src);
-  R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vsrcs = new Uint8Array(nv);
+  R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vpid = []; R.vsrcs = new Uint8Array(nv);
   R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind }; }));
   vout.forEach(function (x, j) {
     var p = all[x[0]], i = x[1];
     R.vs[j] = x[2]; R.ve[j] = x[3]; R.voff[j] = p.voff[i];
     R.vday[j] = x[2] === p.vs[i] ? p.vday[i] : dayOf({ ms: x[2], off: p.voff[i] === NO_OFF ? null : p.voff[i] });
-    R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vsrcs[j] = vsrc(p, i);
+    R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vpid.push(p.vpid && p.vpid[i] || ''); R.vsrcs[j] = vsrc(p, i);
   });
   // Records points give the Timeline trips their full GPS trail (see withTrack).
   var track = mergeTracks(all.map(function (p) { return p.track; }));
@@ -760,7 +762,7 @@ function withStrava(R) {
     O.est[j] |= STRAVA;
     if (off[k_] !== NO_OFF) { O.off[j] = off[k_]; O.day[j] = Math.floor((S.start[k_] + off[k_] * 60000) / 864e5); }
   });
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
   O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched };
   return O;
 }
@@ -851,7 +853,7 @@ function saveData(R) {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
   var keep = {};
   ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'pathPts', 'pathT', 'pathOff',
-    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
+    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
   return withStore('btdt', 'readwrite', function (s) { return s.put(keep, 'trips'); }).catch(function () { /* this visit still works */ });
 }
 function loadSaved() {

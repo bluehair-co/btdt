@@ -260,7 +260,7 @@ function renderPlaces() {
   for (var k in by) list.push(by[k]);
   list.sort(function (a, b) { return useStays ? b.h - a.h : b.n - a.n; });
   $('placesTitle').textContent = useStays ? 'Where you spent time' : 'Where you went';
-  $('placesNote').textContent = useStays ? 'Places you stayed, by total time there. Tap one to see it on the map.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
+  $('placesNote').textContent = useStays ? 'Places you stayed, by total time there. Tap one for its visits, spots and a Google Maps link.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
   if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
   $('topPlaces').innerHTML = list.slice(0, 8).map(function (o) {
     var q = D.places[o.p], cc = countryAt(q.lat, q.lng), home = o.p === D.home;
@@ -713,10 +713,111 @@ document.querySelector('#insightsPage .cards').addEventListener('click', functio
   if (!b) return;
   if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
   else if (b.dataset.day) { setTab('map'); showDay(+b.dataset.day); }
-  else {
+  else if (!openPlace(+b.dataset.place)) {
+    // A place you only reached by trip (no stays there) has no page: show it on the map.
     var q = D.places[+b.dataset.place];
     if (PREFS.proj !== 'merc') setProj('merc');
     setTab('map');
     if (map) map.setView([q.lat, q.lng], 15);
   }
+});
+
+// ---------- place page ----------
+// Everything about one place in the Places list, over your whole history (not just the filters):
+// how often and when you go, and the spots inside it. A place in the list is everything with the
+// same name (often a town); Google gives each spot you stay at its own place ID, so the spots are
+// told apart by that ID even when they're a few metres apart. Stays without an ID (Takeout files
+// before IDs, or data saved before BT;DT kept them) fall back to the 300 m grouping.
+// Nothing is looked up: the Google Maps buttons are plain links you choose to open.
+function mapsUrl(lat, lng, pid) {
+  return 'https://www.google.com/maps/search/?api=1&query=' + lat.toFixed(6) + '%2C' + lng.toFixed(6) + (pid ? '&query_place_id=' + encodeURIComponent(pid) : '');
+}
+function mapsLink(lat, lng, pid, text) {
+  return '<a class="btn" href="' + esc(mapsUrl(lat, lng, pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + (text || 'Open in Google Maps') + '</a>';
+}
+function placeStays(lbl) {
+  var out = [];
+  for (var v = 0; v < D.vs.length; v++) if (D.pv[v] >= 0 && placeLabel(D.pv[v]) === lbl) out.push(v);
+  return out;
+}
+function miniBars(vals, labels, aria) {
+  var max = Math.max.apply(null, vals) || 1;
+  return '<div class="mini-bars" role="img" aria-label="' + aria + '" style="grid-template-columns:repeat(' + vals.length + ',minmax(0,1fr))">' +
+    vals.map(function (x, k) { return '<div title="' + labels[k] + ': ' + fmt(x) + '"><i style="height:' + (x ? Math.max(6, x / max * 100) : 0).toFixed(1) + '%"></i></div>'; }).join('') + '</div>';
+}
+var placeOpen = null;
+function openPlace(p) {
+  needPlaces(); findHome();
+  var lbl = placeLabel(p), vs = placeStays(lbl);
+  if (!vs.length) return false;
+  placeOpen = p;
+  var q = D.places[p], cc = countryAt(q.lat, q.lng), h = 0, first = Infinity, last = -Infinity, fv = -1, lv = -1;
+  var byDow = [0, 0, 0, 0, 0, 0, 0], byHour = new Array(24).fill(0), spots = {}, order = [];
+  vs.forEach(function (v) {
+    var dur = D.ve[v] - D.vs[v];
+    h += dur / 36e5;
+    if (D.vs[v] < first) { first = D.vs[v]; fv = v; }
+    if (D.vs[v] > last) { last = D.vs[v]; lv = v; }
+    byDow[dayToDate(D.vday[v]).getUTCDay()]++;
+    byHour[localHour(D.vs[v], D.voff[v])]++;
+    var pid = D.vpid && D.vpid[v] || '', key = pid || 'p' + D.pv[v], s = spots[key];
+    if (!s) { s = spots[key] = { pid: pid, lat: D.vll[2 * v], lng: D.vll[2 * v + 1], n: 0, h: 0, last: 0, lv: v, name: '', type: 0, home: false }; order.push(s); }
+    s.n++; s.h += dur / 36e5; if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
+    if (D.vname[v] && !s.name) s.name = D.vname[v];
+    if (D.vtype[v]) s.type = D.vtype[v];
+    if (D.pv[v] === D.home) s.home = true;
+  });
+  order.sort(function (a, b) { return b.h - a.h; });
+  var n = vs.length, top = order[0];
+  // The busiest weekday and hour, in words.
+  var bd = DOW_ORDER.reduce(function (b, d) { return byDow[d] > byDow[b] ? d : b; }, DOW_ORDER[0]);
+  var bh = byHour.reduce(function (b, x, k) { return x > byHour[b] ? k : b; }, 0);
+  var dows = DOW_ORDER.map(function (d) { return byDow[d]; }), dlab = DOW_ORDER.map(function (d) { return DOW_LONG[d]; });
+  var hlab = byHour.map(function (x, k) { return pad2(k) + ':00'; });
+  var withIds = order.filter(function (s) { return s.pid; }).length;
+  function spotName(s, k) {
+    return s.name || (s.home ? 'Home' : s.type === 1 ? 'Home (Timeline)' : s.type === 2 ? 'Work' : 'Spot ' + (k + 1));
+  }
+  var recent = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; }).slice(0, 10);
+  var html = '<div class="trip-head"><span class="mode-badge" style="background:' + (p === D.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(p === D.home ? 'home' : 'pin') + '</span><div><h3>' + esc(lbl) + '</h3><p>' +
+    (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · all your history</p></div></div>' +
+    '<dl class="kv" style="margin-top:12px">' + [
+      ['Visits', fmt(n)], ['Time there', hoursLabel(h).replace(/ \d+ min$/, '')],
+      ['Average stay', hoursLabel(h / n)], ['Spots', fmt(order.length)],
+      ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
+    ].map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
+    '<h4 class="place-h">When you go</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + pad2(bh) + ':00.</p>' +
+    miniBars(dows, dlab, 'Visits by day of the week') + '<div class="mini-axis" style="grid-template-columns:repeat(7,minmax(0,1fr))">' + DOW_ORDER.map(function (d) { return '<span>' + DOW[d] + '</span>'; }).join('') + '</div>' +
+    miniBars(byHour, hlab, 'Arrivals by hour') + '<div class="mini-axis" style="grid-template-columns:repeat(4,minmax(0,1fr))"><span>00:00</span><span>06:00</span><span>12:00</span><span>18:00</span></div>' +
+    '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
+    ' Open one in Google Maps to see what it is; only that one spot is sent to Google, and only when you tap.</p>' +
+    '<div class="list-rows">' + order.slice(0, 15).map(function (s, k) {
+      return '<div class="hit-row spot-row"><span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
+        '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span>' +
+        '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
+        '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
+    }).join('') + '</div>' + (order.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '') +
+    '<h4 class="place-h">Latest visits</h4><div class="list-rows">' + recent.map(function (v) {
+      return '<div class="hit-row"><span class="t"><b>' + longDate(D.vday[v]) + '</b><small>' + clock(D.vs[v], D.voff[v]) + '–' + clock(D.ve[v], D.voff[v]) + '</small></span><span class="r num">' + duration(D.ve[v] - D.vs[v]) + '</span></div>';
+    }).join('') + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + q.lat + ',' + q.lng + '">' + icon('fit') + 'Show on the map</button>' +
+    mapsLink(top.lat, top.lng, top.pid) + '</div>';
+  $('tripSheetTitle').textContent = 'Place';
+  $('tripBack').hidden = true;
+  $('tripBody').innerHTML = html;
+  openSheet('tripSheet');
+  $('tripBody').scrollTop = 0;
+  return true;
+}
+function showPlaceOnMap(lat, lng) {
+  closeSheets();
+  if (PREFS.proj !== 'merc') setProj('merc');
+  setTab('map');
+  if (map) map.setView([lat, lng], 16);
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-pmap]');
+  if (!b) return;
+  var ll = b.dataset.pmap.split(',');
+  showPlaceOnMap(+ll[0], +ll[1]);
 });
