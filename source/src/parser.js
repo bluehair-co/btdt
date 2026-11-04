@@ -90,11 +90,12 @@ function dayOf(t) {
 // Each trip's GPS trail is kept as lat/lng pairs in one flat list (pathPts),
 // with pathOff[i]..pathOff[i+1] marking trip i's slice, and pathT holding each
 // point's time in seconds after the trip started.
-// Places stayed (visits) are kept alongside: start, end, position, kind (1 home, 2 work).
+// Places stayed (visits) are kept alongside: start, end, position, kind (1 home, 2 work),
+// name (Takeout only) and Google's place ID (the same ID every time you're at that place).
 function Collector() {
   this.start = []; this.end = []; this.day = []; this.mode = []; this.km = []; this.est = []; this.off = []; this.orig = []; this.from = []; this.to = [];
   this.pathPts = []; this.pathT = []; this.pathOff = [0];
-  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = [];
+  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = []; this.vpid = [];
 }
 // Trips Timeline couldn't classify get a mode guessed from their average speed,
 // marked with the GUESSED bit in est.
@@ -192,13 +193,13 @@ function fillTimes(pts, t, dur) {
   }
 }
 var HOME = 1, WORK = 2;
-Collector.prototype.visit = function (st, et, ll, type, name) {
+Collector.prototype.visit = function (st, et, ll, type, name, pid) {
   if (!st || !et || !ll || !(et.ms > st.ms)) return;
   var d = dayOf(st);
   if (d == null || !isFinite(d)) return;
   var k = String(type || '').toUpperCase();
   this.vs.push(st.ms); this.ve.push(et.ms); this.vday.push(d); this.voff.push(st.off != null ? st.off : NO_OFF);
-  this.vll.push(ll[0], ll[1]); this.vtype.push(/HOME/.test(k) ? HOME : /WORK/.test(k) ? WORK : 0); this.vname.push(name || '');
+  this.vll.push(ll[0], ll[1]); this.vtype.push(/HOME/.test(k) ? HOME : /WORK/.test(k) ? WORK : 0); this.vname.push(name || ''); this.vpid.push(pid ? String(pid) : '');
 };
 function pathKm(pts) {
   var t = 0;
@@ -578,7 +579,7 @@ function parseAndroid(o, c) {
     var st = parseTime(s.startTime), et = parseTime(s.endTime);
     if (s.visit) {
       var tc = s.visit.topCandidate || {};
-      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '');
+      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '', tc.placeId || tc.placeID);
     }
     if (!s.activity) continue;
     var a = s.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -674,7 +675,7 @@ function parseIos(arr, c) {
     var st = parseTime(it.startTime), et = parseTime(it.endTime);
     if (it.visit) {
       var tc = it.visit.topCandidate || {};
-      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '');
+      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '', tc.placeId || tc.placeID);
     }
     if (!it.activity) continue;
     var a = it.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -689,7 +690,7 @@ function parseSemantic(o, c) {
     if (v) {
       var vd = v.duration || {}, loc = v.location || {};
       c.visit(parseTime(vd.startTimestamp || vd.startTimestampMs), parseTime(vd.endTimestamp || vd.endTimestampMs),
-        parseLL(loc) || parseLL(v.centerLatE7 != null ? { latE7: v.centerLatE7, lngE7: v.centerLngE7 } : null), loc.semanticType, loc.name);
+        parseLL(loc) || parseLL(v.centerLatE7 != null ? { latE7: v.centerLatE7, lngE7: v.centerLngE7 } : null), loc.semanticType, loc.name, loc.placeId);
     }
     var a = objs[i].activitySegment;
     if (!a) continue;
@@ -905,7 +906,7 @@ function dropDuplicateFlights(c) {
   }
   if (!any) return c;
   var o = new Collector();
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname'].forEach(function (k) { o[k] = c[k]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid'].forEach(function (k) { o[k] = c[k]; });
   for (i = 0; i < c.mode.length; i++) {
     if (drop[i]) continue;
     o.start.push(c.start[i]); o.end.push(c.end[i]); o.day.push(c.day[i]); o.mode.push(c.mode[i]); o.km.push(c.km[i]); o.est.push(c.est[i]); o.off.push(c.off[i]); o.orig.push(c.orig[i]);
@@ -925,7 +926,7 @@ function finish(c, src) {
     from: Float32Array.from(c.from), to: Float32Array.from(c.to),
     pathPts: Float32Array.from(c.pathPts), pathT: Float32Array.from(c.pathT), pathOff: Uint32Array.from(c.pathOff),
     vs: Float64Array.from(c.vs), ve: Float64Array.from(c.ve), vday: Int32Array.from(c.vday), voff: Int16Array.from(c.voff),
-    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname
+    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid
   };
 }
 var NOT_TIMELINE = "This file doesn't look like Google Timeline data. Pick Timeline.json from your phone, or Records.json / Semantic Location History files from Google Takeout.";

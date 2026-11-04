@@ -405,3 +405,16 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 #cctlCard.off .card-head .seg, #cctlCard.off .card-head .fine, #cctlCard.off .cctl-scroll, #cctlCard.off .cctl-info, #cctlCard.off .cctl-legend { display: none; }
 .cctl-off { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 16px; border-radius: 8px; background: var(--grid); }
 .cctl-off p { margin: 0; font-size: 13px; color: var(--muted); }
+
+/* Place page */
+.place-h { margin: 18px 0 4px; font-size: 14px; }
+.mini-bars { display: grid; gap: 2px; height: 56px; align-items: end; margin-top: 8px; }
+.mini-bars div { height: 100%; display: flex; align-items: flex-end; background: var(--grid); border-radius: 3px; }
+.mini-bars i { display: block; width: 100%; background: var(--accent); border-radius: 3px; }
+.mini-axis { display: grid; font-size: 11px; color: var(--muted); margin: 3px 0 4px; }
+.spot-row { flex-wrap: wrap; cursor: default; }
+.spot-acts { display: flex; gap: 2px; width: 100%; justify-content: flex-end; margin-top: -4px; }
+
+div.hit-row { cursor: default; }
+div.hit-row:hover { background: none; }
+.spot-acts a.btn { text-decoration: none; }
