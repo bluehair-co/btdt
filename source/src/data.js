@@ -215,6 +215,8 @@ function apply() {
     if (F.guess === 'no' && D.est[i] & 4) continue;
     if (F.guess === 'only' && !(D.est[i] & 4)) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
+    // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
+    if (F.src !== 'timeline' && isDup(i)) continue;
     if (!anyHour && !hourOk(D.hour[i])) continue;
     if (!allCC && !F.countries.has(D.cs[i]) && !F.countries.has(D.ce[i])) continue;
     nav[D.day[i]] = 1;
@@ -252,7 +254,7 @@ function chipHtml(f, v, label, n) {
 }
 function buildFilterUI() {
   var mc = {}, i;
-  for (i = 0; i < D.day.length; i++) { var m = MODES[D.mode[i]]; mc[m] = (mc[m] || 0) + 1; }
+  for (i = 0; i < D.day.length; i++) { if (isDup(i)) continue; var m = MODES[D.mode[i]]; mc[m] = (mc[m] || 0) + 1; }
   $('years').innerHTML = M.years.map(function (y) { return chipHtml('years', y, y); }).join('');
   $('months').innerHTML = MONTHS.map(function (m, k) { return chipHtml('months', k, m); }).join('');
   $('dows').innerHTML = DOW_ORDER.map(function (d) { return chipHtml('dows', d, DOW[d]); }).join('');
@@ -523,7 +525,7 @@ function findHome() {
     }
     if (Object.keys(score).length) how = 'where most nights were spent';
     else {
-      for (i = 0; i < D.day.length; i++) if (D.pb[i] >= 0 && MODES[D.mode[i]] !== 'FLYING') score[D.pb[i]] = (score[D.pb[i]] || 0) + 1;
+      for (i = 0; i < D.day.length; i++) if (D.pb[i] >= 0 && !isDup(i) && MODES[D.mode[i]] !== 'FLYING') score[D.pb[i]] = (score[D.pb[i]] || 0) + 1;
       how = 'where most trips end';
     }
   }
@@ -701,8 +703,17 @@ function gather(all, out, src) {
 // Strava activities replace the Timeline trips they cover: a trip at least half inside an
 // activity's time is the same journey recorded less precisely, whatever transport Timeline
 // thought it was. Activities Timeline missed are added. Flights are never replaced.
+// The replaced Timeline trips stay in the result, marked in dup, so choosing Timeline as the
+// only source shows them again (apply leaves them out otherwise).
 // R itself is left as loaded (it is what gets saved); the result also has repl, the number
-// of Timeline trips each Strava trip replaced, and stravaStats.
+// of Timeline trips each Strava trip replaced, dup, and stravaStats.
+// Trips shown with every source: a Timeline trip a Strava activity replaced isn't counted.
+function isDup(i) { return D.dup ? D.dup[i] === 1 : false; }
+function tripTotal() {
+  if (!D.dup) return D.day.length;
+  for (var i = 0, c = 0; i < D.dup.length; i++) c += 1 - D.dup[i];
+  return c;
+}
 function withStrava(R) {
   var S = R.strava;
   if (!S || !S.start.length) return R;
@@ -734,13 +745,14 @@ function withStrava(R) {
     off[k] = o;
   }
   var list = [];
-  for (i = 0; i < n; i++) if (!drop[i]) list.push([0, i]);
+  for (i = 0; i < n; i++) list.push([0, i]);
   for (k = 0; k < m; k++) list.push([1, k]);
   list.sort(function (x, y) { return (x[0] ? S : R).start[x[1]] - (y[0] ? S : R).start[y[1]]; });
   var O = gather([R, S], list, function (p, x) { return p === S ? SRC.strava : p.srcs ? p.srcs[x] : 0; });
   O.repl = new Uint16Array(list.length);
+  O.dup = new Uint8Array(list.length);
   list.forEach(function (x, j) {
-    if (!x[0]) return;
+    if (!x[0]) { O.dup[j] = drop[x[1]]; return; }
     var k_ = x[1];
     O.repl[j] = cnt[k_];
     O.est[j] |= STRAVA;
@@ -798,7 +810,7 @@ function importFiles(list) {
       busy('');
       var nv = next.vs.length;
       var onlyStrava = r.results.every(function (x) { return x.strava; });
-      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(D.day.length) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + r.results.length + ' file' + (r.results.length > 1 ? 's' : '') + '.';
+      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + r.results.length + ' file' + (r.results.length > 1 ? 's' : '') + '.';
       if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without Timeline data.';
       if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
       if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from Records.json where Timeline recorded nothing.';

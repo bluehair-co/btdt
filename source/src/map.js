@@ -275,6 +275,7 @@ function tripRows(i) {
   ];
   var notes = [];
   if (e & 16) notes.push(D.repl[i] ? 'Recorded on Strava. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded on Strava. Timeline has no trip at this time.');
+  if (isDup(i)) notes.push('Strava recorded this trip too. It shows here because Timeline is the only source chosen; with Strava included, the Strava activity takes its place.');
   if (isSim(i)) notes.push('Simulated from a file you loaded, not recorded by Timeline. It replaces any exported trip at the same time.');
   if (e & PATH_TRIP) notes.push('Timeline kept GPS points here but no trip, so BT;DT made this trip from them.');
   if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? 'Strava calls this activity “' + esc(D.stype[i]) + '”, which BT;DT doesn\'t match to a transport type yet' : 'Strava gives this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
