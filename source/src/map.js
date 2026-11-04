@@ -76,7 +76,8 @@ function initMap() {
   ccLayer = L.layerGroup();
   hlLayer = L.layerGroup().addTo(map);
   heatLayer = new HeatLayer();
-  posMarker = L.marker([0, 0], { icon: L.divIcon({ className: '', html: '<div class="pos-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 1000 });
+  posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
+  posMarker._mode = null;
   map.on('click', function (e) { onMapTap(map.latLngToContainerPoint(e.latlng), e.originalEvent); });
   if (!coarse) {
     var raf = 0, last = null;
@@ -600,7 +601,11 @@ function scrubTo(v) {
       curLine = L.polyline(cur.pts, { renderer: renderer, color: cssVar(groupOf(modeOf(cur.i)).v), weight: LINE_W + 2, opacity: 1, interactive: false });
       pathLayer.addLayer(curLine);
     }
-    if (P_pos) { posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map); }
+    if (P_pos) {
+      var pm = posMode();
+      if (pm !== posMarker._mode) { posMarker.setIcon(posIcon(pm)); posMarker._mode = pm; }
+      posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map);
+    }
     else if (map.hasLayer(posMarker)) map.removeLayer(posMarker);
     if (playing && P_pos && PREFS.proj === 'merc') {
       var cp = map.latLngToContainerPoint(P_pos), sz = map.getSize();
@@ -612,6 +617,13 @@ function scrubTo(v) {
   scrubLabel();
 }
 var P_pos = null, P_cur = null, prevCur = null;
+// The position marker: while a trip is under way it shows that trip's transport icon in
+// its colour; between trips (standing still) it is a plain grey dot.
+function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
+function posIcon(m) {
+  if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+}
 $('scrub').addEventListener('input', function () { stopPlay(); scrubTo(+this.value); });
 function stopPlay() {
   if (!playing) return;
@@ -1230,9 +1242,17 @@ function paintProj(fast) {
   if (P_pos) {
     var g = [P_pos[1], P_pos[0]], xy = P.proj(g);
     if (xy && (PREFS.proj !== 'globe' || d3.geoDistance(g, [P.gc[0], P.gc[1]]) <= Math.PI / 2)) {
-      ctx.globalAlpha = 0.3; ctx.fillStyle = cssVar('--dot'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 9, 0, 7); ctx.fill();
-      ctx.fillStyle = cssVar('--dot'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 6, 0, 7); ctx.fill();
+      var pm = posMode();
+      if (pm) {
+        var col = cssVar(groupOf(pm).v);
+        ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
+        ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
+        ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+      } else {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
+        ctx.fillStyle = cssVar('--pos-still'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
+      }
     }
   }
 }

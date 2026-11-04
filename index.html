@@ -42,6 +42,7 @@
   --m-other: #9aa49d;
   --cc-air: #2a78d6; --cc1: #2a78d6; --cc2: #eb6834; --cc3: #1baf7a; --cc4: #eda100; --cc5: #e87ba4; --cc6: #008300; --cc7: #6250d6; --cc8: #e34948;
   --dot: #d0342c;
+  --pos-still: #8a918c;
   --shadow: 0 8px 28px rgba(20, 40, 25, .16);
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -58,7 +59,7 @@
     --chip: #1d2520; --chip-on-bg: #1f3a29; --chip-on-fg: #9fe0b7; --accent: #5cc48a; --accent-fg: #08140d;
     --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
-    --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
+    --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
     color-scheme: dark;
   }
 }
@@ -67,7 +68,7 @@
   --chip: #1d2520; --chip-on-bg: #1f3a29; --chip-on-fg: #9fe0b7; --accent: #5cc48a; --accent-fg: #08140d;
   --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
-  --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
+  --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -238,7 +239,10 @@ details.help b { color: var(--fg); font-weight: 500; }
 .proj-tip { position: absolute; z-index: 6; pointer-events: none; }
 .trip-tip b { display: block; margin-bottom: 2px; }
 .trip-tip .row { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); }
-.pos-dot { width: 18px; height: 18px; border-radius: 50%; background: var(--dot); border: 3px solid #fff; box-shadow: 0 0 0 6px color-mix(in srgb, var(--dot) 30%, transparent), 0 2px 6px rgba(0, 0, 0, .35); }
+.pos-dot { box-sizing: border-box; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .35); }
+.pos-dot.still { width: 16px; height: 16px; background: var(--pos-still); }
+.pos-dot.moving { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: #fff; }
+.pos-dot.moving svg.ic { width: 16px; height: 16px; }
 
 /* ---------- insights ---------- */
 .cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -3517,7 +3521,8 @@ function initMap() {
   ccLayer = L.layerGroup();
   hlLayer = L.layerGroup().addTo(map);
   heatLayer = new HeatLayer();
-  posMarker = L.marker([0, 0], { icon: L.divIcon({ className: '', html: '<div class="pos-dot"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), interactive: false, keyboard: false, zIndexOffset: 1000 });
+  posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
+  posMarker._mode = null;
   map.on('click', function (e) { onMapTap(map.latLngToContainerPoint(e.latlng), e.originalEvent); });
   if (!coarse) {
     var raf = 0, last = null;
@@ -4041,7 +4046,11 @@ function scrubTo(v) {
       curLine = L.polyline(cur.pts, { renderer: renderer, color: cssVar(groupOf(modeOf(cur.i)).v), weight: LINE_W + 2, opacity: 1, interactive: false });
       pathLayer.addLayer(curLine);
     }
-    if (P_pos) { posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map); }
+    if (P_pos) {
+      var pm = posMode();
+      if (pm !== posMarker._mode) { posMarker.setIcon(posIcon(pm)); posMarker._mode = pm; }
+      posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map);
+    }
     else if (map.hasLayer(posMarker)) map.removeLayer(posMarker);
     if (playing && P_pos && PREFS.proj === 'merc') {
       var cp = map.latLngToContainerPoint(P_pos), sz = map.getSize();
@@ -4053,6 +4062,13 @@ function scrubTo(v) {
   scrubLabel();
 }
 var P_pos = null, P_cur = null, prevCur = null;
+// The position marker: while a trip is under way it shows that trip's transport icon in
+// its colour; between trips (standing still) it is a plain grey dot.
+function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
+function posIcon(m) {
+  if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
+  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+}
 $('scrub').addEventListener('input', function () { stopPlay(); scrubTo(+this.value); });
 function stopPlay() {
   if (!playing) return;
@@ -4671,9 +4687,17 @@ function paintProj(fast) {
   if (P_pos) {
     var g = [P_pos[1], P_pos[0]], xy = P.proj(g);
     if (xy && (PREFS.proj !== 'globe' || d3.geoDistance(g, [P.gc[0], P.gc[1]]) <= Math.PI / 2)) {
-      ctx.globalAlpha = 0.3; ctx.fillStyle = cssVar('--dot'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
-      ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 9, 0, 7); ctx.fill();
-      ctx.fillStyle = cssVar('--dot'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 6, 0, 7); ctx.fill();
+      var pm = posMode();
+      if (pm) {
+        var col = cssVar(groupOf(pm).v);
+        ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
+        ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
+        ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
+        ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+      } else {
+        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
+        ctx.fillStyle = cssVar('--pos-still'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
+      }
     }
   }
 }
