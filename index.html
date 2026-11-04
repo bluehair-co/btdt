@@ -1093,10 +1093,11 @@ function jumpKm(R, i, raw, clean, ends, first, last) {
 // A trip's end or a whole stay can sit at a bad position too (a stray fix, or a place Timeline matched
 // wrongly), which no trail shows when the trip has only its two ends: a 3-minute walk from home to
 // 34 km away. Every trip end and stay, in time order, is a track of where you were, and ends and stays
-// in a row within 1 km of each other are one stop. A stop of under 12 hours that this track reaches or
-// leaves faster than anything on the ground goes (STOP_KMH; the time of a flight doesn't count), when
-// the track goes out to it and comes straight back. Its trip ends and stays move to the stop next to it
-// in time, and those trips' lines and distances follow (see jumpKm).
+// in a row within 1 km of each other are one stop. A stop is a bad position when it holds one end of a
+// trip with no line of its own, lasted under 6 hours with no flight within a day, is at least 5 km from
+// the stops on both sides while those are close together (the track goes out and straight back), and
+// the track reaches or leaves it faster than anything on the ground (STOP_KMH). Its trip ends and
+// stays move to the stop next to it in time, and those trips' lines and distances follow (see jumpKm).
 var STOP_KMH = 300;
 function cleanStops(R) {
   var n = R.start.length, nv = R.vs ? R.vs.length : 0, A = [], fly = [], i, j;
@@ -1128,7 +1129,17 @@ function cleanStops(R) {
     var last = S[S.length - 1];
     if (last && km(last.ll, A[i].ll) < 1) { last.t2 = A[i].t; last.m.push(A[i]); }
     else S.push({ t1: A[i].t, t2: A[i].t, ll: A[i].ll, m: [A[i]] });
+    A[i].s = S.length - 1;
   }
+  // Stops holding one end of a trip with no line of its own (the other end elsewhere): only such a
+  // trip shows a bad end that its line didn't already.
+  var at = {};
+  A.forEach(function (x) { if (x.trip != null) (at[x.trip] = at[x.trip] || [])[x.end] = x.s; });
+  Object.keys(at).forEach(function (k) {
+    var e = at[k];
+    if (e[0] == null || e[1] == null || e[0] === e[1] || R.pathOff[+k + 1] - R.pathOff[+k] > 2 || MODES[R.mode[+k]] === 'FLYING') return;
+    S[e[0]].two = S[e[1]].two = true;
+  });
   var ns = S.length, prev = new Int32Array(ns), next = new Int32Array(ns), gone = new Uint8Array(ns), any = false;
   for (i = 0; i < ns; i++) { prev[i] = i - 1; next[i] = i + 1 < ns ? i + 1 : -1; }
   function speed(p, q) {
@@ -1138,26 +1149,21 @@ function cleanStops(R) {
   }
   function score(c) {
     var p = prev[c], q = next[c];
-    if (p < 0 || q < 0 || S[c].t2 - S[c].t1 > 12 * 36e5) return 0;
-    if (Math.max(speed(p, c), speed(c, q)) <= STOP_KMH) return 0;
+    if (p < 0 || q < 0 || !S[c].two || S[c].t2 - S[c].t1 > 6 * 36e5 || flying(S[c].t1 - 864e5, S[c].t2 + 864e5)) return 0;
     var din = km(S[p].ll, S[c].ll), dout = km(S[c].ll, S[q].ll), dd = km(S[p].ll, S[q].ll);
-    return din + dout > 2 * dd + 1 ? din + dout - dd : 0;
+    if (din < 5 || dout < 5 || dd > 0.2 * Math.min(din, dout)) return 0;
+    return Math.max(speed(p, c), speed(c, q)) > STOP_KMH ? din + dout - dd : 0;
   }
-  // Each pass takes out every stop that scores higher than both its neighbours, until none is left.
-  for (var pass = 0; pass < 50; pass++) {
-    var sc = new Float64Array(ns), cut = [];
-    for (i = 0; i < ns; i++) if (!gone[i]) sc[i] = score(i);
-    for (i = 0; i < ns; i++) {
-      if (!(sc[i] > 0)) continue;
-      if ((prev[i] < 0 || sc[i] >= sc[prev[i]]) && (next[i] < 0 || sc[i] > sc[next[i]])) cut.push(i);
-    }
-    if (!cut.length) break;
-    cut.forEach(function (c) {
-      var p = prev[c], q = next[c];
-      // The bad stop takes the place of the stop next to it in time.
-      S[c].fix = S[q].t1 - S[c].t2 < S[c].t1 - S[p].t2 ? S[q].ll : S[p].ll;
-      gone[c] = 1; next[p] = q; prev[q] = p; any = true;
-    });
+  // One pass, taking out each stop that scores higher than both its neighbours: a bad position is a
+  // single stop, and going on from the stops left would start moving real ones.
+  var sc = new Float64Array(ns);
+  for (i = 0; i < ns; i++) sc[i] = score(i);
+  for (i = 0; i < ns; i++) {
+    var p = prev[i], q = next[i];
+    if (!(sc[i] > 0) || p >= 0 && sc[p] >= sc[i] || q >= 0 && sc[q] >= sc[i]) continue;
+    // The bad stop takes the place of the stop next to it in time.
+    S[i].fix = S[q].t1 - S[i].t2 < S[i].t1 - S[p].t2 ? S[q].ll : S[p].ll;
+    gone[i] = 1; any = true;
   }
   if (!any) return R;
   var trips = {};
