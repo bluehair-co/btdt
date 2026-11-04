@@ -32,6 +32,8 @@ function upgrade(R) {
     R.vll = new Float32Array(0); R.vtype = new Uint8Array(0); R.vname = []; R.vsrcs = new Uint8Array(0);
   }
   if (!R.files) R.files = [];
+  // Bad GPS jumps come out of trips saved before BT;DT looked for them too (it changes nothing the second time).
+  cleanJumps(R);
   fillOffsets(R);
   if (R.strava) fillOffsets(R.strava);
   return R;
@@ -805,8 +807,9 @@ function importFiles(list) {
     busy('Preparing your map…');
     setTimeout(function () {
       var next = merge(RAW, r.results);
-      saveData(next);
       setData(next);
+      // Saved after setData, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
+      saveData(next);
       busy('');
       var nv = next.vs.length;
       var onlyStrava = r.results.every(function (x) { return x.strava; });

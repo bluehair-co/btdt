@@ -203,6 +203,115 @@ function pathKm(pts) {
   for (var i = 1; i < pts.length; i++) t += km(pts[i - 1], pts[i]);
   return t;
 }
+// A corrupted GPS fix (a digit dropped from the longitude, a stale position such as home showing up
+// again) puts a point km off the route, which draws a spike and inflates the distance. A point is left
+// out when reaching it means moving impossibly fast for the trip's transport and:
+// - inside the trail, the trail goes out to it and comes straight back (an out-and-back spike);
+// - at either end, the rest of the trail is consistent and the end is wrong rather than the times
+//   being a little off: the trip couldn't even have gone between its two ends in its time, or the
+//   end repeats a point from inside the trail (a stale fix), or both ends are the same stale point.
+//   A jump under 5 km at an end also needs a minute between the end and the next point, as
+//   Timeline's first and last points are often only seconds apart from the ends.
+// The worst point goes first and the check is repeated, so neighbouring bad points come out one by one.
+// pts are [lat, lng]; t is seconds; cap is km/h. Returns the indices kept.
+function jumpKeep(pts, t, cap) {
+  var keep = [], i;
+  for (i = 0; i < pts.length; i++) keep.push(i);
+  if (pts.length < 3 || !(cap > 0)) return keep;
+  var endCap = Math.max(2 * cap, 150);
+  // Speed of a leg over 1 km (shorter ones are GPS jitter, however short the time), else 0.
+  function v(a, b) {
+    var d = km(pts[a], pts[b]), h = Math.abs(t[b] - t[a]) / 3600;
+    if (!(d > 1)) return 0;
+    return h > 0 ? d / h : Infinity;
+  }
+  // Whether point p is within 100 m of one of the kept points inside the trail.
+  function repeats(p) {
+    for (var k = 1; k < keep.length - 1; k++) if (keep[k] !== p && km(pts[p], pts[keep[k]]) < 0.1) return true;
+    return false;
+  }
+  // Whether the end at index j (0 or the last) is a bad point; 2 when the other end is the same bad point.
+  function badEnd(j) {
+    var n = keep.length, p = keep[j], q = keep[j ? n - 2 : 1], r = keep[j ? n - 3 : 2], o = keep[j ? 0 : n - 1];
+    if (!(v(p, q) > endCap) || v(q, r) > cap) return 0;
+    var d = km(pts[p], pts[q]);
+    if (d < 5 && Math.abs(t[q] - t[p]) < 60) return 0;
+    if (km(pts[p], pts[o]) < 0.1) {
+      var q2 = keep[j ? 1 : n - 2], r2 = keep[j ? 2 : n - 3];
+      return n >= 5 && v(o, q2) > endCap && v(q2, r2) <= cap ? 2 : 0;
+    }
+    var h = Math.abs(t[o] - t[p]) / 3600;
+    return !(h > 0) || km(pts[p], pts[o]) / h > cap || repeats(p) ? 1 : 0;
+  }
+  for (;;) {
+    var n = keep.length, best = -1, top = 0, both = false, j;
+    if (n < 3) break;
+    for (j = 0; j < n; j++) {
+      var p = keep[j], score = 0, end = 0;
+      if (j === 0 || j === n - 1) {
+        end = badEnd(j);
+        if (end) score = km(pts[p], pts[keep[j ? n - 2 : 1]]);
+      } else {
+        var a = keep[j - 1], b = keep[j + 1];
+        if (Math.max(v(a, p), v(p, b)) > cap) {
+          var din = km(pts[a], pts[p]), dout = km(pts[p], pts[b]), dd = km(pts[a], pts[b]);
+          if (din + dout > 2 * dd + 1) score = din + dout - dd;
+        }
+      }
+      if (score > top) { top = score; best = j; both = end === 2; }
+    }
+    if (best < 0) break;
+    if (both) { keep.pop(); keep.shift(); } else keep.splice(best, 1);
+  }
+  return keep;
+}
+// Trips whose trail lost points to jumpKeep, marked with the JUMPS bit in est.
+var JUMPS = 128;
+function jumpCap(mode) { return 1.5 * (MAX_KMH[mode] || 200); }
+// Leaves bad GPS jumps out of every trip's line in R (the parsed or saved trips) and fixes the
+// distance they inflated: a straight line is redrawn between the new ends, and a distance from
+// Timeline or along the trail loses the detour when it counted it (Timeline's figure is then kept in orig).
+// Strava, simulated trips and flights are left as they are.
+// Running it again changes nothing, so it runs on every load and picks up data saved before it existed.
+function cleanJumps(R) {
+  var n = R.start.length, i, q, any = false, out = [];
+  for (i = 0; i < n; i++) {
+    var o0 = R.pathOff[i], o1 = R.pathOff[i + 1], s = R.srcs ? R.srcs[i] : R.src, mode = MODES[R.mode[i]];
+    out.push(null);
+    if (o1 - o0 < 3 || mode === 'FLYING' || s === SRC.strava || s === SRC.sim || R.est[i] & STRAVA) continue;
+    var pts = [], t = [];
+    for (q = o0; q < o1; q++) { pts.push([R.pathPts[2 * q], R.pathPts[2 * q + 1]]); t.push(R.pathT[q]); }
+    var keep = jumpKeep(pts, t, jumpCap(mode));
+    if (keep.length === pts.length) continue;
+    out[i] = keep; any = true;
+    var e = R.est[i], raw = pathKm(pts), clean = pathKm(keep.map(function (k) { return pts[k]; })), first = pts[keep[0]], last = pts[keep[keep.length - 1]];
+    var ends = keep[0] !== 0 || keep[keep.length - 1] !== pts.length - 1;
+    // The trip now starts and ends where its first and last good points are.
+    if (keep[0] !== 0) { R.from[2 * i] = first[0]; R.from[2 * i + 1] = first[1]; }
+    if (keep[keep.length - 1] !== pts.length - 1) { R.to[2 * i] = last[0]; R.to[2 * i + 1] = last[1]; }
+    var d = R.km[i], was = d;
+    // A distance that counted the detour (it is over half of it longer than the clean trail) loses it.
+    if ((e & 3) === 2) { if (ends) d = km(first, last); }
+    else if (d > clean + (raw - clean) / 2) d = Math.max(clean, d - (raw - clean));
+    if (d > 0 && Math.abs(d - was) > 0.001) {
+      if ((e & 3) === 0 && !(e & FIXED) && !(R.orig[i] > 0)) R.orig[i] = was;
+      R.km[i] = d;
+    }
+    R.est[i] = e | JUMPS;
+  }
+  if (!any) return R;
+  var np = 0, w = 0;
+  for (i = 0; i < n; i++) np += out[i] ? out[i].length : R.pathOff[i + 1] - R.pathOff[i];
+  var P = new Float32Array(2 * np), T = new Float32Array(np), O = new Uint32Array(n + 1);
+  for (i = 0; i < n; i++) {
+    var o = R.pathOff[i];
+    if (out[i]) for (q = 0; q < out[i].length; q++, w++) { P[2 * w] = R.pathPts[2 * (o + out[i][q])]; P[2 * w + 1] = R.pathPts[2 * (o + out[i][q]) + 1]; T[w] = R.pathT[o + out[i][q]]; }
+    else for (q = o; q < R.pathOff[i + 1]; q++, w++) { P[2 * w] = R.pathPts[2 * q]; P[2 * w + 1] = R.pathPts[2 * q + 1]; T[w] = R.pathT[q]; }
+    O[i + 1] = w;
+  }
+  R.pathPts = P; R.pathT = T; R.pathOff = O;
+  return R;
+}
 function addActivity(c, type, st, et, meters, a, b, pts, ptsT) {
   var mode = normMode(type), d = Number(meters) / 1000, est = 0;
   if (!(d > 0) && pts && pts.length > 1) { d = pathKm(pts); est = 1; }
@@ -292,6 +401,9 @@ function pathTrips(segs, paths, c) {
     return ms <= lastEnd + M;
   }
   function flush() {
+    // Bad GPS jumps out first, so they neither make the trip nor decide its type (at a car's top speed, as the type isn't known yet).
+    var n0 = run.length;
+    if (run.length >= 3) run = jumpKeep(run.map(function (x) { return x[1]; }), run.map(function (x) { return x[0] / 1000; }), jumpCap('CAR')).map(function (k) { return run[k]; });
     if (run.length >= 2) {
       var a = run[0], b = run[run.length - 1], far = 0;
       for (var j = 1; j < run.length; j++) far = Math.max(far, km(a[1], run[j][1]));
@@ -299,7 +411,7 @@ function pathTrips(segs, paths, c) {
         var inner = run.slice(1, -1), before = c.start.length, off = a[2];
         c.add(runMode(run), { ms: a[0], off: off }, { ms: b[0], off: b[2] != null ? b[2] : off }, pathKm(run.map(function (x) { return x[1]; })), 1 | GUESSED, a[1], b[1],
           inner.map(function (x) { return x[1]; }), inner.map(function (x) { return x[0]; }));
-        if (c.start.length > before) c.est[before] |= PATH_TRIP;
+        if (c.start.length > before) c.est[before] |= PATH_TRIP | (run.length < n0 ? JUMPS : 0);
       }
     }
     run = [];
@@ -984,4 +1096,4 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
+if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
