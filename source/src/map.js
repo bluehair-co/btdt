@@ -281,8 +281,9 @@ function tripRows(i) {
   if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? 'Strava calls this activity “' + esc(D.stype[i]) + '”, which BT;DT doesn\'t match to a transport type yet' : 'Strava gives this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
   else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed from the average speed.');
   if (e & RECORDS_GPS) notes.push('The line follows the GPS points from Records.json' + ((e & 3) === 1 ? ', and the distance is measured along them' + (D.orig[i] > 0 && Math.abs(D.orig[i] - k) > 0.05 * k ? ' (Timeline said ' + dist(D.orig[i]) + ').' : '.') : '.'));
+  else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT;DT measures the distance along the GPS trail instead.');
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT;DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');
-  if (e & JUMPS) notes.push('Some GPS points here jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip (a bad GPS fix), so the line and the distance leave them out' + (D.orig[i] > 0 && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting the jump).' : '.'));
+  if (e & JUMPS) notes.push('Some GPS points here were bad (a fix that jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip, an end at a stale position away from the stay next to it, or time parked counted as part of the trip), so the line, times and distance leave them out' + (D.orig[i] > k && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting them).' : '.'));
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
@@ -312,7 +313,7 @@ function openTrip(i, fromList) {
 // BT;DT keeps what it read from the files, not the files themselves, so this is that.
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
   [16, 'from Strava'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
-  [JUMPS, 'bad GPS jumps left out']];
+  [JUMPS, 'bad GPS points left out']];
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
   function ll(a, k) { return isFinite(a[2 * k]) ? [+a[2 * k].toFixed(6), +a[2 * k + 1].toFixed(6)] : null; }

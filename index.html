@@ -1206,12 +1206,110 @@ function cleanStops(R) {
   });
   return R;
 }
+// Timeline's trips often disagree with the stays on either side of them, and the stays are right:
+// - a trip's first or last point is a stale position (home, or where the car was earlier) km away
+//   from the stay it starts from or ends at, while the trail next to it is at the stay;
+// - a car trip starts long before it leaves (or ends long after it arrives): the time parked next
+//   to the stay is counted as driving, and its GPS jitter as distance;
+// - Timeline's distance is just the straight line between the trip's ends (0.1 km for a 7 km loop),
+//   or shorter than the straight line between where it really started and ended.
+// A stay counts as the trip's own when it ends (or starts) within 5 minutes of the trip.
+var STAY_GAP = 5 * 60000, PARKED_KM = 1, PARKED_MS = 10 * 60000;
+// Index of the point where the trail leaves for good: the first of two points in a row over
+// PARKED_KM from the stay (a single point out there is jitter). -1 if it never does.
+function leaves(pts, at) {
+  for (var i = 0; i + 1 < pts.length; i++) if (km(pts[i], at) > PARKED_KM && km(pts[i + 1], at) > PARKED_KM) return i;
+  return -1;
+}
+function cleanEnds(R) {
+  var n = R.start.length, nv = R.vs ? R.vs.length : 0, i, q, any = false, out = [];
+  if (!nv) return R;
+  var byEnd = [], byStart = [];
+  for (i = 0; i < nv; i++) if (isFinite(R.vll[2 * i])) { byEnd.push(i); byStart.push(i); }
+  byEnd.sort(function (a, b) { return R.ve[a] - R.ve[b]; });
+  byStart.sort(function (a, b) { return R.vs[a] - R.vs[b]; });
+  // The stay in idx (sorted by key) whose key is nearest to t, within STAY_GAP; -1 if none.
+  function near(idx, key, t) {
+    var lo = 0, hi = idx.length, best = -1, bd = STAY_GAP + 1;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (key[idx[mid]] < t) lo = mid + 1; else hi = mid; }
+    for (var j = Math.max(0, lo - 2); j < Math.min(idx.length, lo + 2); j++) {
+      var d = Math.abs(key[idx[j]] - t);
+      if (d < bd) { bd = d; best = idx[j]; }
+    }
+    return best;
+  }
+  function vll(v) { return [R.vll[2 * v], R.vll[2 * v + 1]]; }
+  function dayAt(ms, off) { return off === NO_OFF ? null : Math.floor((ms + off * 60000) / 864e5); }
+  for (i = 0; i < n; i++) {
+    out.push(null);
+    var o0 = R.pathOff[i], o1 = R.pathOff[i + 1], s = R.srcs ? R.srcs[i] : R.src, mode = MODES[R.mode[i]];
+    if (o1 - o0 < 3 || mode === 'FLYING' || s === SRC.strava || s === SRC.sim || R.est[i] & STRAVA) continue;
+    var P = near(byEnd, R.ve, R.start[i]), N = near(byStart, R.vs, R.end[i]);
+    var pts = [], t = [];
+    for (q = o0; q < o1; q++) { pts.push([R.pathPts[2 * q], R.pathPts[2 * q + 1]]); t.push(R.pathT[q]); }
+    var raw = pts.map(function (p) { return p.slice(); }), changed = false, last = pts.length - 1;
+    // Stale ends: over 1 km from the stay, while the next point is closer to the stay than to the end.
+    if (P >= 0 && km(pts[0], vll(P)) > PARKED_KM && km(pts[1], vll(P)) < km(pts[1], pts[0])) { pts[0] = vll(P); changed = true; }
+    if (N >= 0 && km(pts[last], vll(N)) > PARKED_KM && km(pts[last - 1], vll(N)) < km(pts[last - 1], pts[last])) { pts[last] = vll(N); changed = true; }
+    // Parked time at either end of a road trip.
+    var a = 0, b = last;
+    if (ROAD[mode]) {
+      var k = P >= 0 ? leaves(pts, vll(P)) : -1;
+      if (k > 1 && t[k - 1] - t[0] >= PARKED_MS / 1000) a = k - 1;
+      var rp = pts.slice().reverse();
+      k = N >= 0 ? leaves(rp, vll(N)) : -1;
+      if (k > 1 && t[last] - t[last - k + 1] >= PARKED_MS / 1000) b = last - k + 1;
+      if (b - a < 1) { a = 0; b = last; }
+    }
+    var e = R.est[i], was = R.km[i], dur = t[b] - t[a], t0 = t[a], gline = km(raw[0], raw[last]);
+    // Timeline's own distance: kept unless it is only the straight line between its ends, or shorter
+    // than the straight line between the real ends; then the trail measures it, if that is drivable.
+    var short = (e & 3) === 0 && (was <= 1.05 * gline + 0.05 || was < km(pts[a], pts[b]));
+    if (!changed && a === 0 && b === last && !(short && pathKm(pts) > was + 0.05)) continue;
+    pts = pts.slice(a, b + 1); t = t.slice(a, b + 1).map(function (x) { return x - t0; });
+    if (a > 0) {
+      R.start[i] += t0 * 1000;
+      var d0 = dayAt(R.start[i], R.off[i]); if (d0 != null) R.day[i] = d0;
+      R.ve[P] = R.start[i];
+    }
+    if (b < last) {
+      R.end[i] = R.start[i] + dur * 1000;
+      R.vs[N] = R.end[i];
+      var dv = dayAt(R.vs[N], R.voff[N]); if (dv != null) R.vday[N] = dv;
+    }
+    R.from[2 * i] = pts[0][0]; R.from[2 * i + 1] = pts[0][1];
+    R.to[2 * i] = pts[pts.length - 1][0]; R.to[2 * i + 1] = pts[pts.length - 1][1];
+    out[i] = { pts: pts, t: t }; any = true;
+    var clean = pathKm(pts), h = dur / 3600;
+    if ((e & 3) === 1) R.km[i] = clean;
+    else if ((e & 3) === 2) R.km[i] = Math.max(km(pts[0], pts[pts.length - 1]), 0.01);
+    if (changed || a > 0 || b < last) R.est[i] |= JUMPS;
+    if (short && clean > was && !(h > 0 && clean / h > jumpCap(mode))) {
+      if (!(R.orig[i] > 0)) R.orig[i] = was;
+      R.km[i] = clean; R.est[i] = (R.est[i] & ~3) | 1;
+    }
+  }
+  if (!any) return R;
+  var np = 0;
+  for (i = 0; i < n; i++) np += out[i] ? out[i].pts.length : R.pathOff[i + 1] - R.pathOff[i];
+  var PP = new Float32Array(2 * np), T = new Float32Array(np), O = new Uint32Array(n + 1), w = 0;
+  for (i = 0; i < n; i++) {
+    O[i] = w;
+    if (out[i]) for (q = 0; q < out[i].pts.length; q++, w++) { PP[2 * w] = out[i].pts[q][0]; PP[2 * w + 1] = out[i].pts[q][1]; T[w] = out[i].t[q]; }
+    else for (q = R.pathOff[i]; q < R.pathOff[i + 1]; q++, w++) { PP[2 * w] = R.pathPts[2 * q]; PP[2 * w + 1] = R.pathPts[2 * q + 1]; T[w] = R.pathT[q]; }
+  }
+  O[n] = w;
+  R.pathPts = PP; R.pathT = T; R.pathOff = O;
+  return R;
+}
 // Leaves bad GPS jumps out of the trips in R (the parsed or saved trips): first inside each trip's
-// line, then at trip ends and stays. Running it again changes nothing, so it runs on every load and
+// line, then at trip ends and stays, then where trips disagree with
+// the stays next to them. Running it again changes nothing, so it runs on every load and
 // picks up data saved before it existed.
 function cleanJumps(R) {
   cleanTrails(R);
   cleanStops(R);
+  cleanEnds(R);
   return R;
 }
 function addActivity(c, type, st, et, meters, a, b, pts, ptsT) {
@@ -3624,8 +3722,9 @@ function tripRows(i) {
   if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? 'Strava calls this activity “' + esc(D.stype[i]) + '”, which BT;DT doesn\'t match to a transport type yet' : 'Strava gives this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
   else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed from the average speed.');
   if (e & RECORDS_GPS) notes.push('The line follows the GPS points from Records.json' + ((e & 3) === 1 ? ', and the distance is measured along them' + (D.orig[i] > 0 && Math.abs(D.orig[i] - k) > 0.05 * k ? ' (Timeline said ' + dist(D.orig[i]) + ').' : '.') : '.'));
+  else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT;DT measures the distance along the GPS trail instead.');
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT;DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');
-  if (e & JUMPS) notes.push('Some GPS points here jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip (a bad GPS fix), so the line and the distance leave them out' + (D.orig[i] > 0 && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting the jump).' : '.'));
+  if (e & JUMPS) notes.push('Some GPS points here were bad (a fix that jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip, an end at a stale position away from the stay next to it, or time parked counted as part of the trip), so the line, times and distance leave them out' + (D.orig[i] > k && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting them).' : '.'));
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
@@ -3655,7 +3754,7 @@ function openTrip(i, fromList) {
 // BT;DT keeps what it read from the files, not the files themselves, so this is that.
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
   [16, 'from Strava'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
-  [JUMPS, 'bad GPS jumps left out']];
+  [JUMPS, 'bad GPS points left out']];
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
   function ll(a, k) { return isFinite(a[2 * k]) ? [+a[2 * k].toFixed(6), +a[2 * k + 1].toFixed(6)] : null; }
