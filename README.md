@@ -7,3 +7,4 @@ Live app: https://bluehair-co.github.io/btdt/
 - The files at the top of this repository are the published app (`index.html`, the manifest, service worker and icons).
 - `source/` holds the source and the build script; `python3 source/build.py` rebuilds into `source/dist/`.
 - Bad GPS jumps (a stray fix kilometres off the route, or a stale home position) are left out of trips when the app opens; see *Bad GPS jumps* in `source/README.md`.
+- Trips that disagree with the stays next to them (a stale start or end, time parked counted as driving, or a distance that is only the straight line) are fixed too; see *Trips that disagree with their stays* in `source/README.md`.
