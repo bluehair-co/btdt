@@ -104,12 +104,14 @@ function guessMode(dist, hours) {
   var v = dist / hours;
   if (v < 7) return 'WALKING';
   if (v < 25) return 'CYCLING';
+  // Up to 300 km/h a car is likelier than a plane, though no car goes that fast: such a trip is a GPS
+  // jump, which cleanJumps looks at (it would leave a flight alone).
   if (v < 300) return 'CAR';
   return 'FLYING';
 }
 // Fastest believable average speed per mode (km/h). Timeline sometimes stores an
 // absurd distance on a typed trip (e.g. 5,843 km for a car hop across Amsterdam).
-var MAX_KMH = { WALKING: 15, RUNNING: 25, CYCLING: 50, CAR: 200, TAXI: 200, VEHICLE: 200, MOTORCYCLE: 200, BUS: 150, TRAIN: 350,
+var MAX_KMH = { WALKING: 15, RUNNING: 25, CYCLING: 50, CAR: 160, TAXI: 160, VEHICLE: 160, MOTORCYCLE: 160, BUS: 150, TRAIN: 350,
   TRAM: 100, SUBWAY: 120, FERRY: 80, BOAT: 80, CABLE: 60, SKIING: 120, OTHER: 60, FLYING: 1100 };
 var FIXED = 8, NO_OFF = 32767;
 Collector.prototype.add = function (mode, st, et, dist, est, a, b, pts, ptsT) {
@@ -238,7 +240,7 @@ function jumpKeep(pts, t, cap) {
     if (d < 5 && Math.abs(t[q] - t[p]) < 60) return 0;
     if (km(pts[p], pts[o]) < 0.1) {
       var q2 = keep[j ? 1 : n - 2], r2 = keep[j ? 2 : n - 3];
-      return n >= 5 && v(o, q2) > endCap && v(q2, r2) <= cap ? 2 : 0;
+      return n >= 5 && v(o, q2) > endCap && v(q2, r2) <= cap && (km(pts[o], pts[q2]) >= 5 || Math.abs(t[q2] - t[o]) >= 60) ? 2 : 0;
     }
     var h = Math.abs(t[o] - t[p]) / 3600;
     return !(h > 0) || km(pts[p], pts[o]) / h > cap || repeats(p) ? 1 : 0;
@@ -267,7 +269,9 @@ function jumpKeep(pts, t, cap) {
 }
 // Trips that lost bad GPS jumps, marked with the JUMPS bit in est.
 var JUMPS = 128;
-function jumpCap(mode) { return 1.5 * (MAX_KMH[mode] || 200); }
+// Single legs may beat a mode's average by half, except on the road, where nothing beats 160 km/h.
+var ROAD = { CAR: 1, TAXI: 1, VEHICLE: 1, MOTORCYCLE: 1, BUS: 1 };
+function jumpCap(mode) { return ROAD[mode] ? MAX_KMH.CAR : 1.5 * (MAX_KMH[mode] || 200); }
 // Leaves bad GPS jumps out of every trip's line in R and fixes the distance they inflated (see jumpKm).
 // Strava, simulated trips and flights are left as they are.
 function cleanTrails(R) {
