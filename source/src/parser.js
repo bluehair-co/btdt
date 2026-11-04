@@ -104,12 +104,14 @@ function guessMode(dist, hours) {
   var v = dist / hours;
   if (v < 7) return 'WALKING';
   if (v < 25) return 'CYCLING';
+  // Up to 300 km/h a car is likelier than a plane, though no car goes that fast: such a trip is a GPS
+  // jump, which cleanJumps looks at (it would leave a flight alone).
   if (v < 300) return 'CAR';
   return 'FLYING';
 }
 // Fastest believable average speed per mode (km/h). Timeline sometimes stores an
 // absurd distance on a typed trip (e.g. 5,843 km for a car hop across Amsterdam).
-var MAX_KMH = { WALKING: 15, RUNNING: 25, CYCLING: 50, CAR: 200, TAXI: 200, VEHICLE: 200, MOTORCYCLE: 200, BUS: 150, TRAIN: 350,
+var MAX_KMH = { WALKING: 15, RUNNING: 25, CYCLING: 50, CAR: 160, TAXI: 160, VEHICLE: 160, MOTORCYCLE: 160, BUS: 150, TRAIN: 350,
   TRAM: 100, SUBWAY: 120, FERRY: 80, BOAT: 80, CABLE: 60, SKIING: 120, OTHER: 60, FLYING: 1100 };
 var FIXED = 8, NO_OFF = 32767;
 Collector.prototype.add = function (mode, st, et, dist, est, a, b, pts, ptsT) {
@@ -238,7 +240,7 @@ function jumpKeep(pts, t, cap) {
     if (d < 5 && Math.abs(t[q] - t[p]) < 60) return 0;
     if (km(pts[p], pts[o]) < 0.1) {
       var q2 = keep[j ? 1 : n - 2], r2 = keep[j ? 2 : n - 3];
-      return n >= 5 && v(o, q2) > endCap && v(q2, r2) <= cap ? 2 : 0;
+      return n >= 5 && v(o, q2) > endCap && v(q2, r2) <= cap && (km(pts[o], pts[q2]) >= 5 || Math.abs(t[q2] - t[o]) >= 60) ? 2 : 0;
     }
     var h = Math.abs(t[o] - t[p]) / 3600;
     return !(h > 0) || km(pts[p], pts[o]) / h > cap || repeats(p) ? 1 : 0;
@@ -267,7 +269,9 @@ function jumpKeep(pts, t, cap) {
 }
 // Trips that lost bad GPS jumps, marked with the JUMPS bit in est.
 var JUMPS = 128;
-function jumpCap(mode) { return 1.5 * (MAX_KMH[mode] || 200); }
+// Single legs may beat a mode's average by half, except on the road, where nothing beats 160 km/h.
+var ROAD = { CAR: 1, TAXI: 1, VEHICLE: 1, MOTORCYCLE: 1, BUS: 1 };
+function jumpCap(mode) { return ROAD[mode] ? MAX_KMH.CAR : 1.5 * (MAX_KMH[mode] || 200); }
 // Leaves bad GPS jumps out of every trip's line in R and fixes the distance they inflated (see jumpKm).
 // Strava, simulated trips and flights are left as they are.
 function cleanTrails(R) {
@@ -313,14 +317,19 @@ function jumpKm(R, i, raw, clean, ends, first, last) {
     R.km[i] = d;
   }
   R.est[i] = e | JUMPS;
+  // A type guessed from the speed is guessed again from the speed it really had.
+  if (e & GUESSED && !(e & (PATH_TRIP | STRAVA)) && Math.abs(R.km[i] - was) > 0.001) {
+    var g = guessMode(R.km[i], (R.end[i] - R.start[i]) / 36e5);
+    if (g && g !== 'FLYING') R.mode[i] = MODE_IDX[g];
+  }
 }
 // A trip's end or a whole stay can sit at a bad position too (a stray fix, or a place Timeline matched
 // wrongly), which no trail shows when the trip has only its two ends: a 3-minute walk from home to
 // 34 km away. Every trip end and stay, in time order, is a track of where you were, and ends and stays
 // in a row within 1 km of each other are one stop. A stop is a bad position when it holds one end of a
-// trip with no line of its own, lasted under 6 hours with no flight within a day, is at least 5 km from
-// the stops on both sides while those are close together (the track goes out and straight back), and
-// the track reaches or leaves it faster than anything on the ground (STOP_KMH). Its trip ends and
+// trip with no line of its own, lasted under 6 hours, is at least 5 km from the stops on both sides
+// while those are close together (the track goes out and straight back), and the track reaches or
+// leaves it faster than anything on the ground (STOP_KMH; within a day of a flight, faster than a plane). Its trip ends and
 // stays move to the stop next to it in time, and those trips' lines and distances follow (see jumpKm).
 var STOP_KMH = 300;
 function cleanStops(R) {
@@ -373,10 +382,13 @@ function cleanStops(R) {
   }
   function score(c) {
     var p = prev[c], q = next[c];
-    if (p < 0 || q < 0 || !S[c].two || S[c].t2 - S[c].t1 > 6 * 36e5 || flying(S[c].t1 - 864e5, S[c].t2 + 864e5)) return 0;
+    if (p < 0 || q < 0 || !S[c].two || S[c].t2 - S[c].t1 > 6 * 36e5) return 0;
     var din = km(S[p].ll, S[c].ll), dout = km(S[c].ll, S[q].ll), dd = km(S[p].ll, S[q].ll);
     if (din < 5 || dout < 5 || dd > 0.2 * Math.min(din, dout)) return 0;
-    return Math.max(speed(p, c), speed(c, q)) > STOP_KMH ? din + dout - dd : 0;
+    // Within a day of a flight, a layover Timeline missed a flight for is fast but real: there it takes
+    // a jump faster than a plane.
+    var cap = flying(S[c].t1 - 864e5, S[c].t2 + 864e5) ? MAX_KMH.FLYING : STOP_KMH;
+    return Math.max(speed(p, c), speed(c, q)) > cap ? din + dout - dd : 0;
   }
   // One pass, taking out each stop that scores higher than both its neighbours: a bad position is a
   // single stop, and going on from the stops left would start moving real ones.
