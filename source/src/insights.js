@@ -880,6 +880,7 @@ function placePage(o) {
     (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
     mapsLink(top.lat, top.lng, top.pid) + (o.town != null ? '<button type="button" class="btn" data-ptown="' + o.town + '">' + icon('pin') + 'All of ' + esc(placeLabel(o.town)) + '</button>' : '') + '</div>';
+  setPinOn(spots.map(function (x) { return x.key; }));
   $('tripSheetTitle').textContent = 'Place';
   $('tripBack').hidden = true;
   $('tripBody').innerHTML = html;
