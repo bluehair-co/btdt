@@ -741,9 +741,10 @@ function placeStays(lbl) {
   return out;
 }
 // The spot a stay is at: Google's place ID, or the 300 m place when the stay has none.
-// Stays Timeline tagged as home are one spot per 300 m place, whatever IDs Google gave them.
+// Stays Timeline tagged as home (or work) are one spot per 300 m place, whatever IDs Google gave them.
 function spotKey(v) {
   if (D.vtype[v] === 1 && D.pv[v] >= 0) return 'home' + D.pv[v];
+  if (D.vtype[v] === 2 && D.pv[v] >= 0) return 'work' + D.pv[v];
   var pid = D.vpid && D.vpid[v]; return pid ? 'id:' + pid : 'p' + D.pv[v];
 }
 function spotStays(key) {
@@ -768,6 +769,16 @@ function homeSpot() {
   D.homeSpot = best;
   return best;
 }
+// Work is the work-tagged spot where you spent most time; other work-tagged spots (an earlier
+// job, a second office) are "Work in" their town.
+function workSpot() {
+  if (D.workSpot !== undefined) return D.workSpot;
+  var t = {}, best = null, bh = 0, k;
+  for (var v = 0; v < D.vs.length; v++) if (D.vtype[v] === 2 && D.pv[v] >= 0) { k = spotKey(v); t[k] = (t[k] || 0) + D.ve[v] - D.vs[v]; }
+  for (k in t) if (t[k] > bh) { bh = t[k]; best = k; }
+  D.workSpot = best;
+  return best;
+}
 // Spots among the stays vs, most time first.
 function spotsOf(vs) {
   var by = {}, order = [];
@@ -790,7 +801,7 @@ function spotName(s, k) {
   if (s.home) return 'Home';
   if (s.nearHome) return 'Near home';
   if (s.type === 1) return 'Home in ' + placeLabel(s.p);
-  if (s.type === 2) return 'Work';
+  if (s.type === 2) return s.key === workSpot() ? 'Work' : 'Work in ' + placeLabel(s.p);
   return k != null ? 'Spot ' + (k + 1) : 'Spot in ' + placeLabel(s.p);
 }
 // Time spent there by weekday and hour, local time, as minutes per cell.
