@@ -563,6 +563,87 @@ function badPoint(ms, ll) {
   }
   return null;
 }
+// Timeline keeps a stay as a place and that place's location today, not where it was when you were
+// there: when a business moves, every old stay there moves with it (years of office days showing up
+// across town), along with the ends of the trips to and from them. The GPS points recorded during a
+// stay say where you really were. A stay's GPS spot is the middle of its points when none of them is
+// within MOVED_KM of the place and most are within 500 m of that middle; a stay with no points of its
+// own uses the last point before it and the first after it (each within 10 minutes, within 500 m of
+// each other). A place is moved when at least 3 of its stays have a GPS spot over MOVED_KM from it and
+// within 500 m of the middle of those spots: those stays take that middle, and the trips ending or
+// starting within 10 minutes of them at the place's location follow. Stays whose GPS agrees with the
+// place (such as later visits to the new building) are left alone, as is a place that is off only once.
+// V: [{st, et, ll, pid}] (ms); paths: [[ms, ll], …] by time. Sets fix on the moved stays.
+var MOVED_KM = 2;
+function movedPlaces(V, paths) {
+  function mid(L) {
+    var a = L.map(function (x) { return x[0]; }).sort(function (x, y) { return x - y; }), b = L.map(function (x) { return x[1]; }).sort(function (x, y) { return x - y; });
+    return [a[a.length >> 1], b[b.length >> 1]];
+  }
+  function at(ms) {
+    var lo = 0, hi = paths.length;
+    while (lo < hi) { var m = (lo + hi) >> 1; if (paths[m][0] < ms) lo = m + 1; else hi = m; }
+    return lo;
+  }
+  function spot(v) {
+    var i = at(v.st), pts = [], k;
+    for (k = i; k < paths.length && paths[k][0] <= v.et; k++) pts.push(paths[k][1]);
+    if (pts.length) {
+      for (k = 0; k < pts.length; k++) if (km(pts[k], v.ll) <= MOVED_KM) return null;
+      var g = mid(pts), n = 0;
+      for (k = 0; k < pts.length; k++) if (km(pts[k], g) < 0.5) n++;
+      return 2 * n >= pts.length && km(g, v.ll) > MOVED_KM ? g : null;
+    }
+    var p = paths[i - 1], q = paths[i];
+    if (!p || !q || v.st - p[0] > 6e5 || q[0] - v.et > 6e5 || km(p[1], q[1]) > 0.5) return null;
+    return km(p[1], v.ll) > MOVED_KM && km(q[1], v.ll) > MOVED_KM ? [(p[1][0] + q[1][0]) / 2, (p[1][1] + q[1][1]) / 2] : null;
+  }
+  var by = {};
+  V.forEach(function (v) {
+    var g = v.ll && v.et > v.st && spot(v);
+    if (g) (by[v.pid || v.ll.join()] = by[v.pid || v.ll.join()] || []).push({ v: v, g: g });
+  });
+  Object.keys(by).forEach(function (k) {
+    var L = by[k];
+    if (L.length < 3) return;
+    var c = mid(L.map(function (x) { return x.g; })), near = L.filter(function (x) { return km(x.g, c) < 0.5; });
+    if (near.length >= 3) near.forEach(function (x) { x.v.fix = c; });
+  });
+}
+// The stays among Timeline's segments (or iOS items), in order: {st, et, ll, type, pid}.
+function visitsOf(segs) {
+  var V = [];
+  for (var i = 0; i < segs.length; i++) {
+    var s = segs[i];
+    if (!s || !s.visit) continue;
+    var tc = s.visit.topCandidate || {}, st = parseTime(s.startTime), et = parseTime(s.endTime);
+    V.push({ st: st ? st.ms : NaN, et: et ? et.ms : NaN, ll: parseLL(tc.placeLocation), type: tc.semanticType, pid: tc.placeId || tc.placeID });
+  }
+  return V;
+}
+// The fixed stays among V, and a lookup for a trip end at time ms and position ll: the fix of a moved
+// stay that starts (end 1) or ends (end 0) within 10 minutes of it at the place's location, else null.
+function movedEnds(V) {
+  var F = V.filter(function (v) { return v.fix; });
+  return function (ms, ll, end) {
+    if (!ll) return null;
+    for (var i = 0; i < F.length; i++) {
+      var v = F[i];
+      if (Math.abs((end ? v.st : v.et) - ms) <= 6e5 && km(ll, v.ll) < 0.2) return v.fix;
+    }
+    return null;
+  };
+}
+// Adds a trip from Timeline, with its ends moved off a moved place (see movedPlaces); its distance is
+// then measured along its trail between the new ends.
+function addMoved(c, moved, type, st, et, meters, a, b, pts, ts) {
+  var a2 = st && moved(st.ms, a, 0), b2 = et && moved(et.ms, b, 1), n = c.start.length;
+  if (a2) a = a2;
+  if (b2) b = b2;
+  if (a2 || b2) meters = pathKm([a].concat(pts || [], [b])) * 1000;
+  addActivity(c, type, st, et, meters, a, b, pts, ts);
+  if ((a2 || b2) && c.start.length > n) c.est[n] |= JUMPS;
+}
 function parseAndroid(o, c) {
   var segs = o.semanticSegments || [], i, s, paths = [];
   // Path points are stored in separate segments; index them by time so trips without a distance can use them.
@@ -574,19 +655,22 @@ function parseAndroid(o, c) {
     }
   }
   paths.sort(function (x, y) { return x[0] - y[0]; });
+  var V = visitsOf(segs), vi = 0;
+  movedPlaces(V, paths);
+  var moved = movedEnds(V);
   for (i = 0; i < segs.length; i++) {
     s = segs[i];
     var st = parseTime(s.startTime), et = parseTime(s.endTime);
     if (s.visit) {
-      var tc = s.visit.topCandidate || {};
-      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '', tc.placeId || tc.placeID);
+      var v = V[vi++];
+      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid);
     }
     if (!s.activity) continue;
     var a = s.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
     var aLL = parseLL(a.start), bLL = parseLL(a.end), meters = a.distanceMeters, bad;
     if (st && (bad = badPoint(st.ms, aLL))) { aLL = bad.fix; meters = km(aLL, bLL) * 1000; }
     if (et && (bad = badPoint(et.ms, bLL))) { bLL = bad.fix; meters = km(aLL, bLL) * 1000; }
-    addActivity(c, a.topCandidate && a.topCandidate.type, st, et, meters, aLL, bLL, p.pts, p.ts);
+    addMoved(c, moved, a.topCandidate && a.topCandidate.type, st, et, meters, aLL, bLL, p.pts, p.ts);
   }
   pathTrips(segs, paths, c);
 }
@@ -669,17 +753,20 @@ function parseIos(arr, c) {
     }
   }
   paths.sort(function (x, y) { return x[0] - y[0]; });
+  var V = visitsOf(arr), vi = 0;
+  movedPlaces(V, paths);
+  var moved = movedEnds(V);
   for (i = 0; i < arr.length; i++) {
     it = arr[i];
     if (!it) continue;
     var st = parseTime(it.startTime), et = parseTime(it.endTime);
     if (it.visit) {
-      var tc = it.visit.topCandidate || {};
-      c.visit(st, et, parseLL(tc.placeLocation), tc.semanticType, '', tc.placeId || tc.placeID);
+      var v = V[vi++];
+      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid);
     }
     if (!it.activity) continue;
     var a = it.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
-    addActivity(c, a.topCandidate && a.topCandidate.type, st, et, a.distanceMeters, parseLL(a.start), parseLL(a.end), p.pts, p.ts);
+    addMoved(c, moved, a.topCandidate && a.topCandidate.type, st, et, a.distanceMeters, parseLL(a.start), parseLL(a.end), p.pts, p.ts);
   }
 }
 
