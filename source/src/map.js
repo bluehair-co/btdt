@@ -162,7 +162,20 @@ function layerToggles() {
 // A pin on each spot (see spotKey) you stayed at in the filters and have stayed at at least
 // PIN_MIN times over your whole history, so one-off stops don't crowd the map. Tapping one
 // opens its place page.
-var PIN_MIN = 3, PIN_MAX = 400;
+var PIN_MIN = 3, PIN_MAX = 400, pinOn = {}, pinKeys = [];
+// The pins of the place page that's open stand out (red, larger, in front); the rest fade.
+function setPinOn(keys) {
+  pinKeys = keys || [];
+  pinOn = {}; pinKeys.forEach(function (k) { pinOn[k] = 1; });
+  if (!pinLayer) return;
+  var any = pinKeys.length > 0;
+  pinLayer.eachLayer(function (m) {
+    var on = !!pinOn[m._key], el = m.getElement && m.getElement();
+    m.setZIndexOffset(on ? 2000 : 0);
+    m.setOpacity(any && !on ? 0.55 : 1);
+    if (el && el.firstChild) el.firstChild.classList.toggle('on', on);
+  });
+}
 function buildPins() {
   pinLayer.clearLayers();
   pinLayer._ver = selVer(); pinLayer._d = D;
@@ -178,9 +191,12 @@ function buildPins() {
       icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
       title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true
     });
+    m._key = s.key;
     m.on('click', function (e) { if (e.originalEvent) L.DomEvent.stop(e.originalEvent); openSpot(s.key); });
+    m.on('add', function () { var el = m.getElement(); if (el && el.firstChild) el.firstChild.classList.toggle('on', !!pinOn[s.key]); });
     pinLayer.addLayer(m);
   });
+  setPinOn(pinKeys);
 }
 function ccVer() { return selVer() + '|' + ccReach().key; }
 function selVer() { return sel.length + ':' + (sel[0] || 0) + ':' + (sel[sel.length - 1] || 0) + ':' + selV.length; }
@@ -320,6 +336,7 @@ function tripHead(i, sub) {
   return '<div class="trip-head">' + badge(m, false, D.est[i] & 16) + '<div><h3>' + tripLabel(i) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
 }
 function openTrip(i, fromList) {
+  setPinOn([]);
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) +
@@ -463,6 +480,7 @@ function runExport(fn) {
 $('exportJson').addEventListener('click', function () { runExport(exportJson); });
 $('exportCsv').addEventListener('click', function () { runExport(exportCsv); });
 function openList(list) {
+  setPinOn([]);
   listBack = list;
   $('tripSheetTitle').textContent = fmt(list.length) + ' trips here';
   $('tripBack').hidden = true;

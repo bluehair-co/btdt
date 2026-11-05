@@ -416,4 +416,6 @@ div.hit-row { cursor: default; }
 div.hit-row:hover { background: none; }
 .pin-ic { display: flex; align-items: center; justify-content: center; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--m-other); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
 .pin-ic.home { background: var(--accent); }
+.pin-ic { transition: transform .15s; }
+.pin-ic.on { background: var(--dot); transform: rotate(-45deg) scale(1.35); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 35%, transparent), 0 2px 8px rgba(0,0,0,.4); }
 .pin-ic svg { transform: rotate(45deg); width: 60%; height: 60%; fill: #fff; }

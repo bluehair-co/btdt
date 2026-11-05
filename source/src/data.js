@@ -433,7 +433,7 @@ function closeSheets(quiet) {
   $('scrim').hidden = true;
   $('filtersBtn').setAttribute('aria-expanded', 'false');
   $('layersBtn').setAttribute('aria-expanded', 'false');
-  if (was === 'tripSheet') highlight(null);
+  if (was === 'tripSheet') { highlight(null); setPinOn([]); }
 }
 function toggleSheet(id) { if (openId === id) closeSheets(); else openSheet(id); }
 $('filtersBtn').addEventListener('click', function () { toggleSheet('filtersSheet'); });
