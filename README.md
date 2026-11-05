@@ -8,3 +8,4 @@ Live app: https://bluehair-co.github.io/btdt/
 - `source/` holds the source and the build script; `python3 source/build.py` rebuilds into `source/dist/`.
 - Bad GPS jumps (a stray fix kilometres off the route, or a stale home position) are left out of trips when the app opens; see *Bad GPS jumps* in `source/README.md`.
 - Trips that disagree with the stays next to them (a stale start or end, time parked counted as driving, or a distance that is only the straight line) are fixed too; see *Trips that disagree with their stays* in `source/README.md`.
+- Stays Google moved to a place's new location (an office that relocated after you left) are put back where their GPS points say you were; see *Places Google moved* in `source/README.md`. Load Timeline.json again to apply it.
