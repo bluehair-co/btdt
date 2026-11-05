@@ -336,7 +336,7 @@ function tripHead(i, sub) {
   return '<div class="trip-head">' + badge(m, false, D.est[i] & 16) + '<div><h3>' + tripLabel(i) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
 }
 function openTrip(i, fromList) {
-  setPinOn([]);
+  setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) +
@@ -480,7 +480,7 @@ function runExport(fn) {
 $('exportJson').addEventListener('click', function () { runExport(exportJson); });
 $('exportCsv').addEventListener('click', function () { runExport(exportCsv); });
 function openList(list) {
-  setPinOn([]);
+  setPinOn([]); placeLast = null;
   listBack = list;
   $('tripSheetTitle').textContent = fmt(list.length) + ' trips here';
   $('tripBack').hidden = true;

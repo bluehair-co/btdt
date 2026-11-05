@@ -839,8 +839,29 @@ function visitRow(v) {
 }
 var placeVisits = [];
 // One page for a town (every spot with that name, listed) or a single spot.
-function placePage(o) {
-  var vs = o.vs, n = vs.length, h = 0, fv = vs[0], lv = vs[0], durs = [];
+// The page covers your whole history, or only the visits that pass the filters (remembered).
+var placeLast = null;
+function scopeSeg(nAll, nF) {
+  var f = PREFS.placeScope === 'filters';
+  return '<div class="seg full" role="group" aria-label="Visits counted" id="placeScope" style="margin-top:12px">' +
+    '<button type="button" data-pscope="all" aria-pressed="' + !f + '">All history · ' + fmt(nAll) + '</button>' +
+    '<button type="button" data-pscope="filters" aria-pressed="' + f + '">These filters · ' + fmt(nF) + '</button></div>';
+}
+function placePage(o, keepScroll) {
+  placeLast = o;
+  setPinOn(spotsOf(o.vs).map(function (x) { return x.key; }));
+  var inSel = {}, j;
+  for (j = 0; j < selV.length; j++) inSel[selV[j]] = 1;
+  var inF = o.vs.filter(function (v) { return inSel[v]; }), scoped = PREFS.placeScope === 'filters';
+  var seg = scopeSeg(o.vs.length, inF.length), scopeTxt = scoped ? esc(filterText()) : 'all your history';
+  if (scoped && !inF.length) {
+    var s0 = spotsOf(o.vs)[0], c0 = countryAt(s0.lat, s0.lng);
+    showPlaceHtml('<div class="trip-head"><span class="mode-badge" style="background:' + (o.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(o.home ? 'home' : 'pin') + '</span><div><h3>' + esc(o.title) + '</h3><p>' +
+      esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + seg +
+      '<p class="empty" style="margin-top:14px">No visits here in ' + scopeTxt + '. Change the filters or choose All history.</p>', keepScroll);
+    return;
+  }
+  var vs = scoped ? inF : o.vs, n = vs.length, h = 0, fv = vs[0], lv = vs[0], durs = [];
   var byDow = [0, 0, 0, 0, 0, 0, 0], byHour = new Array(24).fill(0);
   vs.forEach(function (v) {
     var dur = D.ve[v] - D.vs[v];
@@ -854,13 +875,14 @@ function placePage(o) {
   var spots = spotsOf(vs), top = spots[0], cc = countryAt(top.lat, top.lng);
   var bd = DOW_ORDER.reduce(function (b, d) { return byDow[d] > byDow[b] ? d : b; }, DOW_ORDER[0]);
   var bh = byHour.reduce(function (b, x, k) { return x > byHour[b] ? k : b; }, 0);
-  // How often: visits per month over the months from the first visit to the last.
-  var months = Math.max(1, (D.vs[lv] - D.vs[fv]) / (30.44 * 864e5)), often = n / months;
-  var oftenTxt = n < 2 ? 'Once' : often >= 4.3 ? fmt(Math.round(often / 4.35 * 10) / 10) + ' a week' : often >= 1 ? fmt(Math.round(often * 10) / 10) + ' a month' : 'Every ' + fmt(Math.round(1 / often)) + ' months';
+  // How often: visits per week or month over the time from the first visit to the last
+  // (at least a week, so a few visits in a short span don't read as a monthly habit).
+  var weeks = Math.max(1, (D.vday[lv] - D.vday[fv] + 1) / 7), perWeek = n / weeks, perMonth = perWeek * 4.35;
+  var oftenTxt = n < 2 ? 'Once' : perWeek >= 1 ? fmt(Math.round(perWeek * 10) / 10) + ' a week' : perMonth >= 1 ? fmt(Math.round(perMonth * 10) / 10) + ' a month' : 'Every ' + fmt(Math.round(1 / perMonth)) + ' months';
   var withIds = spots.filter(function (s) { return s.pid; }).length;
   placeVisits = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; });
   var html = '<div class="trip-head"><span class="mode-badge" style="background:' + (o.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(o.home ? 'home' : 'pin') + '</span><div><h3>' + esc(o.title) + '</h3><p>' +
-    esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · all your history</p></div></div>' +
+    esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + seg +
     '<dl class="kv" style="margin-top:12px">' + [
       ['Visits', fmt(n)], ['How often', oftenTxt],
       ['Time there', hoursLabel(h).replace(/ \d+ min$/, '')], ['Average stay', hoursLabel(h / n)],
@@ -880,13 +902,18 @@ function placePage(o) {
     (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
     mapsLink(top.lat, top.lng, top.pid) + (o.town != null ? '<button type="button" class="btn" data-ptown="' + o.town + '">' + icon('pin') + 'All of ' + esc(placeLabel(o.town)) + '</button>' : '') + '</div>';
-  setPinOn(spots.map(function (x) { return x.key; }));
+  showPlaceHtml(html, keepScroll);
+}
+function showPlaceHtml(html, keepScroll) {
+  var top = $('tripBody').scrollTop;
   $('tripSheetTitle').textContent = 'Place';
   $('tripBack').hidden = true;
   $('tripBody').innerHTML = html;
   openSheet('tripSheet');
-  $('tripBody').scrollTop = 0;
+  $('tripBody').scrollTop = keepScroll ? top : 0;
 }
+// The filters changed while a place page is open: follow them.
+function refreshPlace() { if (placeLast && openId === 'tripSheet') placePage(placeLast, true); }
 // A place in the Places list: everything with its name.
 function openPlace(p) {
   needPlaces(); findHome();
@@ -912,8 +939,9 @@ function showPlaceOnMap(lat, lng) {
   if (map) map.setView([lat, lng], 16);
 }
 $('tripBody').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-pmap],[data-spot],[data-ptown],[data-pall]');
+  var b = ev.target.closest('[data-pmap],[data-spot],[data-ptown],[data-pall],[data-pscope]');
   if (!b) return;
+  if (b.dataset.pscope) { PREFS.placeScope = b.dataset.pscope; savePrefs(); placePage(placeLast, true); return; }
   if (b.dataset.spot) { openSpot(b.dataset.spot); return; }
   if (b.dataset.ptown) { openPlace(+b.dataset.ptown); return; }
   if (b.hasAttribute('data-pall')) { $('placeVisits').innerHTML = placeVisits.map(visitRow).join(''); b.remove(); return; }
