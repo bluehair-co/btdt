@@ -4068,16 +4068,47 @@ function scrubTo(v) {
       posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map);
     }
     else if (map.hasLayer(posMarker)) map.removeLayer(posMarker);
-    if (playing && P_pos && PREFS.proj === 'merc') {
-      var cp = map.latLngToContainerPoint(P_pos), sz = map.getSize();
-      if (cp.x < sz.x * 0.15 || cp.x > sz.x * 0.85 || cp.y < sz.y * 0.2 || cp.y > sz.y * 0.75) map.panTo(P_pos, { animate: true, duration: 0.6 });
-    }
+    if (playing && P_pos && PREFS.proj === 'merc') followPlay();
   }
   if (map && PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.proj !== 'merc' && P && P.proj) paintProj(playing);
   scrubLabel();
 }
 var P_pos = null, P_cur = null, prevCur = null;
+// During playback the map follows the trip under way: when a trip starts, the map glides
+// (zooming out and back in as needed) so that trip's whole route is on screen, clear of
+// the top bar, the legend and the dock. Between trips it only pans to keep the dot in view.
+var playFit = { i: null, until: 0 };
+function playPad() {
+  var m = $('map').getBoundingClientRect(), tb = $('topbar').getBoundingClientRect(), dk = document.querySelector('.dock'), lg = $('mapLegend');
+  var floor = lg && !lg.hidden && lg.offsetHeight ? lg.getBoundingClientRect().top : dk ? dk.getBoundingClientRect().top : m.bottom;
+  var side = wide() ? 60 : 28;
+  return { tl: L.point(side, Math.max(24, tb.bottom - m.top + 20)), br: L.point(side + 40, Math.max(24, m.bottom - floor + 20)) };
+}
+function followPlay() {
+  var now = performance.now(), pad = playPad();
+  if (P_cur && P_cur.i !== playFit.i) {
+    playFit.i = P_cur.i;
+    var pts = tripPath(P_cur.i).filter(function (q) { return isFinite(q[0]) && isFinite(q[1]); });
+    if (pts.length) {
+      var b = L.latLngBounds(pts), z = Math.min(16, map.getBoundsZoom(b, false, pad.tl.add(pad.br)));
+      var view = L.latLngBounds(map.containerPointToLatLng(pad.tl), map.containerPointToLatLng(map.getSize().subtract(pad.br)));
+      // Already in view at the zoom it would get: leave the map be rather than nudge it.
+      if (!(view.contains(b) && Math.abs(map.getZoom() - z) < 0.5)) {
+        var dur = Math.max(0.5, Math.min(1.4, 1.4 / Math.sqrt(PREFS.speed || 1)));
+        map.flyToBounds(b, { paddingTopLeft: pad.tl, paddingBottomRight: pad.br, maxZoom: 16, duration: dur, easeLinearity: 0.2 });
+        playFit.until = now + dur * 1000 + 100;
+        return;
+      }
+    }
+  }
+  if (now < playFit.until) return;
+  var cp = map.latLngToContainerPoint(P_pos), sz = map.getSize();
+  if (cp.x < pad.tl.x || cp.y < pad.tl.y || cp.x > sz.x - pad.br.x || cp.y > sz.y - pad.br.y) {
+    map.panTo(P_pos, { animate: true, duration: 0.6 });
+    playFit.until = now + 700;
+  }
+}
 // The position marker: while a trip is under way it shows that trip's transport icon in
 // its colour; between trips (standing still) it is a plain grey dot.
 function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
@@ -4123,7 +4154,7 @@ function warpMap(from, to, x) {
 }
 function play() {
   if (scrubV >= 1000) scrubTo(0);
-  playing = true;
+  playing = true; playFit.i = null; playFit.until = 0;
   $('playBtn').innerHTML = icon('pause'); $('playBtn').setAttribute('aria-label', 'Pause');
   var W = playWarp(), u = warpMap(W.real, W.virt, scrubTime()), last = performance.now();
   (function frame(now) {
