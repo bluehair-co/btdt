@@ -1,5 +1,5 @@
 // ---------- trips on the map ----------
-var map = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
+var map = null, pinLayer = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
 var hits = [], lines = [], groupLines = [], many = false, mapBounds = [], fitKey = null, hovered = [];
 var visibleB = 0;   // trips sel[0 .. visibleB-1] are drawn; the time slider lowers it
 var HIT_PX = coarse ? 12 : 7, LINE_W = 2.5, LINE_OP = 0.55;
@@ -74,6 +74,7 @@ function initMap() {
   renderer = L.canvas({ padding: 0.4, tolerance: 0 });
   pathLayer = L.layerGroup();
   ccLayer = L.layerGroup();
+  pinLayer = L.layerGroup();
   hlLayer = L.layerGroup().addTo(map);
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
@@ -150,11 +151,36 @@ function buildGroups(limit) {
   });
 }
 function layerToggles() {
-  [[pathLayer, PREFS.paths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat]].forEach(function (x) {
+  [[pathLayer, PREFS.paths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);
   });
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
+  if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
+}
+// ---------- pins on regular places ----------
+// A pin on each spot (see spotKey) you stayed at in the filters and have stayed at at least
+// PIN_MIN times over your whole history, so one-off stops don't crowd the map. Tapping one
+// opens its place page.
+var PIN_MIN = 3, PIN_MAX = 400;
+function buildPins() {
+  pinLayer.clearLayers();
+  pinLayer._ver = selVer(); pinLayer._d = D;
+  if (!D) return;
+  needPlaces(); findHome();
+  if (!D.spotN) { D.spotN = {}; for (var v = 0; v < D.vs.length; v++) if (D.pv[v] >= 0) { var k0 = spotKey(v); D.spotN[k0] = (D.spotN[k0] || 0) + 1; } }
+  var inSel = [];
+  for (var j = 0; j < selV.length; j++) if (D.pv[selV[j]] >= 0 && D.spotN[spotKey(selV[j])] >= PIN_MIN) inSel.push(selV[j]);
+  var spots = spotsOf(inSel).sort(function (a, b) { return D.spotN[b.key] - D.spotN[a.key]; }).slice(0, PIN_MAX);
+  spots.forEach(function (s) {
+    var n = D.spotN[s.key], z = Math.round(Math.min(34, 20 + 4 * Math.log10(n)));
+    var m = L.marker([s.lat, s.lng], {
+      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
+      title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true
+    });
+    m.on('click', function (e) { if (e.originalEvent) L.DomEvent.stop(e.originalEvent); openSpot(s.key); });
+    pinLayer.addLayer(m);
+  });
 }
 function ccVer() { return selVer() + '|' + ccReach().key; }
 function selVer() { return sel.length + ':' + (sel[0] || 0) + ':' + (sel[sel.length - 1] || 0) + ':' + selV.length; }
@@ -1035,7 +1061,8 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc;
+  $('layPaths').checked = PREFS.paths; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  $('pinNote').hidden = !PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
   $('map').hidden = PREFS.proj !== 'merc';
@@ -1050,6 +1077,7 @@ function layersChanged() {
 $('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (!this.checked) { setHovered([]); hideTip(); } layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
 $('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
+$('layPins').addEventListener('change', function () { PREFS.pins = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); layersChanged(); });
 $('heatSrc').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-src]'); if (b) { PREFS.heatSrc = b.dataset.src; layersChanged(); } });
 $('heatBy').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-by]'); if (b && !b.disabled) { PREFS.heatBy = b.dataset.by; layersChanged(); } });
 var heatTimer = 0;

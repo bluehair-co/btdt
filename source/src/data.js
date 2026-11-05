@@ -146,7 +146,7 @@ function setData(R) {
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
   tagCountries();
-  D.places = null; D.home = undefined;
+  D.places = null; D.home = undefined; D.spotN = null;
   var minD = Infinity, maxD = -Infinity;
   for (i = 0; i < n; i++) { if (D.day[i] < minD) minD = D.day[i]; if (D.day[i] > maxD) maxD = D.day[i]; }
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
