@@ -2815,7 +2815,7 @@ function setData(R) {
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
   tagCountries();
-  D.places = null; D.home = undefined; D.spotN = null;
+  D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined;
   var minD = Infinity, maxD = -Infinity;
   for (i = 0; i < n; i++) { if (D.day[i] < minD) minD = D.day[i]; if (D.day[i] > maxD) maxD = D.day[i]; }
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
@@ -5716,11 +5716,32 @@ function placeStays(lbl) {
   return out;
 }
 // The spot a stay is at: Google's place ID, or the 300 m place when the stay has none.
-function spotKey(v) { var pid = D.vpid && D.vpid[v]; return pid ? 'id:' + pid : 'p' + D.pv[v]; }
+// Stays Timeline tagged as home are one spot per 300 m place, whatever IDs Google gave them.
+function spotKey(v) {
+  if (D.vtype[v] === 1 && D.pv[v] >= 0) return 'home' + D.pv[v];
+  var pid = D.vpid && D.vpid[v]; return pid ? 'id:' + pid : 'p' + D.pv[v];
+}
 function spotStays(key) {
   var out = [];
   for (var v = 0; v < D.vs.length; v++) if (D.pv[v] >= 0 && spotKey(v) === key) out.push(v);
   return out;
+}
+// Home is one spot: within the 300 m home place there are often several place IDs (the building
+// next door, the shop downstairs, a GPS fix matched to a neighbour), and only the one where you
+// spent most time (among those Timeline tagged as home, if any) is home; the rest are "Near home".
+function homeSpot() {
+  if (D.homeSpot !== undefined) return D.homeSpot;
+  findHome();
+  var all = {}, tagged = {}, v, k, best = null, bh = 0;
+  for (v = 0; v < D.vs.length; v++) if (D.pv[v] === D.home && D.home >= 0) {
+    k = spotKey(v); var h = D.ve[v] - D.vs[v];
+    all[k] = (all[k] || 0) + h;
+    if (D.vtype[v] === 1) tagged[k] = (tagged[k] || 0) + h;
+  }
+  var pick = Object.keys(tagged).length ? tagged : all;
+  for (k in pick) if (pick[k] > bh) { bh = pick[k]; best = k; }
+  D.homeSpot = best;
+  return best;
 }
 // Spots among the stays vs, most time first.
 function spotsOf(vs) {
@@ -5732,7 +5753,8 @@ function spotsOf(vs) {
     if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
     if (D.vname[v] && !s.name) s.name = D.vname[v];
     if (D.vtype[v]) s.type = D.vtype[v];
-    if (D.pv[v] === D.home) s.home = true;
+    if (key === homeSpot()) s.home = true;
+    else if (D.pv[v] === D.home) s.nearHome = true;
   });
   order.sort(function (a, b) { return b.h - a.h; });
   return order;
@@ -5741,7 +5763,8 @@ function spotsOf(vs) {
 function spotName(s, k) {
   if (s.name) return s.name;
   if (s.home) return 'Home';
-  if (s.type === 1) return 'Home (Timeline)';
+  if (s.nearHome) return 'Near home';
+  if (s.type === 1) return 'Home in ' + placeLabel(s.p);
   if (s.type === 2) return 'Work';
   return k != null ? 'Spot ' + (k + 1) : 'Spot in ' + placeLabel(s.p);
 }
