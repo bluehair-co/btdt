@@ -4077,36 +4077,84 @@ function scrubTo(v) {
 var P_pos = null, P_cur = null, prevCur = null;
 // During playback the map follows the trip under way: when a trip starts, the map glides
 // (zooming out and back in as needed) so that trip's whole route is on screen, clear of
-// the top bar, the legend and the dock. Between trips it only pans to keep the dot in view.
-var playFit = { i: null, until: 0 };
+// the top bar, the legend and the dock. Playback holds still while the map glides and
+// until its tiles have loaded, then eases back up to speed, so the dot never outruns the
+// map. The tiles for the next trips' views are fetched ahead of time. Between trips the
+// map only pans to keep the dot in view.
+var playFit = { i: null, flying: 0, landed: 0, resume: 0, pan: 0 }, tilesAhead = {}, tileImgs = [];
 function playPad() {
   var m = $('map').getBoundingClientRect(), tb = $('topbar').getBoundingClientRect(), dk = document.querySelector('.dock'), lg = $('mapLegend');
   var floor = lg && !lg.hidden && lg.offsetHeight ? lg.getBoundingClientRect().top : dk ? dk.getBoundingClientRect().top : m.bottom;
   var side = wide() ? 60 : 28;
   return { tl: L.point(side, Math.max(24, tb.bottom - m.top + 20)), br: L.point(side + 40, Math.max(24, m.bottom - floor + 20)) };
 }
+// The view a trip's route gets: its bounds, padded clear of the bars, at zoom 16 at most.
+function tripView(i, pad) {
+  var pts = tripPath(i).filter(function (q) { return isFinite(q[0]) && isFinite(q[1]); });
+  if (!pts.length) return null;
+  var b = L.latLngBounds(pts), z = Math.min(16, map.getBoundsZoom(b, false, pad.tl.add(pad.br)));
+  var c = map.unproject(map.project(b.getNorthWest(), z).add(map.project(b.getSouthEast(), z)).divideBy(2).add(pad.tl.subtract(pad.br).divideBy(2).multiplyBy(-1)), z);
+  return { b: b, z: z, c: c };
+}
+// Fetches the tiles of a view into the browser's (and the offline) cache.
+function prefetchView(v) {
+  if (!v || !map._tl) return;
+  var sz = map.getSize(), z = Math.max(0, Math.min(16, Math.round(v.z))), n = 1 << z;
+  var mid = map.project(v.c, z), lo = mid.subtract(sz.divideBy(2)).divideBy(256).floor(), hi = mid.add(sz.divideBy(2)).divideBy(256).floor();
+  if ((hi.x - lo.x + 1) * (hi.y - lo.y + 1) > 80) return;
+  for (var x = lo.x; x <= hi.x; x++) for (var y = Math.max(0, lo.y); y <= Math.min(n - 1, hi.y); y++) {
+    var key = z + '/' + ((x % n) + n) % n + '/' + y;
+    if (tilesAhead[key]) continue;
+    tilesAhead[key] = 1;
+    map._tl.forEach(function (l) {
+      var img = new Image();
+      img.onload = img.onerror = function () { var k = tileImgs.indexOf(img); if (k >= 0) tileImgs.splice(k, 1); };
+      img.src = L.Util.template(l._url, { x: ((x % n) + n) % n, y: y, z: z });
+      tileImgs.push(img);
+    });
+  }
+}
+function tilesLoading() { return !!(map._tl && map._tl.some(function (l) { return l.isLoading && l.isLoading(); })); }
+// How fast playback runs now, from 0 (holding for the map) to 1.
+function playRate(now) {
+  var f = playFit;
+  if (f.flying) { if (now - f.flying < 8000) return 0; f.flying = 0; f.landed = now; }
+  if (f.landed) {
+    if (now - f.landed < 2000 && tilesLoading()) return 0;
+    f.landed = 0; f.resume = now;
+  }
+  if (f.resume) {
+    var r = (now - f.resume) / 600;
+    if (r < 1) return r * r;
+    f.resume = 0;
+  }
+  return 1;
+}
 function followPlay() {
-  var now = performance.now(), pad = playPad();
-  if (P_cur && P_cur.i !== playFit.i) {
-    playFit.i = P_cur.i;
-    var pts = tripPath(P_cur.i).filter(function (q) { return isFinite(q[0]) && isFinite(q[1]); });
-    if (pts.length) {
-      var b = L.latLngBounds(pts), z = Math.min(16, map.getBoundsZoom(b, false, pad.tl.add(pad.br)));
+  var now = performance.now(), pad = playPad(), f = playFit;
+  if (f.flying || f.landed) return;
+  if (P_cur && P_cur.i !== f.i) {
+    f.i = P_cur.i;
+    var v = tripView(P_cur.i, pad);
+    // Warm the tiles for the next two trips' views while this one plays.
+    for (var k = visibleB; k < Math.min(sel.length, visibleB + 2); k++) prefetchView(tripView(sel[k], pad));
+    if (v) {
       var view = L.latLngBounds(map.containerPointToLatLng(pad.tl), map.containerPointToLatLng(map.getSize().subtract(pad.br)));
       // Already in view at the zoom it would get: leave the map be rather than nudge it.
-      if (!(view.contains(b) && Math.abs(map.getZoom() - z) < 0.5)) {
-        var dur = Math.max(0.5, Math.min(1.4, 1.4 / Math.sqrt(PREFS.speed || 1)));
-        map.flyToBounds(b, { paddingTopLeft: pad.tl, paddingBottomRight: pad.br, maxZoom: 16, duration: dur, easeLinearity: 0.2 });
-        playFit.until = now + dur * 1000 + 100;
+      if (!(view.contains(v.b) && Math.abs(map.getZoom() - v.z) < 0.5)) {
+        prefetchView(v);
+        f.flying = now; f.resume = 0;
+        map.flyToBounds(v.b, { paddingTopLeft: pad.tl, paddingBottomRight: pad.br, maxZoom: 16, easeLinearity: 0.2 });
+        map.once('moveend', function () { if (f.flying) { f.flying = 0; f.landed = performance.now(); } });
         return;
       }
     }
   }
-  if (now < playFit.until) return;
+  if (now < f.pan) return;
   var cp = map.latLngToContainerPoint(P_pos), sz = map.getSize();
   if (cp.x < pad.tl.x || cp.y < pad.tl.y || cp.x > sz.x - pad.br.x || cp.y > sz.y - pad.br.y) {
     map.panTo(P_pos, { animate: true, duration: 0.6 });
-    playFit.until = now + 700;
+    f.pan = now + 700;
   }
 }
 // The position marker: while a trip is under way it shows that trip's transport icon in
@@ -4154,12 +4202,12 @@ function warpMap(from, to, x) {
 }
 function play() {
   if (scrubV >= 1000) scrubTo(0);
-  playing = true; playFit.i = null; playFit.until = 0;
+  playing = true; playFit = { i: null, flying: 0, landed: 0, resume: 0, pan: 0 };
   $('playBtn').innerHTML = icon('pause'); $('playBtn').setAttribute('aria-label', 'Pause');
   var W = playWarp(), u = warpMap(W.real, W.virt, scrubTime()), last = performance.now();
   (function frame(now) {
     if (!playing) return;
-    u += (now - last) / 120000 * W.len * PREFS.speed;
+    u += (now - last) / 120000 * W.len * PREFS.speed * (map && PREFS.proj === 'merc' ? playRate(now) : 1);
     last = now;
     if (u >= W.len) { scrubTo(1000); stopPlay(); return; }
     scrubTo((warpMap(W.virt, W.real, u) - T0) / (T1 - T0) * 1000);
