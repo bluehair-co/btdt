@@ -5739,8 +5739,10 @@ function placeStays(lbl) {
 // The spot a stay is at: Google's place ID, or the 300 m place when the stay has none.
 // The spot each stay is at, worked out once for all stays. A spot is Google's place ID, so two
 // shops on one street stay apart. A stay without an ID (older Takeout, or saved before IDs were
-// kept) joins the nearest place ID within 100 m in its 300 m place, and otherwise is the 300 m
-// place itself, so one place doesn't show as two pins.
+// kept) joins the nearest place ID within 100 m in its 300 m place (about how far off a GPS
+// position can be in a city), so one place doesn't show as two pins. Stays left over group with
+// each other within 50 m (the first one seen is the centre), so old visits in a busy
+// neighbourhood don't all become one spot.
 function spotKey(v) {
   if (!D.skey || D.skey.length !== D.vs.length) buildSpotKeys();
   return D.skey[v];
@@ -5756,10 +5758,16 @@ function buildSpotKeys() {
       if (!L[keys[v]]) L[keys[v]] = [D.vll[2 * v], D.vll[2 * v + 1]];
     }
   }
+  var loose = {};
   for (v = 0; v < n; v++) {
     if (keys[v]) continue;
-    var C = byPv[D.pv[v]], best = 'p' + D.pv[v], bd = 0.1;
-    for (var k in C) { var d = km([D.vll[2 * v], D.vll[2 * v + 1]], C[k]); if (d <= bd) { bd = d; best = k; } }
+    var ll = [D.vll[2 * v], D.vll[2 * v + 1]], C = byPv[D.pv[v]], best = null, bd = 0.1, k, d;
+    for (k in C) { d = km(ll, C[k]); if (d <= bd) { bd = d; best = k; } }
+    if (!best) {
+      var G = loose[D.pv[v]] || (loose[D.pv[v]] = []);
+      for (var g = 0; g < G.length && !best; g++) if (km(ll, G[g]) <= 0.05) best = 'g' + D.pv[v] + '_' + g;
+      if (!best) { best = 'g' + D.pv[v] + '_' + G.length; G.push(ll); }
+    }
     keys[v] = best;
   }
   D.skey = keys;
