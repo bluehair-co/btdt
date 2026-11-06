@@ -2301,7 +2301,7 @@ function badge(m, small, strava) { return '<span class="mode-badge' + (small ? '
 // ---------- preferences ----------
 var PREFS_KEY = 'btdt.prefs';
 var PREFS = {
-  unit: 'km', theme: 'system', proj: 'merc', paths: true, heat: false, cc: false, pins: false, placeScope: 'all',
+  unit: 'km', theme: 'system', proj: 'merc', paths: true, heat: false, cc: false, pins: false, placeScope: 'all', spotMerge: {},
   heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', timeM: 'km', timeU: 'year', speed: 1,
   // The time slider starts hidden on phones.
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
@@ -5770,7 +5770,75 @@ function buildSpotKeys() {
     }
     keys[v] = best;
   }
+  // Merges: one place under two place IDs (see mergedSpots), then the ones you made by hand.
+  var root = mergedSpots(keys);
+  for (v = 0; v < n; v++) keys[v] = root(keys[v]);
   D.skey = keys;
+}
+// Google sometimes gives one place a new place ID (re-registered, new owner) and your history
+// keeps both. Two place IDs within 25 m whose visits don't overlap in time (all of one's before
+// all of the other's) are taken as one place renamed and merged; two neighbouring shops would
+// have their visits mixed in time. Merges you make on a spot page (PREFS.spotMerge, from key to
+// key) are applied on top. The merged spot keeps the key with more time there.
+var AUTO_MERGE_KM = 0.025;
+function mergedSpots(keys) {
+  var info = {}, v, k, parent = {};
+  for (v = 0; v < keys.length; v++) {
+    k = keys[v];
+    if (k.slice(0, 3) !== 'id:') continue;
+    var o = info[k] || (info[k] = { k: k, pv: D.pv[v], ll: [D.vll[2 * v], D.vll[2 * v + 1]], t0: Infinity, t1: -Infinity, h: 0 });
+    o.t0 = Math.min(o.t0, D.vs[v]); o.t1 = Math.max(o.t1, D.ve[v]); o.h += D.ve[v] - D.vs[v];
+  }
+  function find(x) { while (parent[x] && parent[x] !== x) x = parent[x]; return x; }
+  function union(a, b) {
+    a = find(a); b = find(b);
+    if (a === b) return;
+    var ha = info[a] ? info[a].h : 0, hb = info[b] ? info[b].h : 0;
+    if (ha >= hb) parent[b] = a; else parent[a] = b;
+  }
+  var byPv = {};
+  for (k in info) (byPv[info[k].pv] || (byPv[info[k].pv] = [])).push(info[k]);
+  D.autoMerged = {};
+  for (var pv in byPv) {
+    var L = byPv[pv];
+    for (var i = 0; i < L.length; i++) for (var j = i + 1; j < L.length; j++) {
+      var a = L[i], b = L[j];
+      if (km(a.ll, b.ll) > AUTO_MERGE_KM || !(a.t1 <= b.t0 || b.t1 <= a.t0)) continue;
+      union(a.k, b.k); D.autoMerged[a.k] = D.autoMerged[b.k] = 1;
+    }
+  }
+  var man = PREFS.spotMerge || {};
+  for (k in man) if (info[k] && info[man[k]]) union(man[k], k);
+  return function (x) { return parent[x] ? find(x) : x; };
+}
+// Every place ID that ended up in a spot, with how it got there.
+function spotParts(key) {
+  var seen = {}, out = [];
+  for (var v = 0; v < D.vs.length; v++) {
+    var pid = D.vpid && D.vpid[v];
+    if (!pid || seen[pid] || spotKey(v) !== key) continue;
+    seen[pid] = 1;
+    var k = 'id:' + pid;
+    out.push({ k: k, pid: pid, manual: !!(PREFS.spotMerge && PREFS.spotMerge[k]), auto: !!(D.autoMerged && D.autoMerged[k]) });
+  }
+  return out;
+}
+function respot() {
+  D.skey = null; D.spotN = null; D.homeSpot = undefined;
+  if (pinLayer) pinLayer._ver = null;
+  if (map && PREFS.pins) layerToggles();
+}
+function mergeSpot(from, into) {
+  PREFS.spotMerge = PREFS.spotMerge || {};
+  PREFS.spotMerge[from] = into; savePrefs(); respot();
+  var pid = into.slice(3);
+  for (var v = 0; v < D.vs.length; v++) if (D.vpid[v] === pid) { openSpot(spotKey(v)); return; }
+}
+function unmergeSpot(key) {
+  var m = PREFS.spotMerge || {};
+  spotParts(key).forEach(function (x) { delete m[x.k]; });
+  for (var k in m) if (m[k] === key) delete m[k];
+  savePrefs(); respot(); openSpot(key);
 }
 function spotStays(key) {
   var out = [];
@@ -5796,7 +5864,7 @@ function spotsOf(vs) {
   var by = {}, order = [];
   vs.forEach(function (v) {
     var key = spotKey(v), s = by[key], dur = D.ve[v] - D.vs[v];
-    if (!s) { s = by[key] = { key: key, pid: D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false }; order.push(s); }
+    if (!s) { s = by[key] = { key: key, pid: key.slice(0, 3) === 'id:' ? key.slice(3) : D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false }; order.push(s); }
     s.n++; s.h += dur / 36e5;
     if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
     if (D.vname[v] && !s.name) s.name = D.vname[v];
@@ -5907,6 +5975,7 @@ function placePage(o, keepScroll) {
         '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
         '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
     }).join('') + '</div>' + (spots.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '');
+  if (o.spot) html += mergeHtml(o.spot);
   html += '<h4 class="place-h">Visits</h4><div class="list-rows" id="placeVisits">' + placeVisits.slice(0, 20).map(visitRow).join('') + '</div>' +
     (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
@@ -5933,12 +6002,37 @@ function openPlace(p) {
   return true;
 }
 // One spot (a pin on the map).
+// On a spot page: the place IDs it's made of, and nearby spots with an ID to merge it into by hand
+// (Google's IDs only: spots without one have no lasting key to remember the merge by).
+function mergeHtml(key) {
+  var parts = spotParts(key), me = spotsOf(spotStays(key))[0], html = '';
+  if (parts.length > 1) html += '<h4 class="place-h">Merged spot</h4><p class="fine">' + fmt(parts.length) + ' Google place IDs are counted as this one place' +
+    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within 25 m and your visits moved from one to the other)' : '') + '.</p>' +
+    (parts.some(function (x) { return x.manual; }) || Object.keys(PREFS.spotMerge || {}).some(function (k) { return PREFS.spotMerge[k] === key; }) ? '<button type="button" class="btn quiet" data-punmerge="' + esc(key) + '">Undo the merges you made</button>' : '');
+  if (key.slice(0, 3) !== 'id:') return html;
+  var near = [], seen = {};
+  for (var v = 0; v < D.vs.length; v++) {
+    var k = spotKey(v);
+    if (k === key || seen[k] || k.slice(0, 3) !== 'id:') continue;
+    var d = km([me.lat, me.lng], [D.vll[2 * v], D.vll[2 * v + 1]]);
+    if (d > 0.15) continue;
+    seen[k] = 1; near.push({ k: k, d: d });
+  }
+  near.sort(function (a, b) { return a.d - b.d; });
+  if (!near.length) return html;
+  return html + '<h4 class="place-h">Same place as…</h4><p class="fine">If a spot nearby is really this place under another Google ID, merge it here. The merge is saved on this device and can be undone.</p>' +
+    '<div class="list-rows">' + near.slice(0, 5).map(function (x) {
+      var s2 = spotsOf(spotStays(x.k))[0];
+      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(x.k) + '"><span class="t"><b>' + esc(spotName(s2)) + '</b><small>' + fmt(Math.round(x.d * 1000)) + ' m away · ' + fmt(s2.n) + ' visit' + (s2.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s2.lv]) + '</small></span></button>' +
+        '<span class="spot-acts"><a class="btn quiet" href="' + esc(mapsUrl(s2.lat, s2.lng, s2.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a><button type="button" class="btn quiet" data-pmerge="' + esc(x.k) + '" data-pinto="' + esc(key) + '">Merge into this</button></span></div>';
+    }).join('') + '</div>';
+}
 function openSpot(key) {
   needPlaces(); findHome();
   var vs = spotStays(key);
   if (!vs.length) return false;
   var s = spotsOf(vs)[0], name = spotName(s), town = placeLabel(s.p), others = placeStays(town).length > vs.length;
-  placePage({ title: name, sub: name.indexOf(town) < 0 && town !== 'Home' ? town : '', vs: vs, home: s.home, spots: false, town: others ? s.p : null });
+  placePage({ title: name, sub: name.indexOf(town) < 0 && town !== 'Home' ? town : '', vs: vs, home: s.home, spots: false, town: others ? s.p : null, spot: key });
   return true;
 }
 function showPlaceOnMap(lat, lng) {
@@ -5948,8 +6042,10 @@ function showPlaceOnMap(lat, lng) {
   if (map) map.setView([lat, lng], 16);
 }
 $('tripBody').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-pmap],[data-spot],[data-ptown],[data-pall],[data-pscope]');
+  var b = ev.target.closest('[data-pmap],[data-spot],[data-ptown],[data-pall],[data-pscope],[data-pmerge],[data-punmerge]');
   if (!b) return;
+  if (b.dataset.pmerge) { mergeSpot(b.dataset.pmerge, b.dataset.pinto); return; }
+  if (b.dataset.punmerge) { unmergeSpot(b.dataset.punmerge); return; }
   if (b.dataset.pscope) { PREFS.placeScope = b.dataset.pscope; savePrefs(); placePage(placeLast, true); return; }
   if (b.dataset.spot) { openSpot(b.dataset.spot); return; }
   if (b.dataset.ptown) { openPlace(+b.dataset.ptown); return; }
