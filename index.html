@@ -2817,7 +2817,7 @@ function setData(R) {
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
   tagCountries();
-  D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.workSpot = undefined;
+  D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.workSpot = undefined; D.skey = null;
   var minD = Infinity, maxD = -Infinity;
   for (i = 0; i < n; i++) { if (D.day[i] < minD) minD = D.day[i]; if (D.day[i] > maxD) maxD = D.day[i]; }
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
@@ -5737,11 +5737,41 @@ function placeStays(lbl) {
   return out;
 }
 // The spot a stay is at: Google's place ID, or the 300 m place when the stay has none.
-// Stays Timeline tagged as home (or work) are one spot per 300 m place, whatever IDs Google gave them.
+// The spot each stay is at, worked out once for all stays. A spot is Google's place ID, so two
+// shops on one street stay apart. A place ID with some stays tagged as home or work belongs
+// wholly to that home or work, and those are one spot per 300 m place whatever IDs Google gave
+// them (otherwise one place could show as two pins, its tagged and untagged visits). A stay
+// without an ID (older Takeout, or saved before IDs were kept) joins the nearest place ID within
+// 100 m in its 300 m place, and otherwise is the 300 m place itself.
+var TAGS = ['', 'home', 'work'];
 function spotKey(v) {
-  if (D.vtype[v] === 1 && D.pv[v] >= 0) return 'home' + D.pv[v];
-  if (D.vtype[v] === 2 && D.pv[v] >= 0) return 'work' + D.pv[v];
-  var pid = D.vpid && D.vpid[v]; return pid ? 'id:' + pid : 'p' + D.pv[v];
+  if (!D.skey || D.skey.length !== D.vs.length) buildSpotKeys();
+  return D.skey[v];
+}
+function buildSpotKeys() {
+  var n = D.vs.length, keys = new Array(n), pidTag = {}, byPv = {}, v, pid, t;
+  for (v = 0; v < n; v++) {
+    pid = D.vpid && D.vpid[v]; t = D.vtype[v];
+    if (pid && t && !pidTag[pid] && D.pv[v] >= 0) pidTag[pid] = TAGS[t] + D.pv[v];
+  }
+  for (v = 0; v < n; v++) {
+    pid = D.vpid && D.vpid[v]; t = D.vtype[v];
+    if (D.pv[v] < 0) keys[v] = 'p' + D.pv[v];
+    else if (t) keys[v] = pid && pidTag[pid] ? pidTag[pid] : TAGS[t] + D.pv[v];
+    else if (pid) keys[v] = pidTag[pid] || 'id:' + pid;
+    else continue;
+    if (pid) {
+      var L = byPv[D.pv[v]] || (byPv[D.pv[v]] = {});
+      if (!L[keys[v]]) L[keys[v]] = [D.vll[2 * v], D.vll[2 * v + 1]];
+    }
+  }
+  for (v = 0; v < n; v++) {
+    if (keys[v]) continue;
+    var C = byPv[D.pv[v]], best = 'p' + D.pv[v], bd = 0.1;
+    for (var k in C) { var d = km([D.vll[2 * v], D.vll[2 * v + 1]], C[k]); if (d <= bd) { bd = d; best = k; } }
+    keys[v] = best;
+  }
+  D.skey = keys;
 }
 function spotStays(key) {
   var out = [];
