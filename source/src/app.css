@@ -255,7 +255,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .rhythm .h { text-align: center; }
 .rhythm .d { display: flex; align-items: center; }
 .rhythm-scale { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
-.rhythm-scale i { width: 14px; height: 10px; border-radius: 2px; display: block; }
+.rhythm-scale i { width: 12px; height: 10px; border-radius: 2px; display: block; }
 .list-rows { display: flex; flex-direction: column; }
 .list-rows .hit-row:last-child { border-bottom: 0; }
 .rank { width: 22px; text-align: right; color: var(--muted); font-family: var(--font-mono); font-size: 12px; flex: none; }
