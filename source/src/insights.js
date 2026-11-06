@@ -52,17 +52,20 @@ function renderSplit() {
 }
 $('splitSeg').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-m]'); if (b) { PREFS.splitM = b.dataset.m; savePrefs(); renderSplit(); } });
 
-function heatColor(level) { return level ? 'color-mix(in srgb, var(--accent) ' + [0, 22, 42, 62, 82, 100][level] + '%, var(--grid))' : 'var(--grid)'; }
+// Ten steps of the accent colour, from faint (1) to full (10); 0 is empty.
+var HEAT_STEPS = 10, HEAT_LEVELS = Array.from({ length: HEAT_STEPS }, function (_, k) { return k + 1; });
+function heatColor(level) { return level ? 'color-mix(in srgb, var(--accent) ' + Math.round(14 + 86 * (level - 1) / (HEAT_STEPS - 1)) + '%, var(--grid))' : 'var(--grid)'; }
+// Levels by decile of the non-empty values, so a few very busy cells don't wash out the rest.
+function heatLevels(vals) {
+  vals = vals.filter(function (v) { return v; }).sort(function (a, b) { return a - b; });
+  var cuts = HEAT_LEVELS.slice(0, -1).map(function (l) { return vals[Math.floor((vals.length - 1) * l / HEAT_STEPS)] || 0; });
+  return function (v) { if (!v) return 0; var l = 1; cuts.forEach(function (x) { if (v > x) l++; }); return Math.min(HEAT_STEPS, l); };
+}
 function renderRhythm() {
   var c = [], j, k, max = 0;
   for (k = 0; k < 7; k++) c.push(new Array(24).fill(0));
   for (j = 0; j < sel.length; j++) { var i = sel[j]; c[D.dow[i]][D.hour[i]]++; }
-  var vals = [];
-  c.forEach(function (row) { row.forEach(function (v) { if (v) vals.push(v); if (v > max) max = v; }); });
-  vals.sort(function (a, b) { return a - b; });
-  // Five steps by quantile, so a few very busy hours don't wash out the rest.
-  var cuts = [0.2, 0.4, 0.6, 0.8].map(function (q) { return vals[Math.floor((vals.length - 1) * q)] || 0; });
-  function level(v) { if (!v) return 0; var l = 1; cuts.forEach(function (x) { if (v > x) l++; }); return Math.min(5, l); }
+  var level = heatLevels([].concat.apply([], c));
   var h = '<div></div>';
   for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? k : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
@@ -70,7 +73,7 @@ function renderRhythm() {
     for (k = 0; k < 24; k++) h += '<div class="c" data-d="' + d + '" data-h="' + k + '" data-n="' + c[d][k] + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
   });
   $('rhythm').innerHTML = '<div class="rhythm" role="img" aria-label="Trips by day of the week and hour">' + h + '</div>' +
-    '<div class="rhythm-scale">Fewer' + [1, 2, 3, 4, 5].map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More trips</div>';
+    '<div class="rhythm-scale">Fewer' + HEAT_LEVELS.map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More trips</div>';
 }
 function rhythmTip(ev) {
   var c = ev.target.closest('.c[data-d]');
@@ -918,11 +921,7 @@ function presence(vs) {
   return c;
 }
 function presenceGrid(c) {
-  var vals = [], k;
-  c.forEach(function (row) { row.forEach(function (v) { if (v) vals.push(v); }); });
-  vals.sort(function (a, b) { return a - b; });
-  var cuts = [0.2, 0.4, 0.6, 0.8].map(function (q) { return vals[Math.floor((vals.length - 1) * q)] || 0; });
-  function level(v) { if (!v) return 0; var l = 1; cuts.forEach(function (x) { if (v > x) l++; }); return Math.min(5, l); }
+  var k, level = heatLevels([].concat.apply([], c));
   var h = '<div></div>';
   for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? k : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
@@ -930,7 +929,7 @@ function presenceGrid(c) {
     for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + pad2(k) + ':00: ' + hoursLabel(c[d][k] / 60) + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
   });
   return '<div class="rhythm" role="img" aria-label="Time there by day of the week and hour">' + h + '</div>' +
-    '<div class="rhythm-scale">Less' + [1, 2, 3, 4, 5].map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More time there</div>';
+    '<div class="rhythm-scale">Less' + HEAT_LEVELS.map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More time there</div>';
 }
 function visitRow(v) {
   return '<div class="hit-row"><span class="t"><b>' + longDate(D.vday[v]) + '</b><small>' + clock(D.vs[v], D.voff[v]) + '–' + clock(D.ve[v], D.voff[v]) + '</small></span><span class="r num">' + duration(D.ve[v] - D.vs[v]) + '</span></div>';
