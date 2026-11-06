@@ -742,29 +742,20 @@ function placeStays(lbl) {
 }
 // The spot a stay is at: Google's place ID, or the 300 m place when the stay has none.
 // The spot each stay is at, worked out once for all stays. A spot is Google's place ID, so two
-// shops on one street stay apart. A place ID with some stays tagged as home or work belongs
-// wholly to that home or work, and those are one spot per 300 m place whatever IDs Google gave
-// them (otherwise one place could show as two pins, its tagged and untagged visits). A stay
-// without an ID (older Takeout, or saved before IDs were kept) joins the nearest place ID within
-// 100 m in its 300 m place, and otherwise is the 300 m place itself.
-var TAGS = ['', 'home', 'work'];
+// shops on one street stay apart. A stay without an ID (older Takeout, or saved before IDs were
+// kept) joins the nearest place ID within 100 m in its 300 m place, and otherwise is the 300 m
+// place itself, so one place doesn't show as two pins.
 function spotKey(v) {
   if (!D.skey || D.skey.length !== D.vs.length) buildSpotKeys();
   return D.skey[v];
 }
 function buildSpotKeys() {
-  var n = D.vs.length, keys = new Array(n), pidTag = {}, byPv = {}, v, pid, t;
+  var n = D.vs.length, keys = new Array(n), byPv = {}, v, pid;
   for (v = 0; v < n; v++) {
-    pid = D.vpid && D.vpid[v]; t = D.vtype[v];
-    if (pid && t && !pidTag[pid] && D.pv[v] >= 0) pidTag[pid] = TAGS[t] + D.pv[v];
-  }
-  for (v = 0; v < n; v++) {
-    pid = D.vpid && D.vpid[v]; t = D.vtype[v];
+    pid = D.vpid && D.vpid[v];
     if (D.pv[v] < 0) keys[v] = 'p' + D.pv[v];
-    else if (t) keys[v] = pid && pidTag[pid] ? pidTag[pid] : TAGS[t] + D.pv[v];
-    else if (pid) keys[v] = pidTag[pid] || 'id:' + pid;
-    else continue;
-    if (pid) {
+    else if (pid) {
+      keys[v] = 'id:' + pid;
       var L = byPv[D.pv[v]] || (byPv[D.pv[v]] = {});
       if (!L[keys[v]]) L[keys[v]] = [D.vll[2 * v], D.vll[2 * v + 1]];
     }
@@ -784,29 +775,16 @@ function spotStays(key) {
 }
 // Home is one spot: within the 300 m home place there are often several place IDs (the building
 // next door, the shop downstairs, a GPS fix matched to a neighbour), and only the one where you
-// spent most time (among those Timeline tagged as home, if any) is home; the rest are "Near home".
+// spent most time is home; the rest are "Near home".
 function homeSpot() {
   if (D.homeSpot !== undefined) return D.homeSpot;
   findHome();
-  var all = {}, tagged = {}, v, k, best = null, bh = 0;
+  var all = {}, v, k, best = null, bh = 0;
   for (v = 0; v < D.vs.length; v++) if (D.pv[v] === D.home && D.home >= 0) {
-    k = spotKey(v); var h = D.ve[v] - D.vs[v];
-    all[k] = (all[k] || 0) + h;
-    if (D.vtype[v] === 1) tagged[k] = (tagged[k] || 0) + h;
+    k = spotKey(v); all[k] = (all[k] || 0) + D.ve[v] - D.vs[v];
   }
-  var pick = Object.keys(tagged).length ? tagged : all;
-  for (k in pick) if (pick[k] > bh) { bh = pick[k]; best = k; }
+  for (k in all) if (all[k] > bh) { bh = all[k]; best = k; }
   D.homeSpot = best;
-  return best;
-}
-// Work is the work-tagged spot where you spent most time; other work-tagged spots (an earlier
-// job, a second office) are "Work in" their town.
-function workSpot() {
-  if (D.workSpot !== undefined) return D.workSpot;
-  var t = {}, best = null, bh = 0, k;
-  for (var v = 0; v < D.vs.length; v++) if (D.vtype[v] === 2 && D.pv[v] >= 0) { k = spotKey(v); t[k] = (t[k] || 0) + D.ve[v] - D.vs[v]; }
-  for (k in t) if (t[k] > bh) { bh = t[k]; best = k; }
-  D.workSpot = best;
   return best;
 }
 // Spots among the stays vs, most time first.
@@ -814,24 +792,21 @@ function spotsOf(vs) {
   var by = {}, order = [];
   vs.forEach(function (v) {
     var key = spotKey(v), s = by[key], dur = D.ve[v] - D.vs[v];
-    if (!s) { s = by[key] = { key: key, pid: D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', type: 0, home: false }; order.push(s); }
+    if (!s) { s = by[key] = { key: key, pid: D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false }; order.push(s); }
     s.n++; s.h += dur / 36e5;
     if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
     if (D.vname[v] && !s.name) s.name = D.vname[v];
-    if (D.vtype[v]) s.type = D.vtype[v];
     if (key === homeSpot()) s.home = true;
     else if (D.pv[v] === D.home) s.nearHome = true;
   });
   order.sort(function (a, b) { return b.h - a.h; });
   return order;
 }
-// A spot's name: the one Takeout gave it, Home or Work, or the town it's in.
+// A spot's name: the one Takeout gave it, Home, or the town it's in.
 function spotName(s, k) {
   if (s.name) return s.name;
   if (s.home) return 'Home';
   if (s.nearHome) return 'Near home';
-  if (s.type === 1) return 'Home in ' + placeLabel(s.p);
-  if (s.type === 2) return s.key === workSpot() ? 'Work' : 'Work in ' + placeLabel(s.p);
   return k != null ? 'Spot ' + (k + 1) : 'Spot in ' + placeLabel(s.p);
 }
 // Time spent there by weekday and hour, local time, as minutes per cell.

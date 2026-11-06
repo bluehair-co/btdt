@@ -33,6 +33,8 @@ function upgrade(R) {
   }
   // Google's place ID for each stay; data saved before it was kept has none until the file is loaded again.
   if (!R.vpid) R.vpid = [];
+  // Google's home and work tags aren't used (see Collector.visit); clear them from data saved before.
+  if (R.vtype) R.vtype.fill(0);
   if (!R.files) R.files = [];
   // Bad GPS jumps come out of trips saved before BT;DT looked for them too (it changes nothing the second time).
   cleanJumps(R);
@@ -146,7 +148,7 @@ function setData(R) {
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
   tagCountries();
-  D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.workSpot = undefined; D.skey = null;
+  D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
   var minD = Infinity, maxD = -Infinity;
   for (i = 0; i < n; i++) { if (D.day[i] < minD) minD = D.day[i]; if (D.day[i] > maxD) maxD = D.day[i]; }
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
@@ -514,14 +516,12 @@ function tripRoute(i) {
   var a = placeLabel(D.pa[i]), b = placeLabel(D.pb[i]);
   return D.pa[i] === D.pb[i] || a === b ? 'Around ' + a : a + ' → ' + b;
 }
-// Home: the place Timeline tagged as home, else where nights are spent, else the most common trip end.
+// Home: where most nights are spent, else the most common trip end (Google's home tag isn't used).
 function findHome() {
   if (D.home !== undefined) return D.home;
   needPlaces();
   var score = {}, best = -1, bs = 0, v, i, how = '';
-  for (v = 0; v < D.vs.length; v++) if (D.vtype[v] === 1) score[D.pv[v]] = (score[D.pv[v]] || 0) + 1;
-  if (Object.keys(score).length) how = 'the place Timeline tagged as home';
-  else {
+  {
     for (v = 0; v < D.vs.length; v++) {
       // A stay that covers 3 am local time counts as a night there.
       var off = D.voff[v] !== NO_OFF ? D.voff[v] * 60000 : -new Date(D.vs[v]).getTimezoneOffset() * 60000;

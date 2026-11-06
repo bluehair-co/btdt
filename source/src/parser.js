@@ -192,14 +192,14 @@ function fillTimes(pts, t, dur) {
     i = j;
   }
 }
-var HOME = 1, WORK = 2;
+// Google's home and work tags (semanticType) are left out: they often don't match what you
+// labelled yourself. vtype stays in the data (always 0) so saved data keeps its shape.
 Collector.prototype.visit = function (st, et, ll, type, name, pid) {
   if (!st || !et || !ll || !(et.ms > st.ms)) return;
   var d = dayOf(st);
   if (d == null || !isFinite(d)) return;
-  var k = String(type || '').toUpperCase();
   this.vs.push(st.ms); this.ve.push(et.ms); this.vday.push(d); this.voff.push(st.off != null ? st.off : NO_OFF);
-  this.vll.push(ll[0], ll[1]); this.vtype.push(/HOME/.test(k) ? HOME : /WORK/.test(k) ? WORK : 0); this.vname.push(name || ''); this.vpid.push(pid ? String(pid) : '');
+  this.vll.push(ll[0], ll[1]); this.vtype.push(0); this.vname.push(name || ''); this.vpid.push(pid ? String(pid) : '');
 };
 function pathKm(pts) {
   var t = 0;
