@@ -105,6 +105,19 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 /* Strava sports, in a row under their transport mode. */
 .subchips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding-left: 14px; border-left: 2px solid var(--line); margin: -2px 0 2px 10px; }
 .chip.sub { font-size: 12px; padding: 5px 10px; }
+/* Transport filter: kinds (Road, Flights…) with their types under them. */
+.mode-tree { display: flex; flex-direction: column; gap: 6px; }
+.mt-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.mt-caret { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.mt-caret:hover { background: var(--chip); }
+.mt-caret svg { width: 20px; height: 20px; transition: transform .15s ease; }
+.mt-caret[aria-expanded="true"] svg { transform: rotate(90deg); }
+.mt-caret-pad { flex: none; width: 32px; }
+.mt-row .chip { font-weight: 600; }
+.chip .sw { width: 10px; height: 10px; border-radius: 3px; display: block; }
+.mt-sum { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-left: 4px; }
+.mt-kids { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px 47px; padding-left: 12px; border-left: 2px solid var(--line); }
+.mt-mode { display: contents; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
 .seg button { border: 0; background: none; color: var(--muted); padding: 7px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); }
@@ -250,6 +263,15 @@ details.help b { color: var(--fg); font-weight: 500; }
 .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
 .card-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .card-head .fine { width: 100%; margin-top: -4px; }
+/* A card's explanation sits behind an (i) button next to its title, so the cards stay uncluttered. */
+.card-title { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.card-title .fine { width: auto; margin: 0 0 0 6px; }
+.info-btn { width: 30px; height: 30px; border-radius: 50%; color: var(--muted); flex: none; }
+.info-btn svg { width: 18px; height: 18px; }
+.info-btn[aria-expanded="true"] { color: var(--accent); background: var(--chip-on-bg); }
+.card-head .info-text { display: none; order: 10; margin-top: -2px; padding: 8px 10px; border-radius: 10px; background: var(--chip); line-height: 1.45; }
+.card-head.info-open .info-text { display: block; }
+.card-head:has(> .info-text:empty) .info-btn { display: none; }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
 .stat .label { font-size: 12px; color: var(--muted); }
 .stat .value { font-size: 24px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15; }
@@ -424,7 +446,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .cc-stop svg.ic { width: 12px; height: 12px; fill: currentColor; }
 .cctl-bars b.q { opacity: .45; }
 .cctl-bars b.q.on { opacity: .7; }
-#cctlCard.off .card-head .seg, #cctlCard.off .card-head .fine, #cctlCard.off .cctl-scroll, #cctlCard.off .cctl-info, #cctlCard.off .cctl-legend { display: none; }
+#cctlCard.off .card-head .seg, #cctlCard.off .card-head .fine, #cctlCard.off .card-head .info-btn, #cctlCard.off .cctl-scroll, #cctlCard.off .cctl-info, #cctlCard.off .cctl-legend { display: none; }
 .cctl-off { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 16px; border-radius: 8px; background: var(--grid); }
 .cctl-off p { margin: 0; font-size: 13px; color: var(--muted); }
 
@@ -482,8 +504,7 @@ div.hit-row:hover { background: none; }
     </div>
 
     <div class="topbar" id="topbar">
-      <button type="button" class="bar summary-pill" id="summaryPill"><span id="summaryMain">All trips</span><span class="sub" id="summarySub"></span></button>
-      <div class="bar" id="timeBar" data-pnav hidden>
+      <div class="bar" id="timeBar" data-pnav>
         <div class="bar-top">
           <div class="daynav" data-pn="nav" hidden>
             <button type="button" class="icon-btn" data-pn="prev" aria-label="Previous day with trips"><span data-icon="left"></span></button>
@@ -492,7 +513,7 @@ div.hit-row:hover { background: none; }
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="today-btn" data-pn="today" hidden>Today</button>
-          <button type="button" class="icon-btn scrub-toggle" id="scrubToggle" aria-label="Show time slider" aria-pressed="false" title="Time slider"><span data-icon="clock"></span></button>
+          <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         <div class="scrub">
@@ -505,7 +526,7 @@ div.hit-row:hover { background: none; }
     </div>
 
     <div class="map-legend" id="mapLegend"></div>
-    <button type="button" class="fab left" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" hidden></span></button>
+    <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
   </section>
 
@@ -537,7 +558,7 @@ div.hit-row:hover { background: none; }
           <div class="bars" id="splitBars"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>Weekly rhythm</h2><span class="fine">When your trips start, by day and hour, in local time.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Weekly rhythm</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">When your trips start, by day and hour, in local time.</span></div>
           <div id="rhythm"></div>
         </section>
         <section class="card wide">
@@ -549,30 +570,30 @@ div.hit-row:hover { background: none; }
           <div class="time-units"><div class="seg" role="group" aria-label="Group by" id="timeUnitSeg"><button type="button" data-u="year" aria-pressed="true">Years</button><button type="button" data-u="month" aria-pressed="false">Months</button><button type="button" data-u="week" aria-pressed="false">Weeks</button><button type="button" data-u="day" aria-pressed="false" hidden>Days</button></div></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>Top routes</h2><span class="fine">Trips between the same two places, either way. Tap one for its latest trip.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Top routes</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Trips between the same two places, either way. Tap one for its latest trip.</span></div>
           <div class="list-rows" id="topRoutes"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2 id="placesTitle">Top places</h2><span class="fine" id="placesNote"></span></div>
+          <div class="card-head"><div class="card-title"><h2 id="placesTitle">Top places</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="placesNote"></span></div>
           <div class="list-rows" id="topPlaces"></div>
         </section>
         <section class="card wide">
-          <div class="card-head"><h2>Records</h2><span class="fine">Tap a record to see the trip.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
           <div class="records" id="records"></div>
         </section>
         <section class="card wide" id="cctlCard">
-          <div class="card-head"><h2>Countries over time</h2><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out. Faded stretches have no records and are guessed from before and after.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Countries over time</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine info-text">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out. Faded stretches have no records and are guessed from before and after.</span></div>
           <div class="cctl-off" id="cctlOff" hidden><p>The country timeline needs every kind of transport, since leaving some trips out would leave holes in where you were.</p><button type="button" class="btn" id="cctlAllModes">Show all transport</button></div>
           <div class="cctl-scroll" id="cctlScroll"><div class="cctl-track" id="cctlTrack"><div class="cctl-pins" id="cctlPins"></div><div class="cctl-bars" id="cctlBars"></div><div class="cctl-pins low" id="cctlPinsLow"></div><div class="cctl-axis" id="cctlAxis"></div></div></div>
           <p class="cctl-info" id="cctlInfo" aria-live="polite"></p>
           <div class="cctl-legend" id="cctlLegend"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>Countries</h2><span class="fine" id="ccNote"></span></div>
+          <div class="card-head"><div class="card-title"><h2>Countries</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="ccNote"></span></div>
           <div class="list-rows" id="ccList"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>CO₂ from travel</h2><span class="fine">Estimated from average emissions per km. Change the factors in Settings.</span></div>
+          <div class="card-head"><div class="card-title"><h2>CO₂ from travel</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Estimated from average emissions per km. Change the factors in Settings.</span></div>
           <div id="co2Card"></div>
         </section>
       </div>
@@ -634,15 +655,15 @@ div.hit-row:hover { background: none; }
         <div class="field"><label for="to">To</label><input type="date" id="to"></div>
       </div>
     </div>
-    <div class="sec">
+    <div class="sec" id="yearsSec">
       <div class="sec-head"><h3>Years</h3><div class="quick"><button type="button" data-q="years" data-all="1">All</button><button type="button" data-q="years" data-all="0">None</button></div></div>
       <div class="chips" id="years"></div>
     </div>
-    <div class="sec">
+    <div class="sec" id="monthsSec">
       <div class="sec-head"><h3>Months</h3><div class="quick"><button type="button" data-q="months" data-all="1">All</button><button type="button" data-q="months" data-all="0">None</button></div></div>
       <div class="chips" id="months"></div>
     </div>
-    <div class="sec">
+    <div class="sec" id="dowsSec">
       <div class="sec-head"><h3>Days of the week</h3><div class="quick"><button type="button" id="dowWeekdays">Weekdays</button><button type="button" id="dowWeekend">Weekend</button><button type="button" data-q="dows" data-all="1">All</button></div></div>
       <div class="chips" id="dows"></div>
     </div>
@@ -655,8 +676,7 @@ div.hit-row:hover { background: none; }
     </div>
     <div class="sec">
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
-      <div class="chips" id="groupChips"></div>
-      <div class="chips" id="modes"></div>
+      <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
         <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed.</p>
         <div class="seg" role="group" aria-label="Trips with a guessed type" id="guessSeg">
@@ -2239,6 +2259,7 @@ var ICONS = {
   home: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
   bolt: 'M7 2v11h3v9l7-12h-4l4-8z',
   ruler: 'M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z',
+  info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
   clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
   // Transport
   WALKING: 'M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7',
@@ -2845,6 +2866,7 @@ function setData(R) {
 }
 
 // ---------- filters ----------
+var modeTreeOpen = {};
 // The app opens on the last 7 days. If nothing was recorded in them (an older export),
 // it shows the last 7 days in the data instead.
 function lastWeek() {
@@ -2872,6 +2894,13 @@ function activeFilters() {
   if (F.guess !== 'all') k++;
   if (F.src !== 'all') k++;
   return k;
+}
+// Years, months and days of the week only apply to All and Date range: the last 7 days or a
+// single day, week, month or year already say which days, so those filters are hidden and
+// turned back to everything there (or they would quietly leave out days you can't see).
+function calFilters() { return F.dm === 'all' || F.dm === 'range'; }
+function allCalendar() {
+  F.years = new Set(M.years); F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
 }
 function hourOk(h) {
   if (F.h0 === 0 && F.h1 === 24) return true;
@@ -2936,16 +2965,28 @@ function buildFilterUI() {
   $('years').innerHTML = M.years.map(function (y) { return chipHtml('years', y, y); }).join('');
   $('months').innerHTML = MONTHS.map(function (m, k) { return chipHtml('months', k, m); }).join('');
   $('dows').innerHTML = DOW_ORDER.map(function (d) { return chipHtml('dows', d, DOW[d]); }).join('');
+  // Transport as a tree: each kind (Road, Flights…) with its types under it, and a type's
+  // Strava sports under the type. Ticking a kind ticks everything under it. A kind with one
+  // type is that type, so it shows only the type's sports, if any, under it.
   var groups = GROUPS.filter(function (g) { return g.modes.some(function (m) { return mc[m]; }); });
-  $('groupChips').innerHTML = groups.length > 1 ? groups.map(function (g) {
-    return '<button type="button" class="chip" data-f="group" data-v="' + g.key + '" aria-pressed="false"><i style="width:10px;height:10px;border-radius:3px;display:block;background:' + g.color + '"></i>' + g.label + '</button>';
-  }).join('') : '';
-  $('groupChips').hidden = groups.length < 2;
-  // A mode with Strava sports gets a row of chips for them under it.
-  $('modes').innerHTML = M.modes.map(function (m) {
-    var subs = M.sports.filter(function (k) { return SPORTS[k][2] === m; });
-    return chipHtml('modes', m, '<span style="color:' + modeColor(m) + ';display:flex">' + icon(m) + '</span>' + (LABEL[m] || m), mc[m]) +
-      (subs.length ? '<div class="subchips" aria-label="' + (LABEL[m] || m) + ' on Strava">' + subs.map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('') + '</div>' : '');
+  function sportChips(m) {
+    return M.sports.filter(function (k) { return SPORTS[k][2] === m; }).map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('');
+  }
+  $('modeTree').innerHTML = groups.map(function (g) {
+    var ms = g.modes.filter(function (m) { return mc[m]; }), one = ms.length === 1, n = 0;
+    ms.forEach(function (m) { n += mc[m]; });
+    var kids = one ? sportChips(ms[0]) : ms.map(function (m) {
+      var subs = sportChips(m);
+      return '<div class="mt-mode">' + chipHtml('modes', m, '<span style="color:' + g.color + ';display:flex">' + icon(m) + '</span>' + (LABEL[m] || m), mc[m]) +
+        (subs ? '<div class="subchips" aria-label="' + (LABEL[m] || m) + ' on Strava">' + subs + '</div>' : '') + '</div>';
+    }).join('');
+    var head = one ? chipHtml('modes', ms[0], '<i class="sw" style="background:' + g.color + '"></i>' + g.label, n)
+      : chipHtml('group', g.key, '<i class="sw" style="background:' + g.color + '"></i>' + g.label, n);
+    var open = !!modeTreeOpen[g.key];
+    return '<div class="mt-group" data-g="' + g.key + '">' +
+      '<div class="mt-row">' + (kids ? '<button type="button" class="mt-caret" data-mt="' + g.key + '" aria-expanded="' + open + '" aria-controls="mt-' + g.key + '" aria-label="Show what ' + esc(g.label) + ' includes">' + icon('right') + '</button>' : '<span class="mt-caret-pad"></span>') +
+      head + (kids && !open ? '<span class="mt-sum">' + (one ? '' : ms.map(function (m) { return LABEL[m] || m; }).join(', ')) + '</span>' : '') + '</div>' +
+      (kids ? '<div class="mt-kids" id="mt-' + g.key + '"' + (open ? '' : ' hidden') + '>' + kids + '</div>' : '') + '</div>';
   }).join('');
   $('countries').innerHTML = M.countries.map(function (k) {
     var cc = D.ccList[k];
@@ -3002,6 +3043,7 @@ function syncFilterUI() {
   $('oneLabel').textContent = F.unit === 'day' ? 'Day' : 'Any day in the ' + F.unit;
   setPressed('[data-pn="step"] button', function (b) { return b.dataset.step === F.unit; });
   $('rangeFields').hidden = F.dm !== 'range';
+  ['yearsSec', 'monthsSec', 'dowsSec'].forEach(function (id) { $(id).hidden = !calFilters(); });
   $('oneDay').value = isoDay(F.one); $('from').value = isoDay(F.from); $('to').value = isoDay(F.to);
   $('h0').value = F.h0; $('h1').value = F.h1;
   var k = activeFilters();
@@ -3029,6 +3071,7 @@ $('filtersSheet').addEventListener('click', function (ev) {
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries }[q] : []);
   } else if (b.dataset.dm) {
     F.dm = b.dataset.dm;
+    if (!calFilters()) allCalendar();
     if (F.dm === 'one') F.unit = 'day';
     if (F.dm === 'one' && M.navDays.length && M.navDays.indexOf(F.one) < 0) F.one = M.navDays[M.navDays.length - 1];
     if (F.dm === 'week') { var wk = lastWeek(); F.from = wk[0]; F.to = wk[1]; }
@@ -3038,6 +3081,15 @@ $('filtersSheet').addEventListener('click', function (ev) {
   else if (b.id === 'dowWeekend') F.dows = new Set([0, 6]);
   else if (b.id === 'hoursAll') { F.h0 = 0; F.h1 = 24; }
   else if (b.id === 'resetFilters') F = defaultFilters();
+  else if (b.dataset.mt) {
+    var g = b.dataset.mt, op = !modeTreeOpen[g];
+    modeTreeOpen[g] = op;
+    b.setAttribute('aria-expanded', op ? 'true' : 'false');
+    $('mt-' + g).hidden = !op;
+    var sum = b.parentNode.querySelector('.mt-sum');
+    if (sum) sum.hidden = op;
+    return;
+  }
   else return;
   syncFilterUI();
   changed();
@@ -3065,6 +3117,7 @@ function todayDay() { return Math.floor((Date.now() - new Date().getTimezoneOffs
 // Show one day (or the week, month or year holding it), from anywhere in the app.
 function showDay(d, unit) {
   F.dm = 'one'; F.one = d; F.unit = unit || 'day';
+  allCalendar();
   syncFilterUI();
   apply();
 }
@@ -3113,7 +3166,12 @@ function toggleSheet(id) { if (openId === id) closeSheets(); else openSheet(id);
 $('filtersBtn').addEventListener('click', function () { toggleSheet('filtersSheet'); });
 $('layersBtn').addEventListener('click', function () { toggleSheet('layersSheet'); });
 document.addEventListener('click', function (ev) {
-  if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
+  var info = ev.target.closest('.info-btn');
+  if (info) {
+    var head = info.closest('.card-head'), op = !head.classList.contains('info-open');
+    head.classList.toggle('info-open', op);
+    info.setAttribute('aria-expanded', op ? 'true' : 'false');
+  } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
   else if (ev.target.closest('[data-close]')) closeSheets();
 });
 $('scrim').addEventListener('click', function () { closeSheets(); });
@@ -4074,14 +4132,11 @@ function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.s
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
 function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
-  $('summaryPill').hidden = n > 0 || one;
-  $('summaryMain').textContent = 'No trips match your filters';
-  $('summarySub').textContent = 'Change filters';
-  $('timeBar').hidden = !n && !one;
+  // The playback button (bottom left) shows or hides the time slider in the top bar.
   document.querySelector('#timeBar .scrub').hidden = !n || !PREFS.scrub;
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
-  $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide time slider' : 'Show time slider');
+  $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
   if (n) {
     if (one) {
       var o = D.off[sel[0]], offMs = o !== NO_OFF ? o * 60000 : -new Date(F.one * 864e5).getTimezoneOffset() * 60000;
@@ -4145,7 +4200,6 @@ document.querySelectorAll('[data-pnav]').forEach(function (bar) {
     if (b && b.dataset.step !== F.unit) showDay(F.one, b.dataset.step);
   });
 });
-$('summaryPill').addEventListener('click', function () { openSheet('filtersSheet'); });
 document.addEventListener('keydown', function (ev) {
   if (F == null || F.dm !== 'one' || openId || /INPUT|SELECT|TEXTAREA/.test(ev.target.tagName)) return;
   if (ev.key === 'ArrowLeft') stepDay(-1);

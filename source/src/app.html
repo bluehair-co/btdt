@@ -36,8 +36,7 @@
     </div>
 
     <div class="topbar" id="topbar">
-      <button type="button" class="bar summary-pill" id="summaryPill"><span id="summaryMain">All trips</span><span class="sub" id="summarySub"></span></button>
-      <div class="bar" id="timeBar" data-pnav hidden>
+      <div class="bar" id="timeBar" data-pnav>
         <div class="bar-top">
           <div class="daynav" data-pn="nav" hidden>
             <button type="button" class="icon-btn" data-pn="prev" aria-label="Previous day with trips"><span data-icon="left"></span></button>
@@ -46,7 +45,7 @@
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="today-btn" data-pn="today" hidden>Today</button>
-          <button type="button" class="icon-btn scrub-toggle" id="scrubToggle" aria-label="Show time slider" aria-pressed="false" title="Time slider"><span data-icon="clock"></span></button>
+          <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         <div class="scrub">
@@ -59,7 +58,7 @@
     </div>
 
     <div class="map-legend" id="mapLegend"></div>
-    <button type="button" class="fab left" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" hidden></span></button>
+    <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
   </section>
 
@@ -91,7 +90,7 @@
           <div class="bars" id="splitBars"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>Weekly rhythm</h2><span class="fine">When your trips start, by day and hour, in local time.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Weekly rhythm</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">When your trips start, by day and hour, in local time.</span></div>
           <div id="rhythm"></div>
         </section>
         <section class="card wide">
@@ -103,30 +102,30 @@
           <div class="time-units"><div class="seg" role="group" aria-label="Group by" id="timeUnitSeg"><button type="button" data-u="year" aria-pressed="true">Years</button><button type="button" data-u="month" aria-pressed="false">Months</button><button type="button" data-u="week" aria-pressed="false">Weeks</button><button type="button" data-u="day" aria-pressed="false" hidden>Days</button></div></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>Top routes</h2><span class="fine">Trips between the same two places, either way. Tap one for its latest trip.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Top routes</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Trips between the same two places, either way. Tap one for its latest trip.</span></div>
           <div class="list-rows" id="topRoutes"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2 id="placesTitle">Top places</h2><span class="fine" id="placesNote"></span></div>
+          <div class="card-head"><div class="card-title"><h2 id="placesTitle">Top places</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="placesNote"></span></div>
           <div class="list-rows" id="topPlaces"></div>
         </section>
         <section class="card wide">
-          <div class="card-head"><h2>Records</h2><span class="fine">Tap a record to see the trip.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
           <div class="records" id="records"></div>
         </section>
         <section class="card wide" id="cctlCard">
-          <div class="card-head"><h2>Countries over time</h2><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out. Faded stretches have no records and are guessed from before and after.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Countries over time</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine info-text">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out. Faded stretches have no records and are guessed from before and after.</span></div>
           <div class="cctl-off" id="cctlOff" hidden><p>The country timeline needs every kind of transport, since leaving some trips out would leave holes in where you were.</p><button type="button" class="btn" id="cctlAllModes">Show all transport</button></div>
           <div class="cctl-scroll" id="cctlScroll"><div class="cctl-track" id="cctlTrack"><div class="cctl-pins" id="cctlPins"></div><div class="cctl-bars" id="cctlBars"></div><div class="cctl-pins low" id="cctlPinsLow"></div><div class="cctl-axis" id="cctlAxis"></div></div></div>
           <p class="cctl-info" id="cctlInfo" aria-live="polite"></p>
           <div class="cctl-legend" id="cctlLegend"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>Countries</h2><span class="fine" id="ccNote"></span></div>
+          <div class="card-head"><div class="card-title"><h2>Countries</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="ccNote"></span></div>
           <div class="list-rows" id="ccList"></div>
         </section>
         <section class="card">
-          <div class="card-head"><h2>CO₂ from travel</h2><span class="fine">Estimated from average emissions per km. Change the factors in Settings.</span></div>
+          <div class="card-head"><div class="card-title"><h2>CO₂ from travel</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Estimated from average emissions per km. Change the factors in Settings.</span></div>
           <div id="co2Card"></div>
         </section>
       </div>
@@ -188,15 +187,15 @@
         <div class="field"><label for="to">To</label><input type="date" id="to"></div>
       </div>
     </div>
-    <div class="sec">
+    <div class="sec" id="yearsSec">
       <div class="sec-head"><h3>Years</h3><div class="quick"><button type="button" data-q="years" data-all="1">All</button><button type="button" data-q="years" data-all="0">None</button></div></div>
       <div class="chips" id="years"></div>
     </div>
-    <div class="sec">
+    <div class="sec" id="monthsSec">
       <div class="sec-head"><h3>Months</h3><div class="quick"><button type="button" data-q="months" data-all="1">All</button><button type="button" data-q="months" data-all="0">None</button></div></div>
       <div class="chips" id="months"></div>
     </div>
-    <div class="sec">
+    <div class="sec" id="dowsSec">
       <div class="sec-head"><h3>Days of the week</h3><div class="quick"><button type="button" id="dowWeekdays">Weekdays</button><button type="button" id="dowWeekend">Weekend</button><button type="button" data-q="dows" data-all="1">All</button></div></div>
       <div class="chips" id="dows"></div>
     </div>
@@ -209,8 +208,7 @@
     </div>
     <div class="sec">
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
-      <div class="chips" id="groupChips"></div>
-      <div class="chips" id="modes"></div>
+      <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
         <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed.</p>
         <div class="seg" role="group" aria-label="Trips with a guessed type" id="guessSeg">
