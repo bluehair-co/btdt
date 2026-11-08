@@ -174,6 +174,7 @@ function setData(R) {
 }
 
 // ---------- filters ----------
+var modeTreeOpen = {};
 // The app opens on the last 7 days. If nothing was recorded in them (an older export),
 // it shows the last 7 days in the data instead.
 function lastWeek() {
@@ -201,6 +202,13 @@ function activeFilters() {
   if (F.guess !== 'all') k++;
   if (F.src !== 'all') k++;
   return k;
+}
+// Years, months and days of the week only apply to All and Date range: the last 7 days or a
+// single day, week, month or year already say which days, so those filters are hidden and
+// turned back to everything there (or they would quietly leave out days you can't see).
+function calFilters() { return F.dm === 'all' || F.dm === 'range'; }
+function allCalendar() {
+  F.years = new Set(M.years); F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
 }
 function hourOk(h) {
   if (F.h0 === 0 && F.h1 === 24) return true;
@@ -265,16 +273,28 @@ function buildFilterUI() {
   $('years').innerHTML = M.years.map(function (y) { return chipHtml('years', y, y); }).join('');
   $('months').innerHTML = MONTHS.map(function (m, k) { return chipHtml('months', k, m); }).join('');
   $('dows').innerHTML = DOW_ORDER.map(function (d) { return chipHtml('dows', d, DOW[d]); }).join('');
+  // Transport as a tree: each kind (Road, Flights…) with its types under it, and a type's
+  // Strava sports under the type. Ticking a kind ticks everything under it. A kind with one
+  // type is that type, so it shows only the type's sports, if any, under it.
   var groups = GROUPS.filter(function (g) { return g.modes.some(function (m) { return mc[m]; }); });
-  $('groupChips').innerHTML = groups.length > 1 ? groups.map(function (g) {
-    return '<button type="button" class="chip" data-f="group" data-v="' + g.key + '" aria-pressed="false"><i style="width:10px;height:10px;border-radius:3px;display:block;background:' + g.color + '"></i>' + g.label + '</button>';
-  }).join('') : '';
-  $('groupChips').hidden = groups.length < 2;
-  // A mode with Strava sports gets a row of chips for them under it.
-  $('modes').innerHTML = M.modes.map(function (m) {
-    var subs = M.sports.filter(function (k) { return SPORTS[k][2] === m; });
-    return chipHtml('modes', m, '<span style="color:' + modeColor(m) + ';display:flex">' + icon(m) + '</span>' + (LABEL[m] || m), mc[m]) +
-      (subs.length ? '<div class="subchips" aria-label="' + (LABEL[m] || m) + ' on Strava">' + subs.map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('') + '</div>' : '');
+  function sportChips(m) {
+    return M.sports.filter(function (k) { return SPORTS[k][2] === m; }).map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('');
+  }
+  $('modeTree').innerHTML = groups.map(function (g) {
+    var ms = g.modes.filter(function (m) { return mc[m]; }), one = ms.length === 1, n = 0;
+    ms.forEach(function (m) { n += mc[m]; });
+    var kids = one ? sportChips(ms[0]) : ms.map(function (m) {
+      var subs = sportChips(m);
+      return '<div class="mt-mode">' + chipHtml('modes', m, '<span style="color:' + g.color + ';display:flex">' + icon(m) + '</span>' + (LABEL[m] || m), mc[m]) +
+        (subs ? '<div class="subchips" aria-label="' + (LABEL[m] || m) + ' on Strava">' + subs + '</div>' : '') + '</div>';
+    }).join('');
+    var head = one ? chipHtml('modes', ms[0], '<i class="sw" style="background:' + g.color + '"></i>' + g.label, n)
+      : chipHtml('group', g.key, '<i class="sw" style="background:' + g.color + '"></i>' + g.label, n);
+    var open = !!modeTreeOpen[g.key];
+    return '<div class="mt-group" data-g="' + g.key + '">' +
+      '<div class="mt-row">' + (kids ? '<button type="button" class="mt-caret" data-mt="' + g.key + '" aria-expanded="' + open + '" aria-controls="mt-' + g.key + '" aria-label="Show what ' + esc(g.label) + ' includes">' + icon('right') + '</button>' : '<span class="mt-caret-pad"></span>') +
+      head + (kids && !open ? '<span class="mt-sum">' + (one ? '' : ms.map(function (m) { return LABEL[m] || m; }).join(', ')) + '</span>' : '') + '</div>' +
+      (kids ? '<div class="mt-kids" id="mt-' + g.key + '"' + (open ? '' : ' hidden') + '>' + kids + '</div>' : '') + '</div>';
   }).join('');
   $('countries').innerHTML = M.countries.map(function (k) {
     var cc = D.ccList[k];
@@ -331,6 +351,7 @@ function syncFilterUI() {
   $('oneLabel').textContent = F.unit === 'day' ? 'Day' : 'Any day in the ' + F.unit;
   setPressed('[data-pn="step"] button', function (b) { return b.dataset.step === F.unit; });
   $('rangeFields').hidden = F.dm !== 'range';
+  ['yearsSec', 'monthsSec', 'dowsSec'].forEach(function (id) { $(id).hidden = !calFilters(); });
   $('oneDay').value = isoDay(F.one); $('from').value = isoDay(F.from); $('to').value = isoDay(F.to);
   $('h0').value = F.h0; $('h1').value = F.h1;
   var k = activeFilters();
@@ -358,6 +379,7 @@ $('filtersSheet').addEventListener('click', function (ev) {
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries }[q] : []);
   } else if (b.dataset.dm) {
     F.dm = b.dataset.dm;
+    if (!calFilters()) allCalendar();
     if (F.dm === 'one') F.unit = 'day';
     if (F.dm === 'one' && M.navDays.length && M.navDays.indexOf(F.one) < 0) F.one = M.navDays[M.navDays.length - 1];
     if (F.dm === 'week') { var wk = lastWeek(); F.from = wk[0]; F.to = wk[1]; }
@@ -367,6 +389,15 @@ $('filtersSheet').addEventListener('click', function (ev) {
   else if (b.id === 'dowWeekend') F.dows = new Set([0, 6]);
   else if (b.id === 'hoursAll') { F.h0 = 0; F.h1 = 24; }
   else if (b.id === 'resetFilters') F = defaultFilters();
+  else if (b.dataset.mt) {
+    var g = b.dataset.mt, op = !modeTreeOpen[g];
+    modeTreeOpen[g] = op;
+    b.setAttribute('aria-expanded', op ? 'true' : 'false');
+    $('mt-' + g).hidden = !op;
+    var sum = b.parentNode.querySelector('.mt-sum');
+    if (sum) sum.hidden = op;
+    return;
+  }
   else return;
   syncFilterUI();
   changed();
@@ -394,6 +425,7 @@ function todayDay() { return Math.floor((Date.now() - new Date().getTimezoneOffs
 // Show one day (or the week, month or year holding it), from anywhere in the app.
 function showDay(d, unit) {
   F.dm = 'one'; F.one = d; F.unit = unit || 'day';
+  allCalendar();
   syncFilterUI();
   apply();
 }
@@ -442,7 +474,12 @@ function toggleSheet(id) { if (openId === id) closeSheets(); else openSheet(id);
 $('filtersBtn').addEventListener('click', function () { toggleSheet('filtersSheet'); });
 $('layersBtn').addEventListener('click', function () { toggleSheet('layersSheet'); });
 document.addEventListener('click', function (ev) {
-  if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
+  var info = ev.target.closest('.info-btn');
+  if (info) {
+    var head = info.closest('.card-head'), op = !head.classList.contains('info-open');
+    head.classList.toggle('info-open', op);
+    info.setAttribute('aria-expanded', op ? 'true' : 'false');
+  } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
   else if (ev.target.closest('[data-close]')) closeSheets();
 });
 $('scrim').addEventListener('click', function () { closeSheets(); });

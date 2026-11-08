@@ -522,14 +522,11 @@ function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.s
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
 function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
-  $('summaryPill').hidden = n > 0 || one;
-  $('summaryMain').textContent = 'No trips match your filters';
-  $('summarySub').textContent = 'Change filters';
-  $('timeBar').hidden = !n && !one;
+  // The playback button (bottom left) shows or hides the time slider in the top bar.
   document.querySelector('#timeBar .scrub').hidden = !n || !PREFS.scrub;
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
-  $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide time slider' : 'Show time slider');
+  $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
   if (n) {
     if (one) {
       var o = D.off[sel[0]], offMs = o !== NO_OFF ? o * 60000 : -new Date(F.one * 864e5).getTimezoneOffset() * 60000;
@@ -593,7 +590,6 @@ document.querySelectorAll('[data-pnav]').forEach(function (bar) {
     if (b && b.dataset.step !== F.unit) showDay(F.one, b.dataset.step);
   });
 });
-$('summaryPill').addEventListener('click', function () { openSheet('filtersSheet'); });
 document.addEventListener('keydown', function (ev) {
   if (F == null || F.dm !== 'one' || openId || /INPUT|SELECT|TEXTAREA/.test(ev.target.tagName)) return;
   if (ev.key === 'ArrowLeft') stepDay(-1);

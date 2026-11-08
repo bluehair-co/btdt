@@ -83,6 +83,19 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 /* Strava sports, in a row under their transport mode. */
 .subchips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding-left: 14px; border-left: 2px solid var(--line); margin: -2px 0 2px 10px; }
 .chip.sub { font-size: 12px; padding: 5px 10px; }
+/* Transport filter: kinds (Road, Flights…) with their types under them. */
+.mode-tree { display: flex; flex-direction: column; gap: 6px; }
+.mt-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.mt-caret { flex: none; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 8px; background: none; color: var(--muted); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.mt-caret:hover { background: var(--chip); }
+.mt-caret svg { width: 20px; height: 20px; transition: transform .15s ease; }
+.mt-caret[aria-expanded="true"] svg { transform: rotate(90deg); }
+.mt-caret-pad { flex: none; width: 32px; }
+.mt-row .chip { font-weight: 600; }
+.chip .sw { width: 10px; height: 10px; border-radius: 3px; display: block; }
+.mt-sum { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-left: 4px; }
+.mt-kids { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px 47px; padding-left: 12px; border-left: 2px solid var(--line); }
+.mt-mode { display: contents; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
 .seg button { border: 0; background: none; color: var(--muted); padding: 7px 12px; font-size: 13px; cursor: pointer; white-space: nowrap; }
 .seg button + button { border-left: 1px solid var(--line); }
@@ -228,6 +241,15 @@ details.help b { color: var(--fg); font-weight: 500; }
 .card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 12px; margin-bottom: 12px; }
 .card-head h2 { margin: 0; font-size: 16px; font-weight: 600; }
 .card-head .fine { width: 100%; margin-top: -4px; }
+/* A card's explanation sits behind an (i) button next to its title, so the cards stay uncluttered. */
+.card-title { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.card-title .fine { width: auto; margin: 0 0 0 6px; }
+.info-btn { width: 30px; height: 30px; border-radius: 50%; color: var(--muted); flex: none; }
+.info-btn svg { width: 18px; height: 18px; }
+.info-btn[aria-expanded="true"] { color: var(--accent); background: var(--chip-on-bg); }
+.card-head .info-text { display: none; order: 10; margin-top: -2px; padding: 8px 10px; border-radius: 10px; background: var(--chip); line-height: 1.45; }
+.card-head.info-open .info-text { display: block; }
+.card-head:has(> .info-text:empty) .info-btn { display: none; }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
 .stat .label { font-size: 12px; color: var(--muted); }
 .stat .value { font-size: 24px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15; }
@@ -402,7 +424,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .cc-stop svg.ic { width: 12px; height: 12px; fill: currentColor; }
 .cctl-bars b.q { opacity: .45; }
 .cctl-bars b.q.on { opacity: .7; }
-#cctlCard.off .card-head .seg, #cctlCard.off .card-head .fine, #cctlCard.off .cctl-scroll, #cctlCard.off .cctl-info, #cctlCard.off .cctl-legend { display: none; }
+#cctlCard.off .card-head .seg, #cctlCard.off .card-head .fine, #cctlCard.off .card-head .info-btn, #cctlCard.off .cctl-scroll, #cctlCard.off .cctl-info, #cctlCard.off .cctl-legend { display: none; }
 .cctl-off { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 18px 16px; border-radius: 8px; background: var(--grid); }
 .cctl-off p { margin: 0; font-size: 13px; color: var(--muted); }
 
