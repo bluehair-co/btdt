@@ -586,11 +586,13 @@ function renderCal() {
     '<button type="button" class="icon-btn" data-cal="1" aria-label="Next month"' + (m1 >= hi ? ' disabled' : '') + '>' + icon('right') + '</button>' +
     '<button type="button" class="icon-btn" data-cal="12" aria-label="Next year"' + (m1 >= hi ? ' disabled' : '') + '>' + icon('right2') + '</button></div><div class="cal-grid">';
   DOW_ORDER.forEach(function (k) { h += '<span class="cal-dow">' + DOW[k].slice(0, 2) + '</span>'; });
-  for (i = 0; i < lead; i++) h += '<span></span>';
+  for (i = 0; i < lead; i++) h += '<span class="cal-pad"></span>';
   for (var d = m0; d <= m1; d++) {
     var cls = (d >= p0 && d <= p1 ? ' on' : '') + (d === today ? ' today' : '') + (has[d] ? ' has' : '');
     h += '<button type="button" class="cal-day' + cls + '" data-day="' + d + '"' + (d < M.minD || d > hi ? ' disabled' : '') + ' aria-label="' + longDate(d) + (has[d] ? ', trips' : '') + '"' + (d === F.one ? ' aria-current="date"' : '') + '>' + dayToDate(d).getUTCDate() + '</button>';
   }
+  // Always six weeks, so the calendar keeps its size and its buttons stay put month to month.
+  for (i = lead + m1 - m0 + 1; i < 42; i++) h += '<span class="cal-pad"></span>';
   h += '</div><div class="cal-foot"><button type="button" class="btn" data-cal="today">Today</button></div>';
   $('calPop').innerHTML = h;
 }

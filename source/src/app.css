@@ -164,6 +164,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .cal-head { display: grid; grid-template-columns: 40px 40px 1fr 40px 40px; align-items: center; text-align: center; margin-bottom: 6px; }
 .cal-head b { font-size: 15px; font-weight: 600; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-pad { height: 38px; }
+.cal-head b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cal-dow { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; }
 .cal-day { position: relative; height: 38px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; cursor: pointer; }
 .cal-day:hover { background: var(--chip); }
