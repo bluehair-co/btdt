@@ -553,14 +553,11 @@ function syncPeriodNavs() {
     q('nav').hidden = !one;
     q('range').hidden = one;
     q('step').hidden = !one;
-    // Today only belongs to the navigator; a date range or All shows just what's selected.
-    q('today').hidden = !one || today >= p0 && today <= p1;
     if (q('badge')) { q('badge').hidden = !k; q('badge').textContent = k; }
     if (one) {
       q('label').textContent = F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit);
       q('sub').textContent = sub;
-      q('pick').value = isoDay(F.one);
-      q('pick').setAttribute('aria-label', F.unit === 'day' ? 'Pick a day' : 'Pick a day in the ' + F.unit);
+      q('pick').setAttribute('aria-label', (F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit)) + '. Pick a day');
       q('prev').disabled = !nd.length || nd[0] >= p0;
       q('next').disabled = !nd.length || nd[nd.length - 1] <= p1;
       q('prev').setAttribute('aria-label', 'Previous ' + F.unit + ' with trips');
@@ -571,6 +568,60 @@ function syncPeriodNavs() {
     }
   });
 }
+// The calendar under the navigator's date: a month at a time, Monday first. Days with
+// trips in the filters have a dot, the period on show is shaded, and Today at the bottom
+// jumps to today in the same step (day, week, month or year).
+var calBtn = null, calMonth = 0;
+function monthStart(d) { var x = dayToDate(d); return Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), 1) / 864e5; }
+function addMonths(d, k) { var x = dayToDate(d); return Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + k, 1) / 864e5; }
+function renderCal() {
+  var m0 = calMonth, m1 = addMonths(m0, 1) - 1, x = dayToDate(m0), today = todayDay();
+  var has = {}, nd = M.navDays, i;
+  for (i = 0; i < nd.length; i++) if (nd[i] >= m0 && nd[i] <= m1) has[nd[i]] = 1;
+  var p0 = periodStart(F.one, F.unit), p1 = periodEnd(F.one, F.unit), lo = monthStart(M.minD), hi = Math.max(M.maxD, today);
+  var lead = (x.getUTCDay() + 6) % 7, h = '<div class="cal-head"><button type="button" class="icon-btn" data-cal="-1" aria-label="Previous month"' + (m0 <= lo ? ' disabled' : '') + '>' + icon('left') + '</button>' +
+    '<b>' + MONTHS_LONG[x.getUTCMonth()] + ' ' + x.getUTCFullYear() + '</b>' +
+    '<button type="button" class="icon-btn" data-cal="1" aria-label="Next month"' + (m1 >= hi ? ' disabled' : '') + '>' + icon('right') + '</button></div><div class="cal-grid">';
+  DOW_ORDER.forEach(function (k) { h += '<span class="cal-dow">' + DOW[k].slice(0, 2) + '</span>'; });
+  for (i = 0; i < lead; i++) h += '<span></span>';
+  for (var d = m0; d <= m1; d++) {
+    var cls = (d >= p0 && d <= p1 ? ' on' : '') + (d === today ? ' today' : '') + (has[d] ? ' has' : '');
+    h += '<button type="button" class="cal-day' + cls + '" data-day="' + d + '"' + (d < M.minD || d > hi ? ' disabled' : '') + ' aria-label="' + longDate(d) + (has[d] ? ', trips' : '') + '"' + (d === F.one ? ' aria-current="date"' : '') + '>' + dayToDate(d).getUTCDate() + '</button>';
+  }
+  h += '</div><div class="cal-foot"><button type="button" class="btn" data-cal="today">Today</button></div>';
+  $('calPop').innerHTML = h;
+}
+function placeCal() {
+  var r = calBtn.getBoundingClientRect(), pop = $('calPop'), w = pop.offsetWidth;
+  pop.style.top = Math.round(r.bottom + 8) + 'px';
+  pop.style.left = Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))) + 'px';
+}
+function openCal(btn) {
+  closeCal();
+  calBtn = btn; calMonth = monthStart(F.one);
+  renderCal();
+  $('calPop').hidden = false; placeCal();
+  btn.setAttribute('aria-expanded', 'true');
+  var cur = $('calPop').querySelector('[aria-current]') || $('calPop').querySelector('.cal-day.today') || $('calPop').querySelector('.cal-day:not([disabled])');
+  if (cur) cur.focus();
+}
+function closeCal() {
+  if (!calBtn) return;
+  calBtn.setAttribute('aria-expanded', 'false');
+  $('calPop').hidden = true; calBtn = null;
+}
+$('calPop').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button');
+  if (!b || b.disabled) return;
+  if (b.dataset.day) { var btn = calBtn; closeCal(); showDay(+b.dataset.day, F.unit); btn.focus(); }
+  else if (b.dataset.cal === 'today') { var bt = calBtn; closeCal(); showDay(todayDay(), F.unit); bt.focus(); }
+  else if (b.dataset.cal) { calMonth = addMonths(calMonth, +b.dataset.cal); renderCal(); placeCal(); }
+});
+document.addEventListener('click', function (ev) {
+  if (calBtn && !ev.target.closest('#calPop') && !ev.target.closest('[data-pn="pick"]')) closeCal();
+}, true);
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && calBtn) { var b = calBtn; closeCal(); b.focus(); } });
+addEventListener('resize', closeCal);
 // Steps to the nearest day, week, month or year before or after this one that has trips.
 // It lands on the last day with trips going back and the first going forward.
 function stepDay(dir) {
@@ -583,8 +634,7 @@ document.querySelectorAll('[data-pnav]').forEach(function (bar) {
   function q(name) { return bar.querySelector('[data-pn="' + name + '"]'); }
   q('prev').addEventListener('click', function () { stepDay(-1); });
   q('next').addEventListener('click', function () { stepDay(1); });
-  q('today').addEventListener('click', function () { showDay(todayDay(), F.dm === 'one' ? F.unit : 'day'); });
-  q('pick').addEventListener('change', function () { var d = parseIsoDay(this.value); if (d != null) showDay(d, F.unit); });
+  q('pick').addEventListener('click', function () { if (calBtn === this) closeCal(); else openCal(this); });
   // Switching unit keeps the day you were on, so Day after Month goes back to it.
   q('step').addEventListener('click', function (ev) {
     var b = ev.target.closest('[data-step]');
@@ -592,7 +642,7 @@ document.querySelectorAll('[data-pnav]').forEach(function (bar) {
   });
 });
 document.addEventListener('keydown', function (ev) {
-  if (F == null || F.dm !== 'one' || openId || /INPUT|SELECT|TEXTAREA/.test(ev.target.tagName)) return;
+  if (F == null || F.dm !== 'one' || openId || calBtn || /INPUT|SELECT|TEXTAREA/.test(ev.target.tagName)) return;
   if (ev.key === 'ArrowLeft') stepDay(-1);
   if (ev.key === 'ArrowRight') stepDay(1);
 });

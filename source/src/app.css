@@ -156,7 +156,21 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .daynav .date-btn { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 0; background: none; padding: 4px; border-radius: 12px; cursor: pointer; min-height: 44px; }
 .daynav .date-btn b { font-size: 15px; font-weight: 600; }
 .daynav .date-btn small { font-size: 12px; color: var(--muted); }
-.daynav .date-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; padding: 0; border: 0; }
+.daynav .date-btn { font: inherit; color: var(--fg); min-width: 0; }
+.daynav .date-btn:hover, .daynav .date-btn[aria-expanded="true"] { background: var(--chip); }
+/* Calendar under the navigator's date */
+.cal-pop { position: fixed; z-index: 45; width: 300px; max-width: calc(100vw - 16px); padding: 10px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.cal-head { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; text-align: center; margin-bottom: 6px; }
+.cal-head b { font-size: 15px; font-weight: 600; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-dow { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; }
+.cal-day { position: relative; height: 38px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; cursor: pointer; }
+.cal-day:hover { background: var(--chip); }
+.cal-day[disabled] { color: var(--muted); opacity: .4; cursor: default; background: none; }
+.cal-day.on { background: var(--chip-on-bg); color: var(--chip-on-fg); font-weight: 600; }
+.cal-day.today { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.cal-day.has::after { content: ''; position: absolute; left: 50%; bottom: 5px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--accent); }
+.cal-foot { display: flex; justify-content: center; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--grid); }
 .range-label { text-align: center; padding: 6px 8px 2px; }
 .range-label b { font-size: 14px; font-weight: 600; }
 .range-label small { display: block; font-size: 12px; color: var(--muted); }
@@ -374,8 +388,6 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .bar-top { display: flex; align-items: center; gap: 2px; }
 .bar-top > .daynav, .bar-top > .range-label { flex: 1; min-width: 0; }
 .scrub-toggle[aria-pressed="true"] { color: var(--accent); background: var(--chip-on-bg); }
-.today-btn { flex: none; border: 1px solid var(--line); background: var(--panel); color: var(--fg); border-radius: 999px; padding: 6px 12px; min-height: 36px; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
-.today-btn:hover { background: var(--chip); }
 .field-head { display: flex; align-items: baseline; justify-content: space-between; }
 .link-btn { border: 0; background: none; padding: 2px 0; font: inherit; font-size: 12px; font-weight: 600; color: var(--accent); cursor: pointer; }
 .step-seg { margin-top: 6px; }

@@ -319,7 +319,6 @@ function buildFilterUI() {
   $('h0').innerHTML = h0; $('h1').innerHTML = h1;
   var lo = isoDay(M.minD), hi = isoDay(M.maxD);
   ['oneDay', 'from', 'to'].forEach(function (id) { $(id).min = lo; $(id).max = hi; });
-  document.querySelectorAll('[data-pn="pick"]').forEach(function (e) { e.min = lo; e.max = hi; });
 }
 // A trip with a Strava sport is shown when its sport is on; other trips when their mode is on.
 // So a mode with sports is fully on when it and all its sports are, partly on when some are.
