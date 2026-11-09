@@ -182,10 +182,17 @@ function lastWeek() {
   if (M.maxD < today - 6) end = M.maxD;
   return [end - 6, end];
 }
+// The app opens on the period navigator at this week. If nothing was recorded in the last
+// 7 days (an older export), it opens on the week of the latest day with data instead.
+// Navigator in Filters goes back to this.
+function navHome() {
+  var today = todayDay();
+  return M.maxD < today - 6 ? M.maxD : today;
+}
 function defaultFilters() {
   var wk = lastWeek();
   return {
-    dm: 'week', one: M.maxD, unit: 'day', from: wk[0], to: wk[1],
+    dm: 'one', one: navHome(), unit: 'week', from: wk[0], to: wk[1],
     years: new Set(M.years), months: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), dows: new Set([0, 1, 2, 3, 4, 5, 6]),
     h0: 0, h1: 24, modes: new Set(M.modes), sports: new Set(M.sports), countries: new Set(M.countries), guess: 'all', src: 'all'
   };
@@ -203,12 +210,15 @@ function activeFilters() {
   if (F.src !== 'all') k++;
   return k;
 }
-// Years, months and days of the week only apply to All and Date range: the last 7 days or a
-// single day, week, month or year already say which days, so those filters are hidden and
-// turned back to everything there (or they would quietly leave out days you can't see).
+// Years and months only apply to All, and days of the week to All and Date range: a date
+// range, the last 7 days or a single day, week, month or year already say which days, so
+// those filters are hidden and turned back to everything there (or they would quietly leave
+// out days you can't see).
+function ymFilters() { return F.dm === 'all'; }
 function calFilters() { return F.dm === 'all' || F.dm === 'range'; }
 function allCalendar() {
-  F.years = new Set(M.years); F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
+  if (!ymFilters()) { F.years = new Set(M.years); F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); }
+  if (!calFilters()) F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
 }
 function hourOk(h) {
   if (F.h0 === 0 && F.h1 === 24) return true;
@@ -293,7 +303,7 @@ function buildFilterUI() {
     var open = !!modeTreeOpen[g.key];
     return '<div class="mt-group" data-g="' + g.key + '">' +
       '<div class="mt-row">' + (kids ? '<button type="button" class="mt-caret" data-mt="' + g.key + '" aria-expanded="' + open + '" aria-controls="mt-' + g.key + '" aria-label="Show what ' + esc(g.label) + ' includes">' + icon('right') + '</button>' : '<span class="mt-caret-pad"></span>') +
-      head + (kids && !open ? '<span class="mt-sum">' + (one ? '' : ms.map(function (m) { return LABEL[m] || m; }).join(', ')) + '</span>' : '') + '</div>' +
+      head + '</div>' +
       (kids ? '<div class="mt-kids" id="mt-' + g.key + '"' + (open ? '' : ' hidden') + '>' + kids + '</div>' : '') + '</div>';
   }).join('');
   $('countries').innerHTML = M.countries.map(function (k) {
@@ -343,15 +353,15 @@ function syncFilterUI() {
     var f = b.dataset.f, v = b.dataset.v;
     b.setAttribute('aria-pressed', f === 'group' ? groupState(v) : f === 'modes' ? modeState(v) : F[f].has(+v) ? 'true' : 'false');
   });
-  setPressed('#dayMode button', function (b) { return b.dataset.dm === F.dm; });
   setPressed('#guessSeg button', function (b) { return b.dataset.g === F.guess; });
   setPressed('#srcSeg button', function (b) { return b.dataset.src === F.src; });
   $('oneField').hidden = F.dm !== 'one';
-  document.querySelector('#dayMode [data-dm="one"]').textContent = 'Single ' + (F.dm === 'one' ? F.unit : 'day');
+  setPressed('#dayMode button', function (b) { return b.dataset.dm === 'nav' ? F.dm === 'one' && F.unit !== 'day' : b.dataset.dm === 'one' ? F.dm === 'one' && F.unit === 'day' : b.dataset.dm === F.dm; });
   $('oneLabel').textContent = F.unit === 'day' ? 'Day' : 'Any day in the ' + F.unit;
   setPressed('[data-pn="step"] button', function (b) { return b.dataset.step === F.unit; });
   $('rangeFields').hidden = F.dm !== 'range';
-  ['yearsSec', 'monthsSec', 'dowsSec'].forEach(function (id) { $(id).hidden = !calFilters(); });
+  $('yearsSec').hidden = $('monthsSec').hidden = !ymFilters();
+  $('dowsSec').hidden = !calFilters();
   $('oneDay').value = isoDay(F.one); $('from').value = isoDay(F.from); $('to').value = isoDay(F.to);
   $('h0').value = F.h0; $('h1').value = F.h1;
   var k = activeFilters();
@@ -377,9 +387,12 @@ $('filtersSheet').addEventListener('click', function (ev) {
     var all = b.dataset.all === '1', q = b.dataset.q;
     if (q === 'modes') F.sports = new Set(all ? M.sports : []);
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries }[q] : []);
+  } else if (b.dataset.dm === 'nav') {
+    F = Object.assign(F, { dm: 'one', unit: 'week', one: navHome() });
+    allCalendar();
   } else if (b.dataset.dm) {
     F.dm = b.dataset.dm;
-    if (!calFilters()) allCalendar();
+    allCalendar();
     if (F.dm === 'one') F.unit = 'day';
     if (F.dm === 'one' && M.navDays.length && M.navDays.indexOf(F.one) < 0) F.one = M.navDays[M.navDays.length - 1];
     if (F.dm === 'week') { var wk = lastWeek(); F.from = wk[0]; F.to = wk[1]; }
@@ -394,8 +407,6 @@ $('filtersSheet').addEventListener('click', function (ev) {
     modeTreeOpen[g] = op;
     b.setAttribute('aria-expanded', op ? 'true' : 'false');
     $('mt-' + g).hidden = !op;
-    var sum = b.parentNode.querySelector('.mt-sum');
-    if (sum) sum.hidden = op;
     return;
   }
   else return;
