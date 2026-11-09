@@ -40,11 +40,10 @@
         <div class="bar-top">
           <div class="daynav" data-pn="nav" hidden>
             <button type="button" class="icon-btn" data-pn="prev" aria-label="Previous day with trips"><span data-icon="left"></span></button>
-            <label class="date-btn"><b data-pn="label"></b><small data-pn="sub"></small><input type="date" data-pn="pick" aria-label="Pick a day"></label>
+            <button type="button" class="date-btn" data-pn="pick" aria-haspopup="dialog" aria-expanded="false" aria-controls="calPop"><b data-pn="label"></b><small data-pn="sub"></small></button>
             <button type="button" class="icon-btn" data-pn="next" aria-label="Next day with trips"><span data-icon="right"></span></button>
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
-          <button type="button" class="today-btn" data-pn="today" hidden>Today</button>
           <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
@@ -69,11 +68,10 @@
           <div class="bar-top">
             <div class="daynav" data-pn="nav" hidden>
               <button type="button" class="icon-btn" data-pn="prev" aria-label="Previous day with trips"><span data-icon="left"></span></button>
-              <label class="date-btn"><b data-pn="label"></b><small data-pn="sub"></small><input type="date" data-pn="pick" aria-label="Pick a day"></label>
+              <button type="button" class="date-btn" data-pn="pick" aria-haspopup="dialog" aria-expanded="false" aria-controls="calPop"><b data-pn="label"></b><small data-pn="sub"></small></button>
               <button type="button" class="icon-btn" data-pn="next" aria-label="Next day with trips"><span data-icon="right"></span></button>
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
-            <button type="button" class="today-btn" data-pn="today" hidden>Today</button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
@@ -139,11 +137,10 @@
           <div class="bar-top">
             <div class="daynav" data-pn="nav" hidden>
               <button type="button" class="icon-btn" data-pn="prev" aria-label="Previous day with trips"><span data-icon="left"></span></button>
-              <label class="date-btn"><b data-pn="label"></b><small data-pn="sub"></small><input type="date" data-pn="pick" aria-label="Pick a day"></label>
+              <button type="button" class="date-btn" data-pn="pick" aria-haspopup="dialog" aria-expanded="false" aria-controls="calPop"><b data-pn="label"></b><small data-pn="sub"></small></button>
               <button type="button" class="icon-btn" data-pn="next" aria-label="Next day with trips"><span data-icon="right"></span></button>
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
-            <button type="button" class="today-btn" data-pn="today" hidden>Today</button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
@@ -329,6 +326,9 @@
   <div class="sheet-head"><h2 id="tripSheetTitle">Trip</h2><div class="acts"><button type="button" class="icon-btn" id="tripBack" aria-label="Back to the list" hidden><span data-icon="left"></span></button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body" id="tripBody"></div>
 </aside>
+
+<!-- Calendar for the period navigator -->
+<div class="cal-pop" id="calPop" role="dialog" aria-label="Pick a day" hidden></div>
 
 <div id="tip" class="tip" hidden></div>
 <div id="busy" class="busy" hidden></div>
