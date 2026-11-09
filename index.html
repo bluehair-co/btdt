@@ -115,7 +115,6 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 .mt-caret-pad { flex: none; width: 32px; }
 .mt-row .chip { font-weight: 600; }
 .chip .sw { width: 10px; height: 10px; border-radius: 3px; display: block; }
-.mt-sum { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; padding-left: 4px; }
 .mt-kids { display: flex; flex-wrap: wrap; gap: 8px; margin: 2px 0 6px 47px; padding-left: 12px; border-left: 2px solid var(--line); }
 .mt-mode { display: contents; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
@@ -2895,12 +2894,15 @@ function activeFilters() {
   if (F.src !== 'all') k++;
   return k;
 }
-// Years, months and days of the week only apply to All and Date range: the last 7 days or a
-// single day, week, month or year already say which days, so those filters are hidden and
-// turned back to everything there (or they would quietly leave out days you can't see).
+// Years and months only apply to All, and days of the week to All and Date range: a date
+// range, the last 7 days or a single day, week, month or year already say which days, so
+// those filters are hidden and turned back to everything there (or they would quietly leave
+// out days you can't see).
+function ymFilters() { return F.dm === 'all'; }
 function calFilters() { return F.dm === 'all' || F.dm === 'range'; }
 function allCalendar() {
-  F.years = new Set(M.years); F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
+  if (!ymFilters()) { F.years = new Set(M.years); F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]); }
+  if (!calFilters()) F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
 }
 function hourOk(h) {
   if (F.h0 === 0 && F.h1 === 24) return true;
@@ -2985,7 +2987,7 @@ function buildFilterUI() {
     var open = !!modeTreeOpen[g.key];
     return '<div class="mt-group" data-g="' + g.key + '">' +
       '<div class="mt-row">' + (kids ? '<button type="button" class="mt-caret" data-mt="' + g.key + '" aria-expanded="' + open + '" aria-controls="mt-' + g.key + '" aria-label="Show what ' + esc(g.label) + ' includes">' + icon('right') + '</button>' : '<span class="mt-caret-pad"></span>') +
-      head + (kids && !open ? '<span class="mt-sum">' + (one ? '' : ms.map(function (m) { return LABEL[m] || m; }).join(', ')) + '</span>' : '') + '</div>' +
+      head + '</div>' +
       (kids ? '<div class="mt-kids" id="mt-' + g.key + '"' + (open ? '' : ' hidden') + '>' + kids + '</div>' : '') + '</div>';
   }).join('');
   $('countries').innerHTML = M.countries.map(function (k) {
@@ -3043,7 +3045,8 @@ function syncFilterUI() {
   $('oneLabel').textContent = F.unit === 'day' ? 'Day' : 'Any day in the ' + F.unit;
   setPressed('[data-pn="step"] button', function (b) { return b.dataset.step === F.unit; });
   $('rangeFields').hidden = F.dm !== 'range';
-  ['yearsSec', 'monthsSec', 'dowsSec'].forEach(function (id) { $(id).hidden = !calFilters(); });
+  $('yearsSec').hidden = $('monthsSec').hidden = !ymFilters();
+  $('dowsSec').hidden = !calFilters();
   $('oneDay').value = isoDay(F.one); $('from').value = isoDay(F.from); $('to').value = isoDay(F.to);
   $('h0').value = F.h0; $('h1').value = F.h1;
   var k = activeFilters();
@@ -3071,7 +3074,7 @@ $('filtersSheet').addEventListener('click', function (ev) {
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries }[q] : []);
   } else if (b.dataset.dm) {
     F.dm = b.dataset.dm;
-    if (!calFilters()) allCalendar();
+    allCalendar();
     if (F.dm === 'one') F.unit = 'day';
     if (F.dm === 'one' && M.navDays.length && M.navDays.indexOf(F.one) < 0) F.one = M.navDays[M.navDays.length - 1];
     if (F.dm === 'week') { var wk = lastWeek(); F.from = wk[0]; F.to = wk[1]; }
@@ -3086,8 +3089,6 @@ $('filtersSheet').addEventListener('click', function (ev) {
     modeTreeOpen[g] = op;
     b.setAttribute('aria-expanded', op ? 'true' : 'false');
     $('mt-' + g).hidden = !op;
-    var sum = b.parentNode.querySelector('.mt-sum');
-    if (sum) sum.hidden = op;
     return;
   }
   else return;
