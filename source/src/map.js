@@ -553,7 +553,8 @@ function syncPeriodNavs() {
     q('nav').hidden = !one;
     q('range').hidden = one;
     q('step').hidden = !one;
-    q('today').hidden = one && today >= p0 && today <= p1;
+    // Today only belongs to the navigator; a date range or All shows just what's selected.
+    q('today').hidden = !one || today >= p0 && today <= p1;
     if (q('badge')) { q('badge').hidden = !k; q('badge').textContent = k; }
     if (one) {
       q('label').textContent = F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit);

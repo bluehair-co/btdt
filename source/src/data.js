@@ -182,10 +182,17 @@ function lastWeek() {
   if (M.maxD < today - 6) end = M.maxD;
   return [end - 6, end];
 }
+// The app opens on the period navigator at this week. If nothing was recorded in the last
+// 7 days (an older export), it opens on the week of the latest day with data instead.
+// Navigator in Filters goes back to this.
+function navHome() {
+  var today = todayDay();
+  return M.maxD < today - 6 ? M.maxD : today;
+}
 function defaultFilters() {
   var wk = lastWeek();
   return {
-    dm: 'week', one: M.maxD, unit: 'day', from: wk[0], to: wk[1],
+    dm: 'one', one: navHome(), unit: 'week', from: wk[0], to: wk[1],
     years: new Set(M.years), months: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), dows: new Set([0, 1, 2, 3, 4, 5, 6]),
     h0: 0, h1: 24, modes: new Set(M.modes), sports: new Set(M.sports), countries: new Set(M.countries), guess: 'all', src: 'all'
   };
@@ -346,11 +353,10 @@ function syncFilterUI() {
     var f = b.dataset.f, v = b.dataset.v;
     b.setAttribute('aria-pressed', f === 'group' ? groupState(v) : f === 'modes' ? modeState(v) : F[f].has(+v) ? 'true' : 'false');
   });
-  setPressed('#dayMode button', function (b) { return b.dataset.dm === F.dm; });
   setPressed('#guessSeg button', function (b) { return b.dataset.g === F.guess; });
   setPressed('#srcSeg button', function (b) { return b.dataset.src === F.src; });
   $('oneField').hidden = F.dm !== 'one';
-  document.querySelector('#dayMode [data-dm="one"]').textContent = 'Single ' + (F.dm === 'one' ? F.unit : 'day');
+  setPressed('#dayMode button', function (b) { return b.dataset.dm === 'nav' ? F.dm === 'one' && F.unit !== 'day' : b.dataset.dm === 'one' ? F.dm === 'one' && F.unit === 'day' : b.dataset.dm === F.dm; });
   $('oneLabel').textContent = F.unit === 'day' ? 'Day' : 'Any day in the ' + F.unit;
   setPressed('[data-pn="step"] button', function (b) { return b.dataset.step === F.unit; });
   $('rangeFields').hidden = F.dm !== 'range';
@@ -381,6 +387,9 @@ $('filtersSheet').addEventListener('click', function (ev) {
     var all = b.dataset.all === '1', q = b.dataset.q;
     if (q === 'modes') F.sports = new Set(all ? M.sports : []);
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries }[q] : []);
+  } else if (b.dataset.dm === 'nav') {
+    F = Object.assign(F, { dm: 'one', unit: 'week', one: navHome() });
+    allCalendar();
   } else if (b.dataset.dm) {
     F.dm = b.dataset.dm;
     allCalendar();
