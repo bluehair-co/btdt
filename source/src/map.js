@@ -579,9 +579,12 @@ function renderCal() {
   var has = {}, nd = M.navDays, i;
   for (i = 0; i < nd.length; i++) if (nd[i] >= m0 && nd[i] <= m1) has[nd[i]] = 1;
   var p0 = periodStart(F.one, F.unit), p1 = periodEnd(F.one, F.unit), lo = monthStart(M.minD), hi = Math.max(M.maxD, today);
-  var lead = (x.getUTCDay() + 6) % 7, h = '<div class="cal-head"><button type="button" class="icon-btn" data-cal="-1" aria-label="Previous month"' + (m0 <= lo ? ' disabled' : '') + '>' + icon('left') + '</button>' +
+  var lead = (x.getUTCDay() + 6) % 7, h = '<div class="cal-head">' +
+    '<button type="button" class="icon-btn" data-cal="-12" aria-label="Previous year"' + (m0 <= lo ? ' disabled' : '') + '>' + icon('left2') + '</button>' +
+    '<button type="button" class="icon-btn" data-cal="-1" aria-label="Previous month"' + (m0 <= lo ? ' disabled' : '') + '>' + icon('left') + '</button>' +
     '<b>' + MONTHS_LONG[x.getUTCMonth()] + ' ' + x.getUTCFullYear() + '</b>' +
-    '<button type="button" class="icon-btn" data-cal="1" aria-label="Next month"' + (m1 >= hi ? ' disabled' : '') + '>' + icon('right') + '</button></div><div class="cal-grid">';
+    '<button type="button" class="icon-btn" data-cal="1" aria-label="Next month"' + (m1 >= hi ? ' disabled' : '') + '>' + icon('right') + '</button>' +
+    '<button type="button" class="icon-btn" data-cal="12" aria-label="Next year"' + (m1 >= hi ? ' disabled' : '') + '>' + icon('right2') + '</button></div><div class="cal-grid">';
   DOW_ORDER.forEach(function (k) { h += '<span class="cal-dow">' + DOW[k].slice(0, 2) + '</span>'; });
   for (i = 0; i < lead; i++) h += '<span></span>';
   for (var d = m0; d <= m1; d++) {
@@ -591,16 +594,11 @@ function renderCal() {
   h += '</div><div class="cal-foot"><button type="button" class="btn" data-cal="today">Today</button></div>';
   $('calPop').innerHTML = h;
 }
-function placeCal() {
-  var r = calBtn.getBoundingClientRect(), pop = $('calPop'), w = pop.offsetWidth;
-  pop.style.top = Math.round(r.bottom + 8) + 'px';
-  pop.style.left = Math.round(Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2))) + 'px';
-}
 function openCal(btn) {
   closeCal();
   calBtn = btn; calMonth = monthStart(F.one);
   renderCal();
-  $('calPop').hidden = false; placeCal();
+  $('calPop').hidden = false; $('calScrim').hidden = false;
   btn.setAttribute('aria-expanded', 'true');
   var cur = $('calPop').querySelector('[aria-current]') || $('calPop').querySelector('.cal-day.today') || $('calPop').querySelector('.cal-day:not([disabled])');
   if (cur) cur.focus();
@@ -608,20 +606,20 @@ function openCal(btn) {
 function closeCal() {
   if (!calBtn) return;
   calBtn.setAttribute('aria-expanded', 'false');
-  $('calPop').hidden = true; calBtn = null;
+  $('calPop').hidden = true; $('calScrim').hidden = true; calBtn = null;
 }
 $('calPop').addEventListener('click', function (ev) {
   var b = ev.target.closest('button');
   if (!b || b.disabled) return;
   if (b.dataset.day) { var btn = calBtn; closeCal(); showDay(+b.dataset.day, F.unit); btn.focus(); }
   else if (b.dataset.cal === 'today') { var bt = calBtn; closeCal(); showDay(todayDay(), F.unit); bt.focus(); }
-  else if (b.dataset.cal) { calMonth = addMonths(calMonth, +b.dataset.cal); renderCal(); placeCal(); }
+  // A year back or forward stops at the first or last month with data (or this month).
+  else if (b.dataset.cal) { calMonth = Math.max(monthStart(M.minD), Math.min(monthStart(Math.max(M.maxD, todayDay())), addMonths(calMonth, +b.dataset.cal))); renderCal(); }
 });
 document.addEventListener('click', function (ev) {
   if (calBtn && !ev.target.closest('#calPop') && !ev.target.closest('[data-pn="pick"]')) closeCal();
 }, true);
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && calBtn) { var b = calBtn; closeCal(); b.focus(); } });
-addEventListener('resize', closeCal);
 // Steps to the nearest day, week, month or year before or after this one that has trips.
 // It lands on the last day with trips going back and the first going forward.
 function stepDay(dir) {
