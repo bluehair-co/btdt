@@ -159,8 +159,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .daynav .date-btn { font: inherit; color: var(--fg); min-width: 0; }
 .daynav .date-btn:hover, .daynav .date-btn[aria-expanded="true"] { background: var(--chip); }
 /* Calendar under the navigator's date */
-.cal-pop { position: fixed; z-index: 45; width: 300px; max-width: calc(100vw - 16px); padding: 10px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
-.cal-head { display: grid; grid-template-columns: 40px 1fr 40px; align-items: center; text-align: center; margin-bottom: 6px; }
+.cal-scrim { position: fixed; inset: 0; z-index: 44; background: rgba(0, 0, 0, .35); }
+.cal-pop { position: fixed; z-index: 45; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 320px; max-width: calc(100vw - 16px); padding: 10px; border-radius: 18px; background: var(--panel); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.cal-head { display: grid; grid-template-columns: 40px 40px 1fr 40px 40px; align-items: center; text-align: center; margin-bottom: 6px; }
 .cal-head b { font-size: 15px; font-weight: 600; }
 .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
 .cal-dow { text-align: center; font-size: 11px; color: var(--muted); padding: 4px 0; }
