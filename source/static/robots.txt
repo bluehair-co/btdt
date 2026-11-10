@@ -1,0 +1,7 @@
+# BT•DT: every page may be crawled.
+# Crawlers only read robots.txt at the root of a host, so this copy at /btdt/ is
+# informational until the app has its own domain; the sitemap is submitted in Search Console.
+User-agent: *
+Allow: /
+
+Sitemap: https://bluehair-co.github.io/btdt/sitemap.xml
