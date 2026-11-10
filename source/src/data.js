@@ -4,6 +4,7 @@ var RAW = null; // the same as loaded and saved, before Strava is laid over
 var M = null;   // facts about D: years, modes, countries, days
 var F = null;   // the filters, shared by every tab
 var sel = new Int32Array(0), selV = new Int32Array(0);   // trips and stays that pass, oldest first
+var applyCount = 0;   // goes up each time filters or the period are applied
 var tab = 'map';
 var dirty = { map: true, insights: true, timeline: true };
 var mq = window.matchMedia('(min-width: 960px)');
@@ -247,6 +248,7 @@ function apply() {
     if (dayOk(D.day[i])) out.push(i);
   }
   sel = Int32Array.from(out);
+  applyCount++;
   M.navDays = Object.keys(nav).map(Number).sort(function (a, b) { return a - b; });
   // Stays follow the same filters, except transport and time of day.
   // Stays come from Timeline, so Strava-only leaves them out.

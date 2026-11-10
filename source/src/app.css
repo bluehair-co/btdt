@@ -281,6 +281,39 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-stat { text-align: center; margin-top: 6px; }
 .far-art.wide { max-width: 640px; }
 .far-art .mars { fill: none; stroke: var(--m-air); stroke-linecap: round; }
+/* The scores take turns in one card: a sliding track, dots and arrows in the header, swipe on touch. */
+.far-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
+.far-dots { display: flex; gap: 2px; }
+.far-dots button { width: 22px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; background: none; padding: 0; cursor: pointer; }
+.far-dots button::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 35%, transparent); transition: background .2s, width .2s; }
+.far-dots button[aria-current="true"]::after { width: 18px; border-radius: 4px; background: var(--accent); }
+.far-view { overflow: hidden; touch-action: pan-y; margin: 0 -16px; }
+.far-track { display: flex; align-items: flex-start; transition: transform .45s cubic-bezier(.3, .7, .3, 1); }
+.far-slide { flex: 0 0 100%; min-width: 0; padding: 0 16px; }
+.far-art.mid { max-width: 640px; overflow: hidden; }
+/* Voyager: the race and the chase share one picture; the zoom scales one into the other. */
+.v-foot { display: flex; justify-content: center; margin-top: 10px; }
+.v-zoom { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px 0 8px; border-radius: 16px; border: 1px solid var(--line); background: var(--chip); color: var(--fg); font: 500 13px var(--font-body); cursor: pointer; }
+.v-zoom svg { width: 20px; height: 20px; fill: currentColor; }
+.v-zoom[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-fg); }
+.far-art .v-race, .far-art .v-chase { transform-box: view-box; transition: transform .6s cubic-bezier(.5, 0, .2, 1), opacity .45s ease; }
+.far-art .v-race { transform-origin: 96px 92px; }
+.far-art .v-chase { transform-origin: 74px 92px; }
+.far-art.out .v-race { transform: scale(.02); opacity: 0; }
+.far-art:not(.out) .v-chase { transform: scale(14); opacity: 0; }
+.far-art .vl { font-size: 11px; fill: var(--muted); }
+.far-art .vb { font-size: 12px; font-weight: 600; fill: var(--fg); }
+.far-art .gold { fill: none; stroke: var(--m-foot); stroke-linecap: round; }
+.v-stats { display: grid; }
+.v-stats > div { grid-area: 1 / 1; transition: opacity .3s; }
+.v-stats > [hidden] { display: block; visibility: hidden; opacity: 0; }
+@media (max-width: 600px) {
+  .far-art .vl { font-size: 17px; } .far-art .vb { font-size: 18px; }
+  /* On a phone the scores are swiped, so the arrows make way for the title. */
+  .far-nav [data-far="prev"], .far-nav [data-far="next"] { display: none; }
+  .far-art { max-width: 230px; }
+}
+@media (prefers-reduced-motion: reduce) { .far-track, .far-art .v-race, .far-art .v-chase { transition: none; } }
 .bars { display: flex; flex-direction: column; gap: 10px; }
 .bar-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .bar-row .name { font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
