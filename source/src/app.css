@@ -339,15 +339,56 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .tl-end { padding: 20px 16px calc(var(--dock-h) + var(--dock-gap) + 28px + var(--safe-b)); text-align: center; color: var(--muted); font-size: 12px; }
 
 /* ---------- welcome ---------- */
-.welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: calc(40px + var(--safe-t)) 16px 40px; background: var(--bg); }
-.welcome .card { max-width: 520px; width: 100%; padding: 28px 24px; text-align: center; }
-.logo { display: block; width: 72px; height: 72px; margin: 0 auto 12px; }
-.welcome h1 { font-family: var(--font-display); font-weight: 800; font-size: 32px; letter-spacing: -.02em; margin: 0 0 6px; }
-.welcome .tagline { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--fg); margin: -4px 0 12px; letter-spacing: .02em; }
-.welcome p { color: var(--muted); margin: 0 0 20px; }
-.welcome .acts { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.welcome .btn.primary { font-size: 16px; padding: 12px 22px; }
-.welcome details.help { text-align: left; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+/* The picture fills the screen like background-size: cover, inside a stage with the picture's
+   own shape (2752 x 1536), so the tagline can sit on the picture itself, just under the sun.
+   On tall screens the stage slides left only as far as keeps the hiker (26.5% across) well
+   in view; on wider ones it keeps the hiker and the sun (63.2% across) on screen together. */
+.welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-start; padding: calc(24px + var(--safe-t)) 24px calc(24px + var(--safe-b)); background: #2c2d55; color: #fff; color-scheme: dark; }
+.welcome-art {
+  position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
+}
+.welcome-art > * {
+  --sw: max(100cqw, 100cqh * 1.7917);
+  --sh: max(100cqh, 100cqw / 1.7917);
+  --sx: max(0px, min(var(--sw) * .4485 - 50cqw, var(--sw) * .265 - 35cqw));
+  --sy: calc((var(--sh) - 100cqh) * .3);
+}
+.welcome-art .stage { position: absolute; left: calc(0px - var(--sx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
+.welcome-art img { display: block; width: 100%; height: 100%; }
+.welcome-tagline {
+  --tw: 11.5em;
+  position: absolute; margin: 0; width: var(--tw); text-align: center;
+  left: clamp(16px + var(--tw) / 2, var(--sw) * .632 - var(--sx), 100cqw - 16px - var(--tw) / 2);
+  top: calc(var(--sh) * .318 - var(--sy));
+  transform: translateX(-50%);
+  font-family: var(--font-display); font-weight: 200; font-size: clamp(24px, 3.2cqw, 60px); line-height: 1.15; letter-spacing: .08em; color: #fff;
+  text-shadow: 0 1px 3px rgba(70, 30, 50, .45), 0 0 24px rgba(90, 40, 70, .4);
+}
+.welcome-tagline br { display: none; }
+/* Too narrow to keep it on one line beside the hiker: two lines at the right. */
+@media (max-aspect-ratio: 1/1) {
+  .welcome-tagline { --tw: 6.2em; text-align: right; }
+  .welcome-tagline br { display: inline; }
+}
+.welcome-panel {
+  position: relative; width: 100%; max-width: 400px; padding: 22px 22px 18px; border-radius: 20px;
+  background: rgba(22, 20, 48, .38); border: 1px solid rgba(255, 255, 255, .18);
+  backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
+}
+.welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
+.welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
+.welcome-panel .btn.primary:hover { background: #fff3e4; }
+.welcome-panel .btn.quiet { color: #fff; }
+.welcome-panel .status { color: rgba(255, 255, 255, .85); }
+.welcome-panel .status:empty { display: none; }
+.welcome-panel .status.err { color: #ffb4ac; }
+.welcome-panel details.help { margin-top: 18px; border-top: 1px solid rgba(255, 255, 255, .2); padding-top: 12px; }
+.welcome-panel details.help ol { color: rgba(255, 255, 255, .82); }
+.welcome-panel details.help b { color: #fff; }
+.welcome-panel :focus-visible { outline-color: #fff; }
+@media (max-width: 520px) { .welcome { padding-left: 16px; padding-right: 16px; } .welcome-panel { max-width: none; } }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
