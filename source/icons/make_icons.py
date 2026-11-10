@@ -10,7 +10,7 @@ The browser-tab icon is the location pin on its own, cut out on a transparent ba
 """
 import math
 import os
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'static')
@@ -51,15 +51,32 @@ def pin(size):
     return src.crop(box).resize((size, size), Image.LANCZOS)
 
 
+# A thin light outline keeps the pin's dark lower half visible on dark browser tabs.
+OUTLINE = (255, 243, 228)
+
+
+def tab_pin(size):
+    """The pin with a light outline about 1/16 of its size (at least 1 px), drawn at this size."""
+    w = max(1, round(size / 16))
+    inner = pin(size - 2 * w)
+    out = Image.new('RGBA', (size, size), (0, 0, 0, 0))
+    out.alpha_composite(inner, (w, w))
+    ring = out.getchannel('A').point(lambda v: 255 if v > 40 else 0).filter(ImageFilter.MaxFilter(2 * w + 1))
+    edge = Image.new('RGBA', (size, size), OUTLINE + (0,))
+    edge.putalpha(ring)
+    edge.alpha_composite(out)
+    return edge
+
+
 def main():
     for s in (192, 512):
         square(s).save(os.path.join(OUT, 'icon-%d.png' % s), optimize=True)
         square(s).save(os.path.join(OUT, 'icon-maskable-%d.png' % s), optimize=True)
     square(180).save(os.path.join(OUT, 'apple-touch-icon.png'), optimize=True)
     # Browser tabs get just the pin.
-    pin(32).save(os.path.join(OUT, 'favicon-32.png'), optimize=True)
-    pin(96).save(os.path.join(OUT, 'favicon-96.png'), optimize=True)
-    pin(256).save(os.path.join(OUT, 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48)])
+    tab_pin(32).save(os.path.join(OUT, 'favicon-32.png'), optimize=True)
+    tab_pin(96).save(os.path.join(OUT, 'favicon-96.png'), optimize=True)
+    tab_pin(48).save(os.path.join(OUT, 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48)], append_images=[tab_pin(16), tab_pin(32)])
     print('Icons written to', os.path.normpath(OUT))
 
 
