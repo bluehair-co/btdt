@@ -12,7 +12,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -32,6 +32,40 @@ function renderSummary() {
     stat('Days travelled', fmt(nd), '', span > 1 ? 'Out of ' + fmt(span) + ' days (' + Math.round(nd / span * 100) + '%)' : '') +
     stat('Countries', fmt(Object.keys(cc).length), '', '') +
     stat('Places', fmt(Object.keys(places).length), '', selV.length ? fmt(selV.length) + ' stays' : 'Where trips ended');
+}
+
+// ---------- how far is that? ----------
+// The selection's distance as laps of the Earth (Magellan) and legs to the Moon and back (Armstrong).
+var EARTH_KM = 40075, MOON_KM = 384400;
+function farBar(share, label) {
+  return '<div class="far-track" role="img" aria-label="' + label + '"><i style="width:' + Math.min(100, share * 100).toFixed(1) + '%"></i></div>';
+}
+function farPct(share) { return share > 0 && share < .01 ? '<1' : String(Math.floor(share * 100)); }
+function renderFar() {
+  var kmT = 0, j;
+  for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
+  $('farNote').textContent = 'The distance of the trips shown, compared with the Earth and the Moon. Magellan\'s expedition was the first to sail around the world, ' +
+    dist(EARTH_KM) + ' around the equator. Armstrong was the first to walk on the Moon, on average ' + dist(MOON_KM) + ' away.';
+  // Magellan: laps around the world, and how far into the current one.
+  var laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, mag;
+  if (laps < 1) mag = stat('Magellan score', farPct(laps) + '%', 'around the world', dist(EARTH_KM - kmT) + ' to go to make it all the way round');
+  else mag = stat('Magellan score', fmt(laps, laps < 10 ? 2 : 1), '× around the world', (done === 1 ? 'Once round' : fmt(done) + ' times round') + ', and ' + dist(EARTH_KM - lap * EARTH_KM) + ' from finishing lap ' + fmt(done + 1));
+  mag += farBar(lap, farPct(lap) + '% of lap ' + fmt(done + 1));
+  // Armstrong: one leg is Earth to the Moon; odd legs head out, even legs come home.
+  var legs = kmT / MOON_KM, leg = Math.floor(legs), part = legs - leg, trips = Math.floor(leg / 2), back = leg % 2 === 1, left = dist(MOON_KM - part * MOON_KM), arm, bar;
+  if (legs < 1) {
+    arm = stat('Armstrong score', farPct(legs) + '%', 'of the way to the Moon', left + ' still to go');
+    bar = farPct(part) + '% of the way to the Moon';
+  } else {
+    var there = trips ? 'There and back ' + (trips === 1 ? 'once' : fmt(trips) + ' times') : '';
+    arm = stat('Armstrong score', fmt(legs / 2, legs < 20 ? 2 : 1), '× to the Moon and back',
+      back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to the Moon! On the way home, with ') + left + ' to go'
+           : there + '. On the way out again, with ' + left + ' to the Moon');
+    bar = farPct(part) + (back ? '% of the way home from the Moon' : '% of the way to the Moon');
+  }
+  arm += farBar(part, bar);
+  $('farStats').innerHTML = '<div>' + mag + '</div><div>' + arm + '</div>';
+  $('farStats').lastChild.querySelector('.far-track').classList.toggle('home', back);
 }
 
 var SPLIT = {
