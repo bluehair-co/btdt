@@ -473,7 +473,9 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .about details > h3:first-of-type { margin-top: 0; }
 .about b { color: #fff; font-weight: 600; }
 .about a { color: #ffd9b0; font-weight: 500; }
-.about-maker { display: inline-flex; align-items: center; gap: 12px; margin: 2px 0 0; padding: 8px 14px 8px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); text-decoration: none; }
+/* The maker card sits in a footer under the scrolling sections, always visible, bottom right. */
+.about-foot { flex: none; display: flex; justify-content: flex-end; padding: 12px 16px 16px; border-top: 1px solid rgba(255, 255, 255, .14); }
+.about-maker { display: inline-flex; align-items: center; gap: 12px; margin: 0; padding: 8px 14px 8px 8px; border-radius: 14px; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .14); text-decoration: none; }
 .about-maker:hover { background: rgba(255, 255, 255, .12); }
 .about-maker img { width: 44px; height: 44px; object-fit: contain; }
 .about-maker span { display: flex; flex-direction: column; line-height: 1.3; }
@@ -741,15 +743,6 @@ div.hit-row:hover { background: none; }
         </details>
 
         <details>
-          <summary>Who made this</summary>
-          <p>BT;DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
-          <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
-            <img src="bluehair-logo.png" alt="" width="44" height="44">
-            <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
-          </a>
-        </details>
-
-        <details>
           <summary>Credits &amp; license</summary>
           <h3>This project</h3>
           <p>BT;DT is free to use, copy and change for <b>non-commercial</b> purposes, as long as you credit the original: “Based on BT;DT by BlueHair (www.bluehair.co)”. It is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>; the code is on <a href="https://github.com/bluehair-co/btdt" target="_blank" rel="noopener">GitHub</a>. The BlueHair name and logo are not part of the license.</p>
@@ -765,6 +758,17 @@ div.hit-row:hover { background: none; }
             <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
           </ul>
         </details>
+
+        <details>
+          <summary>Who made this</summary>
+          <p>BT;DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
+        </details>
+      </div>
+      <div class="about-foot">
+        <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
+          <img src="bluehair-logo.png" alt="" width="44" height="44">
+          <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
+        </a>
       </div>
     </dialog>
   </section>
