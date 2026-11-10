@@ -730,7 +730,7 @@ document.querySelector('#insightsPage .cards').addEventListener('click', functio
 // how often and when you go, and the spots inside it. A place in the list is everything with the
 // same name (often a town); Google gives each spot you stay at its own place ID, so the spots are
 // told apart by that ID even when they're a few metres apart. Stays without an ID (Takeout files
-// before IDs, or data saved before BT;DT kept them) fall back to the 300 m grouping.
+// before IDs, or data saved before BT•DT kept them) fall back to the 300 m grouping.
 // Nothing is looked up: the Google Maps buttons are plain links you choose to open.
 function mapsUrl(lat, lng, pid) {
   return 'https://www.google.com/maps/search/?api=1&query=' + lat.toFixed(6) + '%2C' + lng.toFixed(6) + (pid ? '&query_place_id=' + encodeURIComponent(pid) : '');
