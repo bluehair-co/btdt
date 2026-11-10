@@ -36,7 +36,7 @@ function upgrade(R) {
   // Google's home and work tags aren't used (see Collector.visit); clear them from data saved before.
   if (R.vtype) R.vtype.fill(0);
   if (!R.files) R.files = [];
-  // Bad GPS jumps come out of trips saved before BT;DT looked for them too (it changes nothing the second time).
+  // Bad GPS jumps come out of trips saved before BT•DT looked for them too (it changes nothing the second time).
   cleanJumps(R);
   fillOffsets(R);
   if (R.strava) fillOffsets(R.strava);
@@ -117,7 +117,7 @@ function rematchSports(S) {
   for (var i = 0; i < S.stype.length; i++) {
     if (S.sport[i] || !S.stype[i]) continue;
     var st = stravaSport(S.stype[i]);
-    // The activity file's own type, when activities.csv gave one BT;DT doesn't know (see pickType).
+    // The activity file's own type, when activities.csv gave one BT•DT doesn't know (see pickType).
     if (!st.sport && S.smeta && S.smeta[i] && S.smeta[i].fileType) { st = stravaSport(S.smeta[i].fileType); if (st.sport) S.smeta[i].typeUsed = S.smeta[i].fileType; }
     if (!st.sport) continue;
     S.sport[i] = st.sport; S.mode[i] = MODE_IDX[st.mode]; S.est[i] &= ~GUESSED; S.stype[i] = '';
@@ -163,7 +163,7 @@ function setData(R) {
     minD: minD, maxD: maxD, anyGuess: anyGuess, navDays: [],
     // Strava sports present, by mode, in the order SPORTS lists them.
     sports: Object.keys(sp).map(Number).sort(function (a, b) { return a - b; }), sportN: sp,
-    // Modes with trips that have no sport (from Timeline, or a Strava type BT;DT doesn't know).
+    // Modes with trips that have no sport (from Timeline, or a Strava type BT•DT doesn't know).
     plain: plain
   };
   F = defaultFilters();
