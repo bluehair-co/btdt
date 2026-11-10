@@ -363,17 +363,17 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* ---------- welcome ---------- */
 /* The picture fills the screen like background-size: cover, inside a stage with the picture's
    own shape (2752 x 1536), so the tagline can sit on the picture itself, just under the sun.
-   The stage keeps the hiker (26.5% across) and the sun (63.2% across) on screen together:
-   it is centred between them, and on tall screens it is never wider than 2.1 screen widths,
-   so a phone shows the top of the picture with both, and the dark bottom carries on below. */
+   The stage keeps the bike (from 15.5% across), the hiker and the sun (63.2% across) on
+   screen together: it is centred on them (40.5% across), and on tall screens it is never wider than 1.8 screen widths,
+   so a phone shows the top of the picture with the bike, the hiker and the sun, and the dark bottom carries on below. */
 .welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-end; padding: calc(24px + var(--safe-t)) clamp(20px, 5vw, 72px) calc(clamp(20px, 6vh, 64px) + var(--safe-b)); background: #19153a; color: #fff; color-scheme: dark; }
 .welcome-art {
   position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
 }
 .welcome-art > * {
-  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 210cqw));
+  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 180cqw));
   --sh: calc(var(--sw) / 1.7917);
-  --sx: max(0px, min(var(--sw) * .4485 - 50cqw, var(--sw) * .265 - 8cqw, var(--sw) - 100cqw));
+  --sx: max(0px, min(var(--sw) * .405 - 50cqw, var(--sw) * .15 - 2cqw, var(--sw) - 100cqw));
   --sy: max(0px, (var(--sh) - 100cqh) * .3);
 }
 .welcome-art .stage { position: absolute; left: calc(0px - var(--sx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
@@ -403,7 +403,19 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }
-.welcome-panel .btn.quiet { color: #fff; }
+/* Split button: the main action, and a chevron that opens the folder option above it. */
+.split { position: relative; display: inline-flex; }
+.welcome-panel .split .btn.primary { border-radius: 999px; }
+.welcome-panel .split .btn.split-main { padding-right: 18px; border-radius: 999px 0 0 999px; }
+@media (pointer: coarse) { .welcome-panel .split .btn.split-main { border-radius: 999px; } }
+.welcome-panel .split .btn.split-more { border-left: 1px solid rgba(35, 34, 74, .18); padding: 12px 12px 12px 10px; border-radius: 0 999px 999px 0; }
+.split-more[aria-expanded="true"] { background: #fff3e4; }
+.split-more[aria-expanded="true"] .ic { transform: rotate(180deg); }
+.split-menu { position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 100%; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgba(10, 8, 30, .35); z-index: 2; }
+.split-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: #23224a; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; text-align: left; }
+.split-menu button:hover, .split-menu button:focus-visible { background: #f1eefb; outline: none; }
+.split-menu .ic { width: 18px; height: 18px; fill: currentColor; }
+.welcome-panel .split-menu :focus-visible { outline: none; }
 .welcome-panel .status { color: rgba(255, 255, 255, .85); }
 .welcome-panel .status:empty { display: none; }
 .welcome-panel .status.err { color: #ffb4ac; }
@@ -412,6 +424,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel details.help b { color: #fff; }
 .welcome-panel :focus-visible { outline-color: #fff; }
 @media (max-width: 520px) { .welcome-panel { max-width: none; } }
+@media (min-width: 721px) and (min-aspect-ratio: 1/1) { .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); } }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
@@ -533,8 +546,13 @@ div.hit-row:hover { background: none; }
     <div class="welcome-panel">
       <p>See where you've been and how you get around, from your Google Timeline. Your file is read on this device and never uploaded.</p>
       <div class="acts">
-        <label class="btn primary" for="fileIn"><span data-icon="upload"></span>Load Timeline file</label>
-        <label class="btn quiet desktop-only" for="dirIn">Load a whole folder</label>
+        <div class="split" id="loadSplit">
+          <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load Timeline file</label>
+          <button type="button" class="btn primary split-more desktop-only" id="loadMore" aria-haspopup="menu" aria-expanded="false" aria-controls="loadMenu" aria-label="More ways to load"><span data-icon="down"></span></button>
+          <div class="split-menu" id="loadMenu" role="menu" hidden>
+            <button type="button" role="menuitem" id="loadFolder"><span data-icon="folder"></span>Load a whole folder</button>
+          </div>
+        </div>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
       <details class="help">
@@ -2307,6 +2325,8 @@ var ICONS = {
   gear: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
   close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
   left: 'M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z',
+  down: 'M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z',
+  folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   right: 'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
   play: 'M8 5v14l11-7z',
   pause: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z',
@@ -3631,6 +3651,18 @@ function importFiles(list) {
 $('fileIn').addEventListener('change', function () { closeSheets(); importFiles(this.files); this.value = ''; });
 $('stravaIn').addEventListener('change', function () { closeSheets(); importFiles(this.files); this.value = ''; });
 $('dirIn').addEventListener('change', function () { importFiles(this.files); this.value = ''; });
+// The welcome Load button's chevron opens a small menu (like a split Send button) with Load a whole folder.
+(function () {
+  var more = $('loadMore'), menu = $('loadMenu'), item = $('loadFolder');
+  function show(open) {
+    menu.hidden = !open; more.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) item.focus();
+  }
+  more.addEventListener('click', function (e) { e.stopPropagation(); show(menu.hidden); });
+  item.addEventListener('click', function () { show(false); $('dirIn').click(); });
+  document.addEventListener('click', function (e) { if (!menu.hidden && !$('loadSplit').contains(e.target)) show(false); });
+  $('loadSplit').addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { show(false); more.focus(); } });
+})();
 document.body.addEventListener('dragover', function (e) { e.preventDefault(); });
 document.body.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });
 

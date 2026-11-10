@@ -341,17 +341,17 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* ---------- welcome ---------- */
 /* The picture fills the screen like background-size: cover, inside a stage with the picture's
    own shape (2752 x 1536), so the tagline can sit on the picture itself, just under the sun.
-   The stage keeps the hiker (26.5% across) and the sun (63.2% across) on screen together:
-   it is centred between them, and on tall screens it is never wider than 2.1 screen widths,
-   so a phone shows the top of the picture with both, and the dark bottom carries on below. */
+   The stage keeps the bike (from 15.5% across), the hiker and the sun (63.2% across) on
+   screen together: it is centred on them (40.5% across), and on tall screens it is never wider than 1.8 screen widths,
+   so a phone shows the top of the picture with the bike, the hiker and the sun, and the dark bottom carries on below. */
 .welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-end; padding: calc(24px + var(--safe-t)) clamp(20px, 5vw, 72px) calc(clamp(20px, 6vh, 64px) + var(--safe-b)); background: #19153a; color: #fff; color-scheme: dark; }
 .welcome-art {
   position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
 }
 .welcome-art > * {
-  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 210cqw));
+  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 180cqw));
   --sh: calc(var(--sw) / 1.7917);
-  --sx: max(0px, min(var(--sw) * .4485 - 50cqw, var(--sw) * .265 - 8cqw, var(--sw) - 100cqw));
+  --sx: max(0px, min(var(--sw) * .405 - 50cqw, var(--sw) * .15 - 2cqw, var(--sw) - 100cqw));
   --sy: max(0px, (var(--sh) - 100cqh) * .3);
 }
 .welcome-art .stage { position: absolute; left: calc(0px - var(--sx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
@@ -381,7 +381,19 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }
-.welcome-panel .btn.quiet { color: #fff; }
+/* Split button: the main action, and a chevron that opens the folder option above it. */
+.split { position: relative; display: inline-flex; }
+.welcome-panel .split .btn.primary { border-radius: 999px; }
+.welcome-panel .split .btn.split-main { padding-right: 18px; border-radius: 999px 0 0 999px; }
+@media (pointer: coarse) { .welcome-panel .split .btn.split-main { border-radius: 999px; } }
+.welcome-panel .split .btn.split-more { border-left: 1px solid rgba(35, 34, 74, .18); padding: 12px 12px 12px 10px; border-radius: 0 999px 999px 0; }
+.split-more[aria-expanded="true"] { background: #fff3e4; }
+.split-more[aria-expanded="true"] .ic { transform: rotate(180deg); }
+.split-menu { position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 100%; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgba(10, 8, 30, .35); z-index: 2; }
+.split-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: #23224a; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; text-align: left; }
+.split-menu button:hover, .split-menu button:focus-visible { background: #f1eefb; outline: none; }
+.split-menu .ic { width: 18px; height: 18px; fill: currentColor; }
+.welcome-panel .split-menu :focus-visible { outline: none; }
 .welcome-panel .status { color: rgba(255, 255, 255, .85); }
 .welcome-panel .status:empty { display: none; }
 .welcome-panel .status.err { color: #ffb4ac; }
@@ -390,6 +402,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel details.help b { color: #fff; }
 .welcome-panel :focus-visible { outline-color: #fff; }
 @media (max-width: 520px) { .welcome-panel { max-width: none; } }
+@media (min-width: 721px) and (min-aspect-ratio: 1/1) { .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); } }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
