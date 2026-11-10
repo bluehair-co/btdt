@@ -1349,10 +1349,10 @@ function paintProj(fast) {
   ctx.clearRect(0, 0, w, h);
   var path = d3.geoPath(P.proj, ctx), dark = isDark();
   ctx.beginPath(); path({ type: 'Sphere' });
-  ctx.fillStyle = dark ? '#132029' : '#dce8ee'; ctx.fill();
+  ctx.fillStyle = dark ? '#17143a' : '#e2e4f0'; ctx.fill();
   ctx.beginPath(); path(P.grat);
-  ctx.strokeStyle = dark ? '#1d2c35' : '#cbdae2'; ctx.lineWidth = 0.5; ctx.stroke();
-  ctx.fillStyle = dark ? '#222b25' : '#fbfcfa'; ctx.strokeStyle = dark ? '#3a463e' : '#c3cdc6'; ctx.lineWidth = 0.6;
+  ctx.strokeStyle = dark ? '#241f4d' : '#d2d4e4'; ctx.lineWidth = 0.5; ctx.stroke();
+  ctx.fillStyle = dark ? '#262150' : '#fffaf6'; ctx.strokeStyle = dark ? '#3d3768' : '#d6ccc4'; ctx.lineWidth = 0.6;
   P.land.forEach(function (polys) {
     ctx.beginPath();
     polys.forEach(function (poly) { path(poly); });

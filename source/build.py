@@ -38,7 +38,7 @@ HEAD = '''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="See where you've been and how you get around, from your Google Timeline. Everything stays on your device.">
-<meta name="theme-color" content="#f3f5f2">
+<meta name="theme-color" content="#f7f2ee">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
