@@ -37,35 +37,65 @@ function renderSummary() {
 // ---------- how far is that? ----------
 // The selection's distance as laps of the Earth (Magellan) and legs to the Moon and back (Armstrong).
 var EARTH_KM = 40075, MOON_KM = 384400;
-function farBar(share, label) {
-  return '<div class="far-track" role="img" aria-label="' + label + '"><i style="width:' + Math.min(100, share * 100).toFixed(1) + '%"></i></div>';
-}
 function farPct(share) { return share > 0 && share < .01 ? '<1' : String(Math.floor(share * 100)); }
+// One of the 24×24 icons, drawn at (x, y) as its centre and s wide, in an SVG.
+function glyph(name, x, y, s, color, rot) {
+  return '<path d="' + ICONS[name] + '" fill="' + color + '"' + (name === 'capsule' || name === 'moon' ? ' fill-rule="evenodd"' : '') +
+    ' transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')' + (rot ? ' rotate(' + rot.toFixed(1) + ')' : '') + ' scale(' + s / 24 + ') translate(-12,-12)"/>';
+}
+function rider(x, y, ring, color, name, s, rot, nudge) {
+  return '<circle class="rider" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (s * .8) + '" stroke="' + ring + '"/>' + glyph(name, x, y + (nudge || 0), s, color, rot);
+}
+function polyD(pts) { return pts.map(function (p, k) { return (k ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(''); }
+// The free-return loop as points: out over the top, round the far side of the Moon, home underneath.
+var LOOP = (function () {
+  var ex = 40, mx = 180, cy = 100, R = 34, h = 42, sx = ex + 19, sy = 19, pts = [], k, t;
+  function bez(a, b, c, d) { for (k = 1; k <= 40; k++) { t = k / 40; var u = 1 - t; pts.push([u * u * u * a[0] + 3 * u * u * t * b[0] + 3 * u * t * t * c[0] + t * t * t * d[0], u * u * u * a[1] + 3 * u * u * t * b[1] + 3 * u * t * t * c[1] + t * t * t * d[1]]); } }
+  pts.push([sx, cy - sy]);
+  bez([sx, cy - sy], [ex + 63, cy - h], [mx - R * 1.4, cy - R], [mx, cy - R]);
+  for (k = 1; k <= 40; k++) { t = -Math.PI / 2 + Math.PI * k / 40; pts.push([mx + R * Math.cos(t), cy + R * Math.sin(t)]); }
+  bez([mx, cy + R], [mx - R * 1.4, cy + R], [ex + 63, cy + h], [sx, cy + sy]);
+  var len = [0];
+  for (k = 1; k < pts.length; k++) len.push(len[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]));
+  return { pts: pts, len: len, ex: ex, mx: mx, cy: cy };
+})();
+// The loop up to fraction f: the points so far, where the capsule is, and which way it points.
+function loopAt(f) {
+  var L = LOOP, d = L.len[L.len.length - 1] * Math.max(0, Math.min(1, f)), k = 1;
+  while (k < L.len.length - 1 && L.len[k] < d) k++;
+  var a = L.pts[k - 1], b = L.pts[k], t = (d - L.len[k - 1]) / ((L.len[k] - L.len[k - 1]) || 1), p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  return { pts: L.pts.slice(0, k).concat([p]), x: p[0], y: p[1], ang: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI };
+}
 function renderFar() {
-  var kmT = 0, j;
+  var kmT = 0, j, sea = 'var(--m-road)', space = 'var(--m-bike)';
   for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
-  $('farNote').textContent = 'The distance of the trips shown, compared with the Earth and the Moon. Magellan\'s expedition was the first to sail around the world, ' +
-    dist(EARTH_KM) + ' around the equator. Armstrong was the first to walk on the Moon, on average ' + dist(MOON_KM) + ' away.';
-  // Magellan: laps around the world, and how far into the current one.
-  var laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, mag;
-  if (laps < 1) mag = stat('Magellan score', farPct(laps) + '%', 'around the world', dist(EARTH_KM - kmT) + ' to go to make it all the way round');
-  else mag = stat('Magellan score', fmt(laps, laps < 10 ? 2 : 1), '× around the world', (done === 1 ? 'Once round' : fmt(done) + ' times round') + ', and ' + dist(EARTH_KM - lap * EARTH_KM) + ' from finishing lap ' + fmt(done + 1));
-  mag += farBar(lap, farPct(lap) + '% of lap ' + fmt(done + 1));
-  // Armstrong: one leg is Earth to the Moon; odd legs head out, even legs come home.
-  var legs = kmT / MOON_KM, leg = Math.floor(legs), part = legs - leg, trips = Math.floor(leg / 2), back = leg % 2 === 1, left = dist(MOON_KM - part * MOON_KM), arm, bar;
-  if (legs < 1) {
-    arm = stat('Armstrong score', farPct(legs) + '%', 'of the way to the Moon', left + ' still to go');
-    bar = farPct(part) + '% of the way to the Moon';
-  } else {
-    var there = trips ? 'There and back ' + (trips === 1 ? 'once' : fmt(trips) + ' times') : '';
-    arm = stat('Armstrong score', fmt(legs / 2, legs < 20 ? 2 : 1), '× to the Moon and back',
-      back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to the Moon! On the way home, with ') + left + ' to go'
-           : there + '. On the way out again, with ' + left + ' to the Moon');
-    bar = farPct(part) + (back ? '% of the way home from the Moon' : '% of the way to the Moon');
+  $('magNote').textContent = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator. Magellan\'s expedition was the first to sail all the way round.';
+  $('armNote').textContent = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back. Armstrong was the first to walk on it.';
+  // Magellan: a ring round the Earth from the top, clockwise; the caravel is where this lap has got to.
+  var laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, r = 64, cx = 120, cy = 100, th = lap * 2 * Math.PI;
+  var sx = cx + r * Math.sin(th), sy = cy - r * Math.cos(th), arc = lap > .002 ? '<path class="sea" stroke-width="14" d="M' + cx + ',' + (cy - r) + ' A' + r + ',' + r + ' 0 ' + (lap > .5 ? 1 : 0) + ',1 ' + sx.toFixed(1) + ',' + sy.toFixed(1) + '"/>' : '';
+  $('magellan').innerHTML = '<svg class="far-art" viewBox="0 14 240 172" role="img" aria-label="' + farPct(lap) + '% of the way round on lap ' + fmt(done + 1) + '">' +
+    '<circle class="trk" stroke-width="14" cx="' + cx + '" cy="' + cy + '" r="' + r + '"/>' + arc +
+    glyph('earth', cx, cy - 8, 48, sea) + '<text class="lap" x="' + cx + '" y="' + (cy + 32) + '" text-anchor="middle">LAP ' + fmt(done + 1) + '</text>' +
+    rider(sx, sy, sea, 'var(--accent)', 'caravel', 24, 0, -1) + '</svg>' +
+    '<div class="far-stat">' + (laps < 1
+      ? stat('', farPct(laps) + '%', 'around the world', dist(EARTH_KM - kmT) + ' to go to make it all the way round')
+      : stat('', fmt(laps, laps < 10 ? 2 : 1), '× around the world', (done === 1 ? 'Once round' : done === 2 ? 'Twice round' : fmt(done) + ' times round') + ', and ' + dist(EARTH_KM - lap * EARTH_KM) + ' from finishing lap ' + fmt(done + 1))) + '</div>';
+  // Armstrong: one leg is the Earth to the Moon. Odd legs head out along the top of the loop, even legs come home underneath.
+  var legs = kmT / MOON_KM, leg = Math.floor(legs), part = legs - leg, trips = Math.floor(leg / 2), back = leg % 2 === 1, left = dist(MOON_KM - part * MOON_KM);
+  var at = loopAt((back ? .5 : 0) + part / 2), sub, note, value;
+  if (legs < 1) { value = farPct(legs) + '%'; sub = 'of the way to the Moon'; note = left + ' still to go'; }
+  else {
+    var there = trips ? 'There and back ' + (trips === 1 ? 'once' : trips === 2 ? 'twice' : fmt(trips) + ' times') : '';
+    value = fmt(legs / 2, legs < 20 ? 2 : 1); sub = '× to the Moon and back';
+    note = back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to the Moon! On the way home, with ') + left + ' to go' : there + '. On the way out again, with ' + left + ' to the Moon';
   }
-  arm += farBar(part, bar);
-  $('farStats').innerHTML = '<div>' + mag + '</div><div>' + arm + '</div>';
-  $('farStats').lastChild.querySelector('.far-track').classList.toggle('home', back);
+  $('armstrong').innerHTML = '<svg class="far-art" viewBox="0 14 240 172" role="img" aria-label="' + (back ? farPct(part) + '% of the way home from the Moon' : farPct(part) + '% of the way to the Moon') + '">' +
+    '<path class="trk" stroke-width="10" d="' + polyD(LOOP.pts) + '"/>' + (at.pts.length > 1 ? '<path class="space" stroke-width="10" d="' + polyD(at.pts) + '"/>' : '') +
+    glyph('earth', LOOP.ex, LOOP.cy, 52, sea) + glyph('moon', LOOP.mx, LOOP.cy, 40, 'var(--muted)') +
+    (trips ? '<text class="lap" x="' + LOOP.ex + '" y="' + (LOOP.cy + 50) + '" text-anchor="middle">TRIP ' + fmt(trips + 1) + '</text>' : '') +
+    rider(at.x, at.y, space, space, 'capsule', 22, at.ang) + '</svg>' +
+    '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
 }
 
 var SPLIT = {
