@@ -369,7 +369,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 }
 .welcome-tagline .dot { margin: 0 .3em; }
 @media (max-aspect-ratio: 1/1) {
-  .welcome-tagline { --tw: 12.2em; font-size: min(24px, 5.2cqw); letter-spacing: .05em; }
+  .welcome-tagline { --tw: 12.2em; font-size: min(24px, 5.2cqw); letter-spacing: .05em; top: calc(var(--sh) * .365 - var(--sy)); }
 }
 .welcome-panel {
   position: relative; width: 100%; max-width: 400px; padding: 22px 22px 18px; border-radius: 20px;
@@ -402,7 +402,12 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel details.help b { color: #fff; }
 .welcome-panel :focus-visible { outline-color: #fff; }
 @media (max-width: 520px) { .welcome-panel { max-width: none; } }
-@media (min-width: 721px) and (min-aspect-ratio: 1/1) { .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); } }
+@media (min-width: 721px) and (min-aspect-ratio: 1/1) {
+  .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); }
+  .welcome-panel { max-width: 350px; }
+  .welcome-panel > p:first-child { text-wrap: balance; }
+  .welcome-panel .acts { justify-content: center; }
+}
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
