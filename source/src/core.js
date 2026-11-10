@@ -57,12 +57,14 @@ var ICONS = {
   capsule: 'M1 8.6l2.6.9V14.5L1 15.4zM4.3 7h7.4v10H4.3zM12.6 6.6l7.6 3.6c1.3.6 1.3 3 0 3.6l-7.6 3.6zM15.6 10a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2z',
   earth: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z',
   moon: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM9 6.5a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm6 4.5a3 3 0 1 1 0 6 3 3 0 0 1 0-6zm-6.5 5a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4z',
+  rocket: 'M5 9.4h9.5c3.2 0 6.4 1.1 8.5 2.6-2.1 1.5-5.3 2.6-8.5 2.6H5zM15.5 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM5 9.4L2.2 6.5h4.3l2.6 2.9zM5 14.6l-2.8 2.9h4.3l2.6-2.9zM1 10.5h3.2v3H1z',
+  mars: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8.2 4.6c2.3-.9 5.3-.9 7.6 0C14.6 5.5 13.4 6 12 6s-2.6-.5-3.8-1.4zM4.4 12.4c2.6-.6 5-.2 7.2 1 2.4 1.3 5.1 1.6 8 .6-.2.8-.5 1.5-.9 2.2-2.6.6-5.1.2-7.6-1.1-2-1.1-4.2-1.4-6.4-.9-.2-.6-.3-1.2-.3-1.8zM15 8.4a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z',
   UNKNOWN: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z'
 };
 ICONS.VEHICLE = ICONS.CAR;
 function icon(name, cls) {
   var d = ICONS[name] || ICONS.OTHER;
-  return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"' + (name === 'CABLE' || name === 'capsule' || name === 'moon' ? ' fill-rule="evenodd"' : '') + '><path d="' + d + '"/></svg>';
+  return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"' + (name === 'CABLE' || name === 'capsule' || name === 'moon' || name === 'rocket' || name === 'mars' ? ' fill-rule="evenodd"' : '') + '><path d="' + d + '"/></svg>';
 }
 function fillIcons(root) {
   (root || document).querySelectorAll('[data-icon]').forEach(function (el) {
