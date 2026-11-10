@@ -276,7 +276,10 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art .trk { fill: none; stroke: var(--grid); stroke-linecap: round; }
 .far-art .sea { fill: none; stroke: var(--m-road); stroke-linecap: round; }
 .far-art .space { fill: none; stroke: var(--m-bike); stroke-linecap: round; }
-.far-art .rider { fill: var(--bg); stroke-width: 2; }
+.far-art .rider { stroke: var(--bg); stroke-width: 2.5; }
+/* Armstrong, Musk and Voyager have a longer drawing that fills the card on wider screens. */
+.far-art.far-w { display: none; }
+@media (min-width: 960px) { .far-art.far-n { display: none; } .far-art.far-w, .far-art.mid.far-w { display: block; max-width: none; } }
 .far-art .lap { font-size: 11px; letter-spacing: .06em; fill: var(--muted); }
 .far-stat { text-align: center; margin-top: 6px; }
 .far-art.wide { max-width: 640px; }
