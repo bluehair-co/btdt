@@ -449,6 +449,22 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   .sheet.right { left: auto; right: 16px; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 360px; max-height: none; transform: translateX(12px); }
   .sheet.right.open { transform: none; }
   body:has(#layersSheet.open) .topbar { left: calc((100% - 376px) / 2); }
+  /* Filters is the same full-height panel on the left, where its button sits in the top bar;
+     the top bar moves over into the space right of it, narrowing when it has to. */
+  #filtersSheet { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
+  #filtersSheet.open { transform: none; }
+  body:has(#filtersSheet.open) .topbar { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
+  .bar-top > .pnav-filters { order: -1; }
+  /* The zoom buttons on the left move out from under the filters panel. */
+  #map .leaflet-top.leaflet-left, .proj-zoom { transition: left .2s ease; }
+  body:has(#filtersSheet.open) #map .leaflet-top.leaflet-left { left: 436px; }
+  body:has(#filtersSheet.open) .proj-zoom { left: 452px; }
+  /* Clip the panels' scrollbars to their rounded corners. */
+  .sheet { overflow: hidden; }
+}
+@media (min-width: 960px) and (max-width: 1299px) {
+  /* Below 1300px the filters panel would reach the playback button, so it stops above the dock. */
+  #filtersSheet { bottom: calc(var(--dock-h) + var(--dock-gap) + 16px + var(--safe-b)); }
 }
 @media (min-width: 960px) and (max-width: 1199px) {
   /* Below 1200px the panel would reach the dock and the layers button, so it stops above them. */
