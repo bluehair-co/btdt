@@ -19,15 +19,68 @@
         </div>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
-      <details class="help">
-        <summary>How to get your Timeline file</summary>
-        <ol>
-          <li>On your Android phone open <b>Settings → Location → Location services → Timeline</b>.</li>
-          <li>Tap <b>Export Timeline data</b> and save <b>Timeline.json</b>.</li>
-          <li>Load it here. Older Google Takeout files (Records.json, Semantic Location History) and iPhone exports work too, and you can load several at once.</li>
-        </ol>
-      </details>
+      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your file</button>
     </div>
+
+    <!-- About: closed until the button above opens it -->
+    <dialog class="about" id="about" aria-labelledby="aboutTitle">
+      <div class="about-head">
+        <h2 id="aboutTitle">About BT;DT</h2>
+        <button type="button" class="about-close" id="aboutClose" aria-label="Close"><span data-icon="close"></span></button>
+      </div>
+      <div class="about-body">
+        <p class="about-lead">BT;DT (been there, done that) turns your Google Timeline into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs.</p>
+
+        <details open>
+          <summary>What you can load</summary>
+          <ul>
+            <li><b>Timeline.json</b> exported from Google Maps on an Android phone (the current format).</li>
+            <li><b>Timeline export from an iPhone</b> (Google Maps for iOS).</li>
+            <li><b>Google Takeout</b> files from before Timeline moved to phones: <b>Records.json</b> (raw GPS points) and <b>Semantic Location History</b> (one file per month). Load them together with Timeline.json and the app uses the best of each.</li>
+            <li><b>Strava</b>: the account export ZIP, or single <b>.gpx</b>, <b>.tcx</b> or <b>.fit</b> files. Load them from <b>Settings → Load Strava export</b> once your Timeline is in. Each activity replaces the Timeline trip it covers and keeps its sport.</li>
+          </ul>
+          <p>Flights don't need a file of their own: they come from Timeline, and long jumps Timeline missed are recognised as flights too. You can load several files at once, or a whole folder.</p>
+        </details>
+
+        <details>
+          <summary>How to export your data</summary>
+          <h3>Android</h3>
+          <ol>
+            <li>Open <b>Settings → Location → Location services → Timeline</b>.</li>
+            <li>Tap <b>Export Timeline data</b> and save <b>Timeline.json</b>.</li>
+          </ol>
+          <h3>iPhone</h3>
+          <ol>
+            <li>In Google Maps, tap your profile picture, then <b>Settings → Personal content</b>.</li>
+            <li>Tap <b>Export Timeline data</b> and save the file.</li>
+          </ol>
+          <h3>Older Google Takeout</h3>
+          <p>If you downloaded <b>Location History</b> from takeout.google.com before Google moved Timeline onto phones, load <b>Records.json</b> and the files in <b>Semantic Location History</b>. Takeout no longer offers new ones.</p>
+          <h3>Strava</h3>
+          <ol>
+            <li>On strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and request your archive.</li>
+            <li>Strava emails a ZIP. Load it as it is; only the activity files inside are read, so photos don't slow it down.</li>
+          </ol>
+        </details>
+
+        <details>
+          <summary>How it works</summary>
+          <ul>
+            <li><b>Your file stays on your device.</b> It is read in your browser and saved there so the app opens with it next time. Nothing is uploaded and there is no account.</li>
+            <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
+            <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
+            <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
+            <li>The only things fetched from the internet are the map tiles (Esri) and the map library. Add the app to your home screen and it opens offline.</li>
+          </ul>
+        </details>
+
+        <details>
+          <summary>Who made this</summary>
+          <p>BT;DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
+          <p>Made by David. <a href="https://example.com" id="aboutSite" target="_blank" rel="noopener">Visit my website ↗</a></p>
+        </details>
+      </div>
+    </dialog>
   </section>
   <input type="file" id="fileIn" class="visually-hidden" accept=".json,application/json" multiple>
   <input type="file" id="dirIn" class="visually-hidden" webkitdirectory multiple>

@@ -415,6 +415,42 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel details.help ol { color: rgba(255, 255, 255, .82); }
 .welcome-panel details.help b { color: #fff; }
 .welcome-panel :focus-visible { outline-color: #fff; }
+/* About: a quiet link under the Load button that opens a glass dialog over the picture. */
+.about-open { display: flex; align-items: center; gap: 6px; margin: 18px 0 0; padding: 12px 0 0; width: 100%; border: 0; border-top: 1px solid rgba(255, 255, 255, .2); background: none; color: rgba(255, 255, 255, .9); font: 500 13px var(--font-body); cursor: pointer; text-align: left; }
+.about-open:hover { color: #fff; }
+.about-open .ic { width: 16px; height: 16px; fill: currentColor; }
+.about {
+  width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 48px)); padding: 0; overflow: hidden; display: none; flex-direction: column;
+  border-radius: 20px; border: 1px solid rgba(255, 255, 255, .18); color: #fff; color-scheme: dark;
+  background: rgba(24, 21, 52, .78); backdrop-filter: blur(18px) saturate(1.2); -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  box-shadow: 0 20px 60px rgba(10, 8, 30, .5);
+}
+.about[open] { display: flex; }
+.about::backdrop { background: rgba(14, 10, 34, .45); }
+.about-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 16px 12px 10px 22px; }
+.about-head h2 { margin: 0; font-family: var(--font-display); font-size: 22px; font-weight: 700; letter-spacing: -.01em; }
+.about-close { display: grid; place-items: center; width: 40px; height: 40px; border: 0; border-radius: 50%; background: transparent; color: rgba(255, 255, 255, .85); cursor: pointer; }
+.about-close:hover { background: rgba(255, 255, 255, .12); color: #fff; }
+.about-close .ic { width: 22px; height: 22px; fill: currentColor; }
+.about-body { overflow-y: auto; overscroll-behavior: contain; padding: 0 22px 18px; font-size: 14px; line-height: 1.5; color: rgba(255, 255, 255, .84); }
+.about-lead { margin: 0 0 12px; }
+.about details { border-top: 1px solid rgba(255, 255, 255, .16); }
+.about summary { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; font-weight: 600; font-size: 15px; color: #fff; cursor: pointer; list-style: none; }
+.about summary::-webkit-details-marker { display: none; }
+.about summary::after { content: ""; width: 8px; height: 8px; margin-right: 6px; border: solid rgba(255, 255, 255, .8); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .15s ease; }
+.about details[open] > summary::after { transform: rotate(-135deg); }
+.about details > :last-child { margin-bottom: 16px; }
+.about ul, .about ol { margin: 0 0 10px; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.about p { margin: 0 0 10px; }
+.about h3 { margin: 12px 0 6px; font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: #ffd9b0; }
+.about details > h3:first-of-type { margin-top: 0; }
+.about b { color: #fff; font-weight: 600; }
+.about a { color: #ffd9b0; font-weight: 500; }
+.about :focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+/* Phones: a sheet from the bottom. */
+@media (max-width: 520px) {
+  .about { width: 100%; max-width: none; margin: auto 0 0; max-height: 88dvh; border-radius: 22px 22px 0 0; border-bottom: 0; padding-bottom: var(--safe-b); }
+}
 @media (max-width: 520px) { .welcome-panel { max-width: none; } }
 @media (min-width: 721px) and (min-aspect-ratio: 1/1) {
   .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); }
