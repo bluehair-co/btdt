@@ -67,7 +67,7 @@ function initMap() {
   if (map) return true;
   if (!window.L) { $('map').innerHTML = '<p class="empty" style="padding-top:40vh">The map library couldn\'t load. Check your internet connection and reload.</p>'; return false; }
   map = L.map('map', { preferCanvas: true, worldCopyJump: true, minZoom: 2, zoomControl: !coarse }).setView([50, 8], 4);
-  if (map.zoomControl) map.zoomControl.setPosition('bottomright');
+  if (map.zoomControl) map.zoomControl.setPosition('topleft');
   addTiles(map);
   map.createPane('cc'); map.getPane('cc').style.zIndex = 320;
   map.createPane('heat'); map.getPane('heat').style.zIndex = 380; map.getPane('heat').style.pointerEvents = 'none';

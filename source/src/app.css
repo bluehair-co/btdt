@@ -118,7 +118,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 /* ---------- app frame ---------- */
 #app { position: fixed; inset: 0; }
 .page { position: absolute; inset: 0; }
-.scroll-page { overflow-y: auto; overscroll-behavior: contain; padding: calc(16px + var(--safe-t)) 16px calc(var(--dock-h) + var(--dock-gap) + 28px + var(--safe-b)); }
+.scroll-page { overflow-y: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; padding: calc(16px + var(--safe-t)) 16px calc(var(--dock-h) + var(--dock-gap) + 28px + var(--safe-b)); }
 .page-inner { max-width: 1080px; margin: 0 auto; }
 
 /* Dock: compact and centred, like the Mac dock. */
@@ -148,7 +148,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .map-legend .heat-scale { width: 80px; height: 8px; border-radius: 4px; }
 
 /* Top bar: summary pill, day navigator or time slider. */
-.topbar { position: absolute; z-index: 25; top: calc(12px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); }
+.topbar { position: absolute; z-index: 25; top: calc(12px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); transition: left .2s ease; }
 .bar { background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 20px; box-shadow: var(--shadow); padding: 6px; }
 .summary-pill { display: flex; align-items: center; justify-content: center; gap: 8px; width: auto; max-width: 100%; margin: 0 auto; border-radius: 999px; padding: 10px 16px; font-size: 14px; font-weight: 500; cursor: pointer; color: var(--fg); }
 .summary-pill .sub { color: var(--muted); font-weight: 400; }
@@ -323,7 +323,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .tl-map-info .t { min-width: 0; }
 .tl-map-info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tl-map-info small { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-list { flex: 1; overflow-y: auto; overscroll-behavior: contain; position: relative; }
+.tl-list { flex: 1; overflow-y: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; position: relative; }
 .tl-inner { position: relative; max-width: 760px; margin: 0 auto; }
 .tl-item { position: absolute; left: 0; right: 0; padding: 0 16px; }
 .tl-day { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; height: 40px; padding-bottom: 6px; font-size: 12px; color: var(--muted); }
@@ -444,7 +444,23 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   /* Sheets become floating panels next to the button that opened them. */
   .sheet { left: 16px; right: auto; width: 420px; bottom: calc(var(--dock-h) + var(--dock-gap) + 92px + var(--safe-b)); max-height: calc(100dvh - 200px); border-radius: 20px; border: 1px solid var(--line); transform: translateY(12px); opacity: 0; transition: transform .2s ease, opacity .2s ease, visibility 0s .2s; }
   .sheet.open { transform: none; opacity: 1; transition: transform .2s ease, opacity .2s ease; }
-  .sheet.right { left: auto; right: 16px; }
+  /* Views and layers is a full-height panel on the right, so the map stays in view while it changes;
+     the top bar moves over into the space left of it. */
+  .sheet.right { left: auto; right: 16px; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 360px; max-height: none; transform: translateX(12px); }
+  .sheet.right.open { transform: none; }
+  body:has(#layersSheet.open) .topbar { left: calc((100% - 376px) / 2); }
+}
+@media (min-width: 960px) and (max-width: 1199px) {
+  /* Below 1200px the panel would reach the dock and the layers button, so it stops above them. */
+  .sheet.right { bottom: calc(var(--dock-h) + var(--dock-gap) + 16px + var(--safe-b)); }
+}
+@media (min-width: 960px) {
+  /* Playback and layers sit either side of the dock, centred on it. --dock-w is the dock's width (3 tabs). */
+  :root { --dock-w: 256px; }
+  .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + (var(--dock-h) + 2px - 52px) / 2); }
+  .fab.left { left: calc(50% - var(--dock-w) / 2 - 14px - 52px); }
+  .fab.right { right: calc(50% - var(--dock-w) / 2 - 14px - 52px); }
+  .proj-zoom { right: auto; left: 16px; }
   .sheet.center { left: 50%; right: auto; margin-left: -230px; width: 460px; bottom: auto; top: calc(80px + var(--safe-t)); max-height: calc(100dvh - 200px); }
   .sheet-head::before { display: none; }
   .sheet-body { padding-bottom: 20px; }
@@ -460,7 +476,9 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .no-data .page { visibility: hidden; }
 @media (pointer: coarse) { .desktop-only { display: none !important; } }
 @media (max-width: 360px) { .seg.full button { padding-left: 6px; padding-right: 6px; } }
-.leaflet-control-zoom { margin-bottom: calc(var(--dock-h) + var(--dock-gap) + 90px + var(--safe-b)) !important; }
+/* Zoom buttons sit on the left edge, centred top to bottom. */
+#map .leaflet-top.leaflet-left { top: 50%; transform: translateY(-50%); }
+#map .leaflet-top.leaflet-left .leaflet-control-zoom { margin: 0 0 0 16px; }
 .heat-canvas { position: absolute; left: 0; top: 0; }
 .list-rows .hit-row { padding: 10px 2px; }
 #map, #proj { z-index: 0; }
