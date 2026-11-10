@@ -2,14 +2,20 @@
 
   <!-- Welcome: shown until a Timeline file is loaded -->
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
-    <div class="card">
-      <img class="logo" src="icon-192.png" alt="" width="72" height="72">
-      <h1 id="welcomeTitle">BT;DT</h1>
-      <p class="tagline">Been There · Done That</p>
+    <div class="welcome-art">
+      <div class="stage"><img src="landing-2752.webp" srcset="landing-1600.webp 1600w, landing-2752.webp 2752w" sizes="max(100vw, 179vh)" alt="" decoding="async" fetchpriority="high"></div>
+      <h1 id="welcomeTitle" class="welcome-tagline">been there<span class="dot">·</span>done that</h1>
+    </div>
+    <div class="welcome-panel">
       <p>See where you've been and how you get around, from your Google Timeline. Your file is read on this device and never uploaded.</p>
       <div class="acts">
-        <label class="btn primary" for="fileIn"><span data-icon="upload"></span>Load Timeline file</label>
-        <label class="btn quiet desktop-only" for="dirIn">Load a whole folder</label>
+        <div class="split" id="loadSplit">
+          <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load Timeline file</label>
+          <button type="button" class="btn primary split-more desktop-only" id="loadMore" aria-haspopup="menu" aria-expanded="false" aria-controls="loadMenu" aria-label="More ways to load"><span data-icon="down"></span></button>
+          <div class="split-menu" id="loadMenu" role="menu" hidden>
+            <button type="button" role="menuitem" id="loadFolder"><span data-icon="folder"></span>Load a whole folder</button>
+          </div>
+        </div>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
       <details class="help">

@@ -879,6 +879,18 @@ function importFiles(list) {
 $('fileIn').addEventListener('change', function () { closeSheets(); importFiles(this.files); this.value = ''; });
 $('stravaIn').addEventListener('change', function () { closeSheets(); importFiles(this.files); this.value = ''; });
 $('dirIn').addEventListener('change', function () { importFiles(this.files); this.value = ''; });
+// The welcome Load button's chevron opens a small menu (like a split Send button) with Load a whole folder.
+(function () {
+  var more = $('loadMore'), menu = $('loadMenu'), item = $('loadFolder');
+  function show(open) {
+    menu.hidden = !open; more.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) item.focus();
+  }
+  more.addEventListener('click', function (e) { e.stopPropagation(); show(menu.hidden); });
+  item.addEventListener('click', function () { show(false); $('dirIn').click(); });
+  document.addEventListener('click', function (e) { if (!menu.hidden && !$('loadSplit').contains(e.target)) show(false); });
+  $('loadSplit').addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { show(false); more.focus(); } });
+})();
 document.body.addEventListener('dragover', function (e) { e.preventDefault(); });
 document.body.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });
 

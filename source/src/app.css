@@ -339,15 +339,74 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .tl-end { padding: 20px 16px calc(var(--dock-h) + var(--dock-gap) + 28px + var(--safe-b)); text-align: center; color: var(--muted); font-size: 12px; }
 
 /* ---------- welcome ---------- */
-.welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; padding: calc(40px + var(--safe-t)) 16px 40px; background: var(--bg); }
-.welcome .card { max-width: 520px; width: 100%; padding: 28px 24px; text-align: center; }
-.logo { display: block; width: 72px; height: 72px; margin: 0 auto 12px; }
-.welcome h1 { font-family: var(--font-display); font-weight: 800; font-size: 32px; letter-spacing: -.02em; margin: 0 0 6px; }
-.welcome .tagline { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--fg); margin: -4px 0 12px; letter-spacing: .02em; }
-.welcome p { color: var(--muted); margin: 0 0 20px; }
-.welcome .acts { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-.welcome .btn.primary { font-size: 16px; padding: 12px 22px; }
-.welcome details.help { text-align: left; margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px; }
+/* The picture fills the screen like background-size: cover, inside a stage with the picture's
+   own shape (2752 x 1536), so the tagline can sit on the picture itself, just under the sun.
+   The stage keeps the bike (from 15.5% across), the hiker and the sun (63.2% across) on
+   screen together: it is centred on them (40.5% across), and on tall screens it is never wider than 1.8 screen widths,
+   so a phone shows the top of the picture with the bike, the hiker and the sun, and the dark bottom carries on below. */
+.welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-end; padding: calc(24px + var(--safe-t)) clamp(20px, 5vw, 72px) calc(clamp(20px, 6vh, 64px) + var(--safe-b)); background: #19153a; color: #fff; color-scheme: dark; }
+.welcome-art {
+  position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
+}
+.welcome-art > * {
+  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 180cqw));
+  --sh: calc(var(--sw) / 1.7917);
+  --sx: max(0px, min(var(--sw) * .405 - 50cqw, var(--sw) * .15 - 2cqw, var(--sw) - 100cqw));
+  --sy: max(0px, (var(--sh) - 100cqh) * .3);
+}
+.welcome-art .stage { position: absolute; left: calc(0px - var(--sx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
+.welcome-art img { display: block; width: 100%; height: 100%; }
+/* Blends the picture into the plain colour below it when the screen is taller than the picture. */
+.welcome-art .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 14%; background: linear-gradient(rgba(25, 21, 58, 0), #19153a); }
+.welcome-tagline {
+  --tw: 13em;
+  position: absolute; margin: 0; width: var(--tw); text-align: center; white-space: nowrap;
+  left: clamp(16px + var(--tw) / 2, var(--sw) * .632 - var(--sx), 100cqw - 16px - var(--tw) / 2);
+  top: calc(var(--sh) * .318 - var(--sy));
+  transform: translateX(-50%);
+  font-family: var(--font-display); font-weight: 200; font-size: clamp(18px, 3.2cqw, 60px); line-height: 1.15; letter-spacing: .08em; color: #fff;
+  text-shadow: 0 1px 3px rgba(70, 30, 50, .45), 0 0 24px rgba(90, 40, 70, .4);
+}
+.welcome-tagline .dot { margin: 0 .3em; }
+@media (max-aspect-ratio: 1/1) {
+  .welcome-tagline { --tw: 12.2em; font-size: min(24px, 5.2cqw); letter-spacing: .05em; top: calc(var(--sh) * .365 - var(--sy)); }
+}
+.welcome-panel {
+  position: relative; width: 100%; max-width: 400px; padding: 22px 22px 18px; border-radius: 20px;
+  background: rgba(22, 20, 48, .38); border: 1px solid rgba(255, 255, 255, .18);
+  backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2);
+  box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
+}
+.welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
+.welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
+.welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
+.welcome-panel .btn.primary:hover { background: #fff3e4; }
+/* Split button: the main action, and a chevron that opens the folder option above it. */
+.split { position: relative; display: inline-flex; }
+.welcome-panel .split .btn.primary { border-radius: 999px; }
+.welcome-panel .split .btn.split-main { padding-right: 18px; border-radius: 999px 0 0 999px; }
+@media (pointer: coarse) { .welcome-panel .split .btn.split-main { border-radius: 999px; } }
+.welcome-panel .split .btn.split-more { border-left: 1px solid rgba(35, 34, 74, .18); padding: 12px 12px 12px 10px; border-radius: 0 999px 999px 0; }
+.split-more[aria-expanded="true"] { background: #fff3e4; }
+.split-more[aria-expanded="true"] .ic { transform: rotate(180deg); }
+.split-menu { position: absolute; right: 0; bottom: calc(100% + 8px); min-width: 100%; padding: 6px; border-radius: 14px; background: #fff; box-shadow: 0 10px 30px rgba(10, 8, 30, .35); z-index: 2; }
+.split-menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; border: 0; border-radius: 9px; background: transparent; color: #23224a; font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; text-align: left; }
+.split-menu button:hover, .split-menu button:focus-visible { background: #f1eefb; outline: none; }
+.split-menu .ic { width: 18px; height: 18px; fill: currentColor; }
+.welcome-panel .split-menu :focus-visible { outline: none; }
+.welcome-panel .status { color: rgba(255, 255, 255, .85); }
+.welcome-panel .status:empty { display: none; }
+.welcome-panel .status.err { color: #ffb4ac; }
+.welcome-panel details.help { margin-top: 18px; border-top: 1px solid rgba(255, 255, 255, .2); padding-top: 12px; }
+.welcome-panel details.help ol { color: rgba(255, 255, 255, .82); }
+.welcome-panel details.help b { color: #fff; }
+.welcome-panel :focus-visible { outline-color: #fff; }
+@media (max-width: 520px) { .welcome-panel { max-width: none; } }
+@media (min-width: 721px) and (min-aspect-ratio: 1/1) {
+  .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); }
+  .welcome-panel { max-width: 350px; }
+  .welcome-panel > p:first-child { text-wrap: balance; }
+}
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
