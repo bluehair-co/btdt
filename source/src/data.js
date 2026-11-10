@@ -894,7 +894,10 @@ $('dirIn').addEventListener('change', function () { importFiles(this.files); thi
 // About: a dialog over the welcome picture, closed until asked for. A click on the backdrop closes it.
 (function () {
   var dlg = $('about');
-  $('aboutBtn').addEventListener('click', function () { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); });
+  function open() { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+  $('aboutBtn').addEventListener('click', open);
+  // Settings has a link too: the sheet closes first so the dialog isn't stacked over it.
+  $('settingsAbout').addEventListener('click', function () { closeSheets(); open(); });
   $('aboutClose').addEventListener('click', function () { dlg.close ? dlg.close() : dlg.removeAttribute('open'); });
   dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
 })();
