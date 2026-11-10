@@ -1,87 +1,65 @@
 #!/usr/bin/env python3
-"""Make the app icons in ../static/ from logo-source.jpg.
+"""Make the app icons in ../static/ from icon-source.jpg (2048 x 2048).
 
   python3 source/icons/make_icons.py
 
-The original logo had a checkerboard painted where transparency should be, so
-logo-source.jpg is cut to the dark rounded square and its corners are made truly transparent
-(or filled with the same navy, for icons the platform masks itself).
+icon-source.jpg is a full-bleed square: the platforms round its corners themselves.
+Everything that matters (the location pin) sits well inside the centre circle of 80%
+that Android keeps for maskable icons, so one picture serves every size.
+The browser-tab icon is the location pin on its own, cut out on a transparent background.
 """
+import math
 import os
-import numpy as np
-from PIL import Image, ImageDraw, ImageFilter
+from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'static')
-NAVY = (18, 33, 67)
-# Corner radius of the rounded square, as a share of its side.
-RADIUS = 0.23
-# A point inside the pin of the semicolon, in logo-source.jpg.
-PIN_SEED = (808, 760)
+SRC = os.path.join(HERE, 'icon-source.jpg')
+# The pin in icon-source.jpg: its round head (centre and radius) and the tip it narrows to.
+# Kept a few pixels inside the drawn edge so no background shows along the outline.
+PIN_HEAD = (1023, 784, 466)
+PIN_TIP = (1023, 1640)
 
 
-def rounded_mask(size, inset=0.0):
-    big = size * 4
-    m = Image.new('L', (big, big), 0)
-    i = inset * big
-    ImageDraw.Draw(m).rounded_rectangle((i, i, big - 1 - i, big - 1 - i), radius=RADIUS * (big - 2 * i), fill=255)
-    return m.resize((size, size), Image.LANCZOS)
+def square(size):
+    return Image.open(SRC).convert('RGB').resize((size, size), Image.LANCZOS)
 
 
-def square():
-    return Image.open(os.path.join(HERE, 'logo-source.jpg')).convert('RGB')
-
-
-def rounded(size):
-    """The logo as drawn: a rounded square with transparent corners."""
-    img = square().resize((size, size), Image.LANCZOS).convert('RGBA')
-    img.putalpha(rounded_mask(size, inset=0.006))  # trims the light JPEG fringe at the edge
-    return img
-
-
-def full_bleed(size, scale):
-    """Navy all the way to the edges, with the logo scaled down inside it.
-    For maskable icons (Android adaptive) and iOS, which cut their own shape."""
-    canvas = Image.new('RGBA', (size, size), NAVY + (255,))
-    inner = round(size * scale)
-    logo = rounded(inner)
-    off = (size - inner) // 2
-    canvas.alpha_composite(logo, (off, off))
-    return canvas
+def pin_outline(n=720):
+    """The pin's outline: the head's arc between the two tangents that run to the tip."""
+    cx, cy, r = PIN_HEAD
+    tx, ty = PIN_TIP
+    d = math.hypot(tx - cx, ty - cy)
+    spread = math.acos(r / d)
+    towards = math.atan2(ty - cy, tx - cx)
+    a0, a1 = towards + spread, towards - spread + 2 * math.pi
+    arc = [(cx + r * math.cos(a0 + (a1 - a0) * i / n), cy + r * math.sin(a0 + (a1 - a0) * i / n)) for i in range(n + 1)]
+    return arc + [PIN_TIP]
 
 
 def pin(size):
-    """Just the location pin from the semicolon, on a transparent background: the
-    browser-tab icon, where the whole logo is too small to read."""
-    src = Image.open(os.path.join(HERE, 'logo-source.jpg')).convert('RGB')
-    a = np.asarray(src).astype(float).max(axis=2)
-    # The pin is the bright shape around this point; the letters beside it are not joined to it.
-    solid = Image.fromarray(((a > 170) * 255).astype('uint8')).copy()
-    ImageDraw.floodfill(solid, PIN_SEED, 128)
-    shape = Image.fromarray(((np.array(solid) == 128) * 255).astype('uint8')).filter(ImageFilter.MaxFilter(5))
-    # Soft edge from brightness, so the outline stays smooth against the navy glow.
-    soft = np.clip((a - 110) / 90, 0, 1) * (np.array(shape) / 255)
-    rgba = src.convert('RGBA')
-    rgba.putalpha(Image.fromarray((soft * 255).astype('uint8')))
-    x0, y0, x1, y1 = Image.fromarray((soft > 0.5).astype('uint8') * 255).getbbox()
-    side = max(x1 - x0, y1 - y0) + 6
+    """Just the location pin, on a transparent background: the browser-tab icon."""
+    src = Image.open(SRC).convert('RGBA')
+    k = 4  # drawn at 4x and scaled down, for a smooth edge
+    mask = Image.new('L', (src.width * k, src.height * k), 0)
+    ImageDraw.Draw(mask).polygon([(x * k, y * k) for x, y in pin_outline()], fill=255)
+    src.putalpha(mask.resize(src.size, Image.LANCZOS))
+    x0, y0, x1, y1 = src.getchannel('A').getbbox()
+    side = max(x1 - x0, y1 - y0) + 8
     cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
     box = tuple(round(v) for v in (cx - side / 2, cy - side / 2, cx + side / 2, cy + side / 2))
-    return rgba.crop(box).resize((size, size), Image.LANCZOS)
+    return src.crop(box).resize((size, size), Image.LANCZOS)
 
 
 def main():
     for s in (192, 512):
-        rounded(s).save(os.path.join(OUT, 'icon-%d.png' % s), optimize=True)
-    # Maskable: Android keeps only the centre circle of 80%, so everything
-    # that matters (the route ends and the check pin) has to sit inside it.
-    full_bleed(512, 0.78).save(os.path.join(OUT, 'icon-maskable-512.png'), optimize=True)
-    full_bleed(192, 0.78).save(os.path.join(OUT, 'icon-maskable-192.png'), optimize=True)
-    full_bleed(180, 0.94).convert('RGB').save(os.path.join(OUT, 'apple-touch-icon.png'), optimize=True)
+        square(s).save(os.path.join(OUT, 'icon-%d.png' % s), optimize=True)
+        square(s).save(os.path.join(OUT, 'icon-maskable-%d.png' % s), optimize=True)
+    square(180).save(os.path.join(OUT, 'apple-touch-icon.png'), optimize=True)
     # Browser tabs get just the pin.
     pin(32).save(os.path.join(OUT, 'favicon-32.png'), optimize=True)
     pin(96).save(os.path.join(OUT, 'favicon-96.png'), optimize=True)
-    pin(48).save(os.path.join(OUT, 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48)])
+    pin(256).save(os.path.join(OUT, 'favicon.ico'), sizes=[(16, 16), (32, 32), (48, 48)])
     print('Icons written to', os.path.normpath(OUT))
 
 
