@@ -455,7 +455,12 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .about-close:hover { background: rgba(255, 255, 255, .12); color: #fff; }
 .about-close .ic { width: 22px; height: 22px; fill: currentColor; }
 .about-body { overflow-y: auto; overscroll-behavior: contain; padding: 0 22px 18px; font-size: 14px; line-height: 1.5; color: rgba(255, 255, 255, .84); }
-.about-lead { margin: 0 0 12px; }
+.about-lead { margin: 0 0 14px; }
+/* The privacy promise: always visible, above the fold-outs. */
+.about-privacy { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 16px; padding: 14px 16px; border-radius: 14px; background: rgba(120, 220, 170, .1); border: 1px solid rgba(140, 230, 185, .35); }
+.about-privacy > .ic { flex: none; width: 26px; height: 26px; margin-top: 1px; fill: #9fe8c4; }
+.about .about-privacy h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #fff; }
+.about .about-privacy p { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, .86); }
 .about details { border-top: 1px solid rgba(255, 255, 255, .16); }
 .about summary { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; font-weight: 600; font-size: 15px; color: #fff; cursor: pointer; list-style: none; }
 .about summary::-webkit-details-marker { display: none; }
@@ -677,6 +682,14 @@ div.hit-row:hover { background: none; }
       <div class="about-body">
         <p class="about-lead">BT;DT (been there, done that) turns your Google Timeline into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs.</p>
 
+        <div class="about-privacy" role="note" aria-labelledby="privacyTitle">
+          <span data-icon="shield"></span>
+          <div>
+            <h3 id="privacyTitle">Your data never leaves your device</h3>
+            <p>Your files are read in this browser and kept only here. There is no server, no account and no tracking, so nobody, me included, ever sees your files. Clearing the app's data in your browser removes it completely.</p>
+          </div>
+        </div>
+
         <details open>
           <summary>What you can load</summary>
           <ul>
@@ -712,7 +725,7 @@ div.hit-row:hover { background: none; }
         <details>
           <summary>How it works</summary>
           <ul>
-            <li><b>Your file stays on your device.</b> It is read in your browser and saved there so the app opens with it next time. Nothing is uploaded and there is no account.</li>
+            <li><b>Saved in your browser.</b> Your last import is kept in this browser's storage, so the app opens with it next time.</li>
             <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
             <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
             <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
@@ -2501,7 +2514,8 @@ var ICONS = {
   bolt: 'M7 2v11h3v9l7-12h-4l4-8z',
   ruler: 'M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z',
   info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
-  left2: 'M17.59 18L19 16.59 14.42 12 19 7.41 17.59 6l-6 6zM11 18l1.41-1.41L7.83 12l4.58-4.59L11 6l-6 6z',
+  shield: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z',
+  left2:'M17.59 18L19 16.59 14.42 12 19 7.41 17.59 6l-6 6zM11 18l1.41-1.41L7.83 12l4.58-4.59L11 6l-6 6z',
   right2: 'M6.41 6L5 7.41 9.58 12 5 16.59 6.41 18l6-6zM13 6l-1.41 1.41L16.17 12l-4.58 4.59L13 18l6-6z',
   clock: 'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z',
   // Transport

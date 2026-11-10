@@ -433,7 +433,12 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .about-close:hover { background: rgba(255, 255, 255, .12); color: #fff; }
 .about-close .ic { width: 22px; height: 22px; fill: currentColor; }
 .about-body { overflow-y: auto; overscroll-behavior: contain; padding: 0 22px 18px; font-size: 14px; line-height: 1.5; color: rgba(255, 255, 255, .84); }
-.about-lead { margin: 0 0 12px; }
+.about-lead { margin: 0 0 14px; }
+/* The privacy promise: always visible, above the fold-outs. */
+.about-privacy { display: flex; gap: 12px; align-items: flex-start; margin: 0 0 16px; padding: 14px 16px; border-radius: 14px; background: rgba(120, 220, 170, .1); border: 1px solid rgba(140, 230, 185, .35); }
+.about-privacy > .ic { flex: none; width: 26px; height: 26px; margin-top: 1px; fill: #9fe8c4; }
+.about .about-privacy h3 { margin: 0 0 4px; font-size: 15px; font-weight: 600; letter-spacing: 0; text-transform: none; color: #fff; }
+.about .about-privacy p { margin: 0; font-size: 13.5px; color: rgba(255, 255, 255, .86); }
 .about details { border-top: 1px solid rgba(255, 255, 255, .16); }
 .about summary { display: flex; align-items: center; justify-content: space-between; padding: 13px 0; font-weight: 600; font-size: 15px; color: #fff; cursor: pointer; list-style: none; }
 .about summary::-webkit-details-marker { display: none; }
