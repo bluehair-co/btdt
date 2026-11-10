@@ -1,15 +1,15 @@
 :root {
-  --bg: #f3f5f2;
+  --bg: #f7f2ee;
   --panel: #ffffff;
   --glass: rgba(255, 255, 255, .92);
-  --fg: #172019;
-  --muted: #5c6860;
-  --line: #e0e5e0;
-  --grid: #e9ece8;
-  --chip: #eef2ee;
-  --chip-on-bg: #d7eedf;
-  --chip-on-fg: #1d5a35;
-  --accent: #23794a;
+  --fg: #221f45;
+  --muted: #6b6688;
+  --line: #ebe3dc;
+  --grid: #efe9e4;
+  --chip: #f3ece6;
+  --chip-on-bg: #fde2cf;
+  --chip-on-fg: #a84a1c;
+  --accent: #c25228;
   --accent-fg: #ffffff;
   --m-road: #2a78d6;
   --m-air: #eb6834;
@@ -21,7 +21,7 @@
   --cc-air: #2a78d6; --cc1: #2a78d6; --cc2: #eb6834; --cc3: #1baf7a; --cc4: #eda100; --cc5: #e87ba4; --cc6: #008300; --cc7: #6250d6; --cc8: #e34948;
   --dot: #d0342c;
   --pos-still: #8a918c;
-  --shadow: 0 8px 28px rgba(20, 40, 25, .16);
+  --shadow: 0 8px 28px rgba(34, 31, 69, .14);
   --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -33,20 +33,20 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --bg: #0f1411; --panel: #161c18; --glass: rgba(22, 28, 24, .92); --fg: #e8eee9; --muted: #9aa69d; --line: #26302a; --grid: #222b25;
-    --chip: #1d2520; --chip-on-bg: #1f3a29; --chip-on-fg: #9fe0b7; --accent: #5cc48a; --accent-fg: #08140d;
+    --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f;
+    --chip: #2a2552; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a;
     --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
-    --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
+    --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(5, 3, 20, .55);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --bg: #0f1411; --panel: #161c18; --glass: rgba(22, 28, 24, .92); --fg: #e8eee9; --muted: #9aa69d; --line: #26302a; --grid: #222b25;
-  --chip: #1d2520; --chip-on-bg: #1f3a29; --chip-on-fg: #9fe0b7; --accent: #5cc48a; --accent-fg: #08140d;
+  --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f;
+  --chip: #2a2552; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a;
   --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
-  --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(0, 0, 0, .5);
+  --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(5, 3, 20, .55);
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -411,6 +411,27 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
 .toast { position: fixed; z-index: 70; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow); }
+
+/* ---------- the landing picture behind Insights and Timeline ---------- */
+/* A veil of the page colour keeps text readable: lighter at the top so the sky shows,
+   nearly solid lower down where the cards are. Cards and the list are frosted glass. */
+#insightsPage, #timelinePage {
+  isolation: isolate;
+  --veil-a: 52%; --veil-b: 82%; --veil-c: 92%;
+  --panel: rgba(255, 255, 255, .74); --glass: rgba(255, 255, 255, .82);
+}
+#insightsPage::before, #timelinePage::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    linear-gradient(color-mix(in srgb, var(--bg) var(--veil-a), transparent), color-mix(in srgb, var(--bg) var(--veil-b), transparent) 55%, color-mix(in srgb, var(--bg) var(--veil-c), transparent)),
+    url(landing-1600.webp) 40% 30% / cover no-repeat var(--bg);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) :is(#insightsPage, #timelinePage) { --veil-a: 35%; --veil-b: 78%; --veil-c: 90%; --panel: rgba(31, 27, 66, .6); --glass: rgba(31, 27, 66, .7); --line: rgba(255, 255, 255, .12); }
+}
+:root[data-theme="dark"] :is(#insightsPage, #timelinePage) { --veil-a: 35%; --veil-b: 78%; --veil-c: 90%; --panel: rgba(31, 27, 66, .6); --glass: rgba(31, 27, 66, .7); --line: rgba(255, 255, 255, .12); }
+#insightsPage .card, #timelinePage .tl-inner { backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2); }
+#timelinePage .tl-inner { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; margin: 8px max(8px, calc((100% - 760px) / 2)) calc(var(--dock-h) + var(--dock-gap) + 32px + var(--safe-b)); box-sizing: content-box; }
 
 /* ---------- wider screens ---------- */
 @media (min-width: 720px) {
