@@ -400,7 +400,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
 }
 .welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
-.welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }
 /* Split button: the main action, and a chevron that opens the folder option above it. */
@@ -428,7 +428,6 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); }
   .welcome-panel { max-width: 350px; }
   .welcome-panel > p:first-child { text-wrap: balance; }
-  .welcome-panel .acts { justify-content: center; }
 }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
