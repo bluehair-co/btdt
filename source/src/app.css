@@ -279,6 +279,8 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art .rider { fill: var(--bg); stroke-width: 2; }
 .far-art .lap { font-size: 11px; letter-spacing: .06em; fill: var(--muted); }
 .far-stat { text-align: center; margin-top: 6px; }
+.far-art.wide { max-width: 640px; }
+.far-art .mars { fill: none; stroke: var(--m-air); stroke-linecap: round; }
 .bars { display: flex; flex-direction: column; gap: 10px; }
 .bar-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .bar-row .name { font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }

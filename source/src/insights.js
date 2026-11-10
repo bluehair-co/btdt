@@ -36,11 +36,11 @@ function renderSummary() {
 
 // ---------- how far is that? ----------
 // The selection's distance as laps of the Earth (Magellan) and legs to the Moon and back (Armstrong).
-var EARTH_KM = 40075, MOON_KM = 384400;
+var EARTH_KM = 40075, MOON_KM = 384400, MARS_KM = 225e6;
 function farPct(share) { return share > 0 && share < .01 ? '<1' : String(Math.floor(share * 100)); }
 // One of the 24×24 icons, drawn at (x, y) as its centre and s wide, in an SVG.
 function glyph(name, x, y, s, color, rot) {
-  return '<path d="' + ICONS[name] + '" fill="' + color + '"' + (name === 'capsule' || name === 'moon' ? ' fill-rule="evenodd"' : '') +
+  return '<path d="' + ICONS[name] + '" fill="' + color + '"' + (name === 'capsule' || name === 'moon' || name === 'rocket' || name === 'mars' ? ' fill-rule="evenodd"' : '') +
     ' transform="translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')' + (rot ? ' rotate(' + rot.toFixed(1) + ')' : '') + ' scale(' + s / 24 + ') translate(-12,-12)"/>';
 }
 function rider(x, y, ring, color, name, s, rot, nudge) {
@@ -66,6 +66,42 @@ function loopAt(f) {
   var a = L.pts[k - 1], b = L.pts[k], t = (d - L.len[k - 1]) / ((L.len[k] - L.len[k - 1]) || 1), p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
   return { pts: L.pts.slice(0, k).concat([p]), x: p[0], y: p[1], ang: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI };
 }
+// Musk: a gentle arc from the Earth to Mars, as points.
+var MARS_ARC = (function () {
+  var a = [84, 66], c = [300, 6], b = [516, 66], pts = [], len = [0], k, t;
+  for (k = 0; k <= 60; k++) { t = k / 60; var u = 1 - t; pts.push([u * u * a[0] + 2 * u * t * c[0] + t * t * b[0], u * u * a[1] + 2 * u * t * c[1] + t * t * b[1]]); if (k) len.push(len[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1])); }
+  return { pts: pts, len: len };
+})();
+function marsAt(f) {
+  var L = MARS_ARC, d = L.len[L.len.length - 1] * Math.max(0, Math.min(1, f)), k = 1;
+  while (k < L.len.length - 1 && L.len[k] < d) k++;
+  var a = L.pts[k - 1], b = L.pts[k], t = (d - L.len[k - 1]) / ((L.len[k] - L.len[k - 1]) || 1), p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+  return { pts: L.pts.slice(0, k).concat([p]), x: p[0], y: p[1], ang: Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI };
+}
+// A share of the way to Mars, with enough decimals to show something for a few trips.
+function marsPct(share) {
+  var p = share * 100;
+  if (p <= 0) return '0';
+  if (p < .0001) return '<0.0001';
+  return p >= 10 ? fmt(Math.floor(p)) : p >= 1 ? fmt(Math.floor(p * 10) / 10, 1) : fmt(p, Math.min(4, 1 - Math.floor(Math.log10(p))));
+}
+function yearsText(y) {
+  if (y < 1) return fmt(Math.max(1, Math.round(y * 365.25))) + ' days';
+  if (y < 1e6) return fmt(y, y < 10 ? 1 : 0) + ' years';
+  return 'over a million years';
+}
+function renderMusk(kmT) {
+  var share = kmT / MARS_KM, at = marsAt(share), left = MARS_KM - kmT, note, value, sub;
+  var d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], perDay = kmT / Math.max(1, d1 - d0 + 1);
+  $('muskNote').textContent = 'How far your trips here would take you towards Mars, on average ' + dist(MARS_KM) + ' away (from about ' + dist(55e6) + ' when it\'s closest to ' + dist(401e6) + ' when it\'s on the far side of the Sun). The pace is your distance per day over these dates.';
+  if (share < 1) { value = marsPct(share) + '%'; sub = 'of the way to Mars'; note = dist(left) + ' still to go' + (perDay > 0 ? '. At this pace you\'d land in ' + yearsText(left / perDay / 365.25) : ''); }
+  else { value = fmt(share, share < 10 ? 2 : 1); sub = '× the way to Mars'; note = 'Made it to Mars, with ' + dist(kmT - MARS_KM) + ' to spare'; }
+  $('musk').innerHTML = '<svg class="far-art wide" viewBox="0 0 600 120" role="img" aria-label="' + marsPct(Math.min(1, share)) + '% of the way to Mars">' +
+    '<path class="trk" stroke-width="10" d="' + polyD(MARS_ARC.pts) + '"/>' + (share > 0 ? '<path class="mars" stroke-width="10" d="' + polyD(at.pts) + '"/>' : '') +
+    glyph('earth', 46, 72, 52, 'var(--m-road)') + glyph('mars', 548, 70, 44, 'var(--m-air)') +
+    rider(at.x, at.y, 'var(--m-air)', 'var(--m-air)', 'rocket', 22, at.ang) + '</svg>' +
+    '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
+}
 function renderFar() {
   var kmT = 0, j, sea = 'var(--m-road)', space = 'var(--m-bike)';
   for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
@@ -90,6 +126,7 @@ function renderFar() {
     value = fmt(legs / 2, legs < 20 ? 2 : 1); sub = '× to the Moon and back';
     note = back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to the Moon! On the way home, with ') + left + ' to go' : there + '. On the way out again, with ' + left + ' to the Moon';
   }
+  renderMusk(kmT);
   $('armstrong').innerHTML = '<svg class="far-art" viewBox="0 14 240 172" role="img" aria-label="' + (back ? farPct(part) + '% of the way home from the Moon' : farPct(part) + '% of the way to the Moon') + '">' +
     '<path class="trk" stroke-width="10" d="' + polyD(LOOP.pts) + '"/>' + (at.pts.length > 1 ? '<path class="space" stroke-width="10" d="' + polyD(at.pts) + '"/>' : '') +
     glyph('earth', LOOP.ex, LOOP.cy, 52, sea) + glyph('moon', LOOP.mx, LOOP.cy, 40, 'var(--muted)') +
