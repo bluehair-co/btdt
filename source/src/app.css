@@ -341,34 +341,35 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* ---------- welcome ---------- */
 /* The picture fills the screen like background-size: cover, inside a stage with the picture's
    own shape (2752 x 1536), so the tagline can sit on the picture itself, just under the sun.
-   On tall screens the stage slides left only as far as keeps the hiker (26.5% across) well
-   in view; on wider ones it keeps the hiker and the sun (63.2% across) on screen together. */
-.welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-start; padding: calc(24px + var(--safe-t)) 24px calc(24px + var(--safe-b)); background: #2c2d55; color: #fff; color-scheme: dark; }
+   The stage keeps the hiker (26.5% across) and the sun (63.2% across) on screen together:
+   it is centred between them, and on tall screens it is never wider than 2.1 screen widths,
+   so a phone shows the top of the picture with both, and the dark bottom carries on below. */
+.welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-end; padding: calc(24px + var(--safe-t)) clamp(20px, 5vw, 72px) calc(clamp(20px, 6vh, 64px) + var(--safe-b)); background: #19153a; color: #fff; color-scheme: dark; }
 .welcome-art {
   position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
 }
 .welcome-art > * {
-  --sw: max(100cqw, 100cqh * 1.7917);
-  --sh: max(100cqh, 100cqw / 1.7917);
-  --sx: max(0px, min(var(--sw) * .4485 - 50cqw, var(--sw) * .265 - 35cqw));
-  --sy: calc((var(--sh) - 100cqh) * .3);
+  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 210cqw));
+  --sh: calc(var(--sw) / 1.7917);
+  --sx: max(0px, min(var(--sw) * .4485 - 50cqw, var(--sw) * .265 - 8cqw, var(--sw) - 100cqw));
+  --sy: max(0px, (var(--sh) - 100cqh) * .3);
 }
 .welcome-art .stage { position: absolute; left: calc(0px - var(--sx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
 .welcome-art img { display: block; width: 100%; height: 100%; }
+/* Blends the picture into the plain colour below it when the screen is taller than the picture. */
+.welcome-art .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 14%; background: linear-gradient(rgba(25, 21, 58, 0), #19153a); }
 .welcome-tagline {
-  --tw: 11.5em;
-  position: absolute; margin: 0; width: var(--tw); text-align: center;
+  --tw: 13em;
+  position: absolute; margin: 0; width: var(--tw); text-align: center; white-space: nowrap;
   left: clamp(16px + var(--tw) / 2, var(--sw) * .632 - var(--sx), 100cqw - 16px - var(--tw) / 2);
   top: calc(var(--sh) * .318 - var(--sy));
   transform: translateX(-50%);
-  font-family: var(--font-display); font-weight: 200; font-size: clamp(24px, 3.2cqw, 60px); line-height: 1.15; letter-spacing: .08em; color: #fff;
+  font-family: var(--font-display); font-weight: 200; font-size: clamp(18px, 3.2cqw, 60px); line-height: 1.15; letter-spacing: .08em; color: #fff;
   text-shadow: 0 1px 3px rgba(70, 30, 50, .45), 0 0 24px rgba(90, 40, 70, .4);
 }
-.welcome-tagline br { display: none; }
-/* Too narrow to keep it on one line beside the hiker: two lines at the right. */
+.welcome-tagline .dot { margin: 0 .3em; }
 @media (max-aspect-ratio: 1/1) {
-  .welcome-tagline { --tw: 6.2em; text-align: right; }
-  .welcome-tagline br { display: inline; }
+  .welcome-tagline { --tw: 12.2em; font-size: min(24px, 5.2cqw); letter-spacing: .05em; }
 }
 .welcome-panel {
   position: relative; width: 100%; max-width: 400px; padding: 22px 22px 18px; border-radius: 20px;
@@ -388,7 +389,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel details.help ol { color: rgba(255, 255, 255, .82); }
 .welcome-panel details.help b { color: #fff; }
 .welcome-panel :focus-visible { outline-color: #fff; }
-@media (max-width: 520px) { .welcome { padding-left: 16px; padding-right: 16px; } .welcome-panel { max-width: none; } }
+@media (max-width: 520px) { .welcome-panel { max-width: none; } }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
 .busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
