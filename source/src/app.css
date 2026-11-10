@@ -339,37 +339,51 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .tl-end { padding: 20px 16px calc(var(--dock-h) + var(--dock-gap) + 28px + var(--safe-b)); text-align: center; color: var(--muted); font-size: 12px; }
 
 /* ---------- welcome ---------- */
-/* The picture fills the screen like background-size: cover, inside a stage with the picture's
+/* The picture fills the screen like background-size: cover, inside stages with the picture's
    own shape (2752 x 1536), so the tagline can sit on the picture itself, just under the sun.
-   The stage keeps the bike (from 15.5% across), the hiker and the sun (63.2% across) on
-   screen together: it is centred on them (40.5% across), and on tall screens it is never wider than 1.8 screen widths,
-   so a phone shows the top of the picture with the bike, the hiker and the sun, and the dark bottom carries on below. */
+   The picture is split in two layers (source/landing/make_layers.py): the cliff with the hiker,
+   the bike and the city in front (fg), and the sky, sun and valley behind (bg). On wide screens
+   both line up as one picture. On narrower screens each layer slides on its own: the front one
+   keeps the hiker about 30% across, the back one keeps the sun about 75% across, so both stay
+   in view on a phone. The back layer never moves right of the front one (bx >= fx). */
 .welcome { position: fixed; inset: 0; z-index: 5; overflow-y: auto; display: flex; align-items: flex-end; justify-content: flex-end; padding: calc(24px + var(--safe-t)) clamp(20px, 5vw, 72px) calc(clamp(20px, 6vh, 64px) + var(--safe-b)); background: #19153a; color: #fff; color-scheme: dark; }
 .welcome-art {
   position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
 }
 .welcome-art > * {
-  --sw: min(max(100cqw, 100cqh * 1.7917), max(100cqw, 180cqw));
+  --sw: max(100cqw, 100cqh * 1.7917);
   --sh: calc(var(--sw) / 1.7917);
-  --sx: max(0px, min(var(--sw) * .405 - 50cqw, var(--sw) * .15 - 2cqw, var(--sw) - 100cqw));
   --sy: max(0px, (var(--sh) - 100cqh) * .3);
+  --fx: max(0px, min(var(--sw) * .4485 - 50cqw, var(--sw) * .265 - 30cqw, var(--sw) - 100cqw));
+  --bx: max(var(--fx), min(var(--sw) * .632 - 75cqw, var(--sw) - 100cqw));
 }
-.welcome-art .stage { position: absolute; left: calc(0px - var(--sx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
+.welcome-art .stage { position: absolute; left: calc(0px - var(--bx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
+.welcome-art .stage.fg { left: calc(0px - var(--fx)); }
 .welcome-art img { display: block; width: 100%; height: 100%; }
-/* Blends the picture into the plain colour below it when the screen is taller than the picture. */
-.welcome-art .stage::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 14%; background: linear-gradient(rgba(25, 21, 58, 0), #19153a); }
 .welcome-tagline {
   --tw: 13em;
   position: absolute; margin: 0; width: var(--tw); text-align: center; white-space: nowrap;
-  left: clamp(16px + var(--tw) / 2, var(--sw) * .632 - var(--sx), 100cqw - 16px - var(--tw) / 2);
+  left: clamp(16px + var(--tw) / 2, var(--sw) * .632 - var(--bx), 100cqw - 16px - var(--tw) / 2);
   top: calc(var(--sh) * .318 - var(--sy));
   transform: translateX(-50%);
   font-family: var(--font-display); font-weight: 200; font-size: clamp(18px, 3.2cqw, 60px); line-height: 1.15; letter-spacing: .08em; color: #fff;
   text-shadow: 0 1px 3px rgba(70, 30, 50, .45), 0 0 24px rgba(90, 40, 70, .4);
 }
 .welcome-tagline .dot { margin: 0 .3em; }
+.welcome-tagline br { display: none; }
+/* Portrait tablets keep the single line, a little larger and with more shadow over the bright sky. */
 @media (max-aspect-ratio: 1/1) {
-  .welcome-tagline { --tw: 12.2em; font-size: min(24px, 5.2cqw); letter-spacing: .05em; top: calc(var(--sh) * .365 - var(--sy)); }
+  .welcome-tagline { font-size: min(34px, 4.1cqw); letter-spacing: .06em; text-shadow: 0 1px 3px rgba(60, 25, 45, .6), 0 0 22px rgba(80, 35, 65, .55); }
+}
+/* Phones: two larger lines, right-aligned under the sun. */
+@media (max-aspect-ratio: 1/1) and (max-width: 600px) {
+  .welcome-tagline {
+    --tw: 6.6em; text-align: right; white-space: normal; font-size: min(32px, 7.6cqw); letter-spacing: .05em; line-height: 1.12;
+    top: calc(var(--sh) * .355 - var(--sy));
+    text-shadow: 0 1px 3px rgba(60, 25, 45, .6), 0 0 22px rgba(80, 35, 65, .55);
+  }
+  .welcome-tagline br { display: inline; }
+  .welcome-tagline .dot { margin-right: 0; }
 }
 .welcome-panel {
   position: relative; width: 100%; max-width: 400px; padding: 22px 22px 18px; border-radius: 20px;
