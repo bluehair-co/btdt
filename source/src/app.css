@@ -278,6 +278,13 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art { display: block; width: 100%; max-width: 280px; height: auto; margin: 0 auto; overflow: visible; }
 .far-art.eight { max-width: none; }
 .far-art.ring { max-width: 164px; }
+.far-art.map { max-width: 184px; }
+.far-art .fr { fill: color-mix(in srgb, var(--muted) 14%, var(--panel)); stroke: color-mix(in srgb, var(--muted) 30%, transparent); stroke-width: 1.5px; stroke-linejoin: round; }
+.far-art .tour { fill: none; stroke: var(--m-bike); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
+.far-art .stage { fill: var(--panel); stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 2px; }
+.far-art .stage.on { fill: #fff; stroke: var(--m-bike); }
+/* The finish in Paris wears the leader's yellow. */
+.far-art .tour-end { fill: #F2C200; stroke: var(--panel); stroke-width: 3px; }
 .far-art .trk { fill: none; stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 4px; stroke-dasharray: 8 8; stroke-linecap: butt; }
 .far-art :is(.sea, .space, .mars, .gold, .you, .polo) { fill: none; stroke-width: 6px; stroke-linecap: round; }
 .far-art .sea { stroke: var(--m-road); }
