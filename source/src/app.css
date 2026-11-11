@@ -279,8 +279,12 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art.eight { max-width: none; }
 .far-art.ring { max-width: 164px; }
 .far-art .trk { fill: none; stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 4px; stroke-dasharray: 8 8; stroke-linecap: butt; }
-.far-art :is(.sea, .space, .mars, .gold, .you) { fill: none; stroke-width: 6px; stroke-linecap: round; }
+.far-art :is(.sea, .space, .mars, .gold, .you, .polo) { fill: none; stroke-width: 6px; stroke-linecap: round; }
 .far-art .sea { stroke: var(--m-road); }
+.far-art .polo { stroke: var(--m-transit); }
+.far-art .polo-end { fill: var(--panel); stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 4px; }
+.far-art .polo-l { font-size: 13px; font-weight: 600; fill: var(--fg); }
+.far-art .polo-s { font-size: 12px; fill: var(--muted); }
 .far-art .space { stroke: var(--m-bike); }
 .far-art .mars { stroke: var(--m-air); }
 /* Musk's magnifier over the Earth's edge: a rim and handle in the text colour, a tinted lens, and a glare on the glass. */
@@ -302,7 +306,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-dots button { width: 22px; height: 30px; display: flex; align-items: center; justify-content: center; border: 0; background: none; padding: 0; cursor: pointer; }
 .far-dots button::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: color-mix(in srgb, var(--muted) 35%, transparent); transition: background .2s, width .2s; }
 .far-dots button[aria-current="true"]::after { width: 18px; border-radius: 4px; background: var(--accent); }
-.far-view { overflow: hidden; touch-action: pan-y; margin: 0 -16px; }
+.far-view { overflow: hidden; touch-action: pan-y; margin: 0 -16px; transition: height .45s cubic-bezier(.3, .7, .3, 1); }
 .far-track { display: flex; align-items: flex-start; transition: transform .45s cubic-bezier(.3, .7, .3, 1); }
 .far-slide { flex: 0 0 100%; min-width: 0; padding: 0 16px; }
 .far-art.mid { max-width: 640px; overflow: hidden; }
@@ -328,7 +332,7 @@ details.help b { color: var(--fg); font-weight: 500; }
   .far-nav [data-far="prev"], .far-nav [data-far="next"] { display: none; }
   .far-art.mid { max-width: 230px; }
 }
-@media (prefers-reduced-motion: reduce) { .far-track, .far-art .v-race, .far-art .v-chase { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .far-view, .far-track, .far-art .v-race, .far-art .v-chase { transition: none; } }
 .bars { display: flex; flex-direction: column; gap: 10px; }
 .bar-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 10px; }
 .bar-row .name { font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }

@@ -177,20 +177,21 @@
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
       <div class="cards">
-        <section class="card wide">
-          <div class="card-head"><h2>Summary</h2><span class="fine" id="sumNote"></span></div>
-          <div class="stats" id="sumStats"></div>
-        </section>
         <section class="card wide far-card" id="farCard" aria-roledescription="carousel" aria-label="Distance scores">
-          <div class="card-head"><div class="card-title"><h2 id="farTitle" aria-live="polite">Magellan score</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this score" title="About this score"><span data-icon="info"></span></button></div>
+          <div class="card-head"><div class="card-title"><h2 id="farTitle" aria-live="polite">Marco Polo score</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this score" title="About this score"><span data-icon="info"></span></button></div>
             <div class="far-nav"><button type="button" class="icon-btn" data-far="prev" aria-label="Previous score"><span data-icon="left"></span></button><div class="far-dots" id="farDots"></div><button type="button" class="icon-btn" data-far="next" aria-label="Next score"><span data-icon="right"></span></button></div>
             <span class="fine info-text" id="farNote"></span></div>
           <div class="far-view" id="farView"><div class="far-track" id="farTrack">
+            <div class="far-slide" data-title="Marco Polo score" role="group" aria-roledescription="slide"><div id="polo"></div></div>
             <div class="far-slide" data-title="Magellan score" role="group" aria-roledescription="slide"><div id="magellan"></div></div>
             <div class="far-slide" data-title="Armstrong score" role="group" aria-roledescription="slide"><div id="armstrong"></div></div>
             <div class="far-slide" data-title="Musk score" role="group" aria-roledescription="slide"><div id="musk"></div></div>
             <div class="far-slide" data-title="Voyager score" role="group" aria-roledescription="slide"><div id="voyager"></div></div>
           </div></div>
+        </section>
+        <section class="card wide" id="sumCard">
+          <div class="card-head"><h2>Summary</h2><span class="fine" id="sumNote"></span></div>
+          <div class="stats" id="sumStats"></div>
         </section>
         <section class="card">
           <div class="card-head"><h2>How you travel</h2>

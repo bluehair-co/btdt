@@ -5,7 +5,7 @@ function stat(label, value, unit, note) {
 function hours(i) { return Math.max(0, D.end[i] - D.start[i]) / 36e5; }
 function renderInsights() {
   var n = sel.length;
-  $('insightsPage').querySelectorAll('.card').forEach(function (c, k) { if (k) c.hidden = !n; });
+  $('insightsPage').querySelectorAll('.card').forEach(function (c) { if (c.id !== 'sumCard') c.hidden = !n; });
   if (!n) {
     $('sumStats').innerHTML = '<p class="empty" style="grid-column:1/-1">No trips match your filters.</p>';
     $('sumNote').textContent = '';
@@ -116,6 +116,35 @@ function muskArt(share) {
     '<circle class="lens-glint" cx="' + (ex + gr * Math.cos(266 * Math.PI / 180)).toFixed(1) + '" cy="' + (cy + gr * Math.sin(266 * Math.PI / 180)).toFixed(1) + '" r="2.6"/></g>' +
     '<circle class="lens-rim" cx="' + ex + '" cy="' + cy + '" r="' + R + '"/><text class="lens-zoom" x="' + (ex + R + 10) + '" y="' + (cy + R + 10) + '">×' + fmt(z) + '</text></svg>';
 }
+// Marco Polo: Venice to Kublai Khan's China and back over land, so only trips on the ground count (road,
+// public transport, on foot and cycling). Odd legs head east along a winding Silk Road, even legs come home.
+var POLO_KM = 12000, LAND = { road: 1, transit: 1, foot: 1, bike: 1 };
+function renderPolo() {
+  var km = 0, j;
+  for (j = 0; j < sel.length; j++) if (LAND[groupOf(MODES[D.mode[sel[j]]]).key]) km += D.km[sel[j]];
+  FAR.notes[0] = 'How far your trips over land here would take you along the Silk Road from Venice to China, about ' + dist(POLO_KM) + ', and back. Only road, public transport, walking and cycling count; flights and boats don\'t.';
+  var legs = km / POLO_KM, leg = Math.floor(legs), part = legs - leg, back = leg % 2 === 1, trips = Math.floor(leg / 2), left = dist(POLO_KM - part * POLO_KM), value, sub, note;
+  if (legs < 1) { value = farPct(legs) + '%'; sub = 'of the way to China'; note = left + ' still to go to Kublai Khan\'s court'; }
+  else {
+    var there = trips ? 'There and back ' + (trips === 1 ? 'once' : trips === 2 ? 'twice' : fmt(trips) + ' times') : '';
+    value = fmt(legs / 2, legs < 20 ? 2 : 1); sub = '× Venice to China and back';
+    note = back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to China! On the way home to Venice, with ') + left + ' to go' : there + '. Heading east again, with ' + left + ' to China';
+  }
+  // The road: a gentle wave between Venice and China, as points, drawn to the card's width.
+  var w = farWidth(), k = farScale(w), W = w / k, x0 = 56, x1 = W - 56, cy = 62, A = 14, n = 2.5, pts = [], len = [0], i;
+  for (i = 0; i <= 120; i++) { var t = i / 120; pts.push([x0 + (x1 - x0) * t, cy + A * Math.sin(t * n * 2 * Math.PI)]); if (i) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); }
+  var road = { pts: pts, len: len }, f = back ? 1 - part : part, at = loopAt(f, road), done = back ? [[at.x, at.y]].concat(pts.slice(Math.ceil(f * 120))) : at.pts;
+  var ride = rider(at.x, at.y, 'var(--m-transit)', '', 'camel', 24, 0);
+  if (back) ride = '<g transform="translate(' + (2 * at.x).toFixed(1) + ',0) scale(-1,1)">' + ride + '</g>';
+  function end(x, name, sub, anchor) {
+    return '<circle cx="' + x + '" cy="' + cy + '" r="7" class="polo-end"/><text class="polo-l" x="' + x + '" y="' + (cy + 40) + '" text-anchor="' + anchor + '">' + name + '</text>' +
+      '<text class="polo-s" x="' + x + '" y="' + (cy + 55) + '" text-anchor="' + anchor + '">' + sub + '</text>';
+  }
+  $('polo').innerHTML = '<svg class="far-art eight" viewBox="0 0 ' + W.toFixed(1) + ' 128" style="height:' + (128 * k).toFixed(1) + 'px" role="img" aria-label="' + farPct(part) + '% of the way ' + (back ? 'home to Venice' : 'to China') + '">' +
+    '<path class="trk" d="' + polyD(pts) + '"/>' + end(x0, 'Venice', '1271', 'start') + end(x1, 'Kublai Khan\'s court', '1275', 'end') +
+    (part > 0 ? '<path class="polo" d="' + polyD(done) + '"/>' : '') + ride + '</svg>' +
+    '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
+}
 // A share of the way to Mars, with enough decimals to show something for a few trips.
 function marsPct(share) {
   var p = share * 100;
@@ -131,7 +160,7 @@ function yearsText(y) {
 function renderMusk(kmT) {
   var share = kmT / MARS_KM, left = MARS_KM - kmT, note, value, sub;
   var d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], perDay = kmT / Math.max(1, d1 - d0 + 1);
-  FAR.notes[2] = 'How far your trips here would take you towards Mars when it\'s closest, about ' + bigDist(MARS_KM) + ' away (it averages ' + bigDist(225e6) + ', and is ' + bigDist(401e6) + ' away on the far side of the Sun). The line is to scale: while your rocket is too close to the Earth to see, the magnifier zooms in on it. The pace is your distance per day over these dates.';
+  FAR.notes[3] = 'How far your trips here would take you towards Mars when it\'s closest, about ' + bigDist(MARS_KM) + ' away (it averages ' + bigDist(225e6) + ', and is ' + bigDist(401e6) + ' away on the far side of the Sun). The line is to scale: while your rocket is too close to the Earth to see, the magnifier zooms in on it. The pace is your distance per day over these dates.';
   if (share < 1) { value = marsPct(share) + '%'; sub = 'of the way to Mars'; note = dist(left) + ' still to go' + (perDay > 0 ? '. At this pace you\'d land in ' + yearsText(left / perDay / 365.25) : ''); }
   else { value = fmt(share, share < 10 ? 2 : 1); sub = '× the way to Mars'; note = 'Made it to Mars, with ' + dist(kmT - MARS_KM) + ' to spare'; }
   $('musk').innerHTML = muskArt(share) +
@@ -149,7 +178,7 @@ function raceTime(h) { return h * 60 < 1 ? fmt(Math.max(1, Math.round(h * 3600))
 function renderVoyager(kmT) {
   var dV = voyagerKm(), raceH = kmT / VOY_KMH, d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], span = d1 - d0 + 1;
   var youF = Math.min(1, raceH / (span * 24)), faster = VOY_KMH / Math.max(1e-9, kmT / (span * 24)), share = kmT / dV, ratio = VOY_PER_DAY / Math.max(1, kmT);
-  FAR.notes[3] = 'Voyager 1 left Earth in 1977 and is the farthest thing people have made: about ' + bigDist(dV) + ' away, a light-day, and moving at about ' + fmt(distVal(VOY_KMH)) + ' ' + distUnit() + '/h. ' +
+  FAR.notes[4] = 'It\'s the farthest thing people have made: about ' + bigDist(dV) + ' away, a light-day, and moving at about ' + fmt(distVal(VOY_KMH)) + ' ' + distUnit() + '/h. ' +
     'The race is your distance here against Voyager over the same distance, with you going at your average pace for these dates. Zoom out for the whole way to Voyager.';
   var out = FAR.zoom;
   function art(W, cls) {
@@ -193,6 +222,7 @@ function voyagerZoom(on) {
 // until the period or filters change. It also waits while the card is hovered or Insights isn't showing.
 // Who each score is named after, and when they did it: the first line of each score's note.
 var FAR_WHO = [
+  'Marco Polo set out from Venice in 1271 and reached Kublai Khan\'s court in China in 1275, over land along the Silk Road.',
   'Ferdinand Magellan set out in 1519 on the first voyage around the world, finished in 1522.',
   'Neil Armstrong was the first person to walk on the Moon, on 20 July 1969.',
   'Elon Musk is planning to go to Mars... somewhere in the future.',
@@ -205,6 +235,9 @@ function farGo(k, user) {
   var n = farSlides.length;
   FAR.i = ((k % n) + n) % n;
   $('farTrack').style.transform = 'translateX(' + (-100 * FAR.i) + '%)';
+  // The card is as tall as the score showing, so a short drawing doesn't leave a gap above the next card.
+  var h = farSlides[FAR.i].offsetHeight;
+  if (h) $('farView').style.height = h + 'px';
   farSlides.forEach(function (s, j) { var on = j === FAR.i; s.inert = !on; s.setAttribute('aria-hidden', on ? 'false' : 'true'); s.setAttribute('aria-label', (j + 1) + ' of ' + n); });
   $('farDots').querySelectorAll('button').forEach(function (b, j) { b.setAttribute('aria-current', j === FAR.i ? 'true' : 'false'); });
   $('farTitle').textContent = farSlides[FAR.i].dataset.title;
@@ -257,8 +290,8 @@ function farRefresh() {
 function renderFar() {
   var kmT = 0, j, sea = 'var(--m-road)';
   for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
-  FAR.notes[0] = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator.';
-  FAR.notes[1] = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back.';
+  FAR.notes[1] = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator.';
+  FAR.notes[2] = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back.';
   // Magellan: a ring round the Earth from the top, clockwise; the caravel is where this lap has got to.
   var laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, r = 70.5, cx = 82, cy = 82, th = lap * 2 * Math.PI, ks = farScale(farWidth());
   var sx = cx + r * Math.sin(th), sy = cy - r * Math.cos(th), arc = lap > .002 ? '<path class="sea" d="M' + cx + ',' + (cy - r) + ' A' + r + ',' + r + ' 0 ' + (lap > .5 ? 1 : 0) + ',1 ' + sx.toFixed(1) + ',' + sy.toFixed(1) + '"/>' : '';
@@ -277,7 +310,7 @@ function renderFar() {
     value = fmt(legs / 2, legs < 20 ? 2 : 1); sub = '× to the Moon and back';
     note = back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to the Moon! On the way home, with ') + left + ' to go' : there + '. On the way out again, with ' + left + ' to the Moon';
   }
-  renderMusk(kmT); renderVoyager(kmT);
+  renderMusk(kmT); renderVoyager(kmT); renderPolo();
   $('armstrong').innerHTML = eightArt(f, 'moon', 35, 32, 'space', 'capsule', back ? farPct(part) + '% of the way home from the Moon' : farPct(part) + '% of the way to the Moon') +
     '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
   farRefresh();
