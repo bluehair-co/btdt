@@ -36,7 +36,8 @@ function renderSummary() {
 
 // ---------- how far is that? ----------
 // The selection's distance as laps of the Earth (Magellan) and legs to the Moon and back (Armstrong).
-var EARTH_KM = 40075, MOON_KM = 384400, MARS_KM = 225e6;
+// Mars counts at its closest, when launches to it are timed.
+var EARTH_KM = 40075, MOON_KM = 384400, MARS_KM = 55e6;
 function farPct(share) { return share > 0 && share < .01 ? '<1' : String(Math.floor(share * 100)); }
 // One of the 24×24 icons, drawn at (x, y) as its centre and s wide, in an SVG.
 function glyph(name, x, y, s, color, rot) {
@@ -92,6 +93,29 @@ function eightArt(f, far, farSize, r, cls, rideName, label) {
     (f > 0 ? '<path class="' + cls + '" d="' + polyD(at.pts) + '"/>' : '') +
     rider(at.x, at.y, 'var(--m-' + { space: 'bike', mars: 'air' }[cls] + ')', '', rideName, 24, at.ang) + '</svg>';
 }
+// Musk: a straight line from the Earth to Mars, to scale. While the rocket would be lost in the Earth's edge,
+// a magnifier over the edge shows the start of the line zoomed in, by the biggest step of 1-2-5 that keeps the
+// rocket inside the lens, and says by how much. From 20 px out the line shows as it is.
+var MUSK_ZOOMS = [2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 1e4, 2e4, 5e4, 1e5];
+function muskArt(share) {
+  var w = farWidth(), k = farScale(w), W = w / k, cy = 82, ex = 145, rx = W - 17 - 34, x1 = rx - 33.5, px = (x1 - ex) * Math.min(1, share), R = 48;
+  var s = '<svg class="far-art eight" viewBox="0 0 ' + W.toFixed(1) + ' 164" style="height:' + (164 * k).toFixed(1) + 'px" role="img" aria-label="' + marsPct(Math.min(1, share)) + '% of the way to Mars">' +
+    '<path class="trk" d="M' + ex + ',' + cy + 'H' + x1 + '"/>' + planet('mars', rx, cy, 68) + planet('earth', 81, cy, 128);
+  if (px >= 20) return s + '<path class="mars" d="M' + ex + ',' + cy + 'H' + (ex + px).toFixed(1) + '"/>' + rider(ex + px, cy, 'var(--m-air)', '', 'rocket', 24, 0) + '</svg>';
+  var z = 2, j, zx;
+  for (j = 0; j < MUSK_ZOOMS.length; j++) if (px * MUSK_ZOOMS[j] <= 36) z = MUSK_ZOOMS[j];
+  zx = ex + Math.max(0, px * z);
+  // A glare on the glass: a bright arc along the upper left of the lens and a small glint beside it.
+  var g0 = 200 * Math.PI / 180, g1 = 252 * Math.PI / 180, gr = R - 11;
+  return s + '<defs><clipPath id="muskLens"><circle cx="' + ex + '" cy="' + cy + '" r="' + R + '"/></clipPath></defs>' +
+    '<rect class="lens-rim" x="172" y="118.1" width="8" height="29" transform="rotate(-45 172 118.1)"/>' +
+    '<g clip-path="url(#muskLens)"><circle class="lens-bg" cx="' + ex + '" cy="' + cy + '" r="' + R + '"/>' + planet('earth', ex - 279, cy, 558) +
+    '<path class="trk" d="M' + ex + ',' + cy + 'H' + (ex + R) + '"/>' + (share > 0 ? '<path class="mars" d="M' + ex + ',' + cy + 'H' + zx.toFixed(1) + '"/>' : '') +
+    rider(zx, cy, 'var(--m-air)', '', 'rocket', 24, 0) + '<circle class="lens-in" cx="' + ex + '" cy="' + cy + '" r="' + (R - 2.5) + '"/>' +
+    '<path class="lens-glare" d="M' + (ex + gr * Math.cos(g0)).toFixed(1) + ',' + (cy + gr * Math.sin(g0)).toFixed(1) + 'A' + gr + ',' + gr + ' 0 0 1 ' + (ex + gr * Math.cos(g1)).toFixed(1) + ',' + (cy + gr * Math.sin(g1)).toFixed(1) + '"/>' +
+    '<circle class="lens-glint" cx="' + (ex + gr * Math.cos(266 * Math.PI / 180)).toFixed(1) + '" cy="' + (cy + gr * Math.sin(266 * Math.PI / 180)).toFixed(1) + '" r="2.6"/></g>' +
+    '<circle class="lens-rim" cx="' + ex + '" cy="' + cy + '" r="' + R + '"/><text class="lens-zoom" x="' + (ex + R + 10) + '" y="' + (cy + R + 10) + '">×' + fmt(z) + '</text></svg>';
+}
 // A share of the way to Mars, with enough decimals to show something for a few trips.
 function marsPct(share) {
   var p = share * 100;
@@ -107,10 +131,10 @@ function yearsText(y) {
 function renderMusk(kmT) {
   var share = kmT / MARS_KM, left = MARS_KM - kmT, note, value, sub;
   var d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], perDay = kmT / Math.max(1, d1 - d0 + 1);
-  FAR.notes[2] = 'How far your trips here would take you towards Mars, on average ' + dist(MARS_KM) + ' away (from about ' + dist(55e6) + ' when it\'s closest to ' + dist(401e6) + ' when it\'s on the far side of the Sun). The pace is your distance per day over these dates.';
+  FAR.notes[2] = 'How far your trips here would take you towards Mars when it\'s closest, about ' + dist(MARS_KM) + ' away (it averages ' + dist(225e6) + ', and is ' + dist(401e6) + ' away on the far side of the Sun). The line is to scale: while your rocket is too close to the Earth to see, the magnifier zooms in on it. The pace is your distance per day over these dates.';
   if (share < 1) { value = marsPct(share) + '%'; sub = 'of the way to Mars'; note = dist(left) + ' still to go' + (perDay > 0 ? '. At this pace you\'d land in ' + yearsText(left / perDay / 365.25) : ''); }
   else { value = fmt(share, share < 10 ? 2 : 1); sub = '× the way to Mars'; note = 'Made it to Mars, with ' + dist(kmT - MARS_KM) + ' to spare'; }
-  $('musk').innerHTML = eightArt(Math.min(1, share) / 2, 'mars', 68, 50, 'mars', 'rocket', marsPct(Math.min(1, share)) + '% of the way to Mars') +
+  $('musk').innerHTML = muskArt(share) +
     '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
 }
 // Voyager 1: about 17 km/s, and one light-day (25,902 million km) from Earth in mid-November 2026.

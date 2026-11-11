@@ -283,6 +283,14 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art .sea { stroke: var(--m-road); }
 .far-art .space { stroke: var(--m-bike); }
 .far-art .mars { stroke: var(--m-air); }
+/* Musk's magnifier over the Earth's edge: a rim and handle in the text colour, a tinted lens, and a glare on the glass. */
+.far-art .lens-bg { fill: color-mix(in srgb, var(--muted) 14%, var(--panel)); }
+.far-art circle.lens-rim { fill: none; stroke: var(--fg); stroke-width: 7px; }
+.far-art rect.lens-rim { fill: var(--fg); }
+.far-art .lens-in { fill: none; stroke: color-mix(in srgb, var(--muted) 70%, transparent); stroke-width: 5px; }
+.far-art .lens-glare { fill: none; stroke: #fff; stroke-opacity: .7; stroke-width: 5px; stroke-linecap: round; }
+.far-art .lens-glint { fill: #fff; fill-opacity: .75; }
+.far-art .lens-zoom { font-size: 12px; font-weight: 600; fill: var(--fg); }
 /* Voyager has a longer drawing that fills the card on wider screens. */
 .far-art.far-w { display: none; }
 @media (min-width: 960px) { .far-art.far-n { display: none; } .far-art.far-w, .far-art.mid.far-w { display: block; max-width: none; } }
