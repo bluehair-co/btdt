@@ -131,7 +131,7 @@ function yearsText(y) {
 function renderMusk(kmT) {
   var share = kmT / MARS_KM, left = MARS_KM - kmT, note, value, sub;
   var d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], perDay = kmT / Math.max(1, d1 - d0 + 1);
-  FAR.notes[2] = 'How far your trips here would take you towards Mars when it\'s closest, about ' + dist(MARS_KM) + ' away (it averages ' + dist(225e6) + ', and is ' + dist(401e6) + ' away on the far side of the Sun). The line is to scale: while your rocket is too close to the Earth to see, the magnifier zooms in on it. The pace is your distance per day over these dates.';
+  FAR.notes[2] = 'How far your trips here would take you towards Mars when it\'s closest, about ' + bigDist(MARS_KM) + ' away (it averages ' + bigDist(225e6) + ', and is ' + bigDist(401e6) + ' away on the far side of the Sun). The line is to scale: while your rocket is too close to the Earth to see, the magnifier zooms in on it. The pace is your distance per day over these dates.';
   if (share < 1) { value = marsPct(share) + '%'; sub = 'of the way to Mars'; note = dist(left) + ' still to go' + (perDay > 0 ? '. At this pace you\'d land in ' + yearsText(left / perDay / 365.25) : ''); }
   else { value = fmt(share, share < 10 ? 2 : 1); sub = '× the way to Mars'; note = 'Made it to Mars, with ' + dist(kmT - MARS_KM) + ' to spare'; }
   $('musk').innerHTML = muskArt(share) +
@@ -191,6 +191,13 @@ function voyagerZoom(on) {
 // ---------- the scores carousel ----------
 // The scores take turns every 5 seconds. Touching the card (swipe, dots, arrows, zoom, info) stops that,
 // until the period or filters change. It also waits while the card is hovered or Insights isn't showing.
+// Who each score is named after, and when they did it: the first line of each score's note.
+var FAR_WHO = [
+  'Ferdinand Magellan set out in 1519 on the first voyage around the world, finished in 1522.',
+  'Neil Armstrong was the first person to walk on the Moon, on 20 July 1969.',
+  'Elon Musk is planning to go to Mars... somewhere in the future.',
+  'Voyager 1 was launched by NASA on 5 September 1977 and reached interstellar space in 2012.'
+];
 var FAR = { i: 0, auto: true, key: -1, timer: 0, zoom: false, notes: [] };
 var farSlides = Array.prototype.slice.call(document.querySelectorAll('#farTrack .far-slide'));
 $('farDots').innerHTML = farSlides.map(function (s, k) { return '<button type="button" data-far="' + k + '" aria-label="' + s.dataset.title + '"></button>'; }).join('');
@@ -202,7 +209,7 @@ function farGo(k, user) {
   $('farDots').querySelectorAll('button').forEach(function (b, j) { b.setAttribute('aria-current', j === FAR.i ? 'true' : 'false'); });
   $('farTitle').textContent = farSlides[FAR.i].dataset.title;
   $('farTitle').setAttribute('aria-live', user ? 'polite' : 'off');
-  $('farNote').textContent = FAR.notes[FAR.i] || '';
+  $('farNote').innerHTML = '<span class="far-who">' + FAR_WHO[FAR.i] + '</span>' + (FAR.notes[FAR.i] || '');
   farSchedule();
 }
 function farStop() { FAR.auto = false; clearTimeout(FAR.timer); }
@@ -250,8 +257,8 @@ function farRefresh() {
 function renderFar() {
   var kmT = 0, j, sea = 'var(--m-road)';
   for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
-  FAR.notes[0] = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator. Magellan\'s expedition was the first to sail all the way round.';
-  FAR.notes[1] = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back. Armstrong was the first to walk on it.';
+  FAR.notes[0] = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator.';
+  FAR.notes[1] = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back.';
   // Magellan: a ring round the Earth from the top, clockwise; the caravel is where this lap has got to.
   var laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, r = 70.5, cx = 82, cy = 82, th = lap * 2 * Math.PI, ks = farScale(farWidth());
   var sx = cx + r * Math.sin(th), sy = cy - r * Math.cos(th), arc = lap > .002 ? '<path class="sea" d="M' + cx + ',' + (cy - r) + ' A' + r + ',' + r + ' 0 ' + (lap > .5 ? 1 : 0) + ',1 ' + sx.toFixed(1) + ',' + sy.toFixed(1) + '"/>' : '';

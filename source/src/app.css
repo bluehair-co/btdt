@@ -295,6 +295,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art.far-w { display: none; }
 @media (min-width: 960px) { .far-art.far-n { display: none; } .far-art.far-w, .far-art.mid.far-w { display: block; max-width: none; } }
 .far-stat { text-align: center; margin-top: 6px; }
+.far-who { display: block; font-weight: 600; color: var(--fg); margin-bottom: 2px; }
 /* The scores take turns in one card: a sliding track, dots and arrows in the header, swipe on touch. */
 .far-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .far-dots { display: flex; gap: 2px; }
