@@ -91,3 +91,9 @@ At the bottom of Filters, *Export* downloads what the filters currently show (ev
 Run `python3 build.py`. It assembles `dist/index.html` from `src/` and copies `static/` (the manifest, service worker and icons).
 
 The app icons in `static/` are made from `icons/icon-source.jpg` (a full-bleed square; the browser-tab icon is the pin cut out of it) by `python3 icons/make_icons.py`. Data saved on a device under the old name, Timeliner, is picked up and copied to the new storage on first open.
+
+## Demo
+
+*Try the demo* on the welcome page opens `demo.json`: three made-up years (13 Nov 2023 to 8 Nov 2026) of someone living in Oud-West, Amsterdam, with an office at the Zuidas. It is mostly cycling, walking and trams on a sketch of Amsterdam's streets, a run in the Vondelpark, the ferry to NDSM, trains to other Randstad cities, a road trip outside the Randstad every couple of months (Texel, Giethoorn, the Ardennes, Hoge Veluwe, Cologne, Zeeland, Maastricht, Groningen, Antwerp, Friesland), and two holidays a year: Vietnam, Peru, South Africa, Japan, Colombia and Tanzania. Four of them change planes on the way (Dubai, Helsinki, Madrid and Doha), so those countries show as layovers only.
+
+`python3 source/demo/make_demo.py` writes it to `static/demo.json` as an on-device Timeline.json, the same every run. It is read by the same parser as your own file but never saved: the demo opens on all its data with Countries visited on (your own setting for that layer is what stays saved), *Exit demo* reloads to the welcome page, and importing your own files replaces it. The service worker caches it the first time it is opened.

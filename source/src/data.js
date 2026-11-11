@@ -858,6 +858,8 @@ function importFiles(list) {
     if (!r.results.length) { busy(''); setStatus(r.errors.length ? r.errors.join(' · ') : NOT_TIMELINE, true); return; }
     busy('Preparing your map…');
     setTimeout(function () {
+      // Your own files replace the demo rather than joining it.
+      if (DEMO) { RAW = null; leaveDemo(); }
       var next = merge(RAW, r.results);
       setData(next);
       // Saved after setData, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
@@ -905,6 +907,51 @@ $('dirIn').addEventListener('change', function () { importFiles(this.files); thi
 })();
 document.body.addEventListener('dragover', function (e) { e.preventDefault(); });
 document.body.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });
+
+// ---------- demo ----------
+// Made-up data (three years of someone living in Amsterdam, from source/demo/make_demo.py) to look
+// around before loading a file. It is read like any Timeline.json but never saved, so leaving it
+// (a reload) goes back to the welcome page, and loading your own files replaces it.
+// DEMO holds your own Countries visited setting, which the demo turns on for itself.
+var DEMO = null;
+$('demoBtn').addEventListener('click', function () {
+  setStatus('');
+  busy('Opening the demo…');
+  fetch('demo.json').then(function (res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.blob();
+  }).then(function (b) {
+    return runParser([new File([b], 'demo.json', { type: 'application/json' })]);
+  }).then(function (r) {
+    if (!r.results.length) throw new Error('no data');
+    DEMO = { cc: PREFS.cc };
+    document.documentElement.classList.add('demo');
+    $('demoBar').hidden = false;
+    PREFS.cc = true;
+    syncLayersUI();
+    RAW = null;
+    setData(merge(null, r.results));
+    // The demo opens on all of its data, the whole map in view.
+    F.dm = 'all';
+    allCalendar();
+    syncFilterUI();
+    mapReset();
+    apply();
+    busy('');
+  }).catch(function () {
+    busy('');
+    setStatus('The demo couldn\'t open. Check your internet connection and try again.', true);
+  });
+});
+function leaveDemo() {
+  if (!DEMO) return;
+  PREFS.cc = DEMO.cc;
+  DEMO = null;
+  savePrefs(); syncLayersUI();
+  document.documentElement.classList.remove('demo');
+  $('demoBar').hidden = true;
+}
+$('demoExit').addEventListener('click', function () { leaveDemo(); location.reload(); });
 
 // ---------- remember the last import on this device ----------
 // Kept in this browser's IndexedDB so the app opens with it next time. Nothing leaves the device.

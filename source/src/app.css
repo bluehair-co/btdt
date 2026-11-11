@@ -679,3 +679,19 @@ div.hit-row:hover { background: none; }
 .pin-ic { transition: transform .15s; }
 .pin-ic.on { background: var(--dot); transform: rotate(-45deg) scale(1.35); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 35%, transparent), 0 2px 8px rgba(0,0,0,.4); }
 .pin-ic svg { transform: rotate(45deg); width: 60%; height: 60%; fill: #fff; }
+
+/* Demo: a link under Load on the welcome panel, and a bar over every page while the demo is open.
+   The bar pushes the app down through --safe-t, which every top-anchored part already uses. */
+.welcome-panel .demo-open { flex-basis: 100%; display: inline-flex; justify-content: center; align-items: center; gap: 6px; background: none; border: 0; color: rgba(255, 255, 255, .9); font: inherit; font-size: 14px; font-weight: 500; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.welcome-panel .demo-open span:last-child { text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .4); text-underline-offset: 3px; }
+.welcome-panel .demo-open:hover span:last-child { text-decoration-color: #fff; }
+.welcome-panel .demo-open svg.ic { width: 18px; height: 18px; }
+:root.demo { --demo-h: 40px; --safe-t: calc(env(safe-area-inset-top, 0px) + var(--demo-h)); }
+.demo-bar { position: fixed; z-index: 70; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top, 0px) + var(--demo-h, 40px)); padding: env(safe-area-inset-top, 0px) 16px 0 calc(8px + env(safe-area-inset-left, 0px)); box-sizing: border-box; display: flex; align-items: center; gap: 12px; background: #19153a; color: #fff; font-size: 13px; }
+.demo-bar[hidden] { display: none; }
+.demo-exit { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .08); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.demo-exit:hover { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .6); }
+.demo-exit svg.ic { width: 18px; height: 18px; }
+.demo-msg { flex: 1; min-width: 0; margin: 0; color: rgba(255, 255, 255, .86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.demo-msg .narrow-only { display: none; }
+@media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
