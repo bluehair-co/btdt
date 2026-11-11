@@ -595,8 +595,17 @@ function setStatus(text, isErr) {
   ['welcomeStatus', 'importStatus'].forEach(function (id) { $(id).textContent = text || ''; $(id).className = 'status' + (isErr ? ' err' : ''); });
   if (text && D) toast(text);
 }
+// Exports that are raw GPS points, whose trips are rebuilt from them: Records.json and Dawarich.
+function POINTS_SRC(s) { return s === SRC.records || s === SRC.dawarich; }
+// What those are called in messages, from the files loaded.
+function pointsName(files) {
+  var k = {};
+  (files || []).forEach(function (f) { k[f.kind] = true; });
+  var r = k[KIND_LABEL[SRC.records]], d = k[KIND_LABEL[SRC.dawarich]];
+  return r && d ? 'Records.json and Dawarich' : d ? 'Dawarich' : 'Records.json';
+}
 // Combine exports. When several cover the same day, the newest kind of export wins for that day,
-// except for Records.json trips in the gaps it left (see inGap).
+// except for Records.json and Dawarich trips in the gaps it left (see inGap).
 // Simulated trips and stays always win: they are kept whatever the day, an exported trip that
 // overlaps them for at least half of its time (or half of theirs) is left out, and exported stays
 // are cut back to the time around them. A few minutes' overlap at the ends is not a conflict, so
@@ -640,7 +649,7 @@ function merge(base, parts) {
     }
     return xs.length > 0 && tot >= (e - s) / 2;
   }
-  // What the winning exports cover, in time order. A Records.json trip on a day another export
+  // What the winning exports cover, in time order. A Records.json (or Dawarich) trip on a day another export
   // won is still kept when it falls in a gap they left (Timeline exports often record a stay and
   // nothing else on a day of driving): at most a fifth of it overlaps their trips, and at most
   // half of it their stays (whose ends are often loose). Flights are left to the winning export.
@@ -661,8 +670,8 @@ function merge(base, parts) {
   var coverT = [], coverV = [], fly = MODES.indexOf('FLYING');
   all.forEach(function (p) {
     var i, s;
-    for (i = 0; i < p.day.length; i++) { s = src(p, i); if (s !== SRC.sim && s !== SRC.records && s === best[p.day[i]]) coverT.push([p.start[i], p.end[i]]); }
-    for (i = 0; i < p.vs.length; i++) { s = vsrc(p, i); if (s !== SRC.sim && s !== SRC.records && s === best[p.vday[i]]) coverV.push([p.vs[i], p.ve[i]]); }
+    for (i = 0; i < p.day.length; i++) { s = src(p, i); if (s !== SRC.sim && !POINTS_SRC(s) && s === best[p.day[i]]) coverT.push([p.start[i], p.end[i]]); }
+    for (i = 0; i < p.vs.length; i++) { s = vsrc(p, i); if (s !== SRC.sim && !POINTS_SRC(s) && s === best[p.vday[i]]) coverV.push([p.vs[i], p.ve[i]]); }
   });
   var ovT = overlaps(coverT), ovV = overlaps(coverV);
   function inGap(p, i) {
@@ -676,7 +685,7 @@ function merge(base, parts) {
       s = src(p, i);
       if (s === SRC.sim) idx.push([pi, i]);
       else if (s === best[p.day[i]]) { if (simClash(p.start[i], p.end[i])) simOut++; else idx.push([pi, i]); }
-      else if (s === SRC.records && inGap(p, i) && !simClash(p.start[i], p.end[i])) { idx.push([pi, i]); gapKept++; }
+      else if (POINTS_SRC(s) && inGap(p, i) && !simClash(p.start[i], p.end[i])) { idx.push([pi, i]); gapKept++; }
     }
     for (i = 0; i < p.vs.length; i++) {
       s = vsrc(p, i);
@@ -708,7 +717,7 @@ function merge(base, parts) {
     R.vday[j] = x[2] === p.vs[i] ? p.vday[i] : dayOf({ ms: x[2], off: p.voff[i] === NO_OFF ? null : p.voff[i] });
     R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vpid.push(p.vpid && p.vpid[i] || ''); R.vsrcs[j] = vsrc(p, i);
   });
-  // Records points give the Timeline trips their full GPS trail (see withTrack).
+  // Records.json and Dawarich points give the Timeline trips their full GPS trail (see withTrack).
   var track = mergeTracks(all.map(function (p) { return p.track; }));
   if (track) {
     var before = 0, after = 0, i_;
@@ -850,8 +859,8 @@ function runParser(files) {
   });
 }
 function importFiles(list) {
-  var files = Array.prototype.filter.call(list, function (f) { return /\.json$/i.test(f.name) || isStravaName(f.name); });
-  if (!files.length) { setStatus('No Timeline (.json) or Strava files found there.', true); return; }
+  var files = Array.prototype.filter.call(list, function (f) { return /\.(json|geojson|jsonl)$/i.test(f.name) || isStravaName(f.name); });
+  if (!files.length) { setStatus('No Timeline (.json), Dawarich or Strava files found there.', true); return; }
   setStatus('');
   busy('Reading…');
   runParser(files).then(function (r) {
@@ -870,8 +879,8 @@ function importFiles(list) {
       var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + r.results.length + ' file' + (r.results.length > 1 ? 's' : '') + '.';
       if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without Timeline data.';
       if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
-      if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from Records.json where Timeline recorded nothing.';
-      if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from Records.json.';
+      if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
+      if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';
       if (next.simReplaced) msg += ' Simulated trips replaced ' + fmt(next.simReplaced) + ' exported trip' + (next.simReplaced === 1 ? '' : 's') + '.';
       if (r.results.some(function (x) { return x.strava; })) msg += ' ' + stravaText(D.stravaStats);
       msg = msg.trim();

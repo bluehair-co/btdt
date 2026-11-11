@@ -2,7 +2,7 @@
 // {start, end, day, mode, km, est} with their GPS trails, plus the places stayed.
 // Runs inside a Web Worker (or on the main thread as a fallback).
 // Supported: on-device Timeline.json (Android), iPhone Timeline export,
-// Takeout Semantic Location History monthly files, Takeout Records.json.
+// Takeout Semantic Location History monthly files, Takeout Records.json, Dawarich exports.
 
 var MODE_ALIASES = {
   WALKING: ['WALKING', 'ON_FOOT', 'WALK', 'HIKING'],
@@ -932,7 +932,7 @@ function withTrack(R, T) {
   for (i = 0; i < n; i++) {
     var s = R.srcs ? R.srcs[i] : R.src;
     mode = MODES[R.mode[i]];
-    if (s === SRC.records || s === SRC.strava || s === SRC.sim || est[i] & (RECORDS_GPS | STRAVA) || mode === 'FLYING') continue;
+    if (s === SRC.records || s === SRC.dawarich || s === SRC.strava || s === SRC.sim || est[i] & (RECORDS_GPS | STRAVA) || mode === 'FLYING') continue;
     var tr = trackFor(R, T, i, mode);
     if (!tr || tr.pts.length <= R.pathOff[i + 1] - R.pathOff[i]) continue;
     var a = [R.from[2 * i], R.from[2 * i + 1]], b = [R.to[2 * i], R.to[2 * i + 1]], dur = (R.end[i] - R.start[i]) / 1000;
@@ -969,8 +969,9 @@ function withTrack(R, T) {
 // Strava activities don't compete per day; they replace the Timeline trips they cover (see withStrava).
 // Simulated trips (an on-device-format file with "simulated": true at the top) don't compete per day
 // either; they replace whatever overlaps them in time (see merge).
-var SRC = { device: 0, ios: 1, semantic: 2, records: 3, sim: 8, strava: 9 };
+var SRC = { device: 0, ios: 1, semantic: 2, records: 3, dawarich: 4, sim: 8, strava: 9 };
 var KIND_LABEL = ['Timeline.json (on-device)', 'iPhone Timeline export', 'Takeout Semantic Location History', 'Takeout Records.json'];
+KIND_LABEL[SRC.dawarich] = 'Dawarich';
 KIND_LABEL[SRC.strava] = 'Strava';
 KIND_LABEL[SRC.sim] = 'Simulated trips';
 var MODES = Object.keys(MODE_ALIASES);
@@ -1016,7 +1017,7 @@ function finish(c, src) {
     vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid
   };
 }
-var NOT_TIMELINE = "This file doesn't look like Google Timeline data. Pick Timeline.json from your phone, or Records.json / Semantic Location History files from Google Takeout.";
+var NOT_TIMELINE = "This file doesn't look like Google Timeline data. Pick Timeline.json from your phone, Records.json / Semantic Location History files from Google Takeout, or a Dawarich export.";
 function parseTimeline(o) {
   var c = new Collector(), src;
   if (Array.isArray(o)) { src = SRC.ios; parseIos(o, c); }
@@ -1038,35 +1039,61 @@ function sniff(head) {
 }
 
 // Records.json can be several hundred MB, too big to load as one string.
-// Read it in 8 MB slices and parse one location entry at a time.
+// Read it as a stream and parse one location entry at a time.
 function parseRecordsStream(file, onProgress) {
   var c = new Collector(), rt = new RecordTrips(c);
-  var CH = 8 << 20, off = 0, dec = new TextDecoder();
+  return streamText(file.stream(), file.size, jsonItems(function (o) { addRecord(o, rt); }), onProgress)
+    .then(function () { return finishRecords(c, rt); });
+}
+// Feeds the text of a byte stream to onText piece by piece (total bytes for the progress).
+function streamText(stream, total, onText, onProgress) {
+  var reader = stream.getReader(), dec = new TextDecoder(), got = 0, shown = -1;
+  return (function pump() {
+    return reader.read().then(function (r) {
+      if (r.done) { onText(dec.decode(), true); return; }
+      got += r.value.byteLength;
+      onText(dec.decode(r.value, { stream: true }));
+      var pc = total ? Math.min(99, Math.floor(got / total * 100)) : 0;
+      if (onProgress && pc !== shown) { shown = pc; onProgress(pc / 100); }
+      return pump();
+    });
+  })();
+}
+// A text handler for streamText that parses each object in the list one level down in the
+// top-level object ({"locations": [{…}, …]}, {"type": "FeatureCollection", "features": [{…}, …]})
+// and hands it to onItem, without ever holding the whole file.
+function jsonItems(onItem) {
   var buf = '', pos = 0, depth = 0, inStr = false, esc = false, start = -1;
-  function step() {
-    if (off >= file.size) return Promise.resolve(finishRecords(c, rt));
-    return file.slice(off, off + CH).arrayBuffer().then(function (ab) {
-      off += ab.byteLength;
-      buf += dec.decode(new Uint8Array(ab), { stream: off < file.size });
-      for (var i = pos, n = buf.length; i < n; i++) {
-        var ch = buf.charCodeAt(i);
-        if (inStr) { if (esc) esc = false; else if (ch === 92) esc = true; else if (ch === 34) inStr = false; continue; }
-        if (ch === 34) inStr = true;
-        else if (ch === 123 || ch === 91) { depth++; if (depth === 3 && ch === 123) start = i; }
-        else if (ch === 125 || ch === 93) {
-          depth--;
-          if (depth === 2 && ch === 125 && start >= 0) {
-            try { addRecord(JSON.parse(buf.slice(start, i + 1)), rt); } catch (e) { /* skip a damaged entry */ }
-            start = -1;
-          }
+  return function (text) {
+    buf += text;
+    for (var i = pos, n = buf.length; i < n; i++) {
+      var ch = buf.charCodeAt(i);
+      if (inStr) { if (esc) esc = false; else if (ch === 92) esc = true; else if (ch === 34) inStr = false; continue; }
+      if (ch === 34) inStr = true;
+      else if (ch === 123 || ch === 91) { depth++; if (depth === 3 && ch === 123) start = i; }
+      else if (ch === 125 || ch === 93) {
+        depth--;
+        if (depth === 2 && ch === 125 && start >= 0) {
+          try { onItem(JSON.parse(buf.slice(start, i + 1))); } catch (e) { /* skip a damaged entry */ }
+          start = -1;
         }
       }
-      if (start >= 0) { buf = buf.slice(start); start = 0; pos = buf.length; } else { buf = ''; pos = 0; }
-      onProgress(off / file.size);
-      return step();
-    });
-  }
-  return step();
+    }
+    if (start >= 0) { buf = buf.slice(start); start = 0; pos = buf.length; } else { buf = ''; pos = 0; }
+  };
+}
+// A text handler for streamText that parses one JSON object per line (JSON Lines).
+function jsonLines(onItem) {
+  var buf = '';
+  function line(l) { l = l.trim(); if (l) try { onItem(JSON.parse(l)); } catch (e) { /* skip a damaged line */ } }
+  return function (text, end) {
+    buf += text;
+    if (end) { buf.split('\n').forEach(line); buf = ''; return; }
+    var k = buf.lastIndexOf('\n');
+    if (k < 0) return;
+    buf.slice(0, k).split('\n').forEach(line);
+    buf = buf.slice(k + 1);
+  };
 }
 
 // ---------- Strava ----------
@@ -1300,19 +1327,23 @@ function readCd(file, off, size) {
         }
         x += 4 + len;
       }
-      out.push({ name: name, method: method, comp: comp, off: lho });
+      out.push({ name: name, method: method, comp: comp, raw: raw, off: lho });
       p = xe + cl;
     }
     return out;
   });
 }
 function zipRead(file, en) {
+  return zipStream(file, en).then(function (st) { return new Response(st).arrayBuffer(); });
+}
+// An entry's uncompressed bytes as a stream, for entries too big to hold whole.
+function zipStream(file, en) {
   return file.slice(en.off, en.off + 30).arrayBuffer().then(function (ab) {
     var v = new DataView(ab), start = en.off + 30 + v.getUint16(26, true) + v.getUint16(28, true);
     var blob = file.slice(start, start + en.comp);
-    if (en.method === 0) return blob.arrayBuffer();
+    if (en.method === 0) return blob.stream();
     if (en.method !== 8) throw new Error('Unsupported compression in ' + en.name);
-    return new Response(blob.stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer();
+    return blob.stream().pipeThrough(new DecompressionStream('deflate-raw'));
   });
 }
 // activities.csv → {"activities/123.fit.gz": "Ride", …}
@@ -1356,8 +1387,8 @@ function pickType(csvType, fileType) {
   if (c.sport || c.mode === null) return csvType;
   return stravaSport(fileType).sport ? fileType : csvType;
 }
-function parseStravaZip(file, onProgress) {
-  return zipEntries(file).then(function (all) {
+function parseStravaZip(file, all, onProgress) {
+  return Promise.resolve(all).then(function (all) {
     var acts = all.filter(function (e) { return /(^|\/)activities\/[^/]+\.(gpx|tcx|fit)(\.gz)?$/i.test(e.name); });
     if (!acts.length) throw new Error(NO_STRAVA);
     var csv = all.filter(function (e) { return /(^|\/)activities\.csv$/i.test(e.name); })[0];
@@ -1377,10 +1408,247 @@ function parseStravaZip(file, onProgress) {
   });
 }
 
+// ---------- Dawarich ----------
+// Dawarich (a self-hosted location history app) keeps raw GPS points, like Records.json. Its exports:
+// - Export as GeoJSON or GPX (Points page): a ZIP holding one file, either GeoJSON (a Point feature
+//   per point, its time in properties.timestamp as Unix seconds) or GPX (creator="Dawarich", one
+//   track with every point). The file on its own works too.
+// - Export my data (Settings): a ZIP with manifest.json and the points as JSON Lines
+//   (points/YYYY/YYYY-MM.jsonl), plus visits (stays at named places) and tracks, whose segments
+//   carry the transport Dawarich detected.
+// Trips and stays are rebuilt from the points (see dwBuild). The points are also kept as a track, so
+// Timeline trips loaded alongside are drawn along them, as with Records.json (see withTrack).
+var NO_DAWARICH = 'No GPS points were found in this Dawarich export.';
+function DwPoints() { this.t = []; this.ll = []; this.dev = []; this.devs = {}; this.ndev = 0; this.visits = []; this.segs = []; }
+DwPoints.prototype.add = function (ms, lat, lng, acc, dev) {
+  if (!(ms > 0) || !(lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) || (lat === 0 && lng === 0) || acc > MAX_ACCURACY) return;
+  var d = 0;
+  if (dev != null && dev !== '') { d = this.devs[dev]; if (d === undefined) d = this.devs[dev] = this.ndev++; }
+  this.t.push(ms); this.ll.push(lat, lng); this.dev.push(d);
+};
+// Unix seconds or milliseconds, or a date string.
+function dwTime(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number' || /^\d+(\.\d+)?$/.test(v)) { var n = Number(v); return n > 1e11 ? n : n * 1000; }
+  var t = parseTime(v);
+  return t ? t.ms : null;
+}
+// A point from the GeoJSON export (a Feature) or the account export (a line of points/….jsonl).
+function dwPoint(o, P) {
+  if (!o || typeof o !== 'object') return;
+  var p = o.properties || o, g = o.geometry, lat, lng, m;
+  if (g) {
+    if (g.type !== 'Point' || !g.coordinates) return;
+    lng = Number(g.coordinates[0]); lat = Number(g.coordinates[1]);
+  } else {
+    lat = parseFloat(p.latitude != null ? p.latitude : p.lat);
+    lng = parseFloat(p.longitude != null ? p.longitude : p.lon != null ? p.lon : p.lng);
+    if (!isFinite(lat) && typeof p.lonlat === 'string' && (m = /(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)/.exec(p.lonlat))) { lng = +m[1]; lat = +m[2]; }
+  }
+  var t = p.timestamp != null ? p.timestamp : p.tst != null ? p.tst : p.recorded_at || p.time || p.datetime;
+  P.add(dwTime(t), lat, lng, p.accuracy != null ? Number(p.accuracy) : 0, p.tracker_id);
+}
+// A visit from the account export: a stay at a place, named by you or by Dawarich. Declined
+// suggestions and deleted visits are left out.
+function dwVisit(o, P) {
+  if (!o || o.status === 'declined' || o.status === 2 || o.deleted_at) return;
+  var s = dwTime(o.started_at), e = dwTime(o.ended_at), pl = o.place_reference || {};
+  if (!(s > 0 && e > s)) return;
+  var lat = parseFloat(pl.latitude), lng = parseFloat(pl.longitude);
+  P.visits.push({ s: s, e: e, name: String(o.name || pl.name || ''), ll: isFinite(lat) && isFinite(lng) && (lat || lng) ? [lat, lng] : null });
+}
+// A track from the account export: its segments say how Dawarich thinks you travelled.
+var DW_MODES = [null, null, 'WALKING', 'RUNNING', 'CYCLING', 'CAR', 'BUS', 'TRAIN', 'FLYING', 'BOAT', 'MOTORCYCLE'];
+var DW_MODE = { walking: 'WALKING', running: 'RUNNING', cycling: 'CYCLING', driving: 'CAR', bus: 'BUS', train: 'TRAIN', flying: 'FLYING', boat: 'BOAT', motorcycle: 'MOTORCYCLE' };
+function dwTrack(o, P) {
+  (o && o.segments || []).forEach(function (g) {
+    var m = g.transportation_mode, mode = typeof m === 'number' ? DW_MODES[m] : DW_MODE[String(m).toLowerCase()];
+    var s = dwTime(g.start_at), e = dwTime(g.end_at);
+    if (mode && g.confidence !== 'low' && g.confidence !== 0 && s > 0 && e > s) P.segs.push([s, e, mode]);
+  });
+}
+// A text handler for streamText that reads the track points of a GPX file.
+function gpxPoints(P) {
+  var buf = '';
+  return function (text) {
+    buf += text;
+    var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, last = 0;
+    while ((m = re.exec(buf))) {
+      var t = parseTime(tag(m[2], 'time'));
+      P.add(t && t.ms, attr(m[1], 'lat'), attr(m[1], 'lon'), 0);
+      last = re.lastIndex;
+    }
+    var k = buf.indexOf('<trkpt', last);
+    buf = k >= 0 ? buf.slice(k) : buf.slice(-8);
+  };
+}
+function dwHandler(kind, P) {
+  if (kind === 'gpx') return gpxPoints(P);
+  var f = kind === 'visits' ? dwVisit : kind === 'tracks' ? dwTrack : dwPoint;
+  return (kind === 'geojson' ? jsonItems : jsonLines)(function (o) { f(o, P); });
+}
+// What a Dawarich file is, from its name and first few KB, or null.
+function dwSniff(name, head) {
+  if (/\.gpx$/i.test(name)) return /<gpx\b[^>]*\bcreator\s*=\s*["']Dawarich/i.test(head) ? 'gpx' : null;
+  if (/^\s*\{\s*"type"\s*:\s*"FeatureCollection"/.test(head)) return 'geojson';
+  // A month of points from the account export, unzipped (the position comes last in each line, often past the first 4 KB).
+  if (/\.jsonl$/i.test(name) && /"timestamp"\s*:/.test(head) && /"(battery_status|tracker_id|latitude|lonlat)"\s*:/.test(head)) return 'points';
+  return null;
+}
+function kmLL(a0, a1, b0, b1) { return km([a0, a1], [b0, b1]); }
+// Stays: points that keep within 150 m of their middle for at least 10 minutes (a phone that
+// stops reporting while still counts, as long as its next point is there too). Stays at the same
+// spot less than 15 minutes apart are one stay (a stray GPS fix doesn't split it).
+// Trips: the points between two stays. A run of them ends at a gap of over 30 minutes, and a long
+// fast jump between two points (no data while in the air) is a flight, as in Records.json. A run
+// that gets at least 500 m from where it started, or ends at least 200 m from it, is a trip; its type is the one Dawarich gave the
+// track it is on (account export), or else guessed from its speed (see runMode).
+var DW_STAY_KM = 0.15, DW_STAY_MS = 10 * 60000;
+function dwBuild(P) {
+  var n0 = P.t.length, k, i, j;
+  if (!n0) throw new Error(NO_DAWARICH);
+  var ord = new Uint32Array(n0);
+  for (k = 0; k < n0; k++) ord[k] = k;
+  ord.sort(function (a, b) { return P.t[a] - P.t[b]; });
+  var T = new Float64Array(n0), LA = new Float64Array(n0), LO = new Float64Array(n0), DV = new Int32Array(n0), n = 0;
+  for (k = 0; k < n0; k++) {
+    var o = ord[k];
+    if (n && P.t[o] === T[n - 1]) continue;
+    T[n] = P.t[o]; LA[n] = P.ll[2 * o]; LO[n] = P.ll[2 * o + 1]; DV[n] = P.dev[o]; n++;
+  }
+  P.t = P.ll = P.dev = null;
+  function pt(x) { return [LA[x], LO[x]]; }
+  var c = new Collector(), stays = [];
+  for (i = 0; i < n;) {
+    var sl = LA[i], sg = LO[i], cnt = 1;
+    for (j = i + 1; j < n && kmLL(sl / cnt, sg / cnt, LA[j], LO[j]) <= DW_STAY_KM; j++) { sl += LA[j]; sg += LO[j]; cnt++; }
+    if (T[j - 1] - T[i] >= DW_STAY_MS) {
+      var last = stays[stays.length - 1], la = sl / cnt, lo = sg / cnt;
+      if (last && T[i] - T[last.b] < 15 * 60000 && kmLL(last.lat, last.lng, la, lo) <= 0.2) {
+        last.lat = (last.lat * last.n + sl) / (last.n + cnt); last.lng = (last.lng * last.n + sg) / (last.n + cnt); last.n += cnt; last.b = j - 1;
+      } else stays.push({ a: i, b: j - 1, lat: la, lng: lo, n: cnt });
+      i = j;
+    } else i++;
+  }
+  // Dawarich's transport per moment, from its track segments.
+  var segs = P.segs.sort(function (a, b) { return a[0] - b[0]; }), segMax = 0;
+  segs.forEach(function (g) { segMax = Math.max(segMax, g[1] - g[0]); });
+  function modeAt(ms) {
+    var lo = 0, hi = segs.length;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (segs[mid][0] <= ms) lo = mid + 1; else hi = mid; }
+    for (var q = lo - 1; q >= 0 && segs[q][0] >= ms - segMax; q--) if (segs[q][1] >= ms) return segs[q][2];
+    return null;
+  }
+  function addRun(idx, mode) {
+    var jumps = false, given = !!mode;
+    if (idx.length >= 3) {
+      var keep = jumpKeep(idx.map(pt), idx.map(function (x) { return T[x] / 1000; }), jumpCap(mode || 'CAR'));
+      if (keep.length < idx.length) { idx = keep.map(function (x) { return idx[x]; }); jumps = true; }
+    }
+    if (idx.length < 2) return;
+    var a = idx[0], b = idx[idx.length - 1], far = 0, q;
+    for (q = 1; q < idx.length; q++) far = Math.max(far, kmLL(LA[a], LO[a], LA[idx[q]], LO[idx[q]]));
+    // A trip from or to a stay starts or ends at its middle. Short hops between two places count
+    // too (a stay takes the first and last 150 m of the way).
+    var ea = edge[a] || pt(a), eb = edge[b] || pt(b);
+    if (far < 0.5 && km(ea, eb) < 0.2) return;
+    var pts = idx.map(pt), dist = pathKm(simplify(pts, 15).map(function (x) { return pts[x]; }));
+    var inner = simplify(pts, 6).slice(1, -1), before = c.start.length;
+    if (!mode) mode = runMode(idx.map(function (x) { return [T[x], pt(x)]; }));
+    c.add(mode, { ms: T[a], off: null }, { ms: T[b], off: null }, dist, 1 | (given ? 0 : GUESSED), ea, eb,
+      inner.map(function (x) { return pts[x]; }), inner.map(function (x) { return T[idx[x]]; }));
+    if (jumps && c.start.length > before) c.est[before] |= JUMPS;
+  }
+  // A run split where Dawarich's transport changes; points it has no transport for join the part they're in.
+  function flush(run) {
+    if (run.length < 2) return;
+    var part = [run[0]], cur = segs.length ? modeAt(T[run[0]]) : null;
+    for (var q = 1; q < run.length; q++) {
+      var m = segs.length ? modeAt(T[run[q]]) : null;
+      part.push(run[q]);
+      if (m && cur && m !== cur) { addRun(part, cur); part = [run[q]]; }
+      if (m) cur = m;
+    }
+    addRun(part, cur);
+  }
+  function stretch(a, b) {
+    var run = [a];
+    for (var q = a + 1; q <= b; q++) {
+      var d = kmLL(LA[q - 1], LO[q - 1], LA[q], LO[q]), h = (T[q] - T[q - 1]) / 36e5;
+      if (d > 150 && h < 20 && d / h > 180) {
+        flush(run); run = [q];
+        c.add('FLYING', { ms: T[q - 1], off: null }, { ms: T[q], off: null }, d, 2, pt(q - 1), pt(q), null);
+      } else if (h > 0.5) { flush(run); run = [q]; }
+      else run.push(q);
+    }
+    flush(run);
+  }
+  var from = 0, edge = {};
+  stays.forEach(function (s) { edge[s.a] = edge[s.b] = [s.lat, s.lng]; });
+  stays.forEach(function (s) { stretch(from, s.a); from = s.b; });
+  stretch(from, n - 1);
+  // Stays, named after the Dawarich visit they match (most of either one's time, within 500 m).
+  var V = P.visits.sort(function (a, b) { return a.s - b.s; }), vMax = 0;
+  V.forEach(function (v) { vMax = Math.max(vMax, v.e - v.s); });
+  stays.forEach(function (s) {
+    var st = T[s.a], et = T[s.b], ll = [s.lat, s.lng], best = null, bestOv = 0;
+    var lo = 0, hi = V.length;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (V[mid].s < st - vMax) lo = mid + 1; else hi = mid; }
+    for (var q = lo; q < V.length && V[q].s < et; q++) {
+      var v = V[q], ov = Math.min(et, v.e) - Math.max(st, v.s);
+      if (ov > bestOv && ov >= 0.5 * Math.min(et - st, v.e - v.s) && (!v.ll || km(v.ll, ll) < 0.5)) { best = v; bestOv = ov; }
+    }
+    if (best && best.ll && km(best.ll, ll) < 0.3) ll = best.ll;
+    c.visit({ ms: st, off: null }, { ms: et, off: null }, ll, 0, best ? best.name : '', '');
+  });
+  if (!c.start.length && !c.vs.length) throw new Error(NO_DAWARICH);
+  var r = finish(c, SRC.dawarich), TL = new Float32Array(2 * n);
+  for (k = 0; k < n; k++) { TL[2 * k] = LA[k]; TL[2 * k + 1] = LO[k]; }
+  r.track = { t: T.slice(0, n), ll: TL, dev: DV.slice(0, n) };
+  return r;
+}
+// A Dawarich file on its own.
+function parseDawarichFile(file, kind, onProgress) {
+  var P = new DwPoints();
+  return streamText(file.stream(), file.size, dwHandler(kind, P), onProgress).then(function () { return dwBuild(P); });
+}
+// A Dawarich ZIP: its points (and the visits and tracks of the account export), then trips and stays from them.
+function isDawarichZip(all) {
+  return all.some(function (e) { return /(^|\/)points\/.*\.jsonl$/i.test(e.name); }) ||
+    !all.some(function (e) { return /(^|\/)activities\//i.test(e.name); }) && all.some(function (e) { return /\.(geojson|json|gpx)$/i.test(e.name) && !/(^|\/)manifest\.json$/i.test(e.name); });
+}
+function parseDawarichZip(file, all, onProgress) {
+  var P = new DwPoints(), jobs = [];
+  all.forEach(function (e) {
+    var m = /(^|\/)(points|visits|tracks)\/.*\.jsonl$/i.exec(e.name);
+    if (m) jobs.push([e, m[2].toLowerCase()]);
+  });
+  if (!jobs.length) all.forEach(function (e) {
+    if (/(^|\/)manifest\.json$/i.test(e.name)) return;
+    if (/\.gpx$/i.test(e.name)) jobs.push([e, 'gpx']);
+    else if (/\.(geojson|json)$/i.test(e.name)) jobs.push([e, 'geojson']);
+  });
+  var total = 0, done = 0;
+  jobs.forEach(function (j) { total += j[0].raw || j[0].comp || 1; });
+  return jobs.reduce(function (pr, j) {
+    return pr.then(function () {
+      var size = j[0].raw || j[0].comp || 1, kind = j[1];
+      return zipStream(file, j[0]).then(function (st) {
+        // A GPX not written by Dawarich (or a JSON that isn't GeoJSON) is read anyway: inside a Dawarich ZIP there is nothing else it can be.
+        return streamText(st, size, dwHandler(kind, P), function (f) { onProgress((done + f * size) / total); });
+      }).then(function () { done += size; });
+    });
+  }, Promise.resolve()).then(function () { return dwBuild(P); });
+}
+
 function parseFile(file, onProgress) {
-  if (/\.zip$/i.test(file.name)) return parseStravaZip(file, onProgress);
-  if (isStravaName(file.name)) return parseStravaFile(file);
+  if (/\.zip$/i.test(file.name)) return zipEntries(file).then(function (all) {
+    return isDawarichZip(all) ? parseDawarichZip(file, all, onProgress) : parseStravaZip(file, all, onProgress);
+  });
   return file.slice(0, 4096).text().then(function (head) {
+    var dw = /\.gz$/i.test(file.name) ? null : dwSniff(file.name, head);
+    if (dw) return parseDawarichFile(file, dw, onProgress);
+    if (isStravaName(file.name)) return parseStravaFile(file);
     var kind = sniff(head);
     if (!kind) throw new Error(NOT_TIMELINE);
     if (kind === 'records') return parseRecordsStream(file, onProgress);
@@ -1408,4 +1676,4 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
+if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
