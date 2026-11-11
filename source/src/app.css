@@ -271,19 +271,22 @@ details.help b { color: var(--fg); font-weight: 500; }
 .stat .value { font-size: 24px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15; }
 .stat .value small { font-size: 13px; font-weight: 500; color: var(--muted); margin-left: 3px; }
 .stat .note { font-size: 12px; color: var(--muted); }
-/* Magellan and Armstrong: a ring round the Earth and a loop round the Moon, as thick tracks like the bars. */
+/* The distance scores, as David drew them: a dashed route, the part travelled as a solid line in the score's
+   colour, and the transport riding its end. Magellan rings the Earth; Armstrong and Musk run a figure of eight
+   out of the Earth and round the Moon or Mars, drawn to the card's width. */
+.art-defs { position: absolute; width: 0; height: 0; overflow: hidden; }
 .far-art { display: block; width: 100%; max-width: 280px; height: auto; margin: 0 auto; overflow: visible; }
-.far-art .trk { fill: none; stroke: var(--grid); stroke-linecap: round; }
-.far-art .sea { fill: none; stroke: var(--m-road); stroke-linecap: round; }
-.far-art .space { fill: none; stroke: var(--m-bike); stroke-linecap: round; }
-.far-art .rider { stroke: var(--bg); stroke-width: 2.5; }
-/* Armstrong, Musk and Voyager have a longer drawing that fills the card on wider screens. */
+.far-art.eight { max-width: none; }
+.far-art.ring { max-width: 164px; }
+.far-art .trk { fill: none; stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 4px; stroke-dasharray: 8 8; stroke-linecap: butt; }
+.far-art :is(.sea, .space, .mars, .gold, .you) { fill: none; stroke-width: 6px; stroke-linecap: round; }
+.far-art .sea { stroke: var(--m-road); }
+.far-art .space { stroke: var(--m-bike); }
+.far-art .mars { stroke: var(--m-air); }
+/* Voyager has a longer drawing that fills the card on wider screens. */
 .far-art.far-w { display: none; }
 @media (min-width: 960px) { .far-art.far-n { display: none; } .far-art.far-w, .far-art.mid.far-w { display: block; max-width: none; } }
-.far-art .lap { font-size: 11px; letter-spacing: .06em; fill: var(--muted); }
 .far-stat { text-align: center; margin-top: 6px; }
-.far-art.wide { max-width: 640px; }
-.far-art .mars { fill: none; stroke: var(--m-air); stroke-linecap: round; }
 /* The scores take turns in one card: a sliding track, dots and arrows in the header, swipe on touch. */
 .far-nav { display: flex; align-items: center; gap: 2px; margin-left: auto; }
 .far-dots { display: flex; gap: 2px; }
@@ -306,7 +309,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art:not(.out) .v-chase { transform: scale(14); opacity: 0; }
 .far-art .vl { font-size: 11px; fill: var(--muted); }
 .far-art .vb { font-size: 12px; font-weight: 600; fill: var(--fg); }
-.far-art .gold { fill: none; stroke: var(--m-foot); stroke-linecap: round; }
+.far-art .gold { stroke: var(--m-foot); }
 .v-stats { display: grid; }
 .v-stats > div { grid-area: 1 / 1; transition: opacity .3s; }
 .v-stats > [hidden] { display: block; visibility: hidden; opacity: 0; }
@@ -314,7 +317,7 @@ details.help b { color: var(--fg); font-weight: 500; }
   .far-art .vl { font-size: 17px; } .far-art .vb { font-size: 18px; }
   /* On a phone the scores are swiped, so the arrows make way for the title. */
   .far-nav [data-far="prev"], .far-nav [data-far="next"] { display: none; }
-  .far-art { max-width: 230px; }
+  .far-art.mid { max-width: 230px; }
 }
 @media (prefers-reduced-motion: reduce) { .far-track, .far-art .v-race, .far-art .v-chase { transition: none; } }
 .bars { display: flex; flex-direction: column; gap: 10px; }
