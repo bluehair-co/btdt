@@ -22,6 +22,7 @@ var ICONS = {
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   right: 'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
   play: 'M8 5v14l11-7z',
+  playCircle: 'M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
   pause: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z',
   calendar: 'M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z',
   fit: 'M3 5v4h2V5h4V3H5c-1.1 0-2 .9-2 2zm2 10H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm14 4h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zm0-16h-4v2h4v4h2V5c0-1.1-.9-2-2-2z',
@@ -113,7 +114,8 @@ var PREFS = {
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
 };
 try { Object.assign(PREFS, JSON.parse(localStorage.getItem(PREFS_KEY) || localStorage.getItem('timeliner.prefs') || '{}')); } catch (e) { /* storage unavailable */ }
-function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch (e) { /* ignore */ } }
+// The demo turns Countries visited on for itself; your own setting is what gets saved.
+function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(DEMO ? Object.assign({}, PREFS, { cc: DEMO.cc }) : PREFS)); } catch (e) { /* ignore */ } }
 function applyTheme() {
   if (PREFS.theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', PREFS.theme);

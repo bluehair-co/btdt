@@ -4,7 +4,13 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   buildFactors();
   if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('homeNote').textContent = ''; $('forgetBtn').hidden = true; return; }
-  $('forgetBtn').hidden = false;
+  $('forgetBtn').hidden = !!DEMO;
+  if (DEMO) {
+    $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
+      ', all made up. Nothing is saved. Import your own Timeline file to replace it.';
+    $('homeNote').textContent = '';
+    return;
+  }
   var names = (D.files || []).map(function (f) { return f.name; }).filter(Boolean);
   $('dataSummary').textContent = tripsText(tripTotal()) + (D.vs.length ? ' and ' + fmt(D.vs.length) + ' stays' : '') + ', ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
     (names.length ? ', from ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '') : '') + '. Saved on this device only.' +

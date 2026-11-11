@@ -33,6 +33,8 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 3. **Explore.** Switch between Map, Insights and Timeline, pick a day, week, month or year, and use the layers button to turn the heatmap, countries and places on or off.
 4. **Keep it.** Your last import is saved in the browser, so the app opens with it next time. Choose *Add to Home screen* (phone) or *Install* (desktop browser) to use it like an app, offline.
 
+Want to look around first? Tap *Try the demo* under the Load button: it opens three made-up years of someone living in Amsterdam, with holidays on four continents. Nothing is saved, and *Exit demo* takes you back.
+
 To add Strava, open Settings → *Load Strava export* and pick the ZIP from Strava (Settings → My Account → Download or Delete Your Account), or single `.gpx`, `.tcx` or `.fit` files.
 
 ![The landing page](docs/screenshots/landing.webp)

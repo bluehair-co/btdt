@@ -722,10 +722,32 @@ div.hit-row:hover { background: none; }
 .pin-ic { transition: transform .15s; }
 .pin-ic.on { background: var(--dot); transform: rotate(-45deg) scale(1.35); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 35%, transparent), 0 2px 8px rgba(0,0,0,.4); }
 .pin-ic svg { transform: rotate(45deg); width: 60%; height: 60%; fill: #fff; }
+
+/* Demo: a link under Load on the welcome panel, and a bar over every page while the demo is open.
+   The bar pushes the app down through --safe-t, which every top-anchored part already uses. */
+.welcome-panel .demo-open { flex-basis: 100%; display: inline-flex; justify-content: center; align-items: center; gap: 6px; background: none; border: 0; color: rgba(255, 255, 255, .9); font: inherit; font-size: 14px; font-weight: 500; padding: 6px 10px; border-radius: 999px; cursor: pointer; }
+.welcome-panel .demo-open span:last-child { text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .4); text-underline-offset: 3px; }
+.welcome-panel .demo-open:hover span:last-child { text-decoration-color: #fff; }
+.welcome-panel .demo-open svg.ic { width: 18px; height: 18px; }
+:root.demo { --demo-h: 40px; --safe-t: calc(env(safe-area-inset-top, 0px) + var(--demo-h)); }
+.demo-bar { position: fixed; z-index: 70; top: 0; left: 0; right: 0; height: calc(env(safe-area-inset-top, 0px) + var(--demo-h, 40px)); padding: env(safe-area-inset-top, 0px) 16px 0 calc(8px + env(safe-area-inset-left, 0px)); box-sizing: border-box; display: flex; align-items: center; gap: 12px; background: #19153a; color: #fff; font-size: 13px; }
+.demo-bar[hidden] { display: none; }
+.demo-exit { flex: none; display: inline-flex; align-items: center; gap: 4px; height: 28px; padding: 0 12px 0 6px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .35); background: rgba(255, 255, 255, .08); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+.demo-exit:hover { background: rgba(255, 255, 255, .18); border-color: rgba(255, 255, 255, .6); }
+.demo-exit svg.ic { width: 18px; height: 18px; }
+.demo-msg { flex: 1; min-width: 0; margin: 0; color: rgba(255, 255, 255, .86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.demo-msg .narrow-only { display: none; }
+@media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
 </style>
 </head>
 <body>
 <div id="app" class="no-data">
+
+  <!-- Demo: shown on top of every page while the made-up demo data is open -->
+  <div class="demo-bar" id="demoBar" role="region" aria-label="Demo" hidden>
+    <button type="button" class="demo-exit" id="demoExit"><span data-icon="left"></span>Exit demo</button>
+    <p class="demo-msg"><span class="wide-only">You’re exploring a demo: made-up data from three years of someone living in Amsterdam.</span><span class="narrow-only">Demo with made-up data</span></p>
+  </div>
 
   <!-- Welcome: shown until a Timeline file is loaded -->
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
@@ -744,6 +766,7 @@ div.hit-row:hover { background: none; }
             <button type="button" role="menuitem" id="loadFolder"><span data-icon="folder"></span>Load a whole folder</button>
           </div>
         </div>
+        <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
       <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your file</button>
@@ -2617,6 +2640,7 @@ var ICONS = {
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   right: 'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
   play: 'M8 5v14l11-7z',
+  playCircle: 'M10 16.5l6-4.5-6-4.5v9zM12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
   pause: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z',
   calendar: 'M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z',
   fit: 'M3 5v4h2V5h4V3H5c-1.1 0-2 .9-2 2zm2 10H3v4c0 1.1.9 2 2 2h4v-2H5v-4zm14 4h-4v2h4c1.1 0 2-.9 2-2v-4h-2v4zm0-16h-4v2h4v4h2V5c0-1.1-.9-2-2-2z',
@@ -2708,7 +2732,8 @@ var PREFS = {
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
 };
 try { Object.assign(PREFS, JSON.parse(localStorage.getItem(PREFS_KEY) || localStorage.getItem('timeliner.prefs') || '{}')); } catch (e) { /* storage unavailable */ }
-function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(PREFS)); } catch (e) { /* ignore */ } }
+// The demo turns Countries visited on for itself; your own setting is what gets saved.
+function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(DEMO ? Object.assign({}, PREFS, { cc: DEMO.cc }) : PREFS)); } catch (e) { /* ignore */ } }
 function applyTheme() {
   if (PREFS.theme === 'system') document.documentElement.removeAttribute('data-theme');
   else document.documentElement.setAttribute('data-theme', PREFS.theme);
@@ -3930,6 +3955,8 @@ function importFiles(list) {
     if (!r.results.length) { busy(''); setStatus(r.errors.length ? r.errors.join(' · ') : NOT_TIMELINE, true); return; }
     busy('Preparing your map…');
     setTimeout(function () {
+      // Your own files replace the demo rather than joining it.
+      if (DEMO) { RAW = null; leaveDemo(); }
       var next = merge(RAW, r.results);
       setData(next);
       // Saved after setData, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
@@ -3977,6 +4004,51 @@ $('dirIn').addEventListener('change', function () { importFiles(this.files); thi
 })();
 document.body.addEventListener('dragover', function (e) { e.preventDefault(); });
 document.body.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });
+
+// ---------- demo ----------
+// Made-up data (three years of someone living in Amsterdam, from source/demo/make_demo.py) to look
+// around before loading a file. It is read like any Timeline.json but never saved, so leaving it
+// (a reload) goes back to the welcome page, and loading your own files replaces it.
+// DEMO holds your own Countries visited setting, which the demo turns on for itself.
+var DEMO = null;
+$('demoBtn').addEventListener('click', function () {
+  setStatus('');
+  busy('Opening the demo…');
+  fetch('demo.json').then(function (res) {
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    return res.blob();
+  }).then(function (b) {
+    return runParser([new File([b], 'demo.json', { type: 'application/json' })]);
+  }).then(function (r) {
+    if (!r.results.length) throw new Error('no data');
+    DEMO = { cc: PREFS.cc };
+    document.documentElement.classList.add('demo');
+    $('demoBar').hidden = false;
+    PREFS.cc = true;
+    syncLayersUI();
+    RAW = null;
+    setData(merge(null, r.results));
+    // The demo opens on all of its data, the whole map in view.
+    F.dm = 'all';
+    allCalendar();
+    syncFilterUI();
+    mapReset();
+    apply();
+    busy('');
+  }).catch(function () {
+    busy('');
+    setStatus('The demo couldn\'t open. Check your internet connection and try again.', true);
+  });
+});
+function leaveDemo() {
+  if (!DEMO) return;
+  PREFS.cc = DEMO.cc;
+  DEMO = null;
+  savePrefs(); syncLayersUI();
+  document.documentElement.classList.remove('demo');
+  $('demoBar').hidden = true;
+}
+$('demoExit').addEventListener('click', function () { leaveDemo(); location.reload(); });
 
 // ---------- remember the last import on this device ----------
 // Kept in this browser's IndexedDB so the app opens with it next time. Nothing leaves the device.
@@ -4230,7 +4302,8 @@ function fitAll() {
   var b = mapBounds.slice();
   if (!b.length) for (var v = 0; v < selV.length; v++) b.push([D.vll[2 * selV[v]], D.vll[2 * selV[v] + 1]]);
   // Over many trips, leave out the few far-off ends so the map opens on where you usually are.
-  if (b.length > 40) {
+  // The demo opening on all its data shows every trip, the far-off holidays too.
+  if (b.length > 40 && !(DEMO && F.dm === 'all')) {
     var la = b.map(function (p) { return p[0]; }).sort(function (x, y) { return x - y; }), lo = b.map(function (p) { return p[1]; }).sort(function (x, y) { return x - y; });
     var q = function (a, f) { return a[Math.floor((a.length - 1) * f)]; };
     b = [[q(la, 0.03), q(lo, 0.03)], [q(la, 0.97), q(lo, 0.97)]];
@@ -6926,7 +6999,13 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   buildFactors();
   if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('homeNote').textContent = ''; $('forgetBtn').hidden = true; return; }
-  $('forgetBtn').hidden = false;
+  $('forgetBtn').hidden = !!DEMO;
+  if (DEMO) {
+    $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
+      ', all made up. Nothing is saved. Import your own Timeline file to replace it.';
+    $('homeNote').textContent = '';
+    return;
+  }
   var names = (D.files || []).map(function (f) { return f.name; }).filter(Boolean);
   $('dataSummary').textContent = tripsText(tripTotal()) + (D.vs.length ? ' and ' + fmt(D.vs.length) + ' stays' : '') + ', ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
     (names.length ? ', from ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '') : '') + '. Saved on this device only.' +

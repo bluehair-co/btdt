@@ -1,5 +1,11 @@
 <div id="app" class="no-data">
 
+  <!-- Demo: shown on top of every page while the made-up demo data is open -->
+  <div class="demo-bar" id="demoBar" role="region" aria-label="Demo" hidden>
+    <button type="button" class="demo-exit" id="demoExit"><span data-icon="left"></span>Exit demo</button>
+    <p class="demo-msg"><span class="wide-only">You’re exploring a demo: made-up data from three years of someone living in Amsterdam.</span><span class="narrow-only">Demo with made-up data</span></p>
+  </div>
+
   <!-- Welcome: shown until a Timeline file is loaded -->
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
     <div class="welcome-art">
@@ -17,6 +23,7 @@
             <button type="button" role="menuitem" id="loadFolder"><span data-icon="folder"></span>Load a whole folder</button>
           </div>
         </div>
+        <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
       <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your file</button>

@@ -206,7 +206,8 @@ function fitAll() {
   var b = mapBounds.slice();
   if (!b.length) for (var v = 0; v < selV.length; v++) b.push([D.vll[2 * selV[v]], D.vll[2 * selV[v] + 1]]);
   // Over many trips, leave out the few far-off ends so the map opens on where you usually are.
-  if (b.length > 40) {
+  // The demo opening on all its data shows every trip, the far-off holidays too.
+  if (b.length > 40 && !(DEMO && F.dm === 'all')) {
     var la = b.map(function (p) { return p[0]; }).sort(function (x, y) { return x - y; }), lo = b.map(function (p) { return p[1]; }).sort(function (x, y) { return x - y; });
     var q = function (a, f) { return a[Math.floor((a.length - 1) * f)]; };
     b = [[q(la, 0.03), q(lo, 0.03)], [q(la, 0.97), q(lo, 0.97)]];
