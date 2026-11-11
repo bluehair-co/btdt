@@ -17,6 +17,7 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 - **Timeline.** Every trip, day by day, with where it started and ended, the transport, the distance and the time. Open a trip for its details and raw data.
 - **Filters and export.** Narrow by dates, time of day, transport and country, then download what matches as JSON or CSV.
 - **Cleaner data than Google's.** Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.
+- **Dawarich too.** Load an export from [Dawarich](https://dawarich.app), the self-hosted location history app: trips and stays are worked out from its GPS points.
 - **Strava too.** Load your Strava export and its activities replace the Timeline trips they cover, keeping their sport.
 
 | Insights | Timeline | On a phone |
@@ -34,6 +35,8 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 4. **Keep it.** Your last import is saved in the browser, so the app opens with it next time. Choose *Add to Home screen* (phone) or *Install* (desktop browser) to use it like an app, offline.
 
 Want to look around first? Tap *Try the demo* under the Load button: it opens three made-up years of someone living in Amsterdam, with holidays on four continents. Nothing is saved, and *Exit demo* takes you back.
+
+To load **Dawarich** data, tap *Load Timeline file* and pick the ZIP Dawarich gives you: either an export from the Points page (GeoJSON or GPX), or *Export my data* from Dawarich's settings, which also brings your visits' names and Dawarich's transport types. Load it on its own or together with your Google Timeline.
 
 To add Strava, open Settings → *Load Strava export* and pick the ZIP from Strava (Settings → My Account → Download or Delete Your Account), or single `.gpx`, `.tcx` or `.fit` files.
 
