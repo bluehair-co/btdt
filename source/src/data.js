@@ -444,6 +444,7 @@ function showDay(d, unit) {
 
 // ---------- tabs ----------
 function setTab(t) {
+  var was = tab;
   tab = t;
   $('mapPage').hidden = t !== 'map';
   $('insightsPage').hidden = t !== 'insights';
@@ -451,7 +452,10 @@ function setTab(t) {
   document.querySelectorAll('.dock button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   hideTip();
   if (openId && openId !== 'settingsSheet' && openId !== 'filtersSheet') closeSheets();
+  var fresh = t === 'insights' && dirty.insights;
   renderTab();
+  // Opening Insights plays the score showing (a fresh render plays it already).
+  if (t === 'insights' && was !== t && !fresh && D && sel.length) farPlay();
 }
 function renderTab() {
   if (!D) return;
