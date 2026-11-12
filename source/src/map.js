@@ -315,8 +315,9 @@ function tripRows(i) {
     ['Straight line', isFinite(line) ? dist(line) : 'Unknown'],
     ['Average speed', ms > 0 ? speed(k / (ms / 36e5)) : 'Unknown'],
     ['CO₂', co2s(tripKg(i))],
+    D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + '</span>'] : null,
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
-  ];
+  ].filter(Boolean);
   var notes = [];
   if (e & 16) notes.push(D.repl[i] ? 'Recorded on Strava. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded on Strava. Timeline has no trip at this time.');
   if (isDup(i)) notes.push('Strava recorded this trip too. It shows here because Timeline is the only source chosen; with Strava included, the Strava activity takes its place.');
@@ -332,15 +333,21 @@ function tripRows(i) {
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
 }
+// A Strava activity's own name is the title, with its sport under it.
 function tripHead(i, sub) {
-  var m = modeOf(i), r = tripRows(i);
-  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16) + '<div><h3>' + tripLabel(i) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
+  var m = modeOf(i), r = tripRows(i), name = tripName(i);
+  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16, tripIcon(i)) + '<div><h3>' + (name ? esc(name) : tripLabel(i)) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (name ? tripLabel(i) + ' · ' : '') + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
+}
+// A Strava activity's description, as written.
+function tripDesc(i) {
+  var s = D.est[i] & STRAVA && stravaInfo(i);
+  return s && s.desc ? '<p class="trip-desc">' + esc(s.desc).replace(/\n/g, '<br>') + '</p>' : '';
 }
 function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -430,6 +437,7 @@ function exportFilters() {
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
   if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
   if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
+  if (F.gear.size !== M.gear.length) o.gear = [0].concat(gearOrder()).filter(function (g) { return F.gear.has(g); }).map(function (g) { return M.gear[g].name; });
   return o;
 }
 function rawStay(v) {

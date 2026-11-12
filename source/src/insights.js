@@ -12,7 +12,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderGear(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -654,6 +654,28 @@ function renderPlaces() {
       '<span class="r num">' + (useStays ? hoursLabel(o.h).replace(/ \d+ min$/, '') : fmt(o.n) + '<small>trips</small>') + '</span></button>';
   }).join('');
 }
+// Each bike and pair of shoes in the trips shown: distance, activities and when it was used.
+function renderGear() {
+  var by = {}, j, i;
+  for (j = 0; j < sel.length; j++) {
+    i = sel[j];
+    var g = D.gear[i];
+    if (!g) continue;
+    var x = by[g] || (by[g] = { g: g, km: 0, n: 0, d0: D.day[i], d1: D.day[i] });
+    x.km += D.km[i]; x.n++; x.d1 = D.day[i];
+  }
+  var list = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.km - a.km; });
+  $('gearCard').hidden = !list.length;
+  if (!list.length) return;
+  var max = list[0].km;
+  $('gearList').innerHTML = list.map(function (x) {
+    var G = M.gear[x.g], d = distParts(x.km);
+    return '<button type="button" class="hit-row gear-row" data-gear="' + x.g + '"><span class="mode-badge sm" style="background:' + modeColor(G.mode) + '">' + icon(gearIcon(x.g)) + '</span>' +
+      '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + ' activit' + (x.n === 1 ? 'y' : 'ies') + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
+      '<i class="gear-bar"><i style="width:' + (x.km / max * 100).toFixed(1) + '%;background:' + modeColor(G.mode) + '"></i></i></span>' +
+      '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
+  }).join('');
+}
 function renderRecords() {
   var best = {}, j, i, byDay = {};
   function rec(key, i_, v) { if (v > 0 && (!best[key] || v > best[key].v)) best[key] = { i: i_, v: v }; }
@@ -1094,9 +1116,10 @@ function renderCo2() {
     }).join('') : '<p class="empty">No emissions from these trips.</p>') + '</div>';
 }
 document.querySelector('#insightsPage .cards').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-i],[data-day],[data-place]');
+  var b = ev.target.closest('[data-i],[data-day],[data-place],[data-gear]');
   if (!b) return;
-  if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
+  if (b.dataset.gear) { F.gear = new Set([+b.dataset.gear]); syncFilterUI(); apply(); toast('Showing only ' + M.gear[+b.dataset.gear].name + '. Change it under Gear in Filters.'); }
+  else if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
   else if (b.dataset.day) { setTab('map'); showDay(+b.dataset.day); }
   else if (!openPlace(+b.dataset.place)) {
     // A place you only reached by trip (no stays there) has no page: show it on the map.

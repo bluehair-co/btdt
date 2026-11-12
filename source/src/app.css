@@ -217,6 +217,9 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge { position: relative; }
 .mode-badge .strava-mark { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 0 2px var(--panel); display: flex; align-items: center; justify-content: center; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
+.trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+.gear-kv { display: inline-flex; align-items: center; gap: 6px; }
+.gear-kv svg.ic { width: 18px; height: 18px; }
 .trip-head h3 { margin: 0; font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); }
 .trip-head p { margin: 0; font-size: 13px; color: var(--muted); }
 .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; margin: 0; }
@@ -367,6 +370,8 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .rhythm-scale { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
 .rhythm-scale i { width: 12px; height: 10px; border-radius: 2px; display: block; }
 .list-rows { display: flex; flex-direction: column; }
+.gear-bar { display: block; height: 4px; border-radius: 2px; background: var(--grid); margin-top: 6px; overflow: hidden; }
+.gear-bar > i { display: block; height: 100%; border-radius: 2px; }
 .list-rows .hit-row:last-child { border-bottom: 0; }
 .rank { width: 22px; text-align: right; color: var(--muted); font-family: var(--font-mono); font-size: 12px; flex: none; }
 .flag { font-size: 20px; width: 34px; text-align: center; flex: none; }
