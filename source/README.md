@@ -101,7 +101,7 @@ At the bottom of Filters, *Export* downloads what the filters currently show (ev
 
 Run `python3 build.py`. It assembles `dist/index.html` from `src/` and copies `static/` (the manifest, service worker and icons).
 
-The app icons in `static/` are made from `icons/icon-source.jpg` (a full-bleed square; the browser-tab icon is the pin cut out of it) by `python3 icons/make_icons.py`. Data saved on a device under the old name, Timeliner, is picked up and copied to the new storage on first open.
+The app icons in `static/` come from the BTDT Icons frames in Figma: `icons/icon-source.png` (the home-screen icon, a full-bleed square) and `icons/favicon.svg` (the browser-tab pin, drawn at 512 px as `icons/favicon-source.png`), made into every size by `python3 icons/make_icons.py`. Data saved on a device under the old name, Timeliner, is picked up and copied to the new storage on first open.
 
 ## Demo
 
