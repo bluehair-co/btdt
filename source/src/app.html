@@ -377,6 +377,8 @@
     <div class="sec" style="gap:0">
       <h3 style="margin-bottom:4px">Layers</h3>
       <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
+      <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
+      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">Each trip's line coloured by how fast you went along it, from the time between its GPS points: red where you crawled or stood still, through yellow and green, to blue and purple at train speeds. Flights are left out. A trip with only its start and end is one colour, its average speed. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
       <div id="heatOpts" hidden style="display:flex;flex-direction:column;gap:12px;padding:4px 0 12px">
         <div class="seg full" role="group" aria-label="Heatmap shows" id="heatSrc">

@@ -1,5 +1,5 @@
 // ---------- trips on the map ----------
-var map = null, pinLayer = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
+var map = null, pinLayer = null, speedLayer = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
 var hits = [], lines = [], groupLines = [], many = false, mapBounds = [], fitKey = null, hovered = [];
 var visibleB = 0;   // trips sel[0 .. visibleB-1] are drawn; the time slider lowers it
 var HIT_PX = coarse ? 12 : 7, LINE_W = 2.5, LINE_OP = 0.55;
@@ -75,6 +75,7 @@ function initMap() {
   pathLayer = L.layerGroup();
   ccLayer = L.layerGroup();
   pinLayer = L.layerGroup();
+  speedLayer = L.layerGroup();
   hlLayer = L.layerGroup().addTo(map);
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
@@ -151,12 +152,57 @@ function buildGroups(limit) {
   });
 }
 function layerToggles() {
-  [[pathLayer, PREFS.paths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
+  [[pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);
   });
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
+  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._u !== PREFS.unit)) buildSpeed();
+}
+
+// ---------- speed paths ----------
+// Every trip but flights, its line cut into stretches coloured by the speed along them. A stretch
+// runs from one GPS point to the next, joined with the next ones until it lasts 20 seconds, so a
+// dense recording (Strava) doesn't turn GPS jitter into speed. A trip with no points between its
+// ends is one stretch at its average speed. Stretches of one colour are drawn as one line, so
+// tens of thousands of trips stay quick.
+var SPEED_BANDS = [5, 10, 15, 25, 50, 80, 120];
+var SPEED_COLORS = ['#d7301f', '#f46d43', '#fdae61', '#fee08b', '#a6d96a', '#1a9850', '#2b83ba', '#5e3c99'];
+function speedBand(kmh) { for (var b = 0; b < SPEED_BANDS.length; b++) if (kmh < SPEED_BANDS[b]) return b; return SPEED_BANDS.length; }
+function speedRuns(i) {
+  var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
+  if (p.length < 2) return out;
+  var hrs = (D.end[i] - D.start[i]) / 36e5, avg = hrs > 0 ? D.km[i] / hrs : 0;
+  if (p.length === 2 || !(ts[ts.length - 1] > 0)) { out.push({ b: speedBand(avg), pts: p }); return out; }
+  var a = 0;
+  while (a < p.length - 1) {
+    var z = a + 1, km = haversine(p[a], p[z]);
+    while (z < p.length - 1 && ts[z] - ts[a] < 20) { km += haversine(p[z], p[z + 1]); z++; }
+    var dt = ts[z] - ts[a], v = dt > 0 ? km / (dt / 3600) : avg, b = speedBand(v), last = out[out.length - 1];
+    var seg = p.slice(a, z + 1);
+    if (last && last.b === b) { seg.shift(); Array.prototype.push.apply(last.pts, seg); } else out.push({ b: b, pts: seg });
+    a = z;
+  }
+  return out;
+}
+function buildSpeed() {
+  speedLayer.clearLayers();
+  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit;
+  var by = SPEED_COLORS.map(function () { return []; });
+  for (var k = 0; k < sel.length; k++) {
+    var i = sel[k];
+    if (modeOf(i) === 'FLYING') continue;
+    speedRuns(i).forEach(function (r) { by[r.b].push(r.pts); });
+  }
+  // Slow first, so the faster stretches on a shared road draw on top.
+  by.forEach(function (parts, b) {
+    if (parts.length) speedLayer.addLayer(L.polyline(parts, { renderer: renderer, color: SPEED_COLORS[b], weight: LINE_W + 0.5, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false }));
+  });
+}
+function speedLegend() {
+  var lab = SPEED_BANDS.map(function (v) { return fmt(distVal(v)); });
+  return '<span class="speed-legend">Speed <span>' + lab[0] + '</span><i class="heat-scale" style="background:linear-gradient(90deg,' + SPEED_COLORS.join(',') + ')"></i><span>' + lab[lab.length - 1] + '+ ' + (PREFS.unit === 'mi' ? 'mph' : 'km/h') + '</span></span>';
 }
 // ---------- pins on regular places ----------
 // A pin on each spot (see spotKey) you stayed at in the filters and have stayed at at least
@@ -226,7 +272,7 @@ function segDist(p, a, b) {
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
 function hitsAt(pt) {
-  if (!PREFS.paths) return [];
+  if (!PREFS.paths && !PREFS.speedPaths) return [];
   var c1 = map.containerPointToLatLng([pt.x - HIT_PX, pt.y + HIT_PX]), c2 = map.containerPointToLatLng([pt.x + HIT_PX, pt.y - HIT_PX]);
   var out = [];
   for (var k = 0; k < hits.length; k++) {
@@ -870,7 +916,8 @@ $('speedBtn').addEventListener('click', function () {
 function legend() {
   var seen = {};
   for (var k = 0; k < sel.length; k++) seen[groupOf(modeOf(sel[k])).key] = 1;
-  var h = PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
+  var h = PREFS.speedPaths ? speedLegend() : '';
+  h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
   if (PREFS.cc) {
     h += '<span><i style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
@@ -1135,7 +1182,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   $('pinNote').hidden = !PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
@@ -1148,7 +1195,14 @@ function layersChanged() {
   if (PREFS.proj !== 'merc') drawProj();
   if (D) heatPoints();
 }
-$('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (!this.checked) { setHovered([]); hideTip(); } layersChanged(); });
+// Paths and speed paths draw the same lines in different colours, so turning one on turns the other off.
+$('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (this.checked) PREFS.speedPaths = false; if (!this.checked && !PREFS.speedPaths) { setHovered([]); hideTip(); } layersChanged(); });
+$('laySpeed').addEventListener('change', function () {
+  PREFS.speedPaths = this.checked;
+  if (this.checked) { PREFS.paths = false; if (PREFS.proj !== 'merc') setProj('merc'); }
+  else { setHovered([]); hideTip(); }
+  layersChanged();
+});
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
 $('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
 $('layPins').addEventListener('change', function () { PREFS.pins = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); layersChanged(); });
