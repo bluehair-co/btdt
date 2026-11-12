@@ -341,11 +341,6 @@
         </div>
       </div>
     </div>
-    <div class="sec" id="gearSec" hidden>
-      <div class="sec-head"><h3>Gear</h3><div class="quick"><button type="button" data-q="gear" data-all="1">All</button><button type="button" data-q="gear" data-all="0">None</button></div></div>
-      <div class="chips" id="gearChips"></div>
-      <p class="fine">The bike or shoes a Strava activity was recorded with. Trips from Timeline have no gear.</p>
-    </div>
     <div class="sec" id="srcWrap" hidden>
       <h3>Source</h3>
       <div class="seg full" role="group" aria-label="Where trips come from" id="srcSeg">
@@ -383,7 +378,7 @@
       <h3 style="margin-bottom:4px">Layers</h3>
       <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
       <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
-      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">Each trip's line coloured by how fast you went along it, from the time between its GPS points: red where you crawled or stood still, through yellow and green, to blue and purple at train speeds. Flights are left out. A trip with only its start and end is one colour, its average speed. Shows on the Mercator view.</p>
+      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds. Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
       <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>

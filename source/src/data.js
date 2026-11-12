@@ -168,7 +168,7 @@ function setData(R) {
     // Modes with trips that have no sport (from Timeline, or a Strava type BT•DT doesn't know).
     plain: plain,
     // Gear from Strava (see buildGear): index 0 is trips with no gear.
-    gear: GEAR
+    gear: GEAR, gearMode: GEAR_MODE
   };
   F = defaultFilters();
   buildFilterUI();
@@ -217,10 +217,26 @@ function buildGear() {
     x_.kind = kind;
     if (kind !== 'shoe' && kind !== 'other') x_.mode = 'CYCLING';
   }
+  // Each type's gear, most used first: their chips sit under the type in Filters.
+  GEAR_MODE = {};
+  gearOrder().forEach(function (g) { var mi = MODE_IDX[GEAR[g].mode]; (GEAR_MODE[mi] || (GEAR_MODE[mi] = [])).push(g); });
 }
-function gearIds() { return GEAR.map(function (_, k) { return k; }); }
+// Gear filter values: each gear's number, and NO_GEAR + a type's index for that type's trips
+// without gear (only for types that have gear).
+var NO_GEAR = 1000, GEAR_MODE = {};
+function gearIds() {
+  var out = GEAR.map(function (_, k) { return k; }).slice(1);
+  Object.keys(GEAR_MODE).forEach(function (mi) { out.push(NO_GEAR + +mi); });
+  return out;
+}
+function gearlessN(m) {
+  var mi = MODE_IDX[m], c = 0;
+  for (var i = 0; i < D.day.length; i++) if (!D.gear[i] && D.mode[i] === mi && !isDup(i)) c++;
+  return c;
+}
+function gearName(g) { return g >= NO_GEAR ? 'No gear (' + (LABEL[MODES[g - NO_GEAR]] || MODES[g - NO_GEAR]) + ')' : GEAR[g].name; }
 // Gear most used first.
-function gearOrder() { return gearIds().slice(1).sort(function (a, b) { return GEAR[b].n - GEAR[a].n; }); }
+function gearOrder() { return GEAR.map(function (_, k) { return k; }).slice(1).sort(function (a, b) { return GEAR[b].n - GEAR[a].n; }); }
 function gearIcon(g) {
   var x = GEAR[g];
   return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
@@ -260,11 +276,10 @@ function activeFilters() {
   if (F.months.size !== 12) k++;
   if (F.dows.size !== 7) k++;
   if (F.h0 !== 0 || F.h1 !== 24) k++;
-  if (F.modes.size !== M.modes.length || F.sports.size !== M.sports.length) k++;
+  if (F.modes.size !== M.modes.length || F.sports.size !== M.sports.length || F.gear.size !== gearIds().length) k++;
   if (F.countries.size !== M.countries.length) k++;
   if (F.guess !== 'all') k++;
   if (F.src !== 'all') k++;
-  if (F.gear.size !== M.gear.length) k++;
   return k;
 }
 // Years and months only apply to All, and days of the week to All and Date range: a date
@@ -289,7 +304,7 @@ function dayOk(d) {
 function apply() {
   var ord = D.order, out = [], nav = {}, k, i;
   var modeOk = MODES.map(function (m) { return F.modes.has(m); });
-  var allCC = F.countries.size === M.countries.length, anyHour = F.h0 === 0 && F.h1 === 24, allGear = F.gear.size === M.gear.length;
+  var allCC = F.countries.size === M.countries.length, anyHour = F.h0 === 0 && F.h1 === 24, allGear = F.gear.size === gearIds().length;
   for (k = 0; k < ord.length; k++) {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
@@ -300,7 +315,8 @@ function apply() {
     if (F.src !== 'timeline' && isDup(i)) continue;
     if (!anyHour && !hourOk(D.hour[i])) continue;
     if (!allCC && !F.countries.has(D.cs[i]) && !F.countries.has(D.ce[i])) continue;
-    if (!allGear && !F.gear.has(D.gear[i])) continue;
+    // A trip with gear shows when its gear is on; one without, when its type's No gear is on.
+    if (!allGear) { var gi = D.gear[i]; if (gi ? !F.gear.has(gi) : M.gearMode[D.mode[i]] && !F.gear.has(NO_GEAR + D.mode[i])) continue; }
     nav[D.day[i]] = 1;
     if (dayOk(D.day[i])) out.push(i);
   }
@@ -346,8 +362,15 @@ function buildFilterUI() {
   // Strava sports under the type. Ticking a kind ticks everything under it. A kind with one
   // type is that type, so it shows only the type's sports, if any, under it.
   var groups = GROUPS.filter(function (g) { return g.modes.some(function (m) { return mc[m]; }); });
+  // Under a type: its Strava sports, then its gear (each bike or pair of shoes, most used first,
+  // and No gear for the type's other trips).
   function sportChips(m) {
-    return M.sports.filter(function (k) { return SPORTS[k][2] === m; }).map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('');
+    var h = M.sports.filter(function (k) { return SPORTS[k][2] === m; }).map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('');
+    var gs = M.gearMode[MODE_IDX[m]];
+    if (gs) h += '<div class="gear-chips" aria-label="' + esc(LABEL[m] || m) + ' gear"><span class="gear-lbl">Gear</span>' + gs.map(function (g) {
+      return chipHtml('gear', g, '<span style="display:flex">' + icon(gearIcon(g)) + '</span>' + esc(M.gear[g].name), M.gear[g].n).replace('class="chip"', 'class="chip sub"');
+    }).join('') + chipHtml('gear', NO_GEAR + MODE_IDX[m], 'No gear', gearlessN(m)).replace('class="chip"', 'class="chip sub"') + '</div>';
+    return h;
   }
   $('modeTree').innerHTML = groups.map(function (g) {
     var ms = g.modes.filter(function (m) { return mc[m]; }), one = ms.length === 1, n = 0;
@@ -372,12 +395,6 @@ function buildFilterUI() {
   $('ccSearch').hidden = M.countries.length < 12;
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
-  // Gear: one chip per bike or pair of shoes, most used first, then trips without gear.
-  $('gearSec').hidden = M.gear.length < 2;
-  $('gearChips').innerHTML = gearOrder().map(function (g) {
-    var x = M.gear[g];
-    return chipHtml('gear', g, '<span style="color:' + modeColor(x.mode) + ';display:flex">' + icon(gearIcon(g)) + '</span>' + esc(x.name), x.n);
-  }).join('') + (M.gear.length > 1 ? chipHtml('gear', 0, 'No gear', M.gear[0].n) : '');
   var h0 = '', h1 = '';
   for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
   for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
@@ -391,8 +408,11 @@ function modeParts(m) {
   var out = [];
   M.sports.forEach(function (k) { if (SPORTS[k][2] === m) out.push(F.sports.has(k)); });
   if (!out.length || M.plain[m]) out.push(F.modes.has(m));
+  modeGear(m).forEach(function (g) { out.push(F.gear.has(g)); });
   return out;
 }
+// The gear chips under a type, No gear included.
+function modeGear(m) { var gs = M.gearMode[MODE_IDX[m]]; return gs ? gs.concat([NO_GEAR + MODE_IDX[m]]) : []; }
 function modeState(m) {
   var p = modeParts(m), on = p.filter(Boolean).length;
   return on === p.length ? 'true' : on ? 'mixed' : 'false';
@@ -400,6 +420,7 @@ function modeState(m) {
 function setMode(m, on) {
   if (on) F.modes.add(m); else F.modes.delete(m);
   M.sports.forEach(function (k) { if (SPORTS[k][2] === m) { if (on) F.sports.add(k); else F.sports.delete(k); } });
+  modeGear(m).forEach(function (g) { if (on) F.gear.add(g); else F.gear.delete(g); });
 }
 function groupModes(key) {
   var g = GROUPS.filter(function (x) { return x.key === key; })[0];
@@ -449,7 +470,7 @@ $('filtersSheet').addEventListener('click', function (ev) {
     }
   } else if (b.dataset.q) {
     var all = b.dataset.all === '1', q = b.dataset.q;
-    if (q === 'modes') F.sports = new Set(all ? M.sports : []);
+    if (q === 'modes') { F.sports = new Set(all ? M.sports : []); F.gear = new Set(all ? gearIds() : []); }
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries, gear: gearIds() }[q] : []);
   } else if (b.dataset.dm === 'nav') {
     F = Object.assign(F, { dm: 'one', unit: 'week', one: navHome() });
