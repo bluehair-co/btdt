@@ -123,7 +123,7 @@ function tripIcon(i) { var g = D.gear ? D.gear[i] : 0; return g && (GEAR[g].kind
 // ---------- preferences ----------
 var PREFS_KEY = 'btdt.prefs';
 var PREFS = {
-  unit: 'km', theme: 'system', proj: 'merc', paths: true, heat: false, cc: false, pins: false, placeScope: 'all', spotMerge: {},
+  unit: 'km', theme: 'system', proj: 'merc', paths: true, speedPaths: false, heat: false, cc: false, pins: false, placeScope: 'all', spotMerge: {},
   heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', timeM: 'km', timeU: 'year', speed: 1,
   // The time slider starts hidden on phones.
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
