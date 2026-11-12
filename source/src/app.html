@@ -226,6 +226,11 @@
           <div class="card-head"><div class="card-title"><h2 id="placesTitle">Top places</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="placesNote"></span></div>
           <div class="list-rows" id="topPlaces"></div>
         </section>
+        <section class="card" id="sqCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about 1.5 km (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
+          <div class="stats" id="sqStats"></div>
+          <div class="bars" id="sqYears" style="margin-top:14px"></div>
+        </section>
         <section class="card" id="gearCard" hidden>
           <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
           <div class="list-rows" id="gearList"></div>
@@ -379,6 +384,8 @@
       <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
       <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
       <p class="fine" id="speedNote" hidden style="margin:0 0 8px">Each trip's line coloured by how fast you went along it, from the time between its GPS points: red where you crawled or stood still, through yellow and green, to blue and purple at train speeds. Flights are left out. A trip with only its start and end is one colour, its average speed. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
+      <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
       <div id="heatOpts" hidden style="display:flex;flex-direction:column;gap:12px;padding:4px 0 12px">
         <div class="seg full" role="group" aria-label="Heatmap shows" id="heatSrc">

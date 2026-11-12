@@ -12,7 +12,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderGear(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderSquares(); renderGear(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -653,6 +653,20 @@ function renderPlaces() {
       '<span class="t"><b>' + esc(placeLabel(o.p)) + '</b><small>' + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + (useStays ? ' · ' + fmt(o.n) + ' stay' + (o.n > 1 ? 's' : '') : '') + '</small></span>' +
       '<span class="r num">' + (useStays ? hoursLabel(o.h).replace(/ \d+ min$/, '') : fmt(o.n) + '<small>trips</small>') + '</span></button>';
   }).join('');
+}
+// Explorer squares in the trips shown: how many, the biggest cluster and square, and new ones per year.
+function renderSquares() {
+  var E = explorer(), years = {};
+  $('sqCard').hidden = !E.sq.size;
+  if (!E.sq.size) return;
+  E.sq.forEach(function (o) { var y = D.year[o.i]; years[y] = (years[y] || 0) + 1; });
+  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about 1.5 km across') +
+    stat('Biggest cluster', fmt(E.cluster.size), '', 'squares with all four neighbours visited') +
+    stat('Max square', E.max + '×' + E.max, '', fmt(E.max * E.max) + ' squares, all visited');
+  var ys = Object.keys(years).map(Number).sort(), mx = Math.max.apply(null, ys.map(function (y) { return years[y]; }));
+  $('sqYears').innerHTML = ys.length > 1 ? '<p class="fine" style="margin:0">New squares each year</p>' + ys.map(function (y) {
+    return '<div class="bar-row"><span class="num" style="font-size:12px">' + y + '</span><div><div class="track"><i style="width:' + (years[y] / mx * 100).toFixed(1) + '%;background:var(--accent)"></i></div></div><div class="val">+' + fmt(years[y]) + '</div></div>';
+  }).join('') : '';
 }
 // Each bike and pair of shoes in the trips shown: distance, activities and when it was used.
 function renderGear() {

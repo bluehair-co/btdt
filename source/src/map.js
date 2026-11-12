@@ -1,5 +1,5 @@
 // ---------- trips on the map ----------
-var map = null, pinLayer = null, speedLayer = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
+var map = null, pinLayer = null, speedLayer = null, sqLayer = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
 var hits = [], lines = [], groupLines = [], many = false, mapBounds = [], fitKey = null, hovered = [];
 var visibleB = 0;   // trips sel[0 .. visibleB-1] are drawn; the time slider lowers it
 var HIT_PX = coarse ? 12 : 7, LINE_W = 2.5, LINE_OP = 0.55;
@@ -76,6 +76,7 @@ function initMap() {
   ccLayer = L.layerGroup();
   pinLayer = L.layerGroup();
   speedLayer = L.layerGroup();
+  sqLayer = L.layerGroup();
   hlLayer = L.layerGroup().addTo(map);
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
@@ -152,13 +153,107 @@ function buildGroups(limit) {
   });
 }
 function layerToggles() {
-  [[pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
+  [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);
   });
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
+  if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
   if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._u !== PREFS.unit)) buildSpeed();
+}
+
+// ---------- explorer squares ----------
+// Zoom 14 map tiles (about 1.5 km across in the Netherlands) that the trips shown passed through,
+// leaving out flights. Lines are followed a quarter of a square at a time; a straight stretch
+// over 30 squares (a long jump between GPS points, or a trip with only its ends) only counts
+// its ends, so it doesn't paint a line of squares you never saw.
+var SQ_Z = 14, SQ_N = 1 << SQ_Z, SQ = null;
+function sqXY(ll) {
+  var la = Math.max(-85.05, Math.min(85.05, ll[0])) * Math.PI / 180;
+  return [(ll[1] + 180) / 360 * SQ_N, (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * SQ_N];
+}
+function sqLat(y) { var n = Math.PI - 2 * Math.PI * y / SQ_N; return 180 / Math.PI * Math.atan(Math.sinh(n)); }
+function sqLng(x) { return x / SQ_N * 360 - 180; }
+function explorer() {
+  if (SQ && SQ.ver === applyCount && SQ.d === D) return SQ;
+  var sq = new Map(), k, i;
+  function mark(x, y, i_) {
+    x = ((Math.floor(x) % SQ_N) + SQ_N) % SQ_N; y = Math.floor(y);
+    if (y < 0 || y >= SQ_N) return;
+    var key = x * SQ_N + y, o = sq.get(key);
+    if (!o) sq.set(key, { t: D.start[i_], i: i_, n: 1, last: i_ });
+    else if (o.last !== i_) { o.n++; o.last = i_; if (D.start[i_] < o.t) { o.t = D.start[i_]; o.i = i_; } }
+  }
+  for (k = 0; k < sel.length; k++) {
+    i = sel[k];
+    if (modeOf(i) === 'FLYING') continue;
+    var p = tripPath(i);
+    if (!p.length) continue;
+    var a = sqXY(p[0]);
+    mark(a[0], a[1], i);
+    for (var j = 1; j < p.length; j++) {
+      var b = sqXY(p[j]), dx = b[0] - a[0], dy = b[1] - a[1], L_ = Math.hypot(dx, dy);
+      if (L_ <= 30) for (var s = 1, ns = Math.ceil(L_ / 0.25); s <= ns; s++) mark(a[0] + dx * s / ns, a[1] + dy * s / ns, i);
+      else mark(b[0], b[1], i);
+      a = b;
+    }
+  }
+  // The cluster: squares with all four neighbours visited, and the biggest 4-connected block of them.
+  function has(x, y) { return sq.has(x * SQ_N + y); }
+  var inner = new Set(), keys = Array.from(sq.keys()), best = [];
+  keys.forEach(function (key) { var x = Math.floor(key / SQ_N), y = key % SQ_N; if (has(x - 1, y) && has(x + 1, y) && has(x, y - 1) && has(x, y + 1)) inner.add(key); });
+  var seen = new Set();
+  inner.forEach(function (key) {
+    if (seen.has(key)) return;
+    var comp = [], stack = [key]; seen.add(key);
+    while (stack.length) {
+      var c = stack.pop(), x = Math.floor(c / SQ_N), y = c % SQ_N; comp.push(c);
+      [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) { var nk = (x + d[0]) * SQ_N + y + d[1]; if (inner.has(nk) && !seen.has(nk)) { seen.add(nk); stack.push(nk); } });
+    }
+    if (comp.length > best.length) best = comp;
+  });
+  // The max square: the biggest n × n block of visited squares (dynamic programming, row by row).
+  keys.sort(function (p_, q) { return p_ % SQ_N - q % SQ_N || p_ - q; });
+  var dp = new Map(), mx = 0, at = null;
+  keys.forEach(function (key) {
+    var x = Math.floor(key / SQ_N), y = key % SQ_N;
+    var v = 1 + Math.min(dp.get((x - 1) * SQ_N + y) || 0, dp.get(x * SQ_N + y - 1) || 0, dp.get((x - 1) * SQ_N + y - 1) || 0);
+    dp.set(key, v);
+    if (v > mx) { mx = v; at = [x, y]; }
+  });
+  SQ = { ver: applyCount, d: D, sq: sq, cluster: new Set(best), max: mx, maxAt: at };
+  return SQ;
+}
+function sqRing(key) {
+  var x = Math.floor(key / SQ_N), y = key % SQ_N, n = sqLat(y), s = sqLat(y + 1), w = sqLng(x), e = sqLng(x + 1);
+  return [[n, w], [n, e], [s, e], [s, w]];
+}
+function buildSquares() {
+  sqLayer.clearLayers();
+  sqLayer._ver = applyCount; sqLayer._d = D;
+  var E = explorer(), plain = [], clus = [], acc = cssVar('--accent');
+  E.sq.forEach(function (_, key) { (E.cluster.has(key) ? clus : plain).push(sqRing(key)); });
+  var o = { renderer: renderer, color: acc, weight: 0.6, opacity: 0.5, fillColor: acc, interactive: false };
+  if (plain.length) sqLayer.addLayer(L.polygon(plain, Object.assign({}, o, { fillOpacity: 0.18 })));
+  if (clus.length) sqLayer.addLayer(L.polygon(clus, Object.assign({}, o, { fillOpacity: 0.42 })));
+  if (E.max > 1) {
+    var x = E.maxAt[0], y = E.maxAt[1];
+    sqLayer.addLayer(L.rectangle([[sqLat(y - E.max + 1), sqLng(x - E.max + 1)], [sqLat(y + 1), sqLng(x + 1)]], { renderer: renderer, color: acc, weight: 2.5, opacity: 0.9, fill: false, interactive: false }));
+  }
+}
+// What a square says when tapped or hovered with no line under it.
+function squareAt(pt, ev) {
+  if (!PREFS.squares || !D) return false;
+  var ll = map.containerPointToLatLng(pt), xy = sqXY([ll.lat, ll.lng]), x = ((Math.floor(xy[0]) % SQ_N) + SQ_N) % SQ_N, o = explorer().sq.get(x * SQ_N + Math.floor(xy[1]));
+  if (!o) return false;
+  showTip(ev, '<b>First here ' + longDate(D.day[o.i]) + '</b><div class="row"><span>' + tripLabel(o.i) + ' · ' + esc(tripRoute(o.i)) + '</span></div><div class="row"><span>' + tripsText(o.n) + ' through this square in these filters</span></div>');
+  return true;
+}
+function sqLegend() {
+  var E = explorer(), acc = 'var(--accent)';
+  return '<span><i style="background:' + acc + ';opacity:.3;height:10px"></i>' + fmt(E.sq.size) + ' squares</span>' + (E.cluster.size ? '<span><i style="background:' + acc + ';opacity:.6;height:10px"></i>Cluster ' + fmt(E.cluster.size) + '</span>' : '') +
+    (E.max > 1 ? '<span><i style="border:2px solid ' + acc + ';background:none;height:8px;width:8px"></i>Max square ' + E.max + '×' + E.max + '</span>' : '');
 }
 
 // ---------- speed paths ----------
@@ -291,9 +386,9 @@ function hitsAt(pt) {
   }
   return out.sort(function (a, b) { return D.start[b.i] - D.start[a.i]; });
 }
-function onMapTap(pt) {
+function onMapTap(pt, ev) {
   var list = hitsAt(pt);
-  if (!list.length) { if (openId === 'tripSheet') closeSheets(); return; }
+  if (!list.length) { if (openId === 'tripSheet') closeSheets(); if (!squareAt(pt, ev)) hideTip(); return; }
   hideTip(); setHovered([]);
   if (list.length === 1) openTrip(list[0].i);
   else openList(list.map(function (h) { return h.i; }));
@@ -309,7 +404,8 @@ function onMapHover(e) {
   if (hits.length > 8000) return;
   var list = hitsAt(e.containerPoint);
   setHovered(list);
-  if (!list.length || openId === 'tripSheet') { hideTip(); return; }
+  if (openId === 'tripSheet' || !list.length && !squareAt(e.containerPoint, e.originalEvent)) { hideTip(); return; }
+  if (!list.length) return;
   showTip(e.originalEvent, hoverHtml(list.map(function (h) { return h.i; })));
 }
 function hoverHtml(list) {
@@ -917,6 +1013,7 @@ function legend() {
   var seen = {};
   for (var k = 0; k < sel.length; k++) seen[groupOf(modeOf(sel[k])).key] = 1;
   var h = PREFS.speedPaths ? speedLegend() : '';
+  if (PREFS.squares && D) h += sqLegend();
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
   if (PREFS.cc) {
@@ -1182,7 +1279,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   $('pinNote').hidden = !PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
@@ -1203,6 +1300,7 @@ $('laySpeed').addEventListener('change', function () {
   else { setHovered([]); hideTip(); }
   layersChanged();
 });
+$('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
 $('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
 $('layPins').addEventListener('change', function () { PREFS.pins = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); layersChanged(); });
