@@ -247,13 +247,16 @@ function renderVoyager(g) {
   var chase = '<g class="v-chase"><path class="gold" stroke-width="10" d="M' + c0 + ',92H' + c1 + '"/>' + planet('earth', 40, 92, 48) +
     [.78e9, 1.43e9, 2.87e9, 4.5e9].map(function (k) { return '<circle cx="' + X(k).toFixed(1) + '" cy="92" r="3" fill="var(--bg)"/>'; }).join('') +
     '<path d="M' + ja.toFixed(1) + ',78V72H' + ne.toFixed(1) + 'V78" fill="none" stroke="var(--muted)"/><text class="vl" x="' + ((ja + ne) / 2).toFixed(1) + '" y="64" text-anchor="middle">Jupiter to Neptune</text>' +
-    '<line x1="' + hp.toFixed(1) + '" y1="58" x2="' + hp.toFixed(1) + '" y2="126" stroke="var(--muted)" stroke-dasharray="3 4"/><text class="vl" x="' + hp.toFixed(1) + '" y="50" text-anchor="middle">Leaves the Sun\'s bubble</text>' +
-    rider(c1, 92, 'var(--m-foot)', 'var(--m-foot)', 'voyager', 24) + '<text class="vl" x="' + c1 + '" y="136" text-anchor="end">Voyager 1, ' + bigDist(dV) + '</text>' +
+    '<line x1="' + hp.toFixed(1) + '" y1="58" x2="' + hp.toFixed(1) + '" y2="' + (W < 500 ? 106 : 126) + '" stroke="var(--muted)" stroke-dasharray="3 4"/><text class="vl" x="' + hp.toFixed(1) + '" y="50" text-anchor="middle">Leaves the Sun\'s bubble</text>' +
+    rider(c1, 92, 'var(--m-foot)', 'var(--m-foot)', 'voyager', 24) + (W < 500 ? '<text class="vl" x="' + c1 + '" y="122" text-anchor="end">Voyager 1,<tspan x="' + c1 + '" dy="15">' + bigDist(dV) + '</tspan></text>'
+      : '<text class="vl" x="' + c1 + '" y="136" text-anchor="end">Voyager 1, ' + bigDist(dV) + '</text>') +
     '<line x1="' + (c0 + 2) + '" y1="92" x2="156" y2="148" stroke="var(--accent)" stroke-width="1.2"/><circle cx="' + (c0 + 2) + '" cy="92" r="3" fill="var(--accent)"/>' +
     rider(172, 154, 'var(--accent)', 'var(--accent)', 'pin', 22) + '<text class="vb" x="198" y="159">You: ' + dist(kmT) + '</text></g>';
-  return '<svg class="far-art mid ' + cls + (out ? ' out' : '') + '" viewBox="0 0 ' + W + ' 180" role="img" aria-label="' + (out ? marsPct(share) + '% of the way to Voyager 1' : 'Voyager covers your distance in ' + raceTime(raceH)) + '">' + race + chase + '</svg>';
+  return '<svg class="far-art mid ' + cls + (out ? ' out' : '') + '" viewBox="0 0 ' + W + ' 180" style="max-width:' + W + 'px" role="img" aria-label="' + (out ? marsPct(share) + '% of the way to Voyager 1' : 'Voyager covers your distance in ' + raceTime(raceH)) + '">' + race + chase + '</svg>';
   }
-  $('voyager').innerHTML = art(640, 'far-n') + art(840, 'far-w') +
+  // The narrow drawing is as wide as the card (up to 640), so it shows at its own size on a phone.
+  var wn = Math.round(Math.max(320, Math.min(640, $('farView').clientWidth - 8)));
+  $('voyager').innerHTML = art(wn, 'far-n') + art(840, 'far-w') +
     '<div class="far-stat v-stats"><div' + (out ? ' hidden' : '') + '>' + stat('', raceTime(raceH * g), 'for Voyager to go as far as you', 'You took ' + (span === 1 ? 'a day' : fmt(span) + ' days') + '. Voyager is ' + fmt(faster) + '× faster than your average pace') + '</div>' +
     '<div' + (out ? '' : ' hidden') + '>' + stat('', marsPct(share) + '%', 'of the way to Voyager 1', 'It\'s a light-day away and gets ' + bigDist(VOY_PER_DAY) + ' further every day' + (ratio >= 1.5 ? ': ' + fmt(ratio) + '× your distance here' : '')) + '</div></div>' +
     '<div class="v-foot"><button type="button" class="v-zoom" id="vZoom" aria-pressed="' + out + '">' + icon(out ? 'zoomIn' : 'zoomOut') + '<span>' + (out ? 'Back to the race' : 'Zoom out') + '</span></button></div>';
@@ -339,6 +342,11 @@ function farRefresh() {
     var w = view.clientWidth;
     if (w && Math.abs(w - w0) > 1) { w0 = w; if (sel.length) renderFar(true); }
   }).observe(view);
+  // The card follows the height of the score showing when that changes by itself (the font arriving, the zoom).
+  if (window.ResizeObserver) {
+    var ro = new ResizeObserver(function () { var h = farSlides[FAR.i].offsetHeight; if (h) view.style.height = h + 'px'; });
+    farSlides.forEach(function (s) { ro.observe(s); });
+  }
 })();
 // Magellan: a ring round the Earth from the top, clockwise; the caravel is where this lap has got to.
 function renderMagellan(g) {
@@ -382,18 +390,29 @@ function renderFar(still) {
 // counts up from nothing over 1.6 s, slowing as it ends: the line grows, the rider rides it and the number climbs.
 // The card keeps the height of the finished score. Not with reduced motion.
 var FAR_PLAY_MS = 1600;
+// The note under the number doesn't count: it keeps its finished text, hidden so its space is there all along,
+// and fades in once the score has played.
 function farPlay() {
   cancelAnimationFrame(FAR.anim); FAR.anim = 0;
-  var k = FAR.i, draw = FAR_DRAW[k], t0 = 0;
+  var k = FAR.i, draw = FAR_DRAW[k], t0 = 0, slide = farSlides[k], notes;
   if (!sel.length || tab !== 'insights' || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  draw(1);
+  notes = Array.prototype.map.call(slide.querySelectorAll('.far-stat .note'), function (n) { return n.innerHTML; });
+  function frame(g) {
+    draw(g);
+    slide.querySelectorAll('.far-stat .note').forEach(function (n, j) { if (notes[j] != null) n.innerHTML = notes[j]; n.classList.add('hold'); });
+  }
   function step(now) {
     if (!t0) t0 = now;
     var t = Math.min(1, (now - t0) / FAR_PLAY_MS);
     FAR.g = 1 - Math.pow(1 - t, 3);
-    draw(FAR.g);
-    FAR.anim = t < 1 && FAR.i === k ? requestAnimationFrame(step) : 0;
+    if (FAR.i !== k) return;
+    if (t < 1) { frame(FAR.g); FAR.anim = requestAnimationFrame(step); return; }
+    FAR.anim = 0; frame(1);
+    void slide.offsetWidth;
+    slide.querySelectorAll('.far-stat .note.hold').forEach(function (n) { n.classList.remove('hold'); });
   }
-  FAR.g = 0; draw(0);
+  FAR.g = 0; frame(0);
   FAR.anim = requestAnimationFrame(step);
 }
 
