@@ -1132,7 +1132,14 @@ function renderCo2() {
 document.querySelector('#insightsPage .cards').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-i],[data-day],[data-place],[data-gear]');
   if (!b) return;
-  if (b.dataset.gear) { F.gear = new Set([+b.dataset.gear]); syncFilterUI(); apply(); toast('Showing only ' + M.gear[+b.dataset.gear].name + '. Change it under Gear in Filters.'); }
+  if (b.dataset.gear) {
+    // Only this gear's trips: the types it was used for on (with their sports), every other type and gear off.
+    var g = +b.dataset.gear, used = M.gear[g].modes;
+    M.modes.forEach(function (m) { setMode(m, !!used[m]); });
+    F.gear = new Set([g]);
+    syncFilterUI(); apply();
+    toast('Showing only ' + M.gear[g].name + '. Change it under Transport in Filters.');
+  }
   else if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
   else if (b.dataset.day) { setTab('map'); showDay(+b.dataset.day); }
   else if (!openPlace(+b.dataset.place)) {

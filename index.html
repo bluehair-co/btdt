@@ -127,6 +127,9 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 /* Strava sports, in a row under their transport mode. */
 .subchips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; padding-left: 14px; border-left: 2px solid var(--line); margin: -2px 0 2px 10px; }
 .chip.sub { font-size: 12px; padding: 5px 10px; }
+/* Strava gear, in a row under the sports of the type it was used for. */
+.gear-chips { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 2px; }
+.gear-lbl { font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-right: 2px; }
 /* Transport filter: kinds (Road, Flights…) with their types under them. */
 .mode-tree { display: flex; flex-direction: column; gap: 6px; }
 .mt-row { display: flex; align-items: center; gap: 4px; min-width: 0; }
@@ -1116,11 +1119,6 @@ div.hit-row:hover { background: none; }
         </div>
       </div>
     </div>
-    <div class="sec" id="gearSec" hidden>
-      <div class="sec-head"><h3>Gear</h3><div class="quick"><button type="button" data-q="gear" data-all="1">All</button><button type="button" data-q="gear" data-all="0">None</button></div></div>
-      <div class="chips" id="gearChips"></div>
-      <p class="fine">The bike or shoes a Strava activity was recorded with. Trips from Timeline have no gear.</p>
-    </div>
     <div class="sec" id="srcWrap" hidden>
       <h3>Source</h3>
       <div class="seg full" role="group" aria-label="Where trips come from" id="srcSeg">
@@ -1158,7 +1156,7 @@ div.hit-row:hover { background: none; }
       <h3 style="margin-bottom:4px">Layers</h3>
       <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
       <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
-      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">Each trip's line coloured by how fast you went along it, from the time between its GPS points: red where you crawled or stood still, through yellow and green, to blue and purple at train speeds. Flights are left out. A trip with only its start and end is one colour, its average speed. Shows on the Mercator view.</p>
+      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds. Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
       <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
@@ -3639,7 +3637,7 @@ function setData(R) {
     // Modes with trips that have no sport (from Timeline, or a Strava type BT•DT doesn't know).
     plain: plain,
     // Gear from Strava (see buildGear): index 0 is trips with no gear.
-    gear: GEAR
+    gear: GEAR, gearMode: GEAR_MODE
   };
   F = defaultFilters();
   buildFilterUI();
@@ -3688,10 +3686,26 @@ function buildGear() {
     x_.kind = kind;
     if (kind !== 'shoe' && kind !== 'other') x_.mode = 'CYCLING';
   }
+  // Each type's gear, most used first: their chips sit under the type in Filters.
+  GEAR_MODE = {};
+  gearOrder().forEach(function (g) { var mi = MODE_IDX[GEAR[g].mode]; (GEAR_MODE[mi] || (GEAR_MODE[mi] = [])).push(g); });
 }
-function gearIds() { return GEAR.map(function (_, k) { return k; }); }
+// Gear filter values: each gear's number, and NO_GEAR + a type's index for that type's trips
+// without gear (only for types that have gear).
+var NO_GEAR = 1000, GEAR_MODE = {};
+function gearIds() {
+  var out = GEAR.map(function (_, k) { return k; }).slice(1);
+  Object.keys(GEAR_MODE).forEach(function (mi) { out.push(NO_GEAR + +mi); });
+  return out;
+}
+function gearlessN(m) {
+  var mi = MODE_IDX[m], c = 0;
+  for (var i = 0; i < D.day.length; i++) if (!D.gear[i] && D.mode[i] === mi && !isDup(i)) c++;
+  return c;
+}
+function gearName(g) { return g >= NO_GEAR ? 'No gear (' + (LABEL[MODES[g - NO_GEAR]] || MODES[g - NO_GEAR]) + ')' : GEAR[g].name; }
 // Gear most used first.
-function gearOrder() { return gearIds().slice(1).sort(function (a, b) { return GEAR[b].n - GEAR[a].n; }); }
+function gearOrder() { return GEAR.map(function (_, k) { return k; }).slice(1).sort(function (a, b) { return GEAR[b].n - GEAR[a].n; }); }
 function gearIcon(g) {
   var x = GEAR[g];
   return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
@@ -3731,11 +3745,10 @@ function activeFilters() {
   if (F.months.size !== 12) k++;
   if (F.dows.size !== 7) k++;
   if (F.h0 !== 0 || F.h1 !== 24) k++;
-  if (F.modes.size !== M.modes.length || F.sports.size !== M.sports.length) k++;
+  if (F.modes.size !== M.modes.length || F.sports.size !== M.sports.length || F.gear.size !== gearIds().length) k++;
   if (F.countries.size !== M.countries.length) k++;
   if (F.guess !== 'all') k++;
   if (F.src !== 'all') k++;
-  if (F.gear.size !== M.gear.length) k++;
   return k;
 }
 // Years and months only apply to All, and days of the week to All and Date range: a date
@@ -3760,7 +3773,7 @@ function dayOk(d) {
 function apply() {
   var ord = D.order, out = [], nav = {}, k, i;
   var modeOk = MODES.map(function (m) { return F.modes.has(m); });
-  var allCC = F.countries.size === M.countries.length, anyHour = F.h0 === 0 && F.h1 === 24, allGear = F.gear.size === M.gear.length;
+  var allCC = F.countries.size === M.countries.length, anyHour = F.h0 === 0 && F.h1 === 24, allGear = F.gear.size === gearIds().length;
   for (k = 0; k < ord.length; k++) {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
@@ -3771,7 +3784,8 @@ function apply() {
     if (F.src !== 'timeline' && isDup(i)) continue;
     if (!anyHour && !hourOk(D.hour[i])) continue;
     if (!allCC && !F.countries.has(D.cs[i]) && !F.countries.has(D.ce[i])) continue;
-    if (!allGear && !F.gear.has(D.gear[i])) continue;
+    // A trip with gear shows when its gear is on; one without, when its type's No gear is on.
+    if (!allGear) { var gi = D.gear[i]; if (gi ? !F.gear.has(gi) : M.gearMode[D.mode[i]] && !F.gear.has(NO_GEAR + D.mode[i])) continue; }
     nav[D.day[i]] = 1;
     if (dayOk(D.day[i])) out.push(i);
   }
@@ -3817,8 +3831,15 @@ function buildFilterUI() {
   // Strava sports under the type. Ticking a kind ticks everything under it. A kind with one
   // type is that type, so it shows only the type's sports, if any, under it.
   var groups = GROUPS.filter(function (g) { return g.modes.some(function (m) { return mc[m]; }); });
+  // Under a type: its Strava sports, then its gear (each bike or pair of shoes, most used first,
+  // and No gear for the type's other trips).
   function sportChips(m) {
-    return M.sports.filter(function (k) { return SPORTS[k][2] === m; }).map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('');
+    var h = M.sports.filter(function (k) { return SPORTS[k][2] === m; }).map(function (k) { return chipHtml('sports', k, esc(SPORTS[k][1]), M.sportN[k]).replace('class="chip"', 'class="chip sub"'); }).join('');
+    var gs = M.gearMode[MODE_IDX[m]];
+    if (gs) h += '<div class="gear-chips" aria-label="' + esc(LABEL[m] || m) + ' gear"><span class="gear-lbl">Gear</span>' + gs.map(function (g) {
+      return chipHtml('gear', g, '<span style="display:flex">' + icon(gearIcon(g)) + '</span>' + esc(M.gear[g].name), M.gear[g].n).replace('class="chip"', 'class="chip sub"');
+    }).join('') + chipHtml('gear', NO_GEAR + MODE_IDX[m], 'No gear', gearlessN(m)).replace('class="chip"', 'class="chip sub"') + '</div>';
+    return h;
   }
   $('modeTree').innerHTML = groups.map(function (g) {
     var ms = g.modes.filter(function (m) { return mc[m]; }), one = ms.length === 1, n = 0;
@@ -3843,12 +3864,6 @@ function buildFilterUI() {
   $('ccSearch').hidden = M.countries.length < 12;
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
-  // Gear: one chip per bike or pair of shoes, most used first, then trips without gear.
-  $('gearSec').hidden = M.gear.length < 2;
-  $('gearChips').innerHTML = gearOrder().map(function (g) {
-    var x = M.gear[g];
-    return chipHtml('gear', g, '<span style="color:' + modeColor(x.mode) + ';display:flex">' + icon(gearIcon(g)) + '</span>' + esc(x.name), x.n);
-  }).join('') + (M.gear.length > 1 ? chipHtml('gear', 0, 'No gear', M.gear[0].n) : '');
   var h0 = '', h1 = '';
   for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
   for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
@@ -3862,8 +3877,11 @@ function modeParts(m) {
   var out = [];
   M.sports.forEach(function (k) { if (SPORTS[k][2] === m) out.push(F.sports.has(k)); });
   if (!out.length || M.plain[m]) out.push(F.modes.has(m));
+  modeGear(m).forEach(function (g) { out.push(F.gear.has(g)); });
   return out;
 }
+// The gear chips under a type, No gear included.
+function modeGear(m) { var gs = M.gearMode[MODE_IDX[m]]; return gs ? gs.concat([NO_GEAR + MODE_IDX[m]]) : []; }
 function modeState(m) {
   var p = modeParts(m), on = p.filter(Boolean).length;
   return on === p.length ? 'true' : on ? 'mixed' : 'false';
@@ -3871,6 +3889,7 @@ function modeState(m) {
 function setMode(m, on) {
   if (on) F.modes.add(m); else F.modes.delete(m);
   M.sports.forEach(function (k) { if (SPORTS[k][2] === m) { if (on) F.sports.add(k); else F.sports.delete(k); } });
+  modeGear(m).forEach(function (g) { if (on) F.gear.add(g); else F.gear.delete(g); });
 }
 function groupModes(key) {
   var g = GROUPS.filter(function (x) { return x.key === key; })[0];
@@ -3920,7 +3939,7 @@ $('filtersSheet').addEventListener('click', function (ev) {
     }
   } else if (b.dataset.q) {
     var all = b.dataset.all === '1', q = b.dataset.q;
-    if (q === 'modes') F.sports = new Set(all ? M.sports : []);
+    if (q === 'modes') { F.sports = new Set(all ? M.sports : []); F.gear = new Set(all ? gearIds() : []); }
     F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries, gear: gearIds() }[q] : []);
   } else if (b.dataset.dm === 'nav') {
     F = Object.assign(F, { dm: 'one', unit: 'week', one: navHome() });
@@ -4627,6 +4646,8 @@ function initMap() {
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
   posMarker._mode = null;
+  var spT = 0;
+  map.on('moveend', function () { clearTimeout(spT); spT = setTimeout(speedMoved, 120); });
   map.on('click', function (e) { onMapTap(map.latLngToContainerPoint(e.latlng), e.originalEvent); });
   if (!coarse) {
     var raf = 0, last = null;
@@ -4706,7 +4727,7 @@ function layerToggles() {
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
   if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
-  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._u !== PREFS.unit)) buildSpeed();
+  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
 }
 
 // ---------- explorer squares ----------
@@ -4803,43 +4824,90 @@ function sqLegend() {
 }
 
 // ---------- speed paths ----------
-// Every trip but flights, its line cut into stretches coloured by the speed along them. A stretch
-// runs from one GPS point to the next, joined with the next ones until it lasts 20 seconds, so a
-// dense recording (Strava) doesn't turn GPS jitter into speed. A trip with no points between its
-// ends is one stretch at its average speed. Stretches of one colour are drawn as one line, so
-// tens of thousands of trips stay quick.
+// The average speed of the trips shown along each stretch of the map, leaving out flights.
+// Each trip's line is cut into stretches from one GPS point to the next, joined with the next
+// ones until they last 20 seconds, so a dense recording (Strava) doesn't turn GPS jitter into
+// speed; a trip with only its ends is one stretch at its average speed. The lines are then
+// followed through a grid of 10-pixel cells at the map's zoom: every move from one cell to the
+// next adds that stretch's speed to the link between the two cells, and each link is drawn
+// between the middles of the points that fell in its cells, coloured by the average speed of
+// everything that passed and thicker where more trips did. Only what's near the view is
+// gathered, again after zooming or moving away, so it stays quick with tens of thousands of trips.
 var SPEED_BANDS = [5, 10, 15, 25, 50, 80, 120];
 var SPEED_COLORS = ['#d7301f', '#f46d43', '#fdae61', '#fee08b', '#a6d96a', '#1a9850', '#2b83ba', '#5e3c99'];
+var SPEED_CELL = 10;
 function speedBand(kmh) { for (var b = 0; b < SPEED_BANDS.length; b++) if (kmh < SPEED_BANDS[b]) return b; return SPEED_BANDS.length; }
+// A trip's line as stretches of at least 20 seconds, each with its speed (km/h).
 function speedRuns(i) {
   var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
   if (p.length < 2) return out;
   var hrs = (D.end[i] - D.start[i]) / 36e5, avg = hrs > 0 ? D.km[i] / hrs : 0;
-  if (p.length === 2 || !(ts[ts.length - 1] > 0)) { out.push({ b: speedBand(avg), pts: p }); return out; }
+  if (p.length === 2 || !(ts[ts.length - 1] > 0)) { out.push({ v: avg, pts: p }); return out; }
   var a = 0;
   while (a < p.length - 1) {
     var z = a + 1, km = haversine(p[a], p[z]);
     while (z < p.length - 1 && ts[z] - ts[a] < 20) { km += haversine(p[z], p[z + 1]); z++; }
-    var dt = ts[z] - ts[a], v = dt > 0 ? km / (dt / 3600) : avg, b = speedBand(v), last = out[out.length - 1];
-    var seg = p.slice(a, z + 1);
-    if (last && last.b === b) { seg.shift(); Array.prototype.push.apply(last.pts, seg); } else out.push({ b: b, pts: seg });
+    var dt = ts[z] - ts[a];
+    out.push({ v: dt > 0 ? km / (dt / 3600) : avg, pts: p.slice(a, z + 1) });
     a = z;
   }
   return out;
 }
+function wpx(ll, s) {
+  var la = Math.max(-85.05, Math.min(85.05, ll[0])) * Math.PI / 180;
+  return [(ll[1] + 180) / 360 * s, (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * s];
+}
+function wll(x, y, s) { return [180 / Math.PI * Math.atan(Math.sinh(Math.PI - 2 * Math.PI * y / s)), x / s * 360 - 180]; }
 function buildSpeed() {
   speedLayer.clearLayers();
-  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit;
-  var by = SPEED_COLORS.map(function () { return []; });
-  for (var k = 0; k < sel.length; k++) {
-    var i = sel[k];
-    if (modeOf(i) === 'FLYING') continue;
-    speedRuns(i).forEach(function (r) { by[r.b].push(r.pts); });
+  var z = map.getZoom(), s = 256 * Math.pow(2, z), vb = map.getBounds().pad(0.5);
+  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit; speedLayer._z = z; speedLayer._b = vb;
+  var nw = wpx([vb.getNorth(), vb.getWest()], s), se = wpx([vb.getSouth(), vb.getEast()], s);
+  var x0 = nw[0], y0 = nw[1], x1 = se[0], y1 = se[1], C = SPEED_CELL, R = 1 << 25;
+  var cells = new Map(), links = new Map();
+  function cell(id, x, y) {
+    var c = cells.get(id);
+    if (!c) cells.set(id, c = { x: 0, y: 0, n: 0 });
+    c.x += x; c.y += y; c.n++;
   }
-  // Slow first, so the faster stretches on a shared road draw on top.
-  by.forEach(function (parts, b) {
-    if (parts.length) speedLayer.addLayer(L.polyline(parts, { renderer: renderer, color: SPEED_COLORS[b], weight: LINE_W + 0.5, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false }));
+  for (var k = 0; k < hits.length; k++) {
+    var h = hits[k], bb = h.bb;
+    if (modeOf(h.i) === 'FLYING' || bb[0] > vb.getNorth() || bb[2] < vb.getSouth() || bb[1] > vb.getEast() || bb[3] < vb.getWest()) continue;
+    speedRuns(h.i).forEach(function (r) {
+      var prev = -1, a = wpx(r.pts[0], s);
+      for (var j = 1; j < r.pts.length; j++) {
+        var b = wpx(r.pts[j], s);
+        if (Math.max(a[0], b[0]) < x0 || Math.min(a[0], b[0]) > x1 || Math.max(a[1], b[1]) < y0 || Math.min(a[1], b[1]) > y1) { a = b; prev = -1; continue; }
+        var n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / (C / 2)));
+        for (var q = j === 1 ? 0 : 1; q <= n; q++) {
+          var x = a[0] + (b[0] - a[0]) * q / n, y = a[1] + (b[1] - a[1]) * q / n, id = Math.floor(x / C) * R + Math.floor(y / C);
+          cell(id, x, y);
+          if (prev >= 0 && id !== prev) {
+            var key = prev < id ? prev + '_' + id : id + '_' + prev, l = links.get(key);
+            if (!l) links.set(key, l = { a: prev, b: id, v: 0, n: 0 });
+            l.v += r.v; l.n++;
+          }
+          prev = id;
+        }
+        a = b;
+      }
+    });
+  }
+  // One line per colour and thickness.
+  var by = {};
+  links.forEach(function (l) {
+    var A = cells.get(l.a), B = cells.get(l.b), w = l.n < 3 ? 0 : l.n < 10 ? 1 : 2, key = speedBand(l.v / l.n) * 3 + w;
+    (by[key] || (by[key] = [])).push([wll(A.x / A.n, A.y / A.n, s), wll(B.x / B.n, B.y / B.n, s)]);
   });
+  Object.keys(by).map(Number).sort(function (p, q) { return p % 3 - q % 3 || p - q; }).forEach(function (key) {
+    speedLayer.addLayer(L.polyline(by[key], { renderer: renderer, color: SPEED_COLORS[Math.floor(key / 3)], weight: [2.5, 3.5, 5][key % 3], opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
+  });
+}
+// After a zoom, or moving beyond what was gathered, gather again.
+function speedMoved() {
+  if (!PREFS.speedPaths || !map.hasLayer(speedLayer)) return;
+  var b = speedLayer._b;
+  if (speedLayer._z !== map.getZoom() || !b || !b.contains(map.getBounds())) buildSpeed();
 }
 function speedLegend() {
   var lab = SPEED_BANDS.map(function (v) { return fmt(distVal(v)); });
@@ -5125,7 +5193,7 @@ function exportFilters() {
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
   if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
   if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
-  if (F.gear.size !== M.gear.length) o.gear = [0].concat(gearOrder()).filter(function (g) { return F.gear.has(g); }).map(function (g) { return M.gear[g].name; });
+  if (F.gear.size !== gearIds().length) o.gear = gearIds().filter(function (g) { return F.gear.has(g); }).map(gearName);
   return o;
 }
 function rawStay(v) {
@@ -5390,8 +5458,8 @@ function scrubTo(v) {
       pathLayer.addLayer(curLine);
     }
     if (P_pos) {
-      var pm = posMode();
-      if (pm !== posMarker._mode) { posMarker.setIcon(posIcon(pm)); posMarker._mode = pm; }
+      var pm = posMode(), pk = pm && pm + '|' + posIc();
+      if (pk !== posMarker._mode) { posMarker.setIcon(posIcon(pm, posIc())); posMarker._mode = pk; }
       posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map);
     }
     else if (map.hasLayer(posMarker)) map.removeLayer(posMarker);
@@ -5487,9 +5555,22 @@ function followPlay() {
 // The position marker: while a trip is under way it shows that trip's transport icon in
 // its colour; between trips (standing still) it is a plain grey dot.
 function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
-function posIcon(m) {
+// A Strava ride on a Halfbike or cargo bike shows that bike.
+function posIc() { return P_cur ? tripIcon(P_cur.i) || 'UNKNOWN' : null; }
+function posIcon(m, ic) {
   if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
-  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(ic || m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+}
+// The line-drawn gear icons as images, for the canvas of the other map views.
+var lineIconImg = {};
+function lineIconImage(name) {
+  if (!lineIconImg[name]) {
+    var im = new Image();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="#fff" color="#fff">' + LINE_ICONS[name] + '</svg>');
+    im.onload = function () { if (P && P.proj) paintProj(playing); };
+    lineIconImg[name] = im;
+  }
+  return lineIconImg[name].complete && lineIconImg[name].naturalWidth ? lineIconImg[name] : null;
 }
 $('scrub').addEventListener('input', function () { stopPlay(); scrubTo(+this.value); });
 function stopPlay() {
@@ -6126,8 +6207,12 @@ function paintProj(fast) {
         var col = cssVar(groupOf(pm).v);
         ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
-        ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
-        ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+        var ic = posIc(), img = LINE_ICONS[ic] && lineIconImage(ic);
+        if (img) ctx.drawImage(img, xy[0] - 8, xy[1] - 8, 16, 16);
+        else {
+          ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
+          ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+        }
       } else {
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
         ctx.fillStyle = cssVar('--pos-still'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
@@ -7330,7 +7415,14 @@ function renderCo2() {
 document.querySelector('#insightsPage .cards').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-i],[data-day],[data-place],[data-gear]');
   if (!b) return;
-  if (b.dataset.gear) { F.gear = new Set([+b.dataset.gear]); syncFilterUI(); apply(); toast('Showing only ' + M.gear[+b.dataset.gear].name + '. Change it under Gear in Filters.'); }
+  if (b.dataset.gear) {
+    // Only this gear's trips: the types it was used for on (with their sports), every other type and gear off.
+    var g = +b.dataset.gear, used = M.gear[g].modes;
+    M.modes.forEach(function (m) { setMode(m, !!used[m]); });
+    F.gear = new Set([g]);
+    syncFilterUI(); apply();
+    toast('Showing only ' + M.gear[g].name + '. Change it under Transport in Filters.');
+  }
   else if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
   else if (b.dataset.day) { setTab('map'); showDay(+b.dataset.day); }
   else if (!openPlace(+b.dataset.place)) {

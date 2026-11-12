@@ -81,6 +81,8 @@ function initMap() {
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
   posMarker._mode = null;
+  var spT = 0;
+  map.on('moveend', function () { clearTimeout(spT); spT = setTimeout(speedMoved, 120); });
   map.on('click', function (e) { onMapTap(map.latLngToContainerPoint(e.latlng), e.originalEvent); });
   if (!coarse) {
     var raf = 0, last = null;
@@ -160,7 +162,7 @@ function layerToggles() {
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
   if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
-  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._u !== PREFS.unit)) buildSpeed();
+  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
 }
 
 // ---------- explorer squares ----------
@@ -257,43 +259,90 @@ function sqLegend() {
 }
 
 // ---------- speed paths ----------
-// Every trip but flights, its line cut into stretches coloured by the speed along them. A stretch
-// runs from one GPS point to the next, joined with the next ones until it lasts 20 seconds, so a
-// dense recording (Strava) doesn't turn GPS jitter into speed. A trip with no points between its
-// ends is one stretch at its average speed. Stretches of one colour are drawn as one line, so
-// tens of thousands of trips stay quick.
+// The average speed of the trips shown along each stretch of the map, leaving out flights.
+// Each trip's line is cut into stretches from one GPS point to the next, joined with the next
+// ones until they last 20 seconds, so a dense recording (Strava) doesn't turn GPS jitter into
+// speed; a trip with only its ends is one stretch at its average speed. The lines are then
+// followed through a grid of 10-pixel cells at the map's zoom: every move from one cell to the
+// next adds that stretch's speed to the link between the two cells, and each link is drawn
+// between the middles of the points that fell in its cells, coloured by the average speed of
+// everything that passed and thicker where more trips did. Only what's near the view is
+// gathered, again after zooming or moving away, so it stays quick with tens of thousands of trips.
 var SPEED_BANDS = [5, 10, 15, 25, 50, 80, 120];
 var SPEED_COLORS = ['#d7301f', '#f46d43', '#fdae61', '#fee08b', '#a6d96a', '#1a9850', '#2b83ba', '#5e3c99'];
+var SPEED_CELL = 10;
 function speedBand(kmh) { for (var b = 0; b < SPEED_BANDS.length; b++) if (kmh < SPEED_BANDS[b]) return b; return SPEED_BANDS.length; }
+// A trip's line as stretches of at least 20 seconds, each with its speed (km/h).
 function speedRuns(i) {
   var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
   if (p.length < 2) return out;
   var hrs = (D.end[i] - D.start[i]) / 36e5, avg = hrs > 0 ? D.km[i] / hrs : 0;
-  if (p.length === 2 || !(ts[ts.length - 1] > 0)) { out.push({ b: speedBand(avg), pts: p }); return out; }
+  if (p.length === 2 || !(ts[ts.length - 1] > 0)) { out.push({ v: avg, pts: p }); return out; }
   var a = 0;
   while (a < p.length - 1) {
     var z = a + 1, km = haversine(p[a], p[z]);
     while (z < p.length - 1 && ts[z] - ts[a] < 20) { km += haversine(p[z], p[z + 1]); z++; }
-    var dt = ts[z] - ts[a], v = dt > 0 ? km / (dt / 3600) : avg, b = speedBand(v), last = out[out.length - 1];
-    var seg = p.slice(a, z + 1);
-    if (last && last.b === b) { seg.shift(); Array.prototype.push.apply(last.pts, seg); } else out.push({ b: b, pts: seg });
+    var dt = ts[z] - ts[a];
+    out.push({ v: dt > 0 ? km / (dt / 3600) : avg, pts: p.slice(a, z + 1) });
     a = z;
   }
   return out;
 }
+function wpx(ll, s) {
+  var la = Math.max(-85.05, Math.min(85.05, ll[0])) * Math.PI / 180;
+  return [(ll[1] + 180) / 360 * s, (1 - Math.log(Math.tan(la) + 1 / Math.cos(la)) / Math.PI) / 2 * s];
+}
+function wll(x, y, s) { return [180 / Math.PI * Math.atan(Math.sinh(Math.PI - 2 * Math.PI * y / s)), x / s * 360 - 180]; }
 function buildSpeed() {
   speedLayer.clearLayers();
-  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit;
-  var by = SPEED_COLORS.map(function () { return []; });
-  for (var k = 0; k < sel.length; k++) {
-    var i = sel[k];
-    if (modeOf(i) === 'FLYING') continue;
-    speedRuns(i).forEach(function (r) { by[r.b].push(r.pts); });
+  var z = map.getZoom(), s = 256 * Math.pow(2, z), vb = map.getBounds().pad(0.5);
+  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit; speedLayer._z = z; speedLayer._b = vb;
+  var nw = wpx([vb.getNorth(), vb.getWest()], s), se = wpx([vb.getSouth(), vb.getEast()], s);
+  var x0 = nw[0], y0 = nw[1], x1 = se[0], y1 = se[1], C = SPEED_CELL, R = 1 << 25;
+  var cells = new Map(), links = new Map();
+  function cell(id, x, y) {
+    var c = cells.get(id);
+    if (!c) cells.set(id, c = { x: 0, y: 0, n: 0 });
+    c.x += x; c.y += y; c.n++;
   }
-  // Slow first, so the faster stretches on a shared road draw on top.
-  by.forEach(function (parts, b) {
-    if (parts.length) speedLayer.addLayer(L.polyline(parts, { renderer: renderer, color: SPEED_COLORS[b], weight: LINE_W + 0.5, opacity: 0.85, lineCap: 'round', lineJoin: 'round', interactive: false }));
+  for (var k = 0; k < hits.length; k++) {
+    var h = hits[k], bb = h.bb;
+    if (modeOf(h.i) === 'FLYING' || bb[0] > vb.getNorth() || bb[2] < vb.getSouth() || bb[1] > vb.getEast() || bb[3] < vb.getWest()) continue;
+    speedRuns(h.i).forEach(function (r) {
+      var prev = -1, a = wpx(r.pts[0], s);
+      for (var j = 1; j < r.pts.length; j++) {
+        var b = wpx(r.pts[j], s);
+        if (Math.max(a[0], b[0]) < x0 || Math.min(a[0], b[0]) > x1 || Math.max(a[1], b[1]) < y0 || Math.min(a[1], b[1]) > y1) { a = b; prev = -1; continue; }
+        var n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / (C / 2)));
+        for (var q = j === 1 ? 0 : 1; q <= n; q++) {
+          var x = a[0] + (b[0] - a[0]) * q / n, y = a[1] + (b[1] - a[1]) * q / n, id = Math.floor(x / C) * R + Math.floor(y / C);
+          cell(id, x, y);
+          if (prev >= 0 && id !== prev) {
+            var key = prev < id ? prev + '_' + id : id + '_' + prev, l = links.get(key);
+            if (!l) links.set(key, l = { a: prev, b: id, v: 0, n: 0 });
+            l.v += r.v; l.n++;
+          }
+          prev = id;
+        }
+        a = b;
+      }
+    });
+  }
+  // One line per colour and thickness.
+  var by = {};
+  links.forEach(function (l) {
+    var A = cells.get(l.a), B = cells.get(l.b), w = l.n < 3 ? 0 : l.n < 10 ? 1 : 2, key = speedBand(l.v / l.n) * 3 + w;
+    (by[key] || (by[key] = [])).push([wll(A.x / A.n, A.y / A.n, s), wll(B.x / B.n, B.y / B.n, s)]);
   });
+  Object.keys(by).map(Number).sort(function (p, q) { return p % 3 - q % 3 || p - q; }).forEach(function (key) {
+    speedLayer.addLayer(L.polyline(by[key], { renderer: renderer, color: SPEED_COLORS[Math.floor(key / 3)], weight: [2.5, 3.5, 5][key % 3], opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
+  });
+}
+// After a zoom, or moving beyond what was gathered, gather again.
+function speedMoved() {
+  if (!PREFS.speedPaths || !map.hasLayer(speedLayer)) return;
+  var b = speedLayer._b;
+  if (speedLayer._z !== map.getZoom() || !b || !b.contains(map.getBounds())) buildSpeed();
 }
 function speedLegend() {
   var lab = SPEED_BANDS.map(function (v) { return fmt(distVal(v)); });
@@ -579,7 +628,7 @@ function exportFilters() {
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
   if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
   if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
-  if (F.gear.size !== M.gear.length) o.gear = [0].concat(gearOrder()).filter(function (g) { return F.gear.has(g); }).map(function (g) { return M.gear[g].name; });
+  if (F.gear.size !== gearIds().length) o.gear = gearIds().filter(function (g) { return F.gear.has(g); }).map(gearName);
   return o;
 }
 function rawStay(v) {
@@ -844,8 +893,8 @@ function scrubTo(v) {
       pathLayer.addLayer(curLine);
     }
     if (P_pos) {
-      var pm = posMode();
-      if (pm !== posMarker._mode) { posMarker.setIcon(posIcon(pm)); posMarker._mode = pm; }
+      var pm = posMode(), pk = pm && pm + '|' + posIc();
+      if (pk !== posMarker._mode) { posMarker.setIcon(posIcon(pm, posIc())); posMarker._mode = pk; }
       posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map);
     }
     else if (map.hasLayer(posMarker)) map.removeLayer(posMarker);
@@ -941,9 +990,22 @@ function followPlay() {
 // The position marker: while a trip is under way it shows that trip's transport icon in
 // its colour; between trips (standing still) it is a plain grey dot.
 function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
-function posIcon(m) {
+// A Strava ride on a Halfbike or cargo bike shows that bike.
+function posIc() { return P_cur ? tripIcon(P_cur.i) || 'UNKNOWN' : null; }
+function posIcon(m, ic) {
   if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
-  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(ic || m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+}
+// The line-drawn gear icons as images, for the canvas of the other map views.
+var lineIconImg = {};
+function lineIconImage(name) {
+  if (!lineIconImg[name]) {
+    var im = new Image();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="#fff" color="#fff">' + LINE_ICONS[name] + '</svg>');
+    im.onload = function () { if (P && P.proj) paintProj(playing); };
+    lineIconImg[name] = im;
+  }
+  return lineIconImg[name].complete && lineIconImg[name].naturalWidth ? lineIconImg[name] : null;
 }
 $('scrub').addEventListener('input', function () { stopPlay(); scrubTo(+this.value); });
 function stopPlay() {
@@ -1580,8 +1642,12 @@ function paintProj(fast) {
         var col = cssVar(groupOf(pm).v);
         ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
-        ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
-        ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+        var ic = posIc(), img = LINE_ICONS[ic] && lineIconImage(ic);
+        if (img) ctx.drawImage(img, xy[0] - 8, xy[1] - 8, 16, 16);
+        else {
+          ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
+          ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+        }
       } else {
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
         ctx.fillStyle = cssVar('--pos-still'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
