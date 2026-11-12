@@ -68,9 +68,21 @@ var ICONS = {
   UNKNOWN: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z'
 };
 ICONS.VEHICLE = ICONS.CAR;
+// Gear icons drawn with lines rather than one filled path: the halfbike (a standing bike with a big
+// front wheel, two small ones at the back and a curved frame up to the handlebar) and a front-loading
+// cargo bike (the rider of the cycling icon behind a box over a small front wheel).
+var LINE_ICONS = {
+  halfbike: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7.27" cy="17.61" r="4.07"/><circle cx="19.04" cy="20.03" r="1.76"/>' +
+    '<path d="M8.59 3.31C8.59 3.31 3.29 14.33 6.37 16.64C9.43 18.97 12.86 15.01 17.72 19.37"/></g><circle cx="12.33" cy="17.28" r="1.5"/><circle cx="8.81" cy="2.98" r="1.35"/>',
+  cargobike: '<path transform="translate(-0.6 2.6) scale(.84)" d="CARGO_RIDER"/><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M13 12.2h8.6l-1.2 3.4a2 2 0 0 1-1.9 1.4H13z" fill="currentColor"/><circle cx="19.8" cy="20.4" r="1.8"/><path d="M9.4 19.4h8.4"/></g>'
+};
+LINE_ICONS.cargobike = LINE_ICONS.cargobike.replace('CARGO_RIDER', ICONS.CYCLING.slice(0, ICONS.CYCLING.indexOf('M19 12')));
 function icon(name, cls) {
+  var open = '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"';
+  if (LINE_ICONS[name]) return open + '>' + LINE_ICONS[name] + '</svg>';
   var d = ICONS[name] || ICONS.OTHER;
-  return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"' + (name === 'CABLE' || name === 'capsule' || name === 'moon' || name === 'rocket' || name === 'mars' ? ' fill-rule="evenodd"' : '') + '><path d="' + d + '"/></svg>';
+  return open + (name === 'CABLE' || name === 'capsule' || name === 'moon' || name === 'rocket' || name === 'mars' ? ' fill-rule="evenodd"' : '') + '><path d="' + d + '"/></svg>';
 }
 function fillIcons(root) {
   (root || document).querySelectorAll('[data-icon]').forEach(function (el) {
@@ -104,7 +116,9 @@ var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
 function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>' : ''; }
-function badge(m, small, strava) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(m) + (strava ? STRAVA_MARK : '') + '</span>'; }
+function badge(m, small, strava, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (strava ? STRAVA_MARK : '') + '</span>'; }
+// A ride on a cargo bike or a Halfbike shows that bike's icon.
+function tripIcon(i) { var g = D.gear ? D.gear[i] : 0; return g && (GEAR[g].kind === 'halfbike' || GEAR[g].kind === 'cargo') ? gearIcon(g) : modeOf(i); }
 
 // ---------- preferences ----------
 var PREFS_KEY = 'btdt.prefs';

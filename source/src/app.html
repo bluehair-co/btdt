@@ -226,6 +226,10 @@
           <div class="card-head"><div class="card-title"><h2 id="placesTitle">Top places</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="placesNote"></span></div>
           <div class="list-rows" id="topPlaces"></div>
         </section>
+        <section class="card" id="gearCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
+          <div class="list-rows" id="gearList"></div>
+        </section>
         <section class="card wide">
           <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
           <div class="records" id="records"></div>
@@ -331,6 +335,11 @@
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
       </div>
+    </div>
+    <div class="sec" id="gearSec" hidden>
+      <div class="sec-head"><h3>Gear</h3><div class="quick"><button type="button" data-q="gear" data-all="1">All</button><button type="button" data-q="gear" data-all="0">None</button></div></div>
+      <div class="chips" id="gearChips"></div>
+      <p class="fine">The bike or shoes a Strava activity was recorded with. Trips from Timeline have no gear.</p>
     </div>
     <div class="sec" id="srcWrap" hidden>
       <h3>Source</h3>

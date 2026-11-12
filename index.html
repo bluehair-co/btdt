@@ -261,6 +261,9 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge { position: relative; }
 .mode-badge .strava-mark { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 0 2px var(--panel); display: flex; align-items: center; justify-content: center; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
+.trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+.gear-kv { display: inline-flex; align-items: center; gap: 6px; }
+.gear-kv svg.ic { width: 18px; height: 18px; }
 .trip-head h3 { margin: 0; font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); }
 .trip-head p { margin: 0; font-size: 13px; color: var(--muted); }
 .kv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 20px; margin: 0; }
@@ -411,6 +414,8 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .rhythm-scale { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
 .rhythm-scale i { width: 12px; height: 10px; border-radius: 2px; display: block; }
 .list-rows { display: flex; flex-direction: column; }
+.gear-bar { display: block; height: 4px; border-radius: 2px; background: var(--grid); margin-top: 6px; overflow: hidden; }
+.gear-bar > i { display: block; height: 100%; border-radius: 2px; }
 .list-rows .hit-row:last-child { border-bottom: 0; }
 .rank { width: 22px; text-align: right; color: var(--muted); font-family: var(--font-mono); font-size: 12px; flex: none; }
 .flag { font-size: 20px; width: 34px; text-align: center; flex: none; }
@@ -996,6 +1001,10 @@ div.hit-row:hover { background: none; }
           <div class="card-head"><div class="card-title"><h2 id="placesTitle">Top places</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="placesNote"></span></div>
           <div class="list-rows" id="topPlaces"></div>
         </section>
+        <section class="card" id="gearCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
+          <div class="list-rows" id="gearList"></div>
+        </section>
         <section class="card wide">
           <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
           <div class="records" id="records"></div>
@@ -1101,6 +1110,11 @@ div.hit-row:hover { background: none; }
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
       </div>
+    </div>
+    <div class="sec" id="gearSec" hidden>
+      <div class="sec-head"><h3>Gear</h3><div class="quick"><button type="button" data-q="gear" data-all="1">All</button><button type="button" data-q="gear" data-all="0">None</button></div></div>
+      <div class="chips" id="gearChips"></div>
+      <p class="fine">The bike or shoes a Strava activity was recorded with. Trips from Timeline have no gear.</p>
     </div>
     <div class="sec" id="srcWrap" hidden>
       <h3>Source</h3>
@@ -2410,13 +2424,17 @@ function maybeGunzip(name, buf) { return /\.gz$/i.test(name) ? gunzip(buf) : Pro
 // GPX and TCX are small enough XML to read with patterns (Web Workers have no DOMParser).
 function attr(s, name) { var m = new RegExp('\\b' + name + '\\s*=\\s*["\']([^"\']+)').exec(s); return m ? parseFloat(m[1]) : NaN; }
 function tag(s, name) { var m = new RegExp('<(?:\\w+:)?' + name + '\\b[^>]*>([^<]*)<').exec(s); return m ? m[1].trim() : ''; }
+function xmlText(s) {
+  return s.replace(/^<!\[CDATA\[|\]\]>$/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&amp;/g, '&').trim();
+}
 function readGpx(txt) {
   var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, pts = [], ts = [];
   while ((m = re.exec(txt))) {
     var lat = attr(m[1], 'lat'), lng = attr(m[1], 'lon'), t = parseTime(tag(m[2], 'time'));
     if (t && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat || lng)) { pts.push([lat, lng]); ts.push(t.ms); }
   }
-  return { type: tag(txt, 'type'), pts: pts, ts: ts };
+  var trk = /<trk\b[^>]*>([\s\S]*?)<trkseg/.exec(txt);
+  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts };
 }
 function readTcx(txt) {
   var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
@@ -2512,7 +2530,9 @@ function addStrava(c, type, a, meta) {
   // A type BT•DT doesn't know is kept by name, to show on the trip.
   (c.stype || (c.stype = [])).push(st.sport ? '' : String(type == null || /^\d+$/.test(String(type).trim()) ? '' : type).trim());
   // What the export said about the activity, for the trip's raw data.
-  (c.smeta || (c.smeta = [])).push(Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {}));
+  var sm = Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {});
+  if (!sm.name && a.name) sm.name = a.name;
+  (c.smeta || (c.smeta = [])).push(sm);
   return true;
 }
 function finishStrava(c) {
@@ -2600,21 +2620,29 @@ function csvRows(txt) {
   if (cell || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
+// Each activity's type, name, description and gear by its file. Headers in English are found by
+// name; in another language the columns are Strava's usual order (name 3rd, description 5th, gear 12th).
 function stravaTypes(txt) {
-  var rows = csvRows(txt.replace(/^\uFEFF/, '')), head = rows[0] || [], ti = -1, fi = -1, out = {}, i;
+  var rows = csvRows(txt.replace(/^\uFEFF/, '')), head = rows[0] || [], ti = -1, fi = -1, ni = -1, di = -1, gi = -1, out = {}, i;
   for (i = 0; i < head.length; i++) {
     if (ti < 0 && /activity type/i.test(head[i])) ti = i;
     if (fi < 0 && /filename/i.test(head[i])) fi = i;
+    if (ni < 0 && /activity name/i.test(head[i])) ni = i;
+    if (di < 0 && /activity description/i.test(head[i])) di = i;
+    if (gi < 0 && /activity gear/i.test(head[i])) gi = i;
   }
+  var english = ti >= 0;
   // Headers in another language: find the file column by its values; the type is the fourth column.
   if (fi < 0 && rows[1]) for (i = 0; i < rows[1].length; i++) if (/^activities\//.test(rows[1][i])) fi = i;
   if (ti < 0) ti = 3;
+  if (!english) { ni = 2; di = 4; gi = head.length > 12 ? 11 : -1; }
   if (fi < 0) return out;
   // The first columns (ID, date, name, type, description, time, distance…) are kept for the trip's raw data.
   for (i = 1; i < rows.length; i++) if (rows[i][fi]) {
     var csv = {};
     for (var k = 0; k < Math.min(head.length, 13); k++) if (rows[i][k]) csv[head[k]] = rows[i][k];
-    out[rows[i][fi].trim()] = { type: rows[i][ti], csv: csv };
+    var r = rows[i], cell = function (k) { return k >= 0 && r[k] ? r[k].trim() : ''; };
+    out[r[fi].trim()] = { type: r[ti], csv: csv, name: cell(ni), desc: cell(di), gear: cell(gi) };
   }
   return out;
 }
@@ -2627,19 +2655,36 @@ function pickType(csvType, fileType) {
   if (c.sport || c.mode === null) return csvType;
   return stravaSport(fileType).sport ? fileType : csvType;
 }
+// bikes.csv and shoes.csv list your gear: whether a name is a bike or shoes, with its brand and model.
+function stravaGear(txt, kind, out) {
+  var rows = csvRows(txt.replace(/^\uFEFF/, ''));
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i], name = (r[0] || '').trim();
+    if (name) out[name] = { kind: kind, brand: (r[1] || '').trim(), model: (r[2] || '').trim() };
+  }
+  return out;
+}
 function parseStravaZip(file, all, onProgress) {
   return Promise.resolve(all).then(function (all) {
     var acts = all.filter(function (e) { return /(^|\/)activities\/[^/]+\.(gpx|tcx|fit)(\.gz)?$/i.test(e.name); });
     if (!acts.length) throw new Error(NO_STRAVA);
     var csv = all.filter(function (e) { return /(^|\/)activities\.csv$/i.test(e.name); })[0];
-    var c = new Collector(), types = {}, skipped = 0;
-    return (csv ? zipRead(file, csv).then(function (b) { types = stravaTypes(new TextDecoder().decode(b)); }) : Promise.resolve()).then(function step(_, i) {
+    var c = new Collector(), types = {}, skipped = 0, gear = {};
+    var gearFiles = all.filter(function (e) { return /(^|\/)(bikes|shoes)\.csv$/i.test(e.name); });
+    var ready = Promise.all(gearFiles.map(function (e) {
+      return zipRead(file, e).then(function (b) { stravaGear(new TextDecoder().decode(b), /bikes/i.test(e.name) ? 'bike' : 'shoe', gear); }).catch(function () {});
+    }));
+    return ready.then(function () { return csv ? zipRead(file, csv).then(function (b) { types = stravaTypes(new TextDecoder().decode(b)); }) : null; }).then(function step(_, i) {
       i = i || 0;
       if (i >= acts.length) { var r = finishStrava(c); r.skippedActs = skipped; return r; }
       var en = acts[i], key = en.name.replace(/^.*?(activities\/)/, '$1');
       return zipRead(file, en).then(function (b) { return maybeGunzip(en.name, b); }).then(function (b) {
         var a = readActivity(en.name, b), row = types[key], t = row && row.type;
-        if (!addStrava(c, pickType(t, a.type), a, { file: key, csvType: t == null ? null : t, csv: row ? row.csv : null })) skipped++;
+        var meta = { file: key, csvType: t == null ? null : t, csv: row ? row.csv : null };
+        if (row && row.name) meta.name = row.name;
+        if (row && row.desc) meta.desc = row.desc;
+        if (row && row.gear) { meta.gear = row.gear; if (gear[row.gear]) meta.gearInfo = gear[row.gear]; }
+        if (!addStrava(c, pickType(t, a.type), a, meta)) skipped++;
       }).catch(function () { skipped++; }).then(function () {
         if (i % 20 === 0) onProgress((i + 1) / acts.length);
         return step(null, i + 1);
@@ -2991,9 +3036,21 @@ var ICONS = {
   UNKNOWN: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z'
 };
 ICONS.VEHICLE = ICONS.CAR;
+// Gear icons drawn with lines rather than one filled path: the halfbike (a standing bike with a big
+// front wheel, two small ones at the back and a curved frame up to the handlebar) and a front-loading
+// cargo bike (the rider of the cycling icon behind a box over a small front wheel).
+var LINE_ICONS = {
+  halfbike: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7.27" cy="17.61" r="4.07"/><circle cx="19.04" cy="20.03" r="1.76"/>' +
+    '<path d="M8.59 3.31C8.59 3.31 3.29 14.33 6.37 16.64C9.43 18.97 12.86 15.01 17.72 19.37"/></g><circle cx="12.33" cy="17.28" r="1.5"/><circle cx="8.81" cy="2.98" r="1.35"/>',
+  cargobike: '<path transform="translate(-0.6 2.6) scale(.84)" d="CARGO_RIDER"/><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M13 12.2h8.6l-1.2 3.4a2 2 0 0 1-1.9 1.4H13z" fill="currentColor"/><circle cx="19.8" cy="20.4" r="1.8"/><path d="M9.4 19.4h8.4"/></g>'
+};
+LINE_ICONS.cargobike = LINE_ICONS.cargobike.replace('CARGO_RIDER', ICONS.CYCLING.slice(0, ICONS.CYCLING.indexOf('M19 12')));
 function icon(name, cls) {
+  var open = '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"';
+  if (LINE_ICONS[name]) return open + '>' + LINE_ICONS[name] + '</svg>';
   var d = ICONS[name] || ICONS.OTHER;
-  return '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"' + (name === 'CABLE' || name === 'capsule' || name === 'moon' || name === 'rocket' || name === 'mars' ? ' fill-rule="evenodd"' : '') + '><path d="' + d + '"/></svg>';
+  return open + (name === 'CABLE' || name === 'capsule' || name === 'moon' || name === 'rocket' || name === 'mars' ? ' fill-rule="evenodd"' : '') + '><path d="' + d + '"/></svg>';
 }
 function fillIcons(root) {
   (root || document).querySelectorAll('[data-icon]').forEach(function (el) {
@@ -3027,7 +3084,9 @@ var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
 function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>' : ''; }
-function badge(m, small, strava) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(m) + (strava ? STRAVA_MARK : '') + '</span>'; }
+function badge(m, small, strava, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (strava ? STRAVA_MARK : '') + '</span>'; }
+// A ride on a cargo bike or a Halfbike shows that bike's icon.
+function tripIcon(i) { var g = D.gear ? D.gear[i] : 0; return g && (GEAR[g].kind === 'halfbike' || GEAR[g].kind === 'cargo') ? gearIcon(g) : modeOf(i); }
 
 // ---------- preferences ----------
 var PREFS_KEY = 'btdt.prefs';
@@ -3557,6 +3616,7 @@ function setData(R) {
   for (i = 0; i < n; i++) { if (D.day[i] < minD) minD = D.day[i]; if (D.day[i] > maxD) maxD = D.day[i]; }
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
   if (!isFinite(minD)) minD = maxD = Math.floor(Date.now() / 864e5);
+  buildGear();
   var anyGuess = false;
   for (i = 0; i < n && !anyGuess; i++) if (D.est[i] & 4) anyGuess = true;
   M = {
@@ -3568,7 +3628,9 @@ function setData(R) {
     // Strava sports present, by mode, in the order SPORTS lists them.
     sports: Object.keys(sp).map(Number).sort(function (a, b) { return a - b; }), sportN: sp,
     // Modes with trips that have no sport (from Timeline, or a Strava type BT•DT doesn't know).
-    plain: plain
+    plain: plain,
+    // Gear from Strava (see buildGear): index 0 is trips with no gear.
+    gear: GEAR
   };
   F = defaultFilters();
   buildFilterUI();
@@ -3576,6 +3638,57 @@ function setData(R) {
   apply();
   renderSettings();
 }
+
+// ---------- Strava names and gear ----------
+// What activities.csv (or the activity file) says about a Strava trip: its name, description
+// and gear. Data loaded before these were kept still has activities.csv's first columns.
+function stravaInfo(i) {
+  var m = D.smeta && D.smeta[i];
+  if (!m) return null;
+  var c = m.csv || {};
+  return { name: m.name || c['Activity Name'] || '', desc: m.desc || c['Activity Description'] || '', gear: m.gear || c['Activity Gear'] || '', info: m.gearInfo || null };
+}
+function tripName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s.name || ''; }
+// Gear kinds by name, brand or model: front-loading cargo bikes and the Halfbike.
+var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiania|riese|\bgsd\b|douze|carqon|packster|triobike|workcycles|load ?60|load ?75|\bbakfi/i;
+var HALFBIKE_RE = /half ?bike|kolelinia/i;
+var GEAR = [{ name: 'No gear', n: 0 }];
+// D.gear numbers each trip's gear (0 = none). A gear's kind comes from bikes.csv and shoes.csv when
+// the export had them, else from what it was used for; its mode is the one it was used for most.
+function buildGear() {
+  var n = D.day.length, by = {}, i;
+  GEAR = [{ name: 'No gear', n: 0 }];
+  D.gear = new Uint16Array(n);
+  for (i = 0; i < n; i++) {
+    var s = D.est[i] & STRAVA && !isDup(i) ? stravaInfo(i) : null, name = s && s.gear;
+    if (!name) { if (!isDup(i)) GEAR[0].n++; continue; }
+    var g = by[name];
+    if (!g) { g = by[name] = GEAR.length; GEAR.push({ name: name, n: 0, modes: {}, info: s.info }); }
+    var x = GEAR[g], m = MODES[D.mode[i]];
+    if (s.info && !x.info) x.info = s.info;
+    D.gear[i] = g; x.n++; x.modes[m] = (x.modes[m] || 0) + 1;
+  }
+  for (var k = 1; k < GEAR.length; k++) {
+    var x_ = GEAR[k], best = null;
+    for (var mm in x_.modes) if (!best || x_.modes[mm] > x_.modes[best]) best = mm;
+    x_.mode = best;
+    var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.info && x_.info.kind;
+    if (kind !== 'shoe' && HALFBIKE_RE.test(words)) kind = 'halfbike';
+    else if (kind !== 'shoe' && CARGO_RE.test(words)) kind = 'cargo';
+    else if (!kind) kind = groupOf(best).key === 'bike' ? 'bike' : groupOf(best).key === 'foot' ? 'shoe' : 'other';
+    x_.kind = kind;
+    if (kind !== 'shoe' && kind !== 'other') x_.mode = 'CYCLING';
+  }
+}
+function gearIds() { return GEAR.map(function (_, k) { return k; }); }
+// Gear most used first.
+function gearOrder() { return gearIds().slice(1).sort(function (a, b) { return GEAR[b].n - GEAR[a].n; }); }
+function gearIcon(g) {
+  var x = GEAR[g];
+  return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
+}
+var GEAR_KIND = { halfbike: 'Halfbike', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes' };
+function gearKind(g) { var x = GEAR[g]; return GEAR_KIND[x.kind] || LABEL[x.mode] || 'Gear'; }
 
 // ---------- filters ----------
 var modeTreeOpen = {};
@@ -3598,7 +3711,8 @@ function defaultFilters() {
   return {
     dm: 'one', one: navHome(), unit: 'week', from: wk[0], to: wk[1],
     years: new Set(M.years), months: new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]), dows: new Set([0, 1, 2, 3, 4, 5, 6]),
-    h0: 0, h1: 24, modes: new Set(M.modes), sports: new Set(M.sports), countries: new Set(M.countries), guess: 'all', src: 'all'
+    h0: 0, h1: 24, modes: new Set(M.modes), sports: new Set(M.sports), countries: new Set(M.countries), guess: 'all', src: 'all',
+    gear: new Set(gearIds())
   };
 }
 function activeFilters() {
@@ -3612,6 +3726,7 @@ function activeFilters() {
   if (F.countries.size !== M.countries.length) k++;
   if (F.guess !== 'all') k++;
   if (F.src !== 'all') k++;
+  if (F.gear.size !== M.gear.length) k++;
   return k;
 }
 // Years and months only apply to All, and days of the week to All and Date range: a date
@@ -3636,7 +3751,7 @@ function dayOk(d) {
 function apply() {
   var ord = D.order, out = [], nav = {}, k, i;
   var modeOk = MODES.map(function (m) { return F.modes.has(m); });
-  var allCC = F.countries.size === M.countries.length, anyHour = F.h0 === 0 && F.h1 === 24;
+  var allCC = F.countries.size === M.countries.length, anyHour = F.h0 === 0 && F.h1 === 24, allGear = F.gear.size === M.gear.length;
   for (k = 0; k < ord.length; k++) {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
@@ -3647,6 +3762,7 @@ function apply() {
     if (F.src !== 'timeline' && isDup(i)) continue;
     if (!anyHour && !hourOk(D.hour[i])) continue;
     if (!allCC && !F.countries.has(D.cs[i]) && !F.countries.has(D.ce[i])) continue;
+    if (!allGear && !F.gear.has(D.gear[i])) continue;
     nav[D.day[i]] = 1;
     if (dayOk(D.day[i])) out.push(i);
   }
@@ -3718,6 +3834,12 @@ function buildFilterUI() {
   $('ccSearch').hidden = M.countries.length < 12;
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
+  // Gear: one chip per bike or pair of shoes, most used first, then trips without gear.
+  $('gearSec').hidden = M.gear.length < 2;
+  $('gearChips').innerHTML = gearOrder().map(function (g) {
+    var x = M.gear[g];
+    return chipHtml('gear', g, '<span style="color:' + modeColor(x.mode) + ';display:flex">' + icon(gearIcon(g)) + '</span>' + esc(x.name), x.n);
+  }).join('') + (M.gear.length > 1 ? chipHtml('gear', 0, 'No gear', M.gear[0].n) : '');
   var h0 = '', h1 = '';
   for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
   for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
@@ -3790,7 +3912,7 @@ $('filtersSheet').addEventListener('click', function (ev) {
   } else if (b.dataset.q) {
     var all = b.dataset.all === '1', q = b.dataset.q;
     if (q === 'modes') F.sports = new Set(all ? M.sports : []);
-    F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries }[q] : []);
+    F[q] = new Set(all ? { years: M.years, months: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11], dows: [0, 1, 2, 3, 4, 5, 6], modes: M.modes, countries: M.countries, gear: gearIds() }[q] : []);
   } else if (b.dataset.dm === 'nav') {
     F = Object.assign(F, { dm: 'one', unit: 'week', one: navHome() });
     allCalendar();
@@ -4730,8 +4852,9 @@ function tripRows(i) {
     ['Straight line', isFinite(line) ? dist(line) : 'Unknown'],
     ['Average speed', ms > 0 ? speed(k / (ms / 36e5)) : 'Unknown'],
     ['CO₂', co2s(tripKg(i))],
+    D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + '</span>'] : null,
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
-  ];
+  ].filter(Boolean);
   var notes = [];
   if (e & 16) notes.push(D.repl[i] ? 'Recorded on Strava. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded on Strava. Timeline has no trip at this time.');
   if (isDup(i)) notes.push('Strava recorded this trip too. It shows here because Timeline is the only source chosen; with Strava included, the Strava activity takes its place.');
@@ -4747,15 +4870,21 @@ function tripRows(i) {
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
 }
+// A Strava activity's own name is the title, with its sport under it.
 function tripHead(i, sub) {
-  var m = modeOf(i), r = tripRows(i);
-  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16) + '<div><h3>' + tripLabel(i) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
+  var m = modeOf(i), r = tripRows(i), name = tripName(i);
+  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16, tripIcon(i)) + '<div><h3>' + (name ? esc(name) : tripLabel(i)) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (name ? tripLabel(i) + ' · ' : '') + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
+}
+// A Strava activity's description, as written.
+function tripDesc(i) {
+  var s = D.est[i] & STRAVA && stravaInfo(i);
+  return s && s.desc ? '<p class="trip-desc">' + esc(s.desc).replace(/\n/g, '<br>') + '</p>' : '';
 }
 function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -4845,6 +4974,7 @@ function exportFilters() {
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
   if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
   if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
+  if (F.gear.size !== M.gear.length) o.gear = [0].concat(gearOrder()).filter(function (g) { return F.gear.has(g); }).map(function (g) { return M.gear[g].name; });
   return o;
 }
 function rawStay(v) {
@@ -5919,7 +6049,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderGear(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -6561,6 +6691,28 @@ function renderPlaces() {
       '<span class="r num">' + (useStays ? hoursLabel(o.h).replace(/ \d+ min$/, '') : fmt(o.n) + '<small>trips</small>') + '</span></button>';
   }).join('');
 }
+// Each bike and pair of shoes in the trips shown: distance, activities and when it was used.
+function renderGear() {
+  var by = {}, j, i;
+  for (j = 0; j < sel.length; j++) {
+    i = sel[j];
+    var g = D.gear[i];
+    if (!g) continue;
+    var x = by[g] || (by[g] = { g: g, km: 0, n: 0, d0: D.day[i], d1: D.day[i] });
+    x.km += D.km[i]; x.n++; x.d1 = D.day[i];
+  }
+  var list = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.km - a.km; });
+  $('gearCard').hidden = !list.length;
+  if (!list.length) return;
+  var max = list[0].km;
+  $('gearList').innerHTML = list.map(function (x) {
+    var G = M.gear[x.g], d = distParts(x.km);
+    return '<button type="button" class="hit-row gear-row" data-gear="' + x.g + '"><span class="mode-badge sm" style="background:' + modeColor(G.mode) + '">' + icon(gearIcon(x.g)) + '</span>' +
+      '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + ' activit' + (x.n === 1 ? 'y' : 'ies') + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
+      '<i class="gear-bar"><i style="width:' + (x.km / max * 100).toFixed(1) + '%;background:' + modeColor(G.mode) + '"></i></i></span>' +
+      '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
+  }).join('');
+}
 function renderRecords() {
   var best = {}, j, i, byDay = {};
   function rec(key, i_, v) { if (v > 0 && (!best[key] || v > best[key].v)) best[key] = { i: i_, v: v }; }
@@ -7001,9 +7153,10 @@ function renderCo2() {
     }).join('') : '<p class="empty">No emissions from these trips.</p>') + '</div>';
 }
 document.querySelector('#insightsPage .cards').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-i],[data-day],[data-place]');
+  var b = ev.target.closest('[data-i],[data-day],[data-place],[data-gear]');
   if (!b) return;
-  if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
+  if (b.dataset.gear) { F.gear = new Set([+b.dataset.gear]); syncFilterUI(); apply(); toast('Showing only ' + M.gear[+b.dataset.gear].name + '. Change it under Gear in Filters.'); }
+  else if (b.dataset.i) { setTab('timeline'); tlSelect(+b.dataset.i, true); }
   else if (b.dataset.day) { setTab('map'); showDay(+b.dataset.day); }
   else if (!openPlace(+b.dataset.place)) {
     // A place you only reached by trip (no stays there) has no page: show it on the map.
@@ -7406,8 +7559,8 @@ function tlRender(force) {
       out += '<div class="tl-item tl-day" ' + top + '><b>' + longDate(d) + '</b><span>' + tripsText(pd.n) + ' · ' + dist(pd.km) + '</span></div>';
     } else if (TL.type[k] === 1) {
       var i = TL.ref[k], m = modeOf(i), ms = D.end[i] - D.start[i];
-      out += '<div class="tl-item" ' + top + '><button type="button" class="tl-trip" data-i="' + i + '" aria-pressed="' + (i === TL.sel) + '">' + badge(m, false, D.est[i] & 16) +
-        '<span class="t"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · Strava' : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
+      out += '<div class="tl-item" ' + top + '><button type="button" class="tl-trip" data-i="' + i + '" aria-pressed="' + (i === TL.sel) + '">' + badge(m, false, D.est[i] & 16, tripIcon(i)) +
+        '<span class="t"><b>' + esc(tripName(i) || tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · Strava' : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
         '<span class="r">' + dist(D.km[i]) + '<small>' + (ms > 0 ? duration(ms) : '') + '</small></span></button></div>';
     } else {
       out += '<div class="tl-item tl-end" ' + top + '>' + (sel.length ? 'That\'s all ' + tripsText(sel.length) + ' for ' + esc(filterText()) + '.' : 'No trips match your filters.') + '</div>';

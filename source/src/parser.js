@@ -1170,13 +1170,17 @@ function maybeGunzip(name, buf) { return /\.gz$/i.test(name) ? gunzip(buf) : Pro
 // GPX and TCX are small enough XML to read with patterns (Web Workers have no DOMParser).
 function attr(s, name) { var m = new RegExp('\\b' + name + '\\s*=\\s*["\']([^"\']+)').exec(s); return m ? parseFloat(m[1]) : NaN; }
 function tag(s, name) { var m = new RegExp('<(?:\\w+:)?' + name + '\\b[^>]*>([^<]*)<').exec(s); return m ? m[1].trim() : ''; }
+function xmlText(s) {
+  return s.replace(/^<!\[CDATA\[|\]\]>$/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&amp;/g, '&').trim();
+}
 function readGpx(txt) {
   var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, pts = [], ts = [];
   while ((m = re.exec(txt))) {
     var lat = attr(m[1], 'lat'), lng = attr(m[1], 'lon'), t = parseTime(tag(m[2], 'time'));
     if (t && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat || lng)) { pts.push([lat, lng]); ts.push(t.ms); }
   }
-  return { type: tag(txt, 'type'), pts: pts, ts: ts };
+  var trk = /<trk\b[^>]*>([\s\S]*?)<trkseg/.exec(txt);
+  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts };
 }
 function readTcx(txt) {
   var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
@@ -1272,7 +1276,9 @@ function addStrava(c, type, a, meta) {
   // A type BT•DT doesn't know is kept by name, to show on the trip.
   (c.stype || (c.stype = [])).push(st.sport ? '' : String(type == null || /^\d+$/.test(String(type).trim()) ? '' : type).trim());
   // What the export said about the activity, for the trip's raw data.
-  (c.smeta || (c.smeta = [])).push(Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {}));
+  var sm = Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {});
+  if (!sm.name && a.name) sm.name = a.name;
+  (c.smeta || (c.smeta = [])).push(sm);
   return true;
 }
 function finishStrava(c) {
@@ -1360,21 +1366,29 @@ function csvRows(txt) {
   if (cell || row.length) { row.push(cell); rows.push(row); }
   return rows;
 }
+// Each activity's type, name, description and gear by its file. Headers in English are found by
+// name; in another language the columns are Strava's usual order (name 3rd, description 5th, gear 12th).
 function stravaTypes(txt) {
-  var rows = csvRows(txt.replace(/^\uFEFF/, '')), head = rows[0] || [], ti = -1, fi = -1, out = {}, i;
+  var rows = csvRows(txt.replace(/^\uFEFF/, '')), head = rows[0] || [], ti = -1, fi = -1, ni = -1, di = -1, gi = -1, out = {}, i;
   for (i = 0; i < head.length; i++) {
     if (ti < 0 && /activity type/i.test(head[i])) ti = i;
     if (fi < 0 && /filename/i.test(head[i])) fi = i;
+    if (ni < 0 && /activity name/i.test(head[i])) ni = i;
+    if (di < 0 && /activity description/i.test(head[i])) di = i;
+    if (gi < 0 && /activity gear/i.test(head[i])) gi = i;
   }
+  var english = ti >= 0;
   // Headers in another language: find the file column by its values; the type is the fourth column.
   if (fi < 0 && rows[1]) for (i = 0; i < rows[1].length; i++) if (/^activities\//.test(rows[1][i])) fi = i;
   if (ti < 0) ti = 3;
+  if (!english) { ni = 2; di = 4; gi = head.length > 12 ? 11 : -1; }
   if (fi < 0) return out;
   // The first columns (ID, date, name, type, description, time, distance…) are kept for the trip's raw data.
   for (i = 1; i < rows.length; i++) if (rows[i][fi]) {
     var csv = {};
     for (var k = 0; k < Math.min(head.length, 13); k++) if (rows[i][k]) csv[head[k]] = rows[i][k];
-    out[rows[i][fi].trim()] = { type: rows[i][ti], csv: csv };
+    var r = rows[i], cell = function (k) { return k >= 0 && r[k] ? r[k].trim() : ''; };
+    out[r[fi].trim()] = { type: r[ti], csv: csv, name: cell(ni), desc: cell(di), gear: cell(gi) };
   }
   return out;
 }
@@ -1387,19 +1401,36 @@ function pickType(csvType, fileType) {
   if (c.sport || c.mode === null) return csvType;
   return stravaSport(fileType).sport ? fileType : csvType;
 }
+// bikes.csv and shoes.csv list your gear: whether a name is a bike or shoes, with its brand and model.
+function stravaGear(txt, kind, out) {
+  var rows = csvRows(txt.replace(/^\uFEFF/, ''));
+  for (var i = 1; i < rows.length; i++) {
+    var r = rows[i], name = (r[0] || '').trim();
+    if (name) out[name] = { kind: kind, brand: (r[1] || '').trim(), model: (r[2] || '').trim() };
+  }
+  return out;
+}
 function parseStravaZip(file, all, onProgress) {
   return Promise.resolve(all).then(function (all) {
     var acts = all.filter(function (e) { return /(^|\/)activities\/[^/]+\.(gpx|tcx|fit)(\.gz)?$/i.test(e.name); });
     if (!acts.length) throw new Error(NO_STRAVA);
     var csv = all.filter(function (e) { return /(^|\/)activities\.csv$/i.test(e.name); })[0];
-    var c = new Collector(), types = {}, skipped = 0;
-    return (csv ? zipRead(file, csv).then(function (b) { types = stravaTypes(new TextDecoder().decode(b)); }) : Promise.resolve()).then(function step(_, i) {
+    var c = new Collector(), types = {}, skipped = 0, gear = {};
+    var gearFiles = all.filter(function (e) { return /(^|\/)(bikes|shoes)\.csv$/i.test(e.name); });
+    var ready = Promise.all(gearFiles.map(function (e) {
+      return zipRead(file, e).then(function (b) { stravaGear(new TextDecoder().decode(b), /bikes/i.test(e.name) ? 'bike' : 'shoe', gear); }).catch(function () {});
+    }));
+    return ready.then(function () { return csv ? zipRead(file, csv).then(function (b) { types = stravaTypes(new TextDecoder().decode(b)); }) : null; }).then(function step(_, i) {
       i = i || 0;
       if (i >= acts.length) { var r = finishStrava(c); r.skippedActs = skipped; return r; }
       var en = acts[i], key = en.name.replace(/^.*?(activities\/)/, '$1');
       return zipRead(file, en).then(function (b) { return maybeGunzip(en.name, b); }).then(function (b) {
         var a = readActivity(en.name, b), row = types[key], t = row && row.type;
-        if (!addStrava(c, pickType(t, a.type), a, { file: key, csvType: t == null ? null : t, csv: row ? row.csv : null })) skipped++;
+        var meta = { file: key, csvType: t == null ? null : t, csv: row ? row.csv : null };
+        if (row && row.name) meta.name = row.name;
+        if (row && row.desc) meta.desc = row.desc;
+        if (row && row.gear) { meta.gear = row.gear; if (gear[row.gear]) meta.gearInfo = gear[row.gear]; }
+        if (!addStrava(c, pickType(t, a.type), a, meta)) skipped++;
       }).catch(function () { skipped++; }).then(function () {
         if (i % 20 === 0) onProgress((i + 1) / acts.length);
         return step(null, i + 1);
