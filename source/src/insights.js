@@ -119,9 +119,10 @@ function muskArt(share) {
 // Marco Polo: Venice to Kublai Khan's China and back over land, so only trips on the ground count (road,
 // public transport, on foot and cycling). Odd legs head east along a winding Silk Road, even legs come home.
 var POLO_KM = 12000, LAND = { road: 1, transit: 1, foot: 1, bike: 1 };
-function renderPolo() {
+function renderPolo(g) {
   var km = 0, j;
   for (j = 0; j < sel.length; j++) if (LAND[groupOf(MODES[D.mode[sel[j]]]).key]) km += D.km[sel[j]];
+  km *= g;
   FAR.notes[0] = 'How far your trips over land here would take you along the Silk Road from Venice to China, about ' + dist(POLO_KM) + ', and back. Only road, public transport, walking and cycling count; flights and boats don\'t.';
   var legs = km / POLO_KM, leg = Math.floor(legs), part = legs - leg, back = leg % 2 === 1, trips = Math.floor(leg / 2), left = dist(POLO_KM - part * POLO_KM), value, sub, note;
   if (legs < 1) { value = farPct(legs) + '%'; sub = 'of the way to China'; note = left + ' still to go to Kublai Khan\'s court'; }
@@ -168,9 +169,10 @@ function smoothPts(P, closed, per) {
   }
   return out;
 }
-function renderMerckx() {
+function renderMerckx(g) {
   var km = 0, j;
   for (j = 0; j < sel.length; j++) if (groupOf(MODES[D.mode[sel[j]]]).key === 'bike') km += D.km[sel[j]];
+  km *= g;
   FAR.notes[1] = 'How many Tours de France your bike rides here add up to, at about ' + dist(TOUR_KM) + ' in 21 stages each. Only cycling counts.';
   var tours = km / TOUR_KM, done = Math.floor(tours), part = tours - done, stage = Math.min(21, Math.floor(part * 21) + 1), left = dist(TOUR_KM - part * TOUR_KM), value, sub, note;
   if (!km) { value = '0'; sub = 'stages ridden'; note = 'No bike rides in these trips yet'; }
@@ -204,8 +206,8 @@ function yearsText(y) {
   if (y < 1e6) return fmt(y, y < 10 ? 1 : 0) + ' years';
   return 'over a million years';
 }
-function renderMusk(kmT) {
-  var share = kmT / MARS_KM, left = MARS_KM - kmT, note, value, sub;
+function renderMusk(g) {
+  var kmT = FAR.km * g, share = kmT / MARS_KM, left = MARS_KM - kmT, note, value, sub;
   var d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], perDay = kmT / Math.max(1, d1 - d0 + 1);
   FAR.notes[4] = 'How far your trips here would take you towards Mars when it\'s closest, about ' + bigDist(MARS_KM) + ' away (it averages ' + bigDist(225e6) + ', and is ' + bigDist(401e6) + ' away on the far side of the Sun). The line is to scale: while your rocket is too close to the Earth to see, the magnifier zooms in on it. The pace is your distance per day over these dates.';
   if (share < 1) { value = marsPct(share) + '%'; sub = 'of the way to Mars'; note = dist(left) + ' still to go' + (perDay > 0 ? '. At this pace you\'d land in ' + yearsText(left / perDay / 365.25) : ''); }
@@ -222,24 +224,25 @@ function bigDist(km) {
   return v >= 1e9 ? fmt(v / 1e9, 1) + ' billion' + u : v >= 1e6 ? fmt(v / 1e6, 1) + ' million' + u : dist(km);
 }
 function raceTime(h) { return h * 60 < 1 ? fmt(Math.max(1, Math.round(h * 3600))) + ' s' : hoursLabel(h); }
-function renderVoyager(kmT) {
-  var dV = voyagerKm(), raceH = kmT / VOY_KMH, d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], span = d1 - d0 + 1;
+// Playing it runs the race: Voyager rides from the start to the flag (g of the way) and you keep your pace.
+function renderVoyager(g) {
+  var kmT = FAR.km, dV = voyagerKm(), raceH = kmT / VOY_KMH, d0 = D.day[sel[0]], d1 = D.day[sel[sel.length - 1]], span = d1 - d0 + 1;
   var youF = Math.min(1, raceH / (span * 24)), faster = VOY_KMH / Math.max(1e-9, kmT / (span * 24)), share = kmT / dV, ratio = VOY_PER_DAY / Math.max(1, kmT);
   FAR.notes[5] = 'It\'s the farthest thing people have made: about ' + bigDist(dV) + ' away, a light-day, and moving at about ' + fmt(distVal(VOY_KMH)) + ' ' + distUnit() + '/h. ' +
     'The race is your distance here against Voyager over the same distance, with you going at your average pace for these dates. Zoom out for the whole way to Voyager.';
   var out = FAR.zoom;
   function art(W, cls) {
-  var x0 = 96, x1 = W - 80, youX = x0 + (x1 - x0) * youF;
+  var x0 = 96, x1 = W - 80, youX = x0 + (x1 - x0) * youF * g, vX = x0 + (x1 - x0) * g;
   var race = '<g class="v-race">' +
     '<line x1="' + x1 + '" y1="30" x2="' + x1 + '" y2="148" stroke="var(--fg)" stroke-width="2" stroke-dasharray="4 4"/>' + glyph('flag', x1 + 12, 26, 20, 'var(--fg)') +
     '<text class="vl" x="' + (x1 + 30) + '" y="168" text-anchor="end">' + dist(kmT) + ', your distance</text>' +
-    '<text class="vl" x="16" y="66">Voyager</text><path class="trk" stroke-width="10" d="M' + x0 + ',62H' + x1 + '"/><path class="gold" stroke-width="10" d="M' + x0 + ',62H' + x1 + '"/>' +
-    rider(x1, 62, 'var(--m-foot)', 'var(--m-foot)', 'voyager', 24) +
+    '<text class="vl" x="16" y="66">Voyager</text><path class="trk" stroke-width="10" d="M' + x0 + ',62H' + x1 + '"/>' + (vX > x0 + 1 ? '<path class="gold" stroke-width="10" d="M' + x0 + ',62H' + vX.toFixed(1) + '"/>' : '') +
+    rider(vX, 62, 'var(--m-foot)', 'var(--m-foot)', 'voyager', 24) +
     '<text class="vl" x="16" y="122">You</text><path class="trk" stroke-width="10" d="M' + x0 + ',118H' + x1 + '"/>' +
     (youX > x0 + 1 ? '<path class="you" stroke-width="10" stroke="var(--accent)" stroke-linecap="round" d="M' + x0 + ',118H' + youX.toFixed(1) + '"/>' : '') +
     rider(youX, 118, 'var(--accent)', 'var(--accent)', 'pin', 20) +
-    (youF < .6 ? '<text class="vl" x="' + (youX + 20).toFixed(1) + '" y="102">' + dist(kmT * youF) + ' in, at your pace</text>' : '') +
-    '<g transform="translate(' + W / 2 + ',22)"><rect x="-74" y="-12" width="148" height="24" rx="12" fill="var(--chip-on-bg)"/><text class="vb" y="4.5" text-anchor="middle" style="fill:var(--chip-on-fg)">Race time ' + raceTime(raceH) + '</text></g></g>';
+    (youF < .6 ? '<text class="vl" x="' + (youX + 20).toFixed(1) + '" y="102">' + dist(kmT * youF * g) + ' in, at your pace</text>' : '') +
+    '<g transform="translate(' + W / 2 + ',22)"><rect x="-74" y="-12" width="148" height="24" rx="12" fill="var(--chip-on-bg)"/><text class="vb" y="4.5" text-anchor="middle" style="fill:var(--chip-on-fg)">Race time ' + raceTime(raceH * g) + '</text></g></g>';
   var c0 = 74, c1 = W - 54, X = function (km) { return c0 + (c1 - c0) * Math.min(1, km / dV); }, ja = X(.78e9), ne = X(4.5e9), hp = X(18e9);
   var chase = '<g class="v-chase"><path class="gold" stroke-width="10" d="M' + c0 + ',92H' + c1 + '"/>' + planet('earth', 40, 92, 48) +
     [.78e9, 1.43e9, 2.87e9, 4.5e9].map(function (k) { return '<circle cx="' + X(k).toFixed(1) + '" cy="92" r="3" fill="var(--bg)"/>'; }).join('') +
@@ -251,7 +254,7 @@ function renderVoyager(kmT) {
   return '<svg class="far-art mid ' + cls + (out ? ' out' : '') + '" viewBox="0 0 ' + W + ' 180" role="img" aria-label="' + (out ? marsPct(share) + '% of the way to Voyager 1' : 'Voyager covers your distance in ' + raceTime(raceH)) + '">' + race + chase + '</svg>';
   }
   $('voyager').innerHTML = art(640, 'far-n') + art(840, 'far-w') +
-    '<div class="far-stat v-stats"><div' + (out ? ' hidden' : '') + '>' + stat('', raceTime(raceH), 'for Voyager to go as far as you', 'You took ' + (span === 1 ? 'a day' : fmt(span) + ' days') + '. Voyager is ' + fmt(faster) + '× faster than your average pace') + '</div>' +
+    '<div class="far-stat v-stats"><div' + (out ? ' hidden' : '') + '>' + stat('', raceTime(raceH * g), 'for Voyager to go as far as you', 'You took ' + (span === 1 ? 'a day' : fmt(span) + ' days') + '. Voyager is ' + fmt(faster) + '× faster than your average pace') + '</div>' +
     '<div' + (out ? '' : ' hidden') + '>' + stat('', marsPct(share) + '%', 'of the way to Voyager 1', 'It\'s a light-day away and gets ' + bigDist(VOY_PER_DAY) + ' further every day' + (ratio >= 1.5 ? ': ' + fmt(ratio) + '× your distance here' : '')) + '</div></div>' +
     '<div class="v-foot"><button type="button" class="v-zoom" id="vZoom" aria-pressed="' + out + '">' + icon(out ? 'zoomIn' : 'zoomOut') + '<span>' + (out ? 'Back to the race' : 'Zoom out') + '</span></button></div>';
 }
@@ -276,11 +279,12 @@ var FAR_WHO = [
   'Elon Musk is planning to go to Mars... somewhere in the future.',
   'Voyager 1 was launched by NASA on 5 September 1977 and reached interstellar space in 2012.'
 ];
-var FAR = { i: 0, auto: true, key: -1, timer: 0, zoom: false, notes: [] };
+var FAR = { i: 0, auto: true, key: -1, timer: 0, zoom: false, notes: [], km: 0, g: 1, anim: 0 };
 var farSlides = Array.prototype.slice.call(document.querySelectorAll('#farTrack .far-slide'));
 $('farDots').innerHTML = farSlides.map(function (s, k) { return '<button type="button" data-far="' + k + '" aria-label="' + s.dataset.title + '"></button>'; }).join('');
-function farGo(k, user) {
+function farGo(k, user, still) {
   var n = farSlides.length;
+  if (FAR.anim && !still) { cancelAnimationFrame(FAR.anim); FAR.anim = 0; FAR_DRAW[FAR.i](1); }
   FAR.i = ((k % n) + n) % n;
   $('farTrack').style.transform = 'translateX(' + (-100 * FAR.i) + '%)';
   // The card is as tall as the score showing, so a short drawing doesn't leave a gap above the next card.
@@ -292,6 +296,7 @@ function farGo(k, user) {
   $('farTitle').setAttribute('aria-live', user ? 'polite' : 'off');
   $('farNote').innerHTML = '<span class="far-who">' + FAR_WHO[FAR.i] + '</span>' + (FAR.notes[FAR.i] || '');
   farSchedule();
+  if (!still) farPlay();
 }
 function farStop() { FAR.auto = false; clearTimeout(FAR.timer); }
 function farSchedule() {
@@ -332,25 +337,23 @@ function farRefresh() {
   var w0 = 0;
   if (window.ResizeObserver) new ResizeObserver(function () {
     var w = view.clientWidth;
-    if (w && Math.abs(w - w0) > 1) { w0 = w; if (sel.length) renderFar(); }
+    if (w && Math.abs(w - w0) > 1) { w0 = w; if (sel.length) renderFar(true); }
   }).observe(view);
 })();
-function renderFar() {
-  var kmT = 0, j, sea = 'var(--m-road)';
-  for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
-  FAR.notes[2] = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator.';
-  FAR.notes[3] = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back.';
-  // Magellan: a ring round the Earth from the top, clockwise; the caravel is where this lap has got to.
-  var laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, r = 70.5, cx = 82, cy = 82, th = lap * 2 * Math.PI, ks = farScale(farWidth());
+// Magellan: a ring round the Earth from the top, clockwise; the caravel is where this lap has got to.
+function renderMagellan(g) {
+  var kmT = FAR.km * g, laps = kmT / EARTH_KM, done = Math.floor(laps), lap = laps - done, r = 70.5, cx = 82, cy = 82, th = lap * 2 * Math.PI, ks = farScale(farWidth());
   var sx = cx + r * Math.sin(th), sy = cy - r * Math.cos(th), arc = lap > .002 ? '<path class="sea" d="M' + cx + ',' + (cy - r) + ' A' + r + ',' + r + ' 0 ' + (lap > .5 ? 1 : 0) + ',1 ' + sx.toFixed(1) + ',' + sy.toFixed(1) + '"/>' : '';
   $('magellan').innerHTML = '<svg class="far-art ring" viewBox="0 0 164 164" style="width:' + (164 * ks).toFixed(1) + 'px" role="img" aria-label="' + farPct(lap) + '% of the way round on lap ' + fmt(done + 1) + '">' +
     planet('earth', cx, cy, 128) + '<circle class="trk" cx="' + cx + '" cy="' + cy + '" r="' + r + '"/>' + arc +
-    rider(sx, sy, sea, '', 'caravel', 24, 0, -1) + '</svg>' +
+    rider(sx, sy, 'var(--m-road)', '', 'caravel', 24, 0, -1) + '</svg>' +
     '<div class="far-stat">' + (laps < 1
       ? stat('', farPct(laps) + '%', 'around the world', dist(EARTH_KM - kmT) + ' to go to make it all the way round')
       : stat('', fmt(laps, laps < 10 ? 2 : 1), '× around the world', (done === 1 ? 'Once round' : done === 2 ? 'Twice round' : fmt(done) + ' times round') + ', and ' + dist(EARTH_KM - lap * EARTH_KM) + ' from finishing lap ' + fmt(done + 1))) + '</div>';
-  // Armstrong: one leg is the Earth to the Moon. Odd legs head out along the top of the loop, even legs come home underneath.
-  var legs = kmT / MOON_KM, leg = Math.floor(legs), part = legs - leg, trips = Math.floor(leg / 2), back = leg % 2 === 1, left = dist(MOON_KM - part * MOON_KM);
+}
+// Armstrong: one leg is the Earth to the Moon. Odd legs head out along the top of the loop, even legs come home underneath.
+function renderArmstrong(g) {
+  var legs = FAR.km * g / MOON_KM, leg = Math.floor(legs), part = legs - leg, trips = Math.floor(leg / 2), back = leg % 2 === 1, left = dist(MOON_KM - part * MOON_KM);
   var f = (back ? .5 : 0) + part / 2, sub, note, value;
   if (legs < 1) { value = farPct(legs) + '%'; sub = 'of the way to the Moon'; note = left + ' still to go'; }
   else {
@@ -358,10 +361,40 @@ function renderFar() {
     value = fmt(legs / 2, legs < 20 ? 2 : 1); sub = '× to the Moon and back';
     note = back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to the Moon! On the way home, with ') + left + ' to go' : there + '. On the way out again, with ' + left + ' to the Moon';
   }
-  renderMusk(kmT); renderVoyager(kmT); renderPolo(); renderMerckx();
   $('armstrong').innerHTML = eightArt(f, 'moon', 35, 32, 'space', 'capsule', back ? farPct(part) + '% of the way home from the Moon' : farPct(part) + '% of the way to the Moon') +
     '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
-  farRefresh();
+}
+// Each score drawn with g of the distance (1 is all of it), in the carousel's order.
+var FAR_DRAW = [renderPolo, renderMerckx, renderMagellan, renderArmstrong, renderMusk, renderVoyager];
+// still: drawn again for a new width, so the score showing isn't played again.
+function renderFar(still) {
+  var kmT = 0, j;
+  for (j = 0; j < sel.length; j++) kmT += D.km[sel[j]];
+  FAR.km = kmT;
+  FAR.notes[2] = 'How many times your trips here would take you around the world, ' + dist(EARTH_KM) + ' at the equator.';
+  FAR.notes[3] = 'How far your trips here would take you towards the Moon, on average ' + dist(MOON_KM) + ' away, and back.';
+  FAR_DRAW.forEach(function (draw) { draw(1); });
+  if (still) { if (FAR.anim) FAR_DRAW[FAR.i](FAR.g); farGo(FAR.i, false, true); }
+  else farRefresh();
+}
+// ---------- the scores playing ----------
+// When a score comes into view (Insights opens, the carousel turns, or the dates or filters change), its distance
+// counts up from nothing over 1.6 s, slowing as it ends: the line grows, the rider rides it and the number climbs.
+// The card keeps the height of the finished score. Not with reduced motion.
+var FAR_PLAY_MS = 1600;
+function farPlay() {
+  cancelAnimationFrame(FAR.anim); FAR.anim = 0;
+  var k = FAR.i, draw = FAR_DRAW[k], t0 = 0;
+  if (!sel.length || tab !== 'insights' || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  function step(now) {
+    if (!t0) t0 = now;
+    var t = Math.min(1, (now - t0) / FAR_PLAY_MS);
+    FAR.g = 1 - Math.pow(1 - t, 3);
+    draw(FAR.g);
+    FAR.anim = t < 1 && FAR.i === k ? requestAnimationFrame(step) : 0;
+  }
+  FAR.g = 0; draw(0);
+  FAR.anim = requestAnimationFrame(step);
 }
 
 var SPLIT = {
