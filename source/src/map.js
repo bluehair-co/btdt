@@ -269,7 +269,8 @@ function sqLegend() {
 // everything that passed and thicker where more trips did. Only what's near the view is
 // gathered, again after zooming or moving away, so it stays quick with tens of thousands of trips.
 // Colour bands (km/h): the general scale, or one fitted to the transport shown when every trip in the
-// filter is of one kind (cycling tops out at 30 km/h rather than 120). Flights aren't drawn.
+// filter is of one kind (cycling tops out at 30 km/h rather than 120), or one kind of Strava water or
+// snow sport (paddling tops out at 10). Flights aren't drawn.
 var SPEED_BANDS = [5, 10, 15, 25, 50, 80, 120];
 var SPEED_FIT = [
   { modes: ['WALKING'], bands: [1, 2, 3, 4, 5, 6, 7] },
@@ -279,16 +280,30 @@ var SPEED_FIT = [
   { modes: ['CAR', 'TAXI', 'VEHICLE', 'MOTORCYCLE', 'BUS'], bands: [10, 20, 30, 50, 70, 90, 120] },
   { modes: ['TRAM', 'SUBWAY'], bands: [5, 10, 15, 20, 30, 40, 60] },
   { modes: ['TRAIN'], bands: [20, 40, 60, 80, 100, 140, 200] },
-  { modes: ['FERRY', 'BOAT'], bands: [3, 6, 10, 15, 20, 30, 40] }
+  // Water and snow by Strava sport first (a trip of that mode with another sport, or none, moves on).
+  { sports: ['kayak', 'canoe', 'sup', 'row', 'swim', 'surf'], bands: [1, 2, 3, 4, 6, 8, 10] },
+  { sports: ['kitesurf', 'windsurf', 'sail'], bands: [4, 8, 12, 16, 20, 25, 30] },
+  { modes: ['FERRY', 'BOAT'], bands: [3, 6, 10, 15, 20, 30, 40] },
+  { sports: ['nordic', 'backcountry', 'snowshoe'], bands: [2, 4, 6, 8, 10, 14, 20] },
+  { sports: ['alpine', 'snowboard'], bands: [5, 10, 20, 30, 40, 50, 70] },
+  { sports: ['iceskate'], bands: [5, 10, 15, 20, 25, 30, 35] },
+  { modes: ['SKIING'], bands: [3, 6, 10, 20, 30, 45, 70] },
+  { sports: ['inline', 'skateboard', 'rollerski'], bands: [5, 10, 14, 18, 22, 26, 30] }
 ];
 var SPEED_COLORS = ['#d7301f', '#f46d43', '#fdae61', '#fee08b', '#a6d96a', '#1a9850', '#2b83ba', '#5e3c99'];
 var SPEED_CELL = 10;
 var spBands = { ver: -1, d: null, bands: SPEED_BANDS };
 function speedBands() {
   if (spBands.ver === applyCount && spBands.d === D) return spBands.bands;
+  // Each kind of trip shown, as [mode, Strava sport key or ''].
   var seen = {}, list = [];
-  for (var k = 0; k < sel.length; k++) { var m = modeOf(sel[k]); if (m !== 'FLYING' && !seen[m]) { seen[m] = 1; list.push(m); } }
-  var fit = list.length ? SPEED_FIT.filter(function (f) { return list.every(function (m) { return f.modes.indexOf(m) >= 0; }); })[0] : null;
+  for (var k = 0; k < sel.length; k++) {
+    var m = modeOf(sel[k]), sp = D.sport && D.sport[sel[k]] ? SPORTS[D.sport[sel[k]]][0] : '';
+    if (m !== 'FLYING' && !seen[m + sp]) { seen[m + sp] = 1; list.push([m, sp]); }
+  }
+  var fit = list.length ? SPEED_FIT.filter(function (f) {
+    return list.every(function (x) { return f.modes && f.modes.indexOf(x[0]) >= 0 || f.sports && f.sports.indexOf(x[1]) >= 0; });
+  })[0] : null;
   spBands = { ver: applyCount, d: D, bands: fit ? fit.bands : SPEED_BANDS };
   return spBands.bands;
 }
@@ -583,42 +598,49 @@ function niceStep(max, n) {
   var raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
   return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
 }
-var chartTrip = null;
-function tripChart(i) {
+// Charts drawn now, by where they are: 'sheet' (trip details) and 'panel' (under the map, on desktop).
+var charts = {};
+// The chart of trip i at W×H (viewBox units; the panel's match its pixels so text keeps its size).
+// The readout line above the chart always takes its room, so pointing at the chart doesn't move it.
+function tripChart(i, where, W, H) {
   var sp = tripSpeeds(i), hr = tripHr(i);
-  chartTrip = null;
+  delete charts[where];
   if (sp.length < 4 && !hr) return '';
-  var dur = Math.max(1, (D.end[i] - D.start[i]) / 1000), W = 340, H = 150, L0 = 34, R0 = hr ? 34 : 10, T0 = 10, B0 = 22;
+  var dur = Math.max(1, (D.end[i] - D.start[i]) / 1000), L0 = 34, R0 = hr ? 34 : 10, T0 = 10, B0 = 22;
   var w = W - L0 - R0, h = H - T0 - B0, x = function (t) { return L0 + w * Math.max(0, Math.min(1, t / dur)); };
-  var smax = 0, k;
+  var smax = 0, k, ticks = Math.max(3, Math.min(8, Math.round(h / 32)));
   for (k = 0; k < sp.length; k++) smax = Math.max(smax, distVal(sp[k][1]));
   // A GPS spike shouldn't flatten the rest: the scale goes to the 98th percentile of speed.
   var sv = sp.map(function (q) { return distVal(q[1]); }).sort(function (a, b) { return a - b; });
   if (sv.length) smax = Math.min(smax, sv[Math.floor(sv.length * 0.98)] * 1.15);
-  var ss = niceStep(smax || 1, 4), stop = Math.ceil((smax || 1) / ss) * ss;
+  var ss = niceStep(smax || 1, ticks), stop = Math.ceil((smax || 1) / ss) * ss;
   var hmin = 0, hmax = 0, hs = 1;
   if (hr) {
     hmin = Math.min.apply(null, hr.v); hmax = Math.max.apply(null, hr.v);
-    hs = niceStep(Math.max(10, hmax - hmin), 4); hmin = Math.floor(hmin / hs) * hs; hmax = Math.max(hmin + hs, Math.ceil(hmax / hs) * hs);
+    hs = niceStep(Math.max(10, hmax - hmin), ticks); hmin = Math.floor(hmin / hs) * hs; hmax = Math.max(hmin + hs, Math.ceil(hmax / hs) * hs);
   }
   var ys = function (v) { return T0 + h * (1 - Math.min(1, v / stop)); }, yh = function (v) { return T0 + h * (1 - (v - hmin) / (hmax - hmin)); };
   var g = '', col = cssVar(groupOf(modeOf(i)).v);
-  for (var v = 0; v <= stop + 1e-9; v += ss) g += '<line x1="' + L0 + '" x2="' + (L0 + w) + '" y1="' + ys(v).toFixed(1) + '" y2="' + ys(v).toFixed(1) + '" class="tc-grid"/><text x="' + (L0 - 5) + '" y="' + (ys(v) + 3.5).toFixed(1) + '" text-anchor="end" class="tc-ax">' + fmt(v, ss < 1 ? 1 : 0) + '</text>';
+  for (var v = 0; v <= stop + 1e-9; v += ss) g += '<line x1="' + L0 + '" x2="' + (L0 + w) + '" y1="' + ys(v).toFixed(1) + '" y2="' + ys(v).toFixed(1) + '" class="tc-grid"/><text x="' + (L0 - 5) + '" y="' + (ys(v) + 3.5).toFixed(1) + '" text-anchor="end" class="tc-ax">' + fmt(v, ss % 1 ? 1 : 0) + '</text>';
   if (hr) for (v = hmin; v <= hmax + 1e-9; v += hs) g += '<text x="' + (L0 + w + 5) + '" y="' + (yh(v) + 3.5).toFixed(1) + '" class="tc-ax tc-hr">' + fmt(v) + '</text>';
-  var ms = dur > 7200 ? 3600 : dur > 3600 ? 1800 : dur > 1800 ? 600 : dur > 600 ? 300 : 60;
+  // Time ticks about every 70 units of width.
+  var steps = [60, 120, 300, 600, 900, 1800, 3600, 7200, 10800, 21600], ms = steps[steps.length - 1];
+  for (k = 0; k < steps.length; k++) if (dur / steps[k] <= w / 70) { ms = steps[k]; break; }
   for (var t = 0; t <= dur; t += ms) g += '<text x="' + x(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="tc-ax">' + (t >= 3600 ? Math.floor(t / 3600) + ':' + pad2(Math.round(t % 3600 / 60)) : Math.round(t / 60) + (t ? '′' : '')) + '</text>';
   var sl = sp.map(function (q) { return x(q[0]).toFixed(1) + ',' + ys(distVal(q[1])).toFixed(1); }).join(' ');
   var hl = hr ? hr.t.map(function (t, j) { return x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1); }).join(' ') : '';
-  chartTrip = { i: i, sp: sp, hr: hr, dur: dur, L0: L0, w: w, W: W };
+  charts[where] = { i: i, sp: sp, spT: sp.map(function (q) { return q[0]; }), spV: sp.map(function (q) { return q[1]; }), hr: hr, dur: dur, L0: L0, w: w, W: W };
   var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h';
-  return '<div class="trip-chart" data-i="' + i + '">' +
-    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') + '<span class="tc-read" id="tcRead"></span></div>' +
-    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
+  return '<div class="trip-chart" data-k="' + where + '">' +
+    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') +
+    (where === 'sheet' ? '<button type="button" class="icon-btn tc-open" data-act="chart" data-i="' + i + '" aria-label="Open the chart under the map" title="Open under the map">' + icon('expand') + '</button>' : '') + '</div>' +
+    '<div class="tc-read" aria-live="off"></div>' +
+    '<svg class="tc-svg" viewBox="0 0 ' + W + ' ' + H + '"' + (where === 'panel' ? ' width="' + W + '" height="' + H + '"' : '') + ' role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
     (sp.length >= 4 ? '<polyline points="' + sl + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round"/>' : '') +
     (hr ? '<polyline points="' + hl + '" fill="none" stroke="var(--cc8)" stroke-width="1.4" stroke-linejoin="round"/>' : '') +
-    '<line id="tcCur" y1="' + T0 + '" y2="' + (T0 + h) + '" class="tc-cur" visibility="hidden"/></svg></div>';
+    '<line y1="' + T0 + '" y2="' + (T0 + h) + '" class="tc-cur" visibility="hidden"/></svg></div>';
 }
-// The value of a series [[t, v], …] or {t, v} at time t.
+// The value of a series (times tt, values vv) at time t.
 function seriesAt(tt, vv, t) {
   var lo = 0, hi = tt.length - 1;
   if (t <= tt[0]) return vv[0];
@@ -629,15 +651,19 @@ function seriesAt(tt, vv, t) {
 }
 var chartMarker = null;
 function chartAt(ev, pan) {
-  var c = chartTrip, svg = ev.target.closest('.trip-chart svg');
+  var box = ev.target.closest('.trip-chart'), svg = box && box.querySelector('.tc-svg'), c = box && charts[box.dataset.k];
   if (!c || !svg) return;
   var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * c.W, t = Math.max(0, Math.min(c.dur, (px - c.L0) / c.w * c.dur));
-  var cur = $('tcCur'), X = (c.L0 + c.w * t / c.dur).toFixed(1);
-  cur.setAttribute('x1', X); cur.setAttribute('x2', X); cur.setAttribute('visibility', 'visible');
-  var parts = [clock(D.start[c.i] + t * 1000, D.off[c.i])];
-  if (c.sp.length >= 4) parts.push(speed(seriesAt(c.sp.map(function (q) { return q[0]; }), c.sp.map(function (q) { return q[1]; }), t)));
-  if (c.hr) parts.push(Math.round(seriesAt(c.hr.t, c.hr.v, t)) + ' bpm');
-  $('tcRead').textContent = parts.join(' · ');
+  // Both charts of the trip follow the pointer.
+  Object.keys(charts).forEach(function (k) {
+    var o = charts[k], el = document.querySelector('.trip-chart[data-k="' + k + '"]');
+    if (!el || o.i !== c.i) return;
+    var cur = el.querySelector('.tc-cur'), X = (o.L0 + o.w * t / o.dur).toFixed(1), parts = [clock(D.start[o.i] + t * 1000, D.off[o.i])];
+    cur.setAttribute('x1', X); cur.setAttribute('x2', X); cur.setAttribute('visibility', 'visible');
+    if (o.sp.length >= 4) parts.push(speed(seriesAt(o.spT, o.spV, t)));
+    if (o.hr) parts.push(Math.round(seriesAt(o.hr.t, o.hr.v, t)) + ' bpm');
+    el.querySelector('.tc-read').textContent = parts.join(' · ');
+  });
   if (!map || !hlLayer || PREFS.proj !== 'merc' || tab !== 'map') return;
   var a = along(c.i, D.start[c.i] + t * 1000);
   if (!a) return;
@@ -646,22 +672,86 @@ function chartAt(ev, pan) {
   if (pan && !map.getBounds().contains(a.ll)) map.panTo(a.ll);
 }
 function chartOut() {
-  var cur = $('tcCur');
-  if (cur) cur.setAttribute('visibility', 'hidden');
-  if ($('tcRead')) $('tcRead').textContent = '';
+  document.querySelectorAll('.trip-chart').forEach(function (el) {
+    el.querySelector('.tc-cur').setAttribute('visibility', 'hidden');
+    el.querySelector('.tc-read').textContent = '';
+  });
   if (chartMarker && hlLayer) hlLayer.removeLayer(chartMarker);
 }
-$('tripBody').addEventListener('pointermove', function (ev) { if (ev.target.closest('.trip-chart svg')) chartAt(ev, false); });
-$('tripBody').addEventListener('pointerdown', function (ev) { if (ev.target.closest('.trip-chart svg')) chartAt(ev, true); });
-$('tripBody').addEventListener('pointerout', function (ev) {
+function onChart(ev) { return ev.target.closest && ev.target.closest('.tc-svg'); }
+document.addEventListener('pointermove', function (ev) { if (onChart(ev)) chartAt(ev, false); });
+document.addEventListener('pointerdown', function (ev) { if (onChart(ev)) chartAt(ev, true); });
+document.addEventListener('pointerout', function (ev) {
   // A mouse leaving the chart takes the marker away; a tap leaves it where it was tapped.
-  if (ev.pointerType === 'mouse' && ev.target.closest('.trip-chart svg') && !(ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.trip-chart svg'))) chartOut();
+  if (ev.pointerType === 'mouse' && onChart(ev) && !(ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.tc-svg'))) chartOut();
 });
+
+// ---------- the chart as a panel under the map (desktop) ----------
+// It takes the bottom of the screen at a height dragged from its top edge; the map, dock and panels
+// move up above it (--chart-h). It follows the trip that's open and closes with it.
+var chartPanelTrip = null, chartPanelH = 240;
+function chartPanelOpen(i) {
+  chartPanelTrip = i;
+  $('chartPanel').hidden = false;
+  document.body.classList.add('chart-open');
+  chartPanelSize(chartPanelH);
+  chartPanelDraw();
+  if (map) map.invalidateSize();
+}
+function chartPanelClose() {
+  if (chartPanelTrip == null) return;
+  chartPanelTrip = null;
+  delete charts.panel;
+  $('chartPanel').hidden = true;
+  $('chartBody').innerHTML = '';
+  document.body.classList.remove('chart-open');
+  if (map) map.invalidateSize();
+}
+function chartPanelSize(hpx) {
+  chartPanelH = Math.round(Math.max(150, Math.min(window.innerHeight * 0.7, hpx)));
+  document.documentElement.style.setProperty('--chart-h', chartPanelH + 'px');
+}
+function chartPanelDraw() {
+  var i = chartPanelTrip;
+  if (i == null) return;
+  var name = tripName(i);
+  $('chartTitle').innerHTML = (name ? esc(name) + ' · ' : '') + tripLabel(i) + ' · ' + longDate(D.day[i]);
+  var body = $('chartBody'), cs = getComputedStyle(body);
+  // The body's inner size, less the key and readout lines above the chart.
+  var W = Math.max(300, body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), H = Math.max(80, body.clientHeight - parseFloat(cs.paddingBottom) - 46);
+  body.innerHTML = tripChart(i, 'panel', W, H);
+  if (!body.innerHTML) chartPanelClose();
+}
+(function () {
+  var drag = null, raf = 0;
+  $('chartHandle').addEventListener('pointerdown', function (ev) {
+    drag = { y: ev.clientY, h: chartPanelH };
+    this.setPointerCapture(ev.pointerId);
+    ev.preventDefault();
+  });
+  $('chartHandle').addEventListener('pointermove', function (ev) {
+    if (!drag) return;
+    chartPanelSize(drag.h + drag.y - ev.clientY);
+    cancelAnimationFrame(raf);
+    raf = requestAnimationFrame(chartPanelDraw);
+  });
+  function end() { if (!drag) return; drag = null; chartPanelDraw(); if (map) map.invalidateSize(); }
+  $('chartHandle').addEventListener('pointerup', end);
+  $('chartHandle').addEventListener('pointercancel', end);
+  // Arrow keys resize it too.
+  $('chartHandle').addEventListener('keydown', function (ev) {
+    var d = ev.key === 'ArrowUp' ? 24 : ev.key === 'ArrowDown' ? -24 : 0;
+    if (!d) return;
+    ev.preventDefault(); chartPanelSize(chartPanelH + d); chartPanelDraw(); if (map) map.invalidateSize();
+  });
+  $('chartClose').addEventListener('click', chartPanelClose);
+  window.addEventListener('resize', function () { if (chartPanelTrip != null) { chartPanelSize(chartPanelH); chartPanelDraw(); } });
+})();
 function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + tripChart(i) +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + tripChart(i, 'sheet', 340, 150) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -674,6 +764,8 @@ function openTrip(i, fromList) {
   openSheet('tripSheet');
   $('tripBody').scrollTop = 0;
   if (tab === 'map') highlight(i);
+  // The chart panel follows the open trip.
+  if (chartPanelTrip != null) chartPanelOpen(i);
 }
 // Everything BT•DT keeps about one trip, as JSON, to look into a trip without sharing the whole import.
 // BT•DT keeps what it read from the files, not the files themselves, so this is that.
@@ -824,7 +916,8 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-i]');
   if (!b) return;
   var i = +b.dataset.i;
-  if (b.dataset.act === 'day') { closeSheets(); setTab('map'); showDay(D.day[i]); }
+  if (b.dataset.act === 'chart') chartPanelOpen(i);
+  else if (b.dataset.act === 'day') { closeSheets(); setTab('map'); showDay(D.day[i]); }
   else if (b.dataset.act === 'tl') { closeSheets(); setTab('timeline'); tlSelect(i, true); }
   else if (b.dataset.act === 'raw') {
     var open = $('rawWrap').hidden;
