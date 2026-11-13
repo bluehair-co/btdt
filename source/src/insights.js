@@ -105,16 +105,17 @@ function muskArt(share) {
   var z = 2, j, zx;
   for (j = 0; j < MUSK_ZOOMS.length; j++) if (px * MUSK_ZOOMS[j] <= 36) z = MUSK_ZOOMS[j];
   zx = ex + Math.max(0, px * z);
+  // The lens sits a little right of the Earth's edge, so the Earth fills less of it than the line.
   // A glare on the glass: a bright arc along the upper left of the lens and a small glint beside it.
-  var g0 = 200 * Math.PI / 180, g1 = 252 * Math.PI / 180, gr = R - 11;
-  return s + '<defs><clipPath id="muskLens"><circle cx="' + ex + '" cy="' + cy + '" r="' + R + '"/></clipPath></defs>' +
-    '<rect class="lens-rim" x="172" y="118.1" width="8" height="29" transform="rotate(-45 172 118.1)"/>' +
-    '<g clip-path="url(#muskLens)"><circle class="lens-bg" cx="' + ex + '" cy="' + cy + '" r="' + R + '"/>' + planet('earth', ex - 279, cy, 558) +
-    '<path class="trk" d="M' + ex + ',' + cy + 'H' + (ex + R) + '"/>' + (share > 0 ? '<path class="mars" d="M' + ex + ',' + cy + 'H' + zx.toFixed(1) + '"/>' : '') +
-    rider(zx, cy, 'var(--m-air)', '', 'rocket', 24, 0) + '<circle class="lens-in" cx="' + ex + '" cy="' + cy + '" r="' + (R - 2.5) + '"/>' +
-    '<path class="lens-glare" d="M' + (ex + gr * Math.cos(g0)).toFixed(1) + ',' + (cy + gr * Math.sin(g0)).toFixed(1) + 'A' + gr + ',' + gr + ' 0 0 1 ' + (ex + gr * Math.cos(g1)).toFixed(1) + ',' + (cy + gr * Math.sin(g1)).toFixed(1) + '"/>' +
-    '<circle class="lens-glint" cx="' + (ex + gr * Math.cos(266 * Math.PI / 180)).toFixed(1) + '" cy="' + (cy + gr * Math.sin(266 * Math.PI / 180)).toFixed(1) + '" r="2.6"/></g>' +
-    '<circle class="lens-rim" cx="' + ex + '" cy="' + cy + '" r="' + R + '"/><text class="lens-zoom" x="' + (ex + R + 10) + '" y="' + (cy + R + 10) + '">×' + fmt(z) + '</text></svg>';
+  var lx = ex + 14, g0 = 200 * Math.PI / 180, g1 = 252 * Math.PI / 180, gr = R - 11, hx = lx + 27, hy = cy + 36.1;
+  return s + '<defs><clipPath id="muskLens"><circle cx="' + lx + '" cy="' + cy + '" r="' + R + '"/></clipPath></defs>' +
+    '<rect class="lens-rim" x="' + hx + '" y="' + hy + '" width="8" height="29" transform="rotate(-45 ' + hx + ' ' + hy + ')"/>' +
+    '<g clip-path="url(#muskLens)"><circle class="lens-bg" cx="' + lx + '" cy="' + cy + '" r="' + R + '"/>' + planet('earth', ex - 279, cy, 558) +
+    '<path class="trk" d="M' + ex + ',' + cy + 'H' + (lx + R) + '"/>' + (share > 0 ? '<path class="mars" d="M' + ex + ',' + cy + 'H' + zx.toFixed(1) + '"/>' : '') +
+    rider(zx, cy, 'var(--m-air)', '', 'rocket', 24, 0) + '<circle class="lens-in" cx="' + lx + '" cy="' + cy + '" r="' + (R - 2.5) + '"/>' +
+    '<path class="lens-glare" d="M' + (lx + gr * Math.cos(g0)).toFixed(1) + ',' + (cy + gr * Math.sin(g0)).toFixed(1) + 'A' + gr + ',' + gr + ' 0 0 1 ' + (lx + gr * Math.cos(g1)).toFixed(1) + ',' + (cy + gr * Math.sin(g1)).toFixed(1) + '"/>' +
+    '<circle class="lens-glint" cx="' + (lx + gr * Math.cos(266 * Math.PI / 180)).toFixed(1) + '" cy="' + (cy + gr * Math.sin(266 * Math.PI / 180)).toFixed(1) + '" r="2.6"/></g>' +
+    '<circle class="lens-rim" cx="' + lx + '" cy="' + cy + '" r="' + R + '"/><text class="lens-zoom" x="' + (lx + R + 10) + '" y="' + (cy + R + 10) + '">×' + fmt(z) + '</text></svg>';
 }
 // Marco Polo: Venice to Kublai Khan's China and back over land, so only trips on the ground count (road,
 // public transport, on foot and cycling). Odd legs head east along a winding Silk Road, even legs come home.
