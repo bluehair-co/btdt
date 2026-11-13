@@ -3690,10 +3690,44 @@ function buildGear() {
   // Each type's gear, most used first: their chips sit under the type in Filters.
   GEAR_MODE = {};
   gearOrder().forEach(function (g) { var mi = MODE_IDX[GEAR[g].mode]; (GEAR_MODE[mi] || (GEAR_MODE[mi] = [])).push(g); });
+  // What each gear chip's trips are filed under (Strava sports, or types for trips without one), so
+  // ticking a gear can turn those on; FREE is what trips outside every gear chip use.
+  GEAR_USE = {}; GEAR_FREE = { sports: {}, modes: {} };
+  for (i = 0; i < n; i++) {
+    if (isDup(i)) continue;
+    var gk = D.gear[i] || (GEAR_MODE[D.mode[i]] ? NO_GEAR + D.mode[i] : 0);
+    var u = gk ? GEAR_USE[gk] || (GEAR_USE[gk] = { sports: {}, modes: {} }) : GEAR_FREE;
+    if (D.sport && D.sport[i]) u.sports[D.sport[i]] = 1; else u.modes[MODES[D.mode[i]]] = 1;
+  }
 }
 // Gear filter values: each gear's number, and NO_GEAR + a type's index for that type's trips
 // without gear (only for types that have gear).
-var NO_GEAR = 1000, GEAR_MODE = {};
+var NO_GEAR = 1000, GEAR_MODE = {}, GEAR_USE = {}, GEAR_FREE = { sports: {}, modes: {} };
+// Ticking a gear on turns on the sports and types its trips are under, so they show; ticking it
+// off turns off the ones no other ticked gear (and no trip outside the gear chips) needs.
+function toggleGear(g) {
+  var u = GEAR_USE[g] || { sports: {}, modes: {} }, k;
+  if (!F.gear.has(g)) {
+    F.gear.add(g);
+    for (k in u.sports) F.sports.add(+k);
+    for (k in u.modes) F.modes.add(k);
+    return;
+  }
+  F.gear.delete(g);
+  function needed(kind, key) {
+    if (GEAR_FREE[kind][key]) return true;
+    for (var h in GEAR_USE) if (F.gear.has(+h) && GEAR_USE[h][kind][key]) return true;
+    return false;
+  }
+  for (k in u.sports) if (!needed('sports', k)) F.sports.delete(+k);
+  for (k in u.modes) if (!needed('modes', k)) F.modes.delete(k);
+}
+// Ticking a Strava sport on when none of the gear its trips use is ticked ticks all of that gear,
+// so the sport's trips show.
+function sportOn(sp) {
+  var keys = Object.keys(GEAR_USE).filter(function (h) { return GEAR_USE[h].sports[sp]; });
+  if (keys.length && !keys.some(function (h) { return F.gear.has(+h); })) keys.forEach(function (h) { F.gear.add(+h); });
+}
 function gearIds() {
   var out = GEAR.map(function (_, k) { return k; }).slice(1);
   Object.keys(GEAR_MODE).forEach(function (mi) { out.push(NO_GEAR + +mi); });
@@ -3934,9 +3968,10 @@ $('filtersSheet').addEventListener('click', function (ev) {
       var on = groupState(v) === 'true';
       groupModes(v).forEach(function (m) { setMode(m, !on); });
     } else if (f === 'modes') setMode(v, modeState(v) !== 'true');
+    else if (f === 'gear') toggleGear(+v);
     else {
       var val = +v, s = F[f];
-      if (s.has(val)) s.delete(val); else s.add(val);
+      if (s.has(val)) s.delete(val); else { s.add(val); if (f === 'sports') sportOn(val); }
     }
   } else if (b.dataset.q) {
     var all = b.dataset.all === '1', q = b.dataset.q;
