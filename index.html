@@ -2119,6 +2119,7 @@ var PATH_TRIP = 64;
 // The type from how fast it went while moving (the average would count every stop on the way):
 // the speed half the distance was covered at or above, so a long fast stretch outweighs a few
 // slow legs at the ends. It is never below the overall average: 20 km in 30 minutes is no bike ride.
+var RUN_BIKE_KMH = 45, RUN_FAST_KM = 2;
 function runMode(run) {
   var v = [], tot = 0, dist = 0;
   for (var j = 1; j < run.length; j++) {
@@ -2132,6 +2133,11 @@ function runMode(run) {
   for (j = 0; j < v.length; j++) { acc += v[j][1]; if (acc >= tot / 2) { fast = v[j][0]; break; } }
   var hrs = (run[run.length - 1][0] - run[0][0]) / 36e5;
   if (hrs > 0) fast = Math.max(fast, dist / hrs);
+  // Several km at over 45 km/h is no bike ride either, however slow the rest (a ride to the station
+  // and the train after it, kept as one run): RUN_FAST_KM, and at least a fifth of the distance.
+  var quick = 0;
+  for (j = 0; j < v.length; j++) if (v[j][0] > RUN_BIKE_KMH) quick += v[j][1];
+  if (quick >= RUN_FAST_KM && quick >= tot / 5) return 'CAR';
   return fast >= 30 ? 'CAR' : fast >= 10 ? 'CYCLING' : 'WALKING';
 }
 function pathTrips(segs, paths, c) {
