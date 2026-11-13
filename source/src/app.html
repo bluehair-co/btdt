@@ -283,6 +283,11 @@
   </section>
 
   <!-- Dock -->
+  <section class="chart-panel" id="chartPanel" hidden aria-label="Trip chart">
+    <div class="cp-handle" id="chartHandle" role="separator" aria-orientation="horizontal" aria-label="Drag to resize the chart" tabindex="0"></div>
+    <div class="cp-head"><h3 id="chartTitle"></h3><button type="button" class="icon-btn" id="chartClose" aria-label="Close the chart"><span data-icon="close"></span></button></div>
+    <div class="cp-body" id="chartBody"></div>
+  </section>
   <nav class="dock" aria-label="Views">
     <button type="button" data-tab="map" aria-current="page"><span data-icon="pin"></span>Map</button>
     <button type="button" data-tab="insights"><span data-icon="chart"></span>Insights</button>
