@@ -268,10 +268,31 @@ function sqLegend() {
 // between the middles of the points that fell in its cells, coloured by the average speed of
 // everything that passed and thicker where more trips did. Only what's near the view is
 // gathered, again after zooming or moving away, so it stays quick with tens of thousands of trips.
+// Colour bands (km/h): the general scale, or one fitted to the transport shown when every trip in the
+// filter is of one kind (cycling tops out at 30 km/h rather than 120). Flights aren't drawn.
 var SPEED_BANDS = [5, 10, 15, 25, 50, 80, 120];
+var SPEED_FIT = [
+  { modes: ['WALKING'], bands: [1, 2, 3, 4, 5, 6, 7] },
+  { modes: ['RUNNING'], bands: [6, 8, 9, 10, 11, 12, 14] },
+  { modes: ['WALKING', 'RUNNING'], bands: [2, 4, 6, 8, 10, 12, 14] },
+  { modes: ['CYCLING'], bands: [6, 10, 14, 18, 22, 26, 30] },
+  { modes: ['CAR', 'TAXI', 'VEHICLE', 'MOTORCYCLE', 'BUS'], bands: [10, 20, 30, 50, 70, 90, 120] },
+  { modes: ['TRAM', 'SUBWAY'], bands: [5, 10, 15, 20, 30, 40, 60] },
+  { modes: ['TRAIN'], bands: [20, 40, 60, 80, 100, 140, 200] },
+  { modes: ['FERRY', 'BOAT'], bands: [3, 6, 10, 15, 20, 30, 40] }
+];
 var SPEED_COLORS = ['#d7301f', '#f46d43', '#fdae61', '#fee08b', '#a6d96a', '#1a9850', '#2b83ba', '#5e3c99'];
 var SPEED_CELL = 10;
-function speedBand(kmh) { for (var b = 0; b < SPEED_BANDS.length; b++) if (kmh < SPEED_BANDS[b]) return b; return SPEED_BANDS.length; }
+var spBands = { ver: -1, d: null, bands: SPEED_BANDS };
+function speedBands() {
+  if (spBands.ver === applyCount && spBands.d === D) return spBands.bands;
+  var seen = {}, list = [];
+  for (var k = 0; k < sel.length; k++) { var m = modeOf(sel[k]); if (m !== 'FLYING' && !seen[m]) { seen[m] = 1; list.push(m); } }
+  var fit = list.length ? SPEED_FIT.filter(function (f) { return list.every(function (m) { return f.modes.indexOf(m) >= 0; }); })[0] : null;
+  spBands = { ver: applyCount, d: D, bands: fit ? fit.bands : SPEED_BANDS };
+  return spBands.bands;
+}
+function speedBand(kmh) { var B = speedBands(); for (var b = 0; b < B.length; b++) if (kmh < B[b]) return b; return B.length; }
 // A trip's line as stretches of at least 20 seconds, each with its speed (km/h).
 function speedRuns(i) {
   var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
@@ -345,7 +366,7 @@ function speedMoved() {
   if (speedLayer._z !== map.getZoom() || !b || !b.contains(map.getBounds())) buildSpeed();
 }
 function speedLegend() {
-  var lab = SPEED_BANDS.map(function (v) { return fmt(distVal(v)); });
+  var lab = speedBands().map(function (v) { return fmt(distVal(v)); });
   return '<span class="speed-legend">Speed <span>' + lab[0] + '</span><i class="heat-scale" style="background:linear-gradient(90deg,' + SPEED_COLORS.join(',') + ')"></i><span>' + lab[lab.length - 1] + '+ ' + (PREFS.unit === 'mi' ? 'mph' : 'km/h') + '</span></span>';
 }
 // ---------- pins on regular places ----------
