@@ -72,8 +72,9 @@ ICONS.VEHICLE = ICONS.CAR;
 // front wheel, two small ones at the back and a curved frame up to the handlebar) and a front-loading
 // cargo bike (the rider of the cycling icon behind a box over a small front wheel).
 var LINE_ICONS = {
-  halfbike: '<g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7.27" cy="17.61" r="4.07"/><circle cx="19.04" cy="20.03" r="1.76"/>' +
-    '<path d="M8.59 3.31C8.59 3.31 3.29 14.33 6.37 16.64C9.43 18.97 12.86 15.01 17.72 19.37"/></g><circle cx="12.33" cy="17.28" r="1.5"/><circle cx="8.81" cy="2.98" r="1.35"/>',
+  // Mirrored so it rides to the right like the other bikes.
+  halfbike: '<g transform="matrix(-1 0 0 1 24 0)"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="7.27" cy="17.61" r="4.07"/><circle cx="19.04" cy="20.03" r="1.76"/>' +
+    '<path d="M8.59 3.31C8.59 3.31 3.29 14.33 6.37 16.64C9.43 18.97 12.86 15.01 17.72 19.37"/></g><circle cx="12.33" cy="17.28" r="1.5"/><circle cx="8.81" cy="2.98" r="1.35"/></g>',
   cargobike: '<path transform="translate(-0.6 2.6) scale(.84)" d="CARGO_RIDER"/><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M13 12.2h8.6l-1.2 3.4a2 2 0 0 1-1.9 1.4H13z" fill="currentColor"/><circle cx="19.8" cy="20.4" r="1.8"/><path d="M9.4 19.4h8.4"/></g>'
 };
