@@ -1796,7 +1796,20 @@ function cleanJumps(R) {
   cleanTrails(R);
   cleanStops(R);
   cleanEnds(R);
+  reguessRuns(R);
   return R;
+}
+// Trips made from loose GPS points get their type guessed again from their saved line, so trips
+// saved before runMode weighed legs by distance are fixed without loading the file again.
+function reguessRuns(R) {
+  for (var i = 0; i < R.mode.length; i++) {
+    if ((R.est[i] & (PATH_TRIP | GUESSED)) !== (PATH_TRIP | GUESSED)) continue;
+    var o0 = R.pathOff[i], o1 = R.pathOff[i + 1], run = [];
+    if (o1 - o0 < 2) continue;
+    for (var q = o0; q < o1; q++) run.push([R.start[i] + R.pathT[q] * 1000, [R.pathPts[2 * q], R.pathPts[2 * q + 1]]]);
+    var m = MODE_IDX[runMode(run)];
+    if (m != null) R.mode[i] = m;
+  }
 }
 function addActivity(c, type, st, et, meters, a, b, pts, ptsT) {
   var mode = normMode(type), d = Number(meters) / 1000, est = 0;
@@ -1942,16 +1955,21 @@ function parseAndroid(o, c) {
 // its speed (see runMode), marked with the PATH_TRIP and GUESSED bits in est.
 var PATH_TRIP = 64;
 // The type from how fast it went while moving (the average would count every stop on the way):
-// the speed most of the moving legs stay under.
+// the speed half the distance was covered at or above, so a long fast stretch outweighs a few
+// slow legs at the ends. It is never below the overall average: 20 km in 30 minutes is no bike ride.
 function runMode(run) {
-  var v = [];
+  var v = [], tot = 0, dist = 0;
   for (var j = 1; j < run.length; j++) {
     var h = (run[j][0] - run[j - 1][0]) / 36e5, d = km(run[j - 1][1], run[j][1]);
-    if (h >= 1 / 60 && d > 0.05) v.push(d / h);
+    dist += d;
+    if (h >= 1 / 60 && d > 0.05) { v.push([d / h, d]); tot += d; }
   }
   if (!v.length) return 'WALKING';
-  v.sort(function (x, y) { return x - y; });
-  var fast = v[Math.floor(0.8 * (v.length - 1))];
+  v.sort(function (x, y) { return x[0] - y[0]; });
+  var fast = v[v.length - 1][0], acc = 0;
+  for (j = 0; j < v.length; j++) { acc += v[j][1]; if (acc >= tot / 2) { fast = v[j][0]; break; } }
+  var hrs = (run[run.length - 1][0] - run[0][0]) / 36e5;
+  if (hrs > 0) fast = Math.max(fast, dist / hrs);
   return fast >= 30 ? 'CAR' : fast >= 10 ? 'CYCLING' : 'WALKING';
 }
 function pathTrips(segs, paths, c) {
