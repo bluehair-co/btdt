@@ -1320,28 +1320,33 @@ function xmlText(s) {
   return s.replace(/^<!\[CDATA\[|\]\]>$/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&amp;/g, '&').trim();
 }
 function readGpx(txt) {
-  var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, pts = [], ts = [];
+  var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, pts = [], ts = [], hr = { t: [], v: [] };
   while ((m = re.exec(txt))) {
     var lat = attr(m[1], 'lat'), lng = attr(m[1], 'lon'), t = parseTime(tag(m[2], 'time'));
     if (t && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat || lng)) { pts.push([lat, lng]); ts.push(t.ms); }
+    // Heart rate from the Garmin extension (<gpxtpx:hr>), as Strava writes it.
+    var b = t && /<(?:\w+:)?hr>/.test(m[2]) ? parseFloat(tag(m[2], 'hr')) : NaN;
+    if (b > 0 && b < 255) { hr.t.push(t.ms); hr.v.push(b); }
   }
   var trk = /<trk\b[^>]*>([\s\S]*?)<trkseg/.exec(txt);
-  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts };
+  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts, hr: hr };
 }
 function readTcx(txt) {
-  var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
+  var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], hr = { t: [], v: [] }, sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
   while ((m = re.exec(txt))) {
     var lat = parseFloat(tag(m[1], 'LatitudeDegrees')), lng = parseFloat(tag(m[1], 'LongitudeDegrees')), t = parseTime(tag(m[1], 'Time'));
     if (t && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat || lng)) { pts.push([lat, lng]); ts.push(t.ms); }
+    var h = /<HeartRateBpm\b[^>]*>\s*<(?:\w+:)?Value>\s*([\d.]+)/.exec(m[1]), b = h ? parseFloat(h[1]) : NaN;
+    if (t && b > 0 && b < 255) { hr.t.push(t.ms); hr.v.push(b); }
   }
-  return { type: sp ? sp[1] : '', pts: pts, ts: ts };
+  return { type: sp ? sp[1] : '', pts: pts, ts: ts, hr: hr };
 }
-// FIT is Garmin's binary format. Only the record messages (time and position) and the
+// FIT is Garmin's binary format. Only the record messages (time, position and heart rate) and the
 // sport are read; everything else is skipped by the sizes its definitions give.
 var FIT_EPOCH = 631065600000;
 function readFit(buf) {
   var v = new DataView(buf), hs = v.getUint8(0), end = Math.min(buf.byteLength, hs + v.getUint32(4, true)), p = hs;
-  var defs = {}, lastTs = 0, pts = [], ts = [], sport = null, subSport = null, virtual = false;
+  var defs = {}, lastTs = 0, pts = [], ts = [], hr = { t: [], v: [] }, sport = null, subSport = null, virtual = false;
   while (p < end) {
     var h = v.getUint8(p++), local, d, ct = null;
     if (h & 0x80) { local = (h >> 5) & 3; var o = h & 0x1f; ct = (lastTs & ~0x1f) + o; if (o < (lastTs & 0x1f)) ct += 0x20; }
@@ -1368,6 +1373,8 @@ function readFit(buf) {
       if (t != null && la != null && lo != null && la !== 0x7fffffff && lo !== 0x7fffffff && (la || lo)) {
         pts.push([la * 180 / 2147483648, lo * 180 / 2147483648]); ts.push(FIT_EPOCH + t * 1000);
       }
+      // Field 3 is the heart rate (255 when there is none).
+      if (t != null && rec[3] > 0 && rec[3] < 255) { hr.t.push(FIT_EPOCH + t * 1000); hr.v.push(rec[3]); }
     } else if (d.g === 18 || d.g === 12) {
       var sp = rec[d.g === 18 ? 5 : 0], sub = rec[d.g === 18 ? 6 : 1];
       if (sp != null && sp !== 255 && sport == null) { sport = sp; subSport = sub; }
@@ -1376,7 +1383,7 @@ function readFit(buf) {
   }
   // Mountain bike and trail run are cycling and running with a sub-sport.
   var name = sport === 2 && subSport === 8 ? 'Mountain Bike Ride' : sport === 1 && subSport === 3 ? 'Trail Run' : FIT_SPORT[sport] || '';
-  return { type: virtual ? 'virtual' : name, sport: sport, subSport: subSport, pts: pts, ts: ts };
+  return { type: virtual ? 'virtual' : name, sport: sport, subSport: subSport, pts: pts, ts: ts, hr: hr };
 }
 function readActivity(name, buf) {
   var n = name.replace(/\.gz$/i, '');
@@ -1404,6 +1411,43 @@ function simplify(pts, tol) {
   for (i = 0; i < n; i++) if (keep[i]) out.push(i);
   return out;
 }
+// Heart rate over the activity, for the trip's chart: { t: seconds after the start, v: bpm }, at most
+// one sample every HR_STEP seconds (the average of the samples in it) and HR_MAX samples in all.
+var HR_STEP = 5, HR_MAX = 1500;
+function hrSeries(h, t0, t1) {
+  if (!h || !h.t.length) return null;
+  var step = Math.max(HR_STEP, Math.ceil((t1 - t0) / 1000 / HR_MAX)), out = { t: [], v: [] }, cur = -1, sum = 0, k = 0;
+  function flush() { if (k) { out.t.push(cur * step); out.v.push(Math.round(sum / k)); } }
+  for (var i = 0; i < h.t.length; i++) {
+    var s = (h.t[i] - t0) / 1000;
+    if (s < 0 || s > (t1 - t0) / 1000) continue;
+    var b = Math.floor(s / step);
+    if (b !== cur) { flush(); cur = b; sum = 0; k = 0; }
+    sum += h.v[i]; k++;
+  }
+  flush();
+  return out.t.length >= 2 ? out : null;
+}
+// Speed over the activity from every recorded point (the saved line keeps fewer), for the same chart:
+// { t: seconds after the start, v: km/h } every few seconds, each over the 20 seconds around it.
+function speedSeries(pts, ts) {
+  var n = pts.length, cum = [0], i;
+  if (n < 3) return null;
+  for (i = 1; i < n; i++) cum.push(cum[i - 1] + km(pts[i - 1], pts[i]));
+  var t0 = ts[0], dur = (ts[n - 1] - t0) / 1000, step = Math.max(HR_STEP, Math.ceil(dur / HR_MAX)), out = { t: [], v: [] }, j = 0;
+  function at(s) {
+    var ms = t0 + s * 1000;
+    while (j > 0 && ts[j] > ms) j--;
+    while (j < n - 2 && ts[j + 1] < ms) j++;
+    var f = ts[j + 1] > ts[j] ? Math.max(0, Math.min(1, (ms - ts[j]) / (ts[j + 1] - ts[j]))) : 0;
+    return cum[j] + (cum[j + 1] - cum[j]) * f;
+  }
+  for (var s = 0; s <= dur; s += step) {
+    var a = Math.max(0, s - 10), b = Math.min(dur, s + 10);
+    if (b > a) { out.t.push(s); out.v.push(Math.round((at(b) - at(a)) / ((b - a) / 3600) * 10) / 10); }
+  }
+  return out.t.length >= 2 ? out : null;
+}
 function addStrava(c, type, a, meta) {
   var st = stravaSport(type), mode = st.mode;
   if (mode === null || a.pts.length < 2) return false;
@@ -1424,6 +1468,9 @@ function addStrava(c, type, a, meta) {
   // What the export said about the activity, for the trip's raw data.
   var sm = Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {});
   if (!sm.name && a.name) sm.name = a.name;
+  var hr = hrSeries(a.hr, ts[0], ts[n]), spd = speedSeries(pts, ts);
+  if (hr) sm.hr = hr;
+  if (spd) sm.spd = spd;
   (c.smeta || (c.smeta = [])).push(sm);
   return true;
 }
