@@ -28,7 +28,7 @@ Loaded together with a Google Timeline, Dawarich works like Records.json: Timeli
 
 ## Trips from Timeline's loose GPS points
 
-Older on-device Timeline data often keeps GPS points while you were moving but no trip for them, so a day of driving shows up as a few stays and nothing else. Points outside every trip and stay are joined into trips (a run ends at a gap of over 30 minutes, a jump of over 50 km, or a trip or stay) when they get at least 500 m from where they started. Their transport type is guessed from the speed they kept while moving: 30 km/h or more is a car, 10 km/h or more a bike, slower is walking. They are marked as guessed, and the trip details say they were made from loose points.
+Older on-device Timeline data often keeps GPS points while you were moving but no trip for them, so a day of driving shows up as a few stays and nothing else. Points outside every trip and stay are joined into trips (a run ends at a gap of over 30 minutes, a jump of over 50 km, or a trip or stay) when they get at least 500 m from where they started. Their transport type is guessed from the speed they kept while moving, weighted by distance (the speed at or above which half the distance was covered, and never less than the trip's overall average, so one long fast stretch between a few slow legs isn't a bike ride): 30 km/h or more is a car, 10 km/h or more a bike, slower is walking. They are marked as guessed, and the trip details say they were made from loose points.
 
 ## Bad GPS jumps
 
