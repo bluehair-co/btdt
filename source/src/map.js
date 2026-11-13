@@ -515,7 +515,7 @@ function tripRows(i) {
   if (isSim(i)) notes.push('Simulated from a file you loaded, not recorded by Timeline. It replaces any exported trip at the same time.');
   if (e & PATH_TRIP) notes.push('Timeline kept GPS points here but no trip, so BT•DT made this trip from them.');
   if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? 'Strava calls this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : 'Strava gives this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
-  else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed from the average speed.');
+  else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed: from its speed, then from your labelled trips along the same line, and from railway stations at its ends.');
   if (e & RECORDS_GPS) notes.push('The line follows the GPS points from Records.json' + ((e & 3) === 1 ? ', and the distance is measured along them' + (D.orig[i] > 0 && Math.abs(D.orig[i] - k) > 0.05 * k ? ' (Timeline said ' + dist(D.orig[i]) + ').' : '.') : '.'));
   else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT•DT measures the distance along the GPS trail instead.');
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT•DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');

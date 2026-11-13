@@ -535,20 +535,148 @@ function cleanJumps(R) {
   cleanTrails(R);
   cleanStops(R);
   cleanEnds(R);
-  reguessRuns(R);
+  retypeGuessed(R);
   return R;
 }
-// Trips made from loose GPS points get their type guessed again from their saved line, so trips
-// saved before runMode weighed legs by distance are fixed without loading the file again.
-function reguessRuns(R) {
-  for (var i = 0; i < R.mode.length; i++) {
-    if ((R.est[i] & (PATH_TRIP | GUESSED)) !== (PATH_TRIP | GUESSED)) continue;
-    var o0 = R.pathOff[i], o1 = R.pathOff[i + 1], run = [];
-    if (o1 - o0 < 2) continue;
-    for (var q = o0; q < o1; q++) run.push([R.start[i] + R.pathT[q] * 1000, [R.pathPts[2 * q], R.pathPts[2 * q + 1]]]);
-    var m = MODE_IDX[runMode(run)];
-    if (m != null) R.mode[i] = m;
+// A guessed type is worked out again every time the data opens, from the speed and then from what
+// else the data knows (see retypeGuessed), so saved trips pick up a better guess without a reload.
+// Motorised types a guessed car trip can take from a labelled trip on the same line.
+var CORRIDOR_MODES = ['CAR', 'TAXI', 'MOTORCYCLE', 'BUS', 'TRAIN', 'TRAM', 'SUBWAY', 'FERRY'];
+// Corridor cells are about 150 m, and a point of a guessed trip is on a labelled line that crosses its
+// cell or one next to it (within 150 to 300 m, as loose points are often minutes apart and cut corners).
+// A guessed trip takes the type of labelled trips whose lines cover CORRIDOR_SHARE of its own, when no
+// other type covers nearly as much.
+var CELL_LAT = 0.00135, CORRIDOR_SHARE = 0.6, CORRIDOR_LEAD = 0.15;
+// A stay named like a railway station. Gas, police, fire, bus, metro and charging stations aren't.
+var STATION_RE = /\b(station|centraal|centrale|central|hbf|hauptbahnhof|bahnhof|gare|estaci[oó]n|stazione|stacja|railway|amtrak)\b/i;
+var NOT_STATION_RE = /\b(gas|petrol|fuel|service|police|fire|charging|power|bus|metro|subway|u-?bahn|tram|radio|space|weather|tank|polizei|politie|brandweer|tankstation)\b/i;
+function isStation(name) { return !!name && STATION_RE.test(name) && !NOT_STATION_RE.test(name); }
+// [[ms, [lat, lng]], …] of trip i's saved line.
+function tripRun(R, i) {
+  var o0 = R.pathOff[i], o1 = R.pathOff[i + 1], run = [];
+  for (var q = o0; q < o1; q++) run.push([R.start[i] + R.pathT[q] * 1000, [R.pathPts[2 * q], R.pathPts[2 * q + 1]]]);
+  return run;
+}
+// Points along a line at most step km apart (the line's own points included), with the cosine of
+// the latitude for each (taken once a leg, as a leg is short next to the earth).
+function densify(pts, step, fn) {
+  for (var j = 0; j < pts.length; j++) {
+    if (j > 0) {
+      var a = pts[j - 1], b = pts[j], dy = b[0] - a[0], dx = (b[1] - a[1]) * cs;
+      var n = Math.min(2000, Math.floor(111.2 * Math.sqrt(dy * dy + dx * dx) / step));
+      for (var k = 1; k <= n; k++) fn(a[0] + (b[0] - a[0]) * k / (n + 1), a[1] + (b[1] - a[1]) * k / (n + 1), cs);
+    }
+    var cs = Math.max(0.2, Math.cos(pts[j][0] * Math.PI / 180));
+    fn(pts[j][0], pts[j][1], cs);
   }
+}
+// A corridor cell's row and column, and a 32-bit hash of them as the key (a rare clash only joins
+// two cells' types).
+function cellY(lat) { return Math.floor((lat + 90) / CELL_LAT); }
+function cellX(lng, cs) { return Math.floor((lng + 180) * cs / CELL_LAT); }
+function cellKey(y, x) { return Math.imul(y, 73856093) ^ Math.imul(x, 19349663); }
+// Train-like speed: most of the distance at a steady 50+ km/h, which a drive through town never has
+// (a motorway drive can, so this only settles a trip one station already points to).
+function steadyFast(run) {
+  var v = [], tot = 0;
+  for (var j = 1; j < run.length; j++) {
+    var h = (run[j][0] - run[j - 1][0]) / 36e5, d = km(run[j - 1][1], run[j][1]);
+    if (h > 0 && d > 0.05) { v.push([d / h, d]); tot += d; }
+  }
+  if (v.length < 3) return false;
+  v.sort(function (x, y) { return x[0] - y[0]; });
+  var med = 0, acc = 0, j2;
+  for (j2 = 0; j2 < v.length; j2++) { acc += v[j2][1]; if (acc >= tot / 2) { med = v[j2][0]; break; } }
+  if (med < 50) return false;
+  var steady = 0;
+  for (j2 = 0; j2 < v.length; j2++) if (v[j2][0] >= 0.6 * med && v[j2][0] <= 1.6 * med) steady += v[j2][1];
+  return steady >= 0.85 * tot;
+}
+// Guessed trips (no type from Timeline, or one that didn't fit) get their type from, in order:
+// 1. the speed: from the GPS legs for trips made from GPS points (loose Timeline points, Dawarich;
+//    runMode), else the average
+//    (guessMode). Up to 300 km/h is a car at this point, so the GPS jump cleaning above treats it
+//    as road traffic and leaves bad fixes out;
+// 2. a car guess averaging over 160 km/h (MAX_KMH.CAR), once cleaned, is a train;
+// 3. a car guess whose line mostly follows labelled trips of one motorised type takes that type
+//    (your commute by train, typed by Timeline on other days);
+// 4. a car guess between two stays named like railway stations is a train, and so is one with a
+//    station at one end and a train-like speed (steadyFast).
+// Strava activities and guessed flights are left as they are.
+function retypeGuessed(R) {
+  var n = R.mode.length, i, q, todo = [];
+  for (i = 0; i < n; i++) {
+    var e = R.est[i];
+    if (!(e & GUESSED) || e & STRAVA || MODES[R.mode[i]] === 'FLYING') continue;
+    var hrs = (R.end[i] - R.start[i]) / 36e5, avg = hrs > 0 ? R.km[i] / hrs : 0, g;
+    var src = R.srcs ? R.srcs[i] : R.src;
+    if ((e & PATH_TRIP || src === SRC.dawarich) && R.pathOff[i + 1] - R.pathOff[i] >= 2) g = runMode(tripRun(R, i));
+    else { g = guessMode(R.km[i], hrs); if (!g || g === 'FLYING') continue; }
+    if (g === 'CAR' && avg > MAX_KMH.CAR) g = 'TRAIN';
+    R.mode[i] = MODE_IDX[g];
+    if (g === 'CAR') todo.push([i, avg]);
+  }
+  if (!todo.length) return;
+  // Cells crossed by labelled motorised trips, as a bit per CORRIDOR_MODES type: only the parts of
+  // their lines in 0.1° tiles a guessed car trip goes through (or next to), which keeps this quick.
+  var tiles = new Set(), cells = new Map(), bit = {};
+  function tile(la, lo) { return Math.floor(la * 10 + 900) * 4000 + Math.floor(lo * 10 + 1800); }
+  todo.forEach(function (t) {
+    var pts = [];
+    for (q = R.pathOff[t[0]]; q < R.pathOff[t[0] + 1]; q++) pts.push([R.pathPts[2 * q], R.pathPts[2 * q + 1]]);
+    densify(pts, 2, function (la, lo) { var k = tile(la, lo); for (var d = -1; d <= 1; d++) tiles.add(k + d * 4000 - 1).add(k + d * 4000).add(k + d * 4000 + 1); });
+  });
+  CORRIDOR_MODES.forEach(function (m, k) { bit[MODE_IDX[m]] = 1 << k; });
+  for (i = 0; i < n; i++) {
+    var b = bit[R.mode[i]];
+    if (!b || R.est[i] & (GUESSED | STRAVA) || R.pathOff[i + 1] - R.pathOff[i] < 2) continue;
+    for (q = R.pathOff[i] + 1; q < R.pathOff[i + 1]; q++) {
+      var a0 = R.pathPts[2 * q - 2], o0 = R.pathPts[2 * q - 1], a1 = R.pathPts[2 * q], o1 = R.pathPts[2 * q + 1];
+      if (!tiles.has(tile(a0, o0)) && !tiles.has(tile(a1, o1)) && !tiles.has(tile((a0 + a1) / 2, (o0 + o1) / 2))) continue;
+      var last = null;
+      densify([[a0, o0], [a1, o1]], 0.15, function (la, lo, cs) {
+        var k = cellKey(cellY(la), cellX(lo, cs));
+        if (k !== last) { cells.set(k, (cells.get(k) || 0) | b); last = k; }
+      });
+    }
+  }
+  // Stays by end and by start time, to find the ones a trip leaves from and arrives at.
+  var nv = R.vs ? R.vs.length : 0, byEnd = [], byStart = [];
+  for (i = 0; i < nv; i++) if (isFinite(R.vll[2 * i]) && isStation(R.vname[i])) { byEnd.push(i); byStart.push(i); }
+  byEnd.sort(function (a, b) { return R.ve[a] - R.ve[b]; });
+  byStart.sort(function (a, b) { return R.vs[a] - R.vs[b]; });
+  function stationAt(idx, key, t, ll) {
+    var lo = 0, hi = idx.length;
+    while (lo < hi) { var mid = (lo + hi) >> 1; if (key[idx[mid]] < t) lo = mid + 1; else hi = mid; }
+    for (var j = Math.max(0, lo - 3); j < Math.min(idx.length, lo + 3); j++) {
+      var v = idx[j];
+      if (Math.abs(key[v] - t) <= 30 * 60000 && (!ll || !isFinite(ll[0]) || km(ll, [R.vll[2 * v], R.vll[2 * v + 1]]) <= 0.5)) return true;
+    }
+    return false;
+  }
+  todo.forEach(function (t) {
+    var i = t[0], avg = t[1], o0 = R.pathOff[i], o1 = R.pathOff[i + 1];
+    var a = [R.from[2 * i], R.from[2 * i + 1]], z = [R.to[2 * i], R.to[2 * i + 1]];
+    if (cells.size && o1 - o0 >= 2) {
+      var pts = [], hit = {}, all = 0;
+      for (q = o0; q < o1; q++) pts.push([R.pathPts[2 * q], R.pathPts[2 * q + 1]]);
+      densify(pts, 0.15, function (la, lo, cs) {
+        all++;
+        var c = 0, y = cellY(la), x = cellX(lo, cs);
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) c |= cells.get(cellKey(y + dy, x + dx)) || 0;
+        for (var k = 0; c >> k; k++) if (c >> k & 1) hit[k] = (hit[k] || 0) + 1;
+      });
+      var best = -1, bs = 0, second = 0;
+      for (var k in hit) {
+        var sh = hit[k] / all;
+        if (sh > bs) { second = bs; bs = sh; best = +k; } else if (sh > second) second = sh;
+      }
+      var m = best >= 0 ? CORRIDOR_MODES[best] : null;
+      if (m && bs >= CORRIDOR_SHARE && bs - second >= CORRIDOR_LEAD && avg <= MAX_KMH[m]) { R.mode[i] = MODE_IDX[m]; return; }
+    }
+    var s0 = stationAt(byEnd, R.ve, R.start[i], a), s1 = stationAt(byStart, R.vs, R.end[i], z);
+    if (s0 && s1 || (s0 || s1) && o1 - o0 >= 4 && steadyFast(tripRun(R, i))) R.mode[i] = MODE_IDX.TRAIN;
+  });
 }
 function addActivity(c, type, st, et, meters, a, b, pts, ptsT) {
   var mode = normMode(type), d = Number(meters) / 1000, est = 0;
