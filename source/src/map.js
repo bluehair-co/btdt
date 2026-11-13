@@ -692,6 +692,9 @@ document.addEventListener('pointerout', function (ev) {
 var chartPanelTrip = null, chartPanelH = 240;
 function chartPanelOpen(i) {
   chartPanelTrip = i;
+  // The chart moves from the trip details into the panel, and back when the panel closes.
+  delete charts.sheet;
+  if ($('tripChartSlot')) $('tripChartSlot').innerHTML = '';
   $('chartPanel').hidden = false;
   document.body.classList.add('chart-open');
   chartPanelSize(chartPanelH);
@@ -700,8 +703,10 @@ function chartPanelOpen(i) {
 }
 function chartPanelClose() {
   if (chartPanelTrip == null) return;
+  var i = chartPanelTrip;
   chartPanelTrip = null;
   delete charts.panel;
+  if (openId === 'tripSheet' && $('tripChartSlot')) $('tripChartSlot').innerHTML = tripChart(i, 'sheet', 340, 150);
   $('chartPanel').hidden = true;
   $('chartBody').innerHTML = '';
   document.body.classList.remove('chart-open');
@@ -751,7 +756,7 @@ function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + tripChart(i, 'sheet', 340, 150) +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
