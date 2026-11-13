@@ -555,11 +555,113 @@ function tripDesc(i) {
   var s = D.est[i] & STRAVA && stravaInfo(i);
   return s && s.desc ? '<p class="trip-desc">' + esc(s.desc).replace(/\n/g, '<br>') + '</p>' : '';
 }
+// ---------- speed and heart rate chart ----------
+// Speed over the trip from its GPS points, over stretches of at least 20 seconds (as for speed paths;
+// a Strava activity's from all its recorded points, see speedSeries),
+// and the heart rate a Strava activity recorded, on one time axis: speed on the left scale, bpm on
+// the right. Pointing at the chart (or tapping it) puts the trip's transport icon where it was then.
+function tripSpeeds(i) {
+  if (modeOf(i) === 'FLYING') return [];
+  // A Strava activity keeps its speed from every recorded point.
+  var sm = D.est[i] & STRAVA && D.smeta && D.smeta[i];
+  if (sm && sm.spd) return sm.spd.t.map(function (t, k) { return [t, sm.spd.v[k]]; });
+  var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
+  if (p.length < 3 || !(ts[ts.length - 1] > 0)) return out;
+  var a = 0;
+  while (a < p.length - 1) {
+    var z = a + 1, d = haversine(p[a], p[z]);
+    while (z < p.length - 1 && ts[z] - ts[a] < 20) { d += haversine(p[z], p[z + 1]); z++; }
+    var dt = ts[z] - ts[a];
+    if (dt > 0) { out.push([ts[a], d / (dt / 3600)]); out.push([ts[z], d / (dt / 3600)]); }
+    a = z;
+  }
+  return out;
+}
+function tripHr(i) { var m = D.est[i] & STRAVA && D.smeta && D.smeta[i]; return m && m.hr && m.hr.t.length >= 2 ? m.hr : null; }
+// Round tick steps for a scale up to max.
+function niceStep(max, n) {
+  var raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
+}
+var chartTrip = null;
+function tripChart(i) {
+  var sp = tripSpeeds(i), hr = tripHr(i);
+  chartTrip = null;
+  if (sp.length < 4 && !hr) return '';
+  var dur = Math.max(1, (D.end[i] - D.start[i]) / 1000), W = 340, H = 150, L0 = 34, R0 = hr ? 34 : 10, T0 = 10, B0 = 22;
+  var w = W - L0 - R0, h = H - T0 - B0, x = function (t) { return L0 + w * Math.max(0, Math.min(1, t / dur)); };
+  var smax = 0, k;
+  for (k = 0; k < sp.length; k++) smax = Math.max(smax, distVal(sp[k][1]));
+  // A GPS spike shouldn't flatten the rest: the scale goes to the 98th percentile of speed.
+  var sv = sp.map(function (q) { return distVal(q[1]); }).sort(function (a, b) { return a - b; });
+  if (sv.length) smax = Math.min(smax, sv[Math.floor(sv.length * 0.98)] * 1.15);
+  var ss = niceStep(smax || 1, 4), stop = Math.ceil((smax || 1) / ss) * ss;
+  var hmin = 0, hmax = 0, hs = 1;
+  if (hr) {
+    hmin = Math.min.apply(null, hr.v); hmax = Math.max.apply(null, hr.v);
+    hs = niceStep(Math.max(10, hmax - hmin), 4); hmin = Math.floor(hmin / hs) * hs; hmax = Math.max(hmin + hs, Math.ceil(hmax / hs) * hs);
+  }
+  var ys = function (v) { return T0 + h * (1 - Math.min(1, v / stop)); }, yh = function (v) { return T0 + h * (1 - (v - hmin) / (hmax - hmin)); };
+  var g = '', col = cssVar(groupOf(modeOf(i)).v);
+  for (var v = 0; v <= stop + 1e-9; v += ss) g += '<line x1="' + L0 + '" x2="' + (L0 + w) + '" y1="' + ys(v).toFixed(1) + '" y2="' + ys(v).toFixed(1) + '" class="tc-grid"/><text x="' + (L0 - 5) + '" y="' + (ys(v) + 3.5).toFixed(1) + '" text-anchor="end" class="tc-ax">' + fmt(v, ss < 1 ? 1 : 0) + '</text>';
+  if (hr) for (v = hmin; v <= hmax + 1e-9; v += hs) g += '<text x="' + (L0 + w + 5) + '" y="' + (yh(v) + 3.5).toFixed(1) + '" class="tc-ax tc-hr">' + fmt(v) + '</text>';
+  var ms = dur > 7200 ? 3600 : dur > 3600 ? 1800 : dur > 1800 ? 600 : dur > 600 ? 300 : 60;
+  for (var t = 0; t <= dur; t += ms) g += '<text x="' + x(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="tc-ax">' + (t >= 3600 ? Math.floor(t / 3600) + ':' + pad2(Math.round(t % 3600 / 60)) : Math.round(t / 60) + (t ? '′' : '')) + '</text>';
+  var sl = sp.map(function (q) { return x(q[0]).toFixed(1) + ',' + ys(distVal(q[1])).toFixed(1); }).join(' ');
+  var hl = hr ? hr.t.map(function (t, j) { return x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1); }).join(' ') : '';
+  chartTrip = { i: i, sp: sp, hr: hr, dur: dur, L0: L0, w: w, W: W };
+  var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h';
+  return '<div class="trip-chart" data-i="' + i + '">' +
+    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') + '<span class="tc-read" id="tcRead"></span></div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
+    (sp.length >= 4 ? '<polyline points="' + sl + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round"/>' : '') +
+    (hr ? '<polyline points="' + hl + '" fill="none" stroke="var(--cc8)" stroke-width="1.4" stroke-linejoin="round"/>' : '') +
+    '<line id="tcCur" y1="' + T0 + '" y2="' + (T0 + h) + '" class="tc-cur" visibility="hidden"/></svg></div>';
+}
+// The value of a series [[t, v], …] or {t, v} at time t.
+function seriesAt(tt, vv, t) {
+  var lo = 0, hi = tt.length - 1;
+  if (t <= tt[0]) return vv[0];
+  if (t >= tt[hi]) return vv[hi];
+  while (hi - lo > 1) { var m = (lo + hi) >> 1; if (tt[m] <= t) lo = m; else hi = m; }
+  var f = tt[hi] > tt[lo] ? (t - tt[lo]) / (tt[hi] - tt[lo]) : 0;
+  return vv[lo] + (vv[hi] - vv[lo]) * f;
+}
+var chartMarker = null;
+function chartAt(ev, pan) {
+  var c = chartTrip, svg = ev.target.closest('.trip-chart svg');
+  if (!c || !svg) return;
+  var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * c.W, t = Math.max(0, Math.min(c.dur, (px - c.L0) / c.w * c.dur));
+  var cur = $('tcCur'), X = (c.L0 + c.w * t / c.dur).toFixed(1);
+  cur.setAttribute('x1', X); cur.setAttribute('x2', X); cur.setAttribute('visibility', 'visible');
+  var parts = [clock(D.start[c.i] + t * 1000, D.off[c.i])];
+  if (c.sp.length >= 4) parts.push(speed(seriesAt(c.sp.map(function (q) { return q[0]; }), c.sp.map(function (q) { return q[1]; }), t)));
+  if (c.hr) parts.push(Math.round(seriesAt(c.hr.t, c.hr.v, t)) + ' bpm');
+  $('tcRead').textContent = parts.join(' · ');
+  if (!map || !hlLayer || PREFS.proj !== 'merc' || tab !== 'map') return;
+  var a = along(c.i, D.start[c.i] + t * 1000);
+  if (!a) return;
+  if (!chartMarker || !hlLayer.hasLayer(chartMarker)) chartMarker = L.marker(a.ll, { icon: posIcon(modeOf(c.i), tripIcon(c.i)), interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(hlLayer);
+  else chartMarker.setLatLng(a.ll);
+  if (pan && !map.getBounds().contains(a.ll)) map.panTo(a.ll);
+}
+function chartOut() {
+  var cur = $('tcCur');
+  if (cur) cur.setAttribute('visibility', 'hidden');
+  if ($('tcRead')) $('tcRead').textContent = '';
+  if (chartMarker && hlLayer) hlLayer.removeLayer(chartMarker);
+}
+$('tripBody').addEventListener('pointermove', function (ev) { if (ev.target.closest('.trip-chart svg')) chartAt(ev, false); });
+$('tripBody').addEventListener('pointerdown', function (ev) { if (ev.target.closest('.trip-chart svg')) chartAt(ev, true); });
+$('tripBody').addEventListener('pointerout', function (ev) {
+  // A mouse leaving the chart takes the marker away; a tap leaves it where it was tapped.
+  if (ev.pointerType === 'mouse' && ev.target.closest('.trip-chart svg') && !(ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.trip-chart svg'))) chartOut();
+});
 function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + tripChart(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -592,7 +694,10 @@ function rawTrip(i) {
   };
   if (e & 16) {
     // The Timeline trips at the same time, including the ones this activity replaced.
-    o.strava = D.smeta && D.smeta[i] || 'Not kept: load the Strava export again to see what it says about this activity.';
+    var sm = D.smeta && D.smeta[i];
+    o.strava = sm ? Object.assign({}, sm, { hr: undefined, spd: undefined }) : 'Not kept: load the Strava export again to see what it says about this activity.';
+    // Heart rate: seconds after the start, bpm.
+    if (sm && sm.hr) o.heartRate = sm.hr.t.map(function (t, k) { return [t, sm.hr.v[k]]; });
     o.timelineSameTime = [];
     for (var j = 0; j < RAW.start.length; j++) {
       if (RAW.end[j] <= D.start[i] || RAW.start[j] >= D.end[i]) continue;

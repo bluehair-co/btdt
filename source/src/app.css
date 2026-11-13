@@ -221,6 +221,15 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge .strava-mark { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 0 2px var(--panel); display: flex; align-items: center; justify-content: center; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
 .trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+.trip-chart { margin-top: 14px; }
+.trip-chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
+.tc-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--muted); margin-bottom: 4px; min-height: 18px; }
+.tc-key i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.tc-read { margin-left: auto; color: var(--fg); font-variant-numeric: tabular-nums; }
+.tc-grid { stroke: var(--grid); stroke-width: 1; }
+.tc-ax { font-size: 9.5px; fill: var(--muted); font-family: var(--font-body); }
+.tc-ax.tc-hr { fill: var(--cc8); }
+.tc-cur { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 3 3; }
 .gear-kv { display: inline-flex; align-items: center; gap: 6px; }
 .gear-kv svg.ic { width: 18px; height: 18px; }
 .trip-head h3 { margin: 0; font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); }

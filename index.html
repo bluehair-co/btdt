@@ -265,6 +265,15 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge .strava-mark { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 0 2px var(--panel); display: flex; align-items: center; justify-content: center; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
 .trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
+.trip-chart { margin-top: 14px; }
+.trip-chart svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
+.tc-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--muted); margin-bottom: 4px; min-height: 18px; }
+.tc-key i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
+.tc-read { margin-left: auto; color: var(--fg); font-variant-numeric: tabular-nums; }
+.tc-grid { stroke: var(--grid); stroke-width: 1; }
+.tc-ax { font-size: 9.5px; fill: var(--muted); font-family: var(--font-body); }
+.tc-ax.tc-hr { fill: var(--cc8); }
+.tc-cur { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 3 3; }
 .gear-kv { display: inline-flex; align-items: center; gap: 6px; }
 .gear-kv svg.ic { width: 18px; height: 18px; }
 .trip-head h3 { margin: 0; font-size: 16px; font-weight: 600; text-transform: none; letter-spacing: 0; color: var(--fg); }
@@ -2581,28 +2590,33 @@ function xmlText(s) {
   return s.replace(/^<!\[CDATA\[|\]\]>$/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&apos;|&#39;/g, "'").replace(/&amp;/g, '&').trim();
 }
 function readGpx(txt) {
-  var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, pts = [], ts = [];
+  var re = /<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>/g, m, pts = [], ts = [], hr = { t: [], v: [] };
   while ((m = re.exec(txt))) {
     var lat = attr(m[1], 'lat'), lng = attr(m[1], 'lon'), t = parseTime(tag(m[2], 'time'));
     if (t && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat || lng)) { pts.push([lat, lng]); ts.push(t.ms); }
+    // Heart rate from the Garmin extension (<gpxtpx:hr>), as Strava writes it.
+    var b = t && /<(?:\w+:)?hr>/.test(m[2]) ? parseFloat(tag(m[2], 'hr')) : NaN;
+    if (b > 0 && b < 255) { hr.t.push(t.ms); hr.v.push(b); }
   }
   var trk = /<trk\b[^>]*>([\s\S]*?)<trkseg/.exec(txt);
-  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts };
+  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts, hr: hr };
 }
 function readTcx(txt) {
-  var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
+  var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], hr = { t: [], v: [] }, sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
   while ((m = re.exec(txt))) {
     var lat = parseFloat(tag(m[1], 'LatitudeDegrees')), lng = parseFloat(tag(m[1], 'LongitudeDegrees')), t = parseTime(tag(m[1], 'Time'));
     if (t && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180 && (lat || lng)) { pts.push([lat, lng]); ts.push(t.ms); }
+    var h = /<HeartRateBpm\b[^>]*>\s*<(?:\w+:)?Value>\s*([\d.]+)/.exec(m[1]), b = h ? parseFloat(h[1]) : NaN;
+    if (t && b > 0 && b < 255) { hr.t.push(t.ms); hr.v.push(b); }
   }
-  return { type: sp ? sp[1] : '', pts: pts, ts: ts };
+  return { type: sp ? sp[1] : '', pts: pts, ts: ts, hr: hr };
 }
-// FIT is Garmin's binary format. Only the record messages (time and position) and the
+// FIT is Garmin's binary format. Only the record messages (time, position and heart rate) and the
 // sport are read; everything else is skipped by the sizes its definitions give.
 var FIT_EPOCH = 631065600000;
 function readFit(buf) {
   var v = new DataView(buf), hs = v.getUint8(0), end = Math.min(buf.byteLength, hs + v.getUint32(4, true)), p = hs;
-  var defs = {}, lastTs = 0, pts = [], ts = [], sport = null, subSport = null, virtual = false;
+  var defs = {}, lastTs = 0, pts = [], ts = [], hr = { t: [], v: [] }, sport = null, subSport = null, virtual = false;
   while (p < end) {
     var h = v.getUint8(p++), local, d, ct = null;
     if (h & 0x80) { local = (h >> 5) & 3; var o = h & 0x1f; ct = (lastTs & ~0x1f) + o; if (o < (lastTs & 0x1f)) ct += 0x20; }
@@ -2629,6 +2643,8 @@ function readFit(buf) {
       if (t != null && la != null && lo != null && la !== 0x7fffffff && lo !== 0x7fffffff && (la || lo)) {
         pts.push([la * 180 / 2147483648, lo * 180 / 2147483648]); ts.push(FIT_EPOCH + t * 1000);
       }
+      // Field 3 is the heart rate (255 when there is none).
+      if (t != null && rec[3] > 0 && rec[3] < 255) { hr.t.push(FIT_EPOCH + t * 1000); hr.v.push(rec[3]); }
     } else if (d.g === 18 || d.g === 12) {
       var sp = rec[d.g === 18 ? 5 : 0], sub = rec[d.g === 18 ? 6 : 1];
       if (sp != null && sp !== 255 && sport == null) { sport = sp; subSport = sub; }
@@ -2637,7 +2653,7 @@ function readFit(buf) {
   }
   // Mountain bike and trail run are cycling and running with a sub-sport.
   var name = sport === 2 && subSport === 8 ? 'Mountain Bike Ride' : sport === 1 && subSport === 3 ? 'Trail Run' : FIT_SPORT[sport] || '';
-  return { type: virtual ? 'virtual' : name, sport: sport, subSport: subSport, pts: pts, ts: ts };
+  return { type: virtual ? 'virtual' : name, sport: sport, subSport: subSport, pts: pts, ts: ts, hr: hr };
 }
 function readActivity(name, buf) {
   var n = name.replace(/\.gz$/i, '');
@@ -2665,6 +2681,43 @@ function simplify(pts, tol) {
   for (i = 0; i < n; i++) if (keep[i]) out.push(i);
   return out;
 }
+// Heart rate over the activity, for the trip's chart: { t: seconds after the start, v: bpm }, at most
+// one sample every HR_STEP seconds (the average of the samples in it) and HR_MAX samples in all.
+var HR_STEP = 5, HR_MAX = 1500;
+function hrSeries(h, t0, t1) {
+  if (!h || !h.t.length) return null;
+  var step = Math.max(HR_STEP, Math.ceil((t1 - t0) / 1000 / HR_MAX)), out = { t: [], v: [] }, cur = -1, sum = 0, k = 0;
+  function flush() { if (k) { out.t.push(cur * step); out.v.push(Math.round(sum / k)); } }
+  for (var i = 0; i < h.t.length; i++) {
+    var s = (h.t[i] - t0) / 1000;
+    if (s < 0 || s > (t1 - t0) / 1000) continue;
+    var b = Math.floor(s / step);
+    if (b !== cur) { flush(); cur = b; sum = 0; k = 0; }
+    sum += h.v[i]; k++;
+  }
+  flush();
+  return out.t.length >= 2 ? out : null;
+}
+// Speed over the activity from every recorded point (the saved line keeps fewer), for the same chart:
+// { t: seconds after the start, v: km/h } every few seconds, each over the 20 seconds around it.
+function speedSeries(pts, ts) {
+  var n = pts.length, cum = [0], i;
+  if (n < 3) return null;
+  for (i = 1; i < n; i++) cum.push(cum[i - 1] + km(pts[i - 1], pts[i]));
+  var t0 = ts[0], dur = (ts[n - 1] - t0) / 1000, step = Math.max(HR_STEP, Math.ceil(dur / HR_MAX)), out = { t: [], v: [] }, j = 0;
+  function at(s) {
+    var ms = t0 + s * 1000;
+    while (j > 0 && ts[j] > ms) j--;
+    while (j < n - 2 && ts[j + 1] < ms) j++;
+    var f = ts[j + 1] > ts[j] ? Math.max(0, Math.min(1, (ms - ts[j]) / (ts[j + 1] - ts[j]))) : 0;
+    return cum[j] + (cum[j + 1] - cum[j]) * f;
+  }
+  for (var s = 0; s <= dur; s += step) {
+    var a = Math.max(0, s - 10), b = Math.min(dur, s + 10);
+    if (b > a) { out.t.push(s); out.v.push(Math.round((at(b) - at(a)) / ((b - a) / 3600) * 10) / 10); }
+  }
+  return out.t.length >= 2 ? out : null;
+}
 function addStrava(c, type, a, meta) {
   var st = stravaSport(type), mode = st.mode;
   if (mode === null || a.pts.length < 2) return false;
@@ -2685,6 +2738,9 @@ function addStrava(c, type, a, meta) {
   // What the export said about the activity, for the trip's raw data.
   var sm = Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {});
   if (!sm.name && a.name) sm.name = a.name;
+  var hr = hrSeries(a.hr, ts[0], ts[n]), spd = speedSeries(pts, ts);
+  if (hr) sm.hr = hr;
+  if (spd) sm.spd = spd;
   (c.smeta || (c.smeta = [])).push(sm);
   return true;
 }
@@ -5302,11 +5358,113 @@ function tripDesc(i) {
   var s = D.est[i] & STRAVA && stravaInfo(i);
   return s && s.desc ? '<p class="trip-desc">' + esc(s.desc).replace(/\n/g, '<br>') + '</p>' : '';
 }
+// ---------- speed and heart rate chart ----------
+// Speed over the trip from its GPS points, over stretches of at least 20 seconds (as for speed paths;
+// a Strava activity's from all its recorded points, see speedSeries),
+// and the heart rate a Strava activity recorded, on one time axis: speed on the left scale, bpm on
+// the right. Pointing at the chart (or tapping it) puts the trip's transport icon where it was then.
+function tripSpeeds(i) {
+  if (modeOf(i) === 'FLYING') return [];
+  // A Strava activity keeps its speed from every recorded point.
+  var sm = D.est[i] & STRAVA && D.smeta && D.smeta[i];
+  if (sm && sm.spd) return sm.spd.t.map(function (t, k) { return [t, sm.spd.v[k]]; });
+  var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
+  if (p.length < 3 || !(ts[ts.length - 1] > 0)) return out;
+  var a = 0;
+  while (a < p.length - 1) {
+    var z = a + 1, d = haversine(p[a], p[z]);
+    while (z < p.length - 1 && ts[z] - ts[a] < 20) { d += haversine(p[z], p[z + 1]); z++; }
+    var dt = ts[z] - ts[a];
+    if (dt > 0) { out.push([ts[a], d / (dt / 3600)]); out.push([ts[z], d / (dt / 3600)]); }
+    a = z;
+  }
+  return out;
+}
+function tripHr(i) { var m = D.est[i] & STRAVA && D.smeta && D.smeta[i]; return m && m.hr && m.hr.t.length >= 2 ? m.hr : null; }
+// Round tick steps for a scale up to max.
+function niceStep(max, n) {
+  var raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * mag;
+}
+var chartTrip = null;
+function tripChart(i) {
+  var sp = tripSpeeds(i), hr = tripHr(i);
+  chartTrip = null;
+  if (sp.length < 4 && !hr) return '';
+  var dur = Math.max(1, (D.end[i] - D.start[i]) / 1000), W = 340, H = 150, L0 = 34, R0 = hr ? 34 : 10, T0 = 10, B0 = 22;
+  var w = W - L0 - R0, h = H - T0 - B0, x = function (t) { return L0 + w * Math.max(0, Math.min(1, t / dur)); };
+  var smax = 0, k;
+  for (k = 0; k < sp.length; k++) smax = Math.max(smax, distVal(sp[k][1]));
+  // A GPS spike shouldn't flatten the rest: the scale goes to the 98th percentile of speed.
+  var sv = sp.map(function (q) { return distVal(q[1]); }).sort(function (a, b) { return a - b; });
+  if (sv.length) smax = Math.min(smax, sv[Math.floor(sv.length * 0.98)] * 1.15);
+  var ss = niceStep(smax || 1, 4), stop = Math.ceil((smax || 1) / ss) * ss;
+  var hmin = 0, hmax = 0, hs = 1;
+  if (hr) {
+    hmin = Math.min.apply(null, hr.v); hmax = Math.max.apply(null, hr.v);
+    hs = niceStep(Math.max(10, hmax - hmin), 4); hmin = Math.floor(hmin / hs) * hs; hmax = Math.max(hmin + hs, Math.ceil(hmax / hs) * hs);
+  }
+  var ys = function (v) { return T0 + h * (1 - Math.min(1, v / stop)); }, yh = function (v) { return T0 + h * (1 - (v - hmin) / (hmax - hmin)); };
+  var g = '', col = cssVar(groupOf(modeOf(i)).v);
+  for (var v = 0; v <= stop + 1e-9; v += ss) g += '<line x1="' + L0 + '" x2="' + (L0 + w) + '" y1="' + ys(v).toFixed(1) + '" y2="' + ys(v).toFixed(1) + '" class="tc-grid"/><text x="' + (L0 - 5) + '" y="' + (ys(v) + 3.5).toFixed(1) + '" text-anchor="end" class="tc-ax">' + fmt(v, ss < 1 ? 1 : 0) + '</text>';
+  if (hr) for (v = hmin; v <= hmax + 1e-9; v += hs) g += '<text x="' + (L0 + w + 5) + '" y="' + (yh(v) + 3.5).toFixed(1) + '" class="tc-ax tc-hr">' + fmt(v) + '</text>';
+  var ms = dur > 7200 ? 3600 : dur > 3600 ? 1800 : dur > 1800 ? 600 : dur > 600 ? 300 : 60;
+  for (var t = 0; t <= dur; t += ms) g += '<text x="' + x(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="tc-ax">' + (t >= 3600 ? Math.floor(t / 3600) + ':' + pad2(Math.round(t % 3600 / 60)) : Math.round(t / 60) + (t ? '′' : '')) + '</text>';
+  var sl = sp.map(function (q) { return x(q[0]).toFixed(1) + ',' + ys(distVal(q[1])).toFixed(1); }).join(' ');
+  var hl = hr ? hr.t.map(function (t, j) { return x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1); }).join(' ') : '';
+  chartTrip = { i: i, sp: sp, hr: hr, dur: dur, L0: L0, w: w, W: W };
+  var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h';
+  return '<div class="trip-chart" data-i="' + i + '">' +
+    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') + '<span class="tc-read" id="tcRead"></span></div>' +
+    '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
+    (sp.length >= 4 ? '<polyline points="' + sl + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round"/>' : '') +
+    (hr ? '<polyline points="' + hl + '" fill="none" stroke="var(--cc8)" stroke-width="1.4" stroke-linejoin="round"/>' : '') +
+    '<line id="tcCur" y1="' + T0 + '" y2="' + (T0 + h) + '" class="tc-cur" visibility="hidden"/></svg></div>';
+}
+// The value of a series [[t, v], …] or {t, v} at time t.
+function seriesAt(tt, vv, t) {
+  var lo = 0, hi = tt.length - 1;
+  if (t <= tt[0]) return vv[0];
+  if (t >= tt[hi]) return vv[hi];
+  while (hi - lo > 1) { var m = (lo + hi) >> 1; if (tt[m] <= t) lo = m; else hi = m; }
+  var f = tt[hi] > tt[lo] ? (t - tt[lo]) / (tt[hi] - tt[lo]) : 0;
+  return vv[lo] + (vv[hi] - vv[lo]) * f;
+}
+var chartMarker = null;
+function chartAt(ev, pan) {
+  var c = chartTrip, svg = ev.target.closest('.trip-chart svg');
+  if (!c || !svg) return;
+  var r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) / r.width * c.W, t = Math.max(0, Math.min(c.dur, (px - c.L0) / c.w * c.dur));
+  var cur = $('tcCur'), X = (c.L0 + c.w * t / c.dur).toFixed(1);
+  cur.setAttribute('x1', X); cur.setAttribute('x2', X); cur.setAttribute('visibility', 'visible');
+  var parts = [clock(D.start[c.i] + t * 1000, D.off[c.i])];
+  if (c.sp.length >= 4) parts.push(speed(seriesAt(c.sp.map(function (q) { return q[0]; }), c.sp.map(function (q) { return q[1]; }), t)));
+  if (c.hr) parts.push(Math.round(seriesAt(c.hr.t, c.hr.v, t)) + ' bpm');
+  $('tcRead').textContent = parts.join(' · ');
+  if (!map || !hlLayer || PREFS.proj !== 'merc' || tab !== 'map') return;
+  var a = along(c.i, D.start[c.i] + t * 1000);
+  if (!a) return;
+  if (!chartMarker || !hlLayer.hasLayer(chartMarker)) chartMarker = L.marker(a.ll, { icon: posIcon(modeOf(c.i), tripIcon(c.i)), interactive: false, keyboard: false, zIndexOffset: 1000 }).addTo(hlLayer);
+  else chartMarker.setLatLng(a.ll);
+  if (pan && !map.getBounds().contains(a.ll)) map.panTo(a.ll);
+}
+function chartOut() {
+  var cur = $('tcCur');
+  if (cur) cur.setAttribute('visibility', 'hidden');
+  if ($('tcRead')) $('tcRead').textContent = '';
+  if (chartMarker && hlLayer) hlLayer.removeLayer(chartMarker);
+}
+$('tripBody').addEventListener('pointermove', function (ev) { if (ev.target.closest('.trip-chart svg')) chartAt(ev, false); });
+$('tripBody').addEventListener('pointerdown', function (ev) { if (ev.target.closest('.trip-chart svg')) chartAt(ev, true); });
+$('tripBody').addEventListener('pointerout', function (ev) {
+  // A mouse leaving the chart takes the marker away; a tap leaves it where it was tapped.
+  if (ev.pointerType === 'mouse' && ev.target.closest('.trip-chart svg') && !(ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.trip-chart svg'))) chartOut();
+});
 function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + tripChart(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -5339,7 +5497,10 @@ function rawTrip(i) {
   };
   if (e & 16) {
     // The Timeline trips at the same time, including the ones this activity replaced.
-    o.strava = D.smeta && D.smeta[i] || 'Not kept: load the Strava export again to see what it says about this activity.';
+    var sm = D.smeta && D.smeta[i];
+    o.strava = sm ? Object.assign({}, sm, { hr: undefined, spd: undefined }) : 'Not kept: load the Strava export again to see what it says about this activity.';
+    // Heart rate: seconds after the start, bpm.
+    if (sm && sm.hr) o.heartRate = sm.hr.t.map(function (t, k) { return [t, sm.hr.v[k]]; });
     o.timelineSameTime = [];
     for (var j = 0; j < RAW.start.length; j++) {
       if (RAW.end[j] <= D.start[i] || RAW.start[j] >= D.end[i]) continue;
