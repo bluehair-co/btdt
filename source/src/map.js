@@ -473,10 +473,13 @@ function hitsAt(pt) {
 }
 function onMapTap(pt, ev) {
   var list = hitsAt(pt);
-  if (!list.length) { if (openId === 'tripSheet') closeSheets(); if (!squareAt(pt, ev)) hideTip(); return; }
+  // On a phone with the chart open, the trip details are out of sight: a tap on an empty spot
+  // leaves the chart open, and a tap on several trips closes it to list them.
+  var phoneChart = chartPanelTrip != null && !wide();
+  if (!list.length) { if (openId === 'tripSheet' && !phoneChart) closeSheets(); if (!squareAt(pt, ev)) hideTip(); return; }
   hideTip(); setHovered([]);
   if (list.length === 1) openTrip(list[0].i);
-  else openList(list.map(function (h) { return h.i; }));
+  else { if (phoneChart) chartPanelClose(); openList(list.map(function (h) { return h.i; })); }
 }
 function setHovered(list) {
   if (many) list = [];
@@ -633,7 +636,8 @@ function tripChart(i, where, W, H) {
   var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h';
   return '<div class="trip-chart" data-k="' + where + '">' +
     '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') +
-    (where === 'sheet' ? '<button type="button" class="icon-btn tc-open" data-act="chart" data-i="' + i + '" aria-label="Open the chart under the map" title="Open under the map">' + icon('expand') + '</button>' : '') + '</div>' +
+    // On a phone the panel goes with the map, so the button is only there on the Map tab.
+    (where === 'sheet' && (wide() || tab === 'map') ? '<button type="button" class="icon-btn tc-open" data-act="chart" data-i="' + i + '" aria-label="Open the chart under the map" title="Open under the map">' + icon('expand') + '</button>' : '') + '</div>' +
     '<div class="tc-read" aria-live="off"></div>' +
     '<svg class="tc-svg" viewBox="0 0 ' + W + ' ' + H + '"' + (where === 'panel' ? ' width="' + W + '" height="' + H + '"' : '') + ' role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
     (sp.length >= 4 ? '<polyline points="' + sl + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round"/>' : '') +
@@ -686,20 +690,29 @@ document.addEventListener('pointerout', function (ev) {
   if (ev.pointerType === 'mouse' && onChart(ev) && !(ev.relatedTarget && ev.relatedTarget.closest && ev.relatedTarget.closest('.tc-svg'))) chartOut();
 });
 
-// ---------- the chart as a panel under the map (desktop) ----------
+// ---------- the chart as a panel under the map ----------
 // It takes the bottom of the screen at a height dragged from its top edge; the map, dock and panels
 // move up above it (--chart-h). It follows the trip that's open and closes with it.
+// On a phone (under 960 px) the dock, the top bar, the map buttons and the trip details make way
+// for it, so the trip's map and its chart show together; closing it brings them back.
 var chartPanelTrip = null, chartPanelH = 240;
 function chartPanelOpen(i) {
+  var first = chartPanelTrip == null;
   chartPanelTrip = i;
   // The chart moves from the trip details into the panel, and back when the panel closes.
   delete charts.sheet;
   if ($('tripChartSlot')) $('tripChartSlot').innerHTML = '';
   $('chartPanel').hidden = false;
   document.body.classList.add('chart-open');
-  chartPanelSize(chartPanelH);
+  // A phone starts it at no more than 40% of the screen, leaving the rest to the map.
+  chartPanelSize(first && !wide() ? Math.min(chartPanelH, window.innerHeight * 0.4) : chartPanelH);
   chartPanelDraw();
   if (map) map.invalidateSize();
+  // On a phone the trip is fitted into the map left above the panel.
+  if (first && !wide() && map && tab === 'map' && PREFS.proj === 'merc') {
+    var pts = tripPath(i);
+    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [32, 32], maxZoom: 16 });
+  }
 }
 function chartPanelClose() {
   if (chartPanelTrip == null) return;
@@ -723,7 +736,7 @@ function chartPanelDraw() {
   $('chartTitle').innerHTML = (name ? esc(name) + ' · ' : '') + tripLabel(i) + ' · ' + longDate(D.day[i]);
   var body = $('chartBody'), cs = getComputedStyle(body);
   // The body's inner size, less the key and readout lines above the chart.
-  var W = Math.max(300, body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), H = Math.max(80, body.clientHeight - parseFloat(cs.paddingBottom) - 46);
+  var W = Math.max(wide() ? 300 : 240, body.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)), H = Math.max(80, body.clientHeight - parseFloat(cs.paddingBottom) - 46);
   body.innerHTML = tripChart(i, 'panel', W, H);
   if (!body.innerHTML) chartPanelClose();
 }

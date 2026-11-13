@@ -227,7 +227,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .tc-key i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
 /* The readout keeps its line when empty, so the chart doesn't move when it fills. */
 .tc-read { height: 18px; line-height: 18px; margin: 2px 0; text-align: right; font-size: 12px; color: var(--fg); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tc-open { display: none; margin-left: auto; width: 30px; height: 30px; }
+.tc-open { display: inline-flex; margin-left: auto; width: 30px; height: 30px; }
 .tc-open svg { width: 16px; height: 16px; }
 .chart-panel { position: fixed; z-index: 31; left: 0; right: 0; bottom: 0; height: var(--chart-h, 240px); display: flex; flex-direction: column; background: var(--panel); border-top: 1px solid var(--line); box-shadow: 0 -6px 20px rgba(34, 31, 69, .08); padding-bottom: var(--safe-b); }
 .chart-panel[hidden] { display: none; }
@@ -239,8 +239,17 @@ details.help b { color: var(--fg); font-weight: 500; }
 .cp-body { flex: 1; min-height: 0; padding: 0 20px 8px; overflow: hidden; }
 .cp-body .trip-chart { margin-top: 0; }
 .cp-body .tc-svg { width: auto; }
+/* On a phone the chart panel shares the screen with the map alone: the dock, the top bar, the map
+   buttons, the legend and the trip details step aside until it closes. */
+@media (max-width: 959px) {
+  body.chart-open #map, body.chart-open #proj { bottom: var(--chart-h); }
+  body.chart-open .dock, body.chart-open .topbar, body.chart-open #mapPage .fab, body.chart-open .map-legend, body.chart-open #scrim { display: none !important; }
+  body.chart-open #tripSheet { transform: translateY(105%); visibility: hidden; }
+  .chart-panel { border-radius: 18px 18px 0 0; }
+  .cp-head { padding-left: 16px; }
+  .cp-body { padding: 0 16px 8px; }
+}
 @media (min-width: 960px) {
-  .tc-open { display: inline-flex; }
   /* With the chart open, the map, the dock and the buttons by it, and the panels sit above it. */
   body.chart-open { --dock-gap: calc(14px + var(--chart-h)); }
   body.chart-open #map, body.chart-open #proj { bottom: var(--chart-h); }
