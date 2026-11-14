@@ -222,6 +222,8 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge { position: relative; }
 .mode-badge .strava-mark { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 0 2px var(--panel); display: flex; align-items: center; justify-content: center; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
+.mode-badge .rec-mark { background: #34405a; }
+.mode-badge .rec-mark svg { width: 10px; height: 10px; margin-top: 0; }
 .trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
 .trip-chart { margin-top: 14px; }
 .hr-zones { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -528,6 +530,11 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
 }
 .welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
+/* What the Load button reads: Timeline first, then the apps and formats. */
+.works-with { list-style: none; margin: -6px 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.works-with li { font-size: 12.5px; font-weight: 500; line-height: 1; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .92); }
+.works-with li.lead { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .3); color: #fff; }
+.works-with li.fmt { background: none; border-color: transparent; padding-left: 2px; padding-right: 2px; color: rgba(255, 255, 255, .7); font-family: var(--font-mono, inherit); font-size: 11.5px; letter-spacing: .02em; }
 .welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }

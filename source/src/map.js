@@ -615,7 +615,7 @@ function tripRows(i) {
   var m = modeOf(i), k = D.km[i], ms = D.end[i] - D.start[i], off = D.off[i], e = D.est[i];
   var line = haversine([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]), nGps = D.pathOff[i + 1] - D.pathOff[i];
   var t0 = localTime(D.start[i], zoneAt(D.from[2 * i], D.from[2 * i + 1]), off), t1 = localTime(D.end[i], zoneAt(D.to[2 * i], D.to[2 * i + 1]), off);
-  var src = e & 16 ? 'from Strava' : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
+  var src = e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
   var rows = [
     ['From', placeOf(i, false)], ['To', placeOf(i, true)],
     ['Start', t0.time + ' <span class="fine">' + t0.label + '</span>'],
@@ -630,11 +630,11 @@ function tripRows(i) {
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
   ].filter(Boolean);
   var notes = [];
-  if (e & 16) notes.push(D.repl[i] ? 'Recorded on Strava. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded on Strava. Timeline has no trip at this time.');
-  if (isDup(i)) notes.push('Strava recorded this trip too. It shows here because Timeline is the only source chosen; with Strava included, the Strava activity takes its place.');
+  if (e & 16) notes.push(D.repl[i] ? 'Recorded ' + esc(actFrom(i)) + '. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded ' + esc(actFrom(i)) + '. Timeline has no trip at this time.');
+  if (isDup(i)) notes.push('A recorded activity covers this trip too. It shows here because Timeline is the only source chosen; with ' + esc(actsLabel(D.stravaStats)) + ' included, the activity takes its place.');
   if (isSim(i)) notes.push('Simulated from a file you loaded, not recorded by Timeline. It replaces any exported trip at the same time.');
   if (e & PATH_TRIP) notes.push('Timeline kept GPS points here but no trip, so BT•DT made this trip from them.');
-  if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? 'Strava calls this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : 'Strava gives this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
+  if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? (actApp(i) ? esc(actApp(i)) + ' calls' : 'Its file calls') + ' this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : (actApp(i) ? esc(actApp(i)) + ' gives' : 'Its file gives') + ' this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
   else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed: from its speed, then from your labelled trips along the same line, and from railway stations at its ends.');
   if (e & RECORDS_GPS) notes.push('The line follows the GPS points from Records.json' + ((e & 3) === 1 ? ', and the distance is measured along them' + (D.orig[i] > 0 && Math.abs(D.orig[i] - k) > 0.05 * k ? ' (Timeline said ' + dist(D.orig[i]) + ').' : '.') : '.'));
   else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT•DT measures the distance along the GPS trail instead.');
@@ -665,7 +665,7 @@ function hrZonesBlock(i) {
 // A Strava activity's own name is the title, with its sport under it.
 function tripHead(i, sub) {
   var m = modeOf(i), r = tripRows(i), name = tripName(i);
-  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16, tripIcon(i)) + '<div><h3>' + (name ? esc(name) : tripLabel(i)) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (name ? tripLabel(i) + ' · ' : '') + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
+  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16 ? actApp(i) || true : 0, tripIcon(i)) + '<div><h3>' + (name ? esc(name) : tripLabel(i)) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (name ? tripLabel(i) + ' · ' : '') + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
 }
 // A Strava activity's description, as written.
 function tripDesc(i) {
@@ -896,13 +896,13 @@ function openTrip(i, fromList) {
 // Everything BT•DT keeps about one trip, as JSON, to look into a trip without sharing the whole import.
 // BT•DT keeps what it read from the files, not the files themselves, so this is that.
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
-  [16, 'from Strava'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
+  [16, 'recorded activity'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
   [JUMPS, 'bad GPS points left out']];
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
   function ll(a, k) { return isFinite(a[2 * k]) ? [+a[2 * k].toFixed(6), +a[2 * k + 1].toFixed(6)] : null; }
   var e = D.est[i], s = D.srcs ? D.srcs[i] : null, o = {
-    source: s === SRC.strava ? 'Strava' : s === SRC.sim ? 'Simulated' : KIND_LABEL[s] || 'Unknown',
+    source: s === SRC.strava ? actApp(i) || 'Activity file' : s === SRC.sim ? 'Simulated' : KIND_LABEL[s] || 'Unknown',
     type: tripLabel(i).replace(/&amp;/g, '&'), mode: modeOf(i),
     sport: D.sport && D.sport[i] ? SPORTS[D.sport[i]][0] : null, stravaType: D.stype && D.stype[i] || null,
     start: iso(D.start[i]), end: iso(D.end[i]), utcOffsetMin: D.off[i] === NO_OFF ? null : D.off[i], localDay: isoDay(D.day[i]),
@@ -913,7 +913,7 @@ function rawTrip(i) {
   if (e & 16) {
     // The Timeline trips at the same time, including the ones this activity replaced.
     var sm = D.smeta && D.smeta[i];
-    o.strava = sm ? Object.assign({}, sm, { hr: undefined, spd: undefined }) : 'Not kept: load the Strava export again to see what it says about this activity.';
+    o.strava = sm ? Object.assign({}, sm, { hr: undefined, spd: undefined }) : 'Not kept: load the export again to see what it says about this activity.';
     // Heart rate: seconds after the start, bpm.
     if (sm && sm.hr) o.heartRate = sm.hr.t.map(function (t, k) { return [t, sm.hr.v[k]]; });
     o.timelineSameTime = [];
@@ -971,7 +971,7 @@ function exportFilters() {
   }
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
   if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
-  if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
+  if (F.src !== 'all') o.source = F.src === 'strava' ? actsLabel(D.stravaStats) : 'Timeline';
   if (F.gear.size !== gearIds().length) o.gear = gearIds().filter(function (g) { return F.gear.has(g); }).map(gearName);
   return o;
 }

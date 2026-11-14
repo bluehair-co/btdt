@@ -8,7 +8,7 @@
     <p class="demo-msg"><span class="wide-only">You’re exploring a demo: made-up data from three years of someone living in Amsterdam.</span><span class="narrow-only">Demo with made-up data</span></p>
   </div>
 
-  <!-- Welcome: shown until a Timeline file is loaded -->
+  <!-- Welcome: shown until location files are loaded -->
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
     <div class="welcome-art">
       <div class="stage bg"><img src="landing-bg-2752.webp" srcset="landing-bg-1600.webp 1600w, landing-bg-2752.webp 2752w" sizes="max(100vw, 179vh)" alt="" decoding="async" fetchpriority="high"></div>
@@ -16,10 +16,13 @@
       <h1 id="welcomeTitle" class="welcome-tagline">been there<span class="dot">·</span><br>done that</h1>
     </div>
     <div class="welcome-panel">
-      <p>See where you've been and how you get around, from your Google Timeline. Your file is read on this device and never uploaded.</p>
+      <p>See where you've been and how you get around. Your files are read on this device and never uploaded.</p>
+      <ul class="works-with" aria-label="Works with">
+        <li class="lead">Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li><li class="fmt">GPX · KML · GeoJSON · FIT · TCX</li>
+      </ul>
       <div class="acts">
         <div class="split" id="loadSplit">
-          <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load Timeline file</label>
+          <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load location files</label>
           <button type="button" class="btn primary split-more desktop-only" id="loadMore" aria-haspopup="menu" aria-expanded="false" aria-controls="loadMenu" aria-label="More ways to load"><span data-icon="down"></span></button>
           <div class="split-menu" id="loadMenu" role="menu" hidden>
             <button type="button" role="menuitem" id="loadFolder"><span data-icon="folder"></span>Load a whole folder</button>
@@ -28,7 +31,7 @@
         <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
-      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your file</button>
+      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your files</button>
     </div>
 
   </section>
@@ -40,7 +43,7 @@
       <button type="button" class="about-close" id="aboutClose" aria-label="Close"><span data-icon="close"></span></button>
     </div>
     <div class="about-body">
-      <p class="about-lead">BT•DT (been there, done that) turns your Google Timeline into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs.</p>
+      <p class="about-lead">BT•DT (been there, done that) turns your location history into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs. Start with your Google Timeline, add the activities from your watch or bike computer, or load any GPS track.</p>
 
       <div class="about-privacy" role="note" aria-labelledby="privacyTitle">
         <span data-icon="shield"></span>
@@ -57,7 +60,9 @@
           <li><b>Timeline export from an iPhone</b> (Google Maps for iOS).</li>
           <li><b>Google Takeout</b> files from before Timeline moved to phones: <b>Records.json</b> (raw GPS points) and <b>Semantic Location History</b> (one file per month). Load them together with Timeline.json and the app uses the best of each.</li>
           <li><b>Dawarich</b>: an export from the Points page (GeoJSON or GPX, as the ZIP Dawarich gives you or unzipped), or the whole account export from <b>Export my data</b>. Trips and stays are worked out from its GPS points, with your visits' names and Dawarich's transport types when the account export has them.</li>
-          <li><b>Strava</b>: the account export ZIP, or single <b>.gpx</b>, <b>.tcx</b> or <b>.fit</b> files. Load them from <b>Settings → Load Strava export</b> once your Timeline is in. Each activity replaces the Timeline trip it covers and keeps its sport.</li>
+          <li><b>Strava</b>: the account export ZIP. Each activity replaces the Timeline trip it covers and keeps its sport, name and gear.</li>
+          <li><b>Garmin Connect</b>: the account export ZIP, or single <b>.fit</b>, <b>.gpx</b> or <b>.tcx</b> activities. <b>Fitbit</b>, <b>Polar</b>, <b>Suunto</b>, <b>Coros</b> and <b>Wahoo</b> activities load the same way. Each activity keeps its sport and its full GPS track, and replaces the Timeline trip it covers.</li>
+          <li><b>Any GPS track</b>: <b>.gpx</b> from Komoot, OsmAnd, GPSLogger and most apps, <b>.kml</b> or <b>.kmz</b> from Google Earth, and <b>.geojson</b>. A track of one journey is a trip; a log of whole days (a tracker that records everything) has its trips and stays worked out from its points, as with Dawarich.</li>
         </ul>
         <p>Flights don't need a file of their own: they come from Timeline, and long jumps Timeline missed are recognised as flights too. You can load several files at once, or a whole folder.</p>
       </details>
@@ -86,6 +91,17 @@
           <li>On strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and request your archive.</li>
           <li>Strava emails a ZIP. Load it as it is; only the activity files inside are read, so photos don't slow it down.</li>
         </ol>
+        <h3>Garmin Connect</h3>
+        <ol>
+          <li>For everything: request your data at <b>garmin.com → Account → Data Management → Export Your Data</b>. Garmin emails a ZIP; load it as it is.</li>
+          <li>For one activity: open it on connect.garmin.com, choose the gear menu and <b>Export Original</b> (a .fit file, in a ZIP) or <b>Export to GPX</b>.</li>
+        </ol>
+        <h3>Fitbit</h3>
+        <ol>
+          <li>On fitbit.com open an activity with GPS, choose the menu and <b>Export as TCX File</b>. Load the .tcx files, or several in a ZIP.</li>
+        </ol>
+        <h3>Other apps</h3>
+        <p>Komoot, Polar Flow, Suunto, Coros, Wahoo, OsmAnd and most trackers can export an activity or a track as <b>GPX</b>. Only recorded tracks have times; planned routes have none, so they can't be placed on your timeline.</p>
       </details>
 
       <details>
@@ -128,9 +144,9 @@
       </a>
     </div>
   </dialog>
-  <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,application/json,application/geo+json,application/zip,application/gpx+xml" multiple>
+  <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,.kml,.kmz,.tcx,.fit,.gz,application/json,application/geo+json,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/octet-stream" multiple>
   <input type="file" id="dirIn" class="visually-hidden" webkitdirectory multiple>
-  <input type="file" id="stravaIn" class="visually-hidden" accept=".zip,.gpx,.fit,.tcx,.gz,application/zip,application/gzip,application/gpx+xml" multiple>
+  <input type="file" id="stravaIn" class="visually-hidden" accept=".zip,.gpx,.fit,.tcx,.kml,.kmz,.geojson,.gz,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/geo+json,application/octet-stream" multiple>
 
   <!-- Map -->
   <section class="page" id="mapPage" aria-label="Map">
@@ -358,7 +374,7 @@
     <div class="sec" id="srcWrap" hidden>
       <h3>Source</h3>
       <div class="seg full" role="group" aria-label="Where trips come from" id="srcSeg">
-        <button type="button" data-src="all" aria-pressed="true">All</button><button type="button" data-src="strava" aria-pressed="false">Strava</button><button type="button" data-src="timeline" aria-pressed="false">Timeline</button>
+        <button type="button" data-src="all" aria-pressed="true">All</button><button type="button" data-src="strava" aria-pressed="false" id="srcActs">Strava</button><button type="button" data-src="timeline" aria-pressed="false">Timeline</button>
       </div>
     </div>
     <div class="sec">
@@ -429,15 +445,16 @@
       <p class="fine" id="dataSummary"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <label class="btn" for="fileIn"><span data-icon="upload"></span>Import more files</label>
-        <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load Strava export</label>
+        <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load activities</label>
         <button type="button" class="btn danger" id="forgetBtn">Remove from this device</button>
       </div>
       <details class="help">
-        <summary>Sharper bike rides from Strava</summary>
-        <p class="fine">Strava activities replace the Timeline trips recorded at the same time, so rides, runs and walks follow Strava's GPS track. Activities Timeline missed are added too.</p>
+        <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
+        <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
         <ol class="fine">
-          <li>On strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>.</li>
-          <li>Strava emails you a ZIP file. Load it here as it is, without unzipping. Single .gpx, .fit or .tcx files work too.</li>
+          <li><b>Strava:</b> on strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>. Load the ZIP it emails you as it is.</li>
+          <li><b>Garmin Connect:</b> request your data under <b>Account → Data Management → Export Your Data</b>, and load the ZIP as it is.</li>
+          <li>Single <b>.fit</b>, <b>.gpx</b>, <b>.tcx</b>, <b>.kml</b> or <b>.geojson</b> files from any app work too.</li>
         </ol>
       </details>
       <p class="status" id="importStatus" role="status"></p>

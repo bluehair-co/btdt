@@ -37,7 +37,7 @@ HEAD = '''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="See everywhere you've been on a heatmap from your Google Timeline export: trips, flights, countries and how you get around. Free, works offline, and your file never leaves your device.">
+<meta name="description" content="See everywhere you've been on a heatmap from your Google Timeline export, Garmin, Strava or any GPX, KML, GeoJSON or FIT file: trips, flights, countries and how you get around. Free, works offline, and your files never leave your device.">
 <meta name="theme-color" content="#f7f2ee">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">

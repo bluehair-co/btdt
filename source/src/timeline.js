@@ -41,8 +41,8 @@ function tlRender(force) {
       out += '<div class="tl-item tl-day" ' + top + '><b>' + longDate(d) + '</b><span>' + tripsText(pd.n) + ' · ' + dist(pd.km) + '</span></div>';
     } else if (TL.type[k] === 1) {
       var i = TL.ref[k], m = modeOf(i), ms = D.end[i] - D.start[i];
-      out += '<div class="tl-item" ' + top + '><button type="button" class="tl-trip" data-i="' + i + '" aria-pressed="' + (i === TL.sel) + '">' + badge(m, false, D.est[i] & 16, tripIcon(i)) +
-        '<span class="t"><b>' + esc(tripName(i) || tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · Strava' : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
+      out += '<div class="tl-item" ' + top + '><button type="button" class="tl-trip" data-i="' + i + '" aria-pressed="' + (i === TL.sel) + '">' + badge(m, false, D.est[i] & 16 ? actApp(i) || true : 0, tripIcon(i)) +
+        '<span class="t"><b>' + esc(tripName(i) || tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · ' + esc(actApp(i) || 'Activity') : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
         '<span class="r">' + dist(D.km[i]) + '<small>' + (ms > 0 ? duration(ms) : '') + '</small></span></button></div>';
     } else {
       out += '<div class="tl-item tl-end" ' + top + '>' + (sel.length ? 'That\'s all ' + tripsText(sel.length) + ' for ' + esc(filterText()) + '.' : 'No trips match your filters.') + '</div>';
