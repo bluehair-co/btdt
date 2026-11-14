@@ -574,11 +574,11 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
 }
 .welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
-/* What the Load button reads: Timeline first, then the apps and formats. */
-.works-with { list-style: none; margin: -6px 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.works-with li { font-size: 12.5px; font-weight: 500; line-height: 1; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .92); }
-.works-with li.lead { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .3); color: #fff; }
-.works-with li.fmt { background: none; border-color: transparent; padding-left: 2px; padding-right: 2px; color: rgba(255, 255, 255, .7); font-family: var(--font-mono, inherit); font-size: 11.5px; letter-spacing: .02em; }
+/* What the Load button reads, quietly under the buttons: the services, then the formats. */
+.works-with { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .02em; line-height: 1.4; color: rgba(255, 255, 255, .7); }
+.works-with li:not(.br):not(:last-child)::after { content: "·"; margin: 0 7px; opacity: .7; }
+.works-with li:has(+ .br)::after { content: none !important; }
+.works-with li.br { flex-basis: 100%; height: 0; }
 .welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }
@@ -858,9 +858,6 @@ div.hit-row:hover { background: none; }
     </div>
     <div class="welcome-panel">
       <p>See where you've been and how you get around. Your files are read on this device and never uploaded.</p>
-      <ul class="works-with" aria-label="Works with">
-        <li class="lead">Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li><li class="fmt">GPX · KML · GeoJSON · FIT · TCX</li>
-      </ul>
       <div class="acts">
         <div class="split" id="loadSplit">
           <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load location files</label>
@@ -871,6 +868,10 @@ div.hit-row:hover { background: none; }
         </div>
         <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
+      <ul class="works-with" aria-label="Works with">
+        <li>Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li>
+        <li class="br" aria-hidden="true"></li><li>GPX</li><li>KML</li><li>GeoJSON</li><li>FIT</li><li>TCX</li>
+      </ul>
       <p id="welcomeStatus" class="status" role="status"></p>
       <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your files</button>
     </div>
@@ -5106,11 +5107,17 @@ var DEMO = null;
 $('demoBtn').addEventListener('click', function () {
   setStatus('');
   busy('Opening the demo…');
-  fetch('demo.json').then(function (res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.blob();
-  }).then(function (b) {
-    return runParser([new File([b], 'demo.json', { type: 'application/json' })]);
+  // The demo's Timeline, and the Strava activities the same made-up person recorded (runs, road
+  // rides and hikes with heart rate, from source/demo/make_activities.py). The demo opens without
+  // them if they don't load.
+  function get(url, name) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.blob();
+    }).then(function (b) { return new File([b], name); });
+  }
+  Promise.all([get('demo.json', 'demo.json'), get('demo-activities.gpx.gz', 'demo-activities.gpx.gz').catch(function () { return null; })]).then(function (fs) {
+    return runParser(fs.filter(Boolean));
   }).then(function (r) {
     if (!r.results.length) throw new Error('no data');
     DEMO = { cc: PREFS.cc };

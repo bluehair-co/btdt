@@ -20,6 +20,8 @@ import random
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'static', 'demo.json')
 R = random.Random(20231113)
+# Weekend road rides draw from their own generator, so adding them left the rest of the demo as it was.
+RR = random.Random(20240406)
 UTC = dt.timezone.utc
 START = dt.date(2023, 11, 13)
 END = dt.date(2026, 11, 8)
@@ -364,7 +366,27 @@ def ferry_outing(day):
     city_trip(HOME, 'CYCLING', me.since)
 
 
+# Weekend morning road rides out of town (recorded on Strava too, see make_activities.py), from April
+# to October: south along the Amstel, or north through Waterland.
+RIDES = [
+    [(52.3560, 4.8800), (52.3450, 4.9020), (52.3200, 4.9100), (52.2960, 4.9230), (52.2740, 4.9660), (52.2850, 5.0100), (52.3150, 4.9750), (52.3400, 4.9300), (52.3560, 4.8800)],
+    [(52.3790, 4.9000), (52.3900, 4.9300), (52.3830, 4.9900), (52.4250, 5.0450), (52.4590, 5.1000), (52.4610, 5.0350), (52.4350, 4.9950), (52.4000, 4.9250), (52.3790, 4.9000)],
+    [(52.3560, 4.8800), (52.3200, 4.8700), (52.2900, 4.8300), (52.2600, 4.8000), (52.2400, 4.8600), (52.2700, 4.9000), (52.3200, 4.8950), (52.3560, 4.8800)],
+]
+
+
+def road_ride(day):
+    global R
+    saved, R = R, RR
+    try:
+        me.go(HOME, 'CYCLING', wiggle(R.choice(RIDES), 0.15, 0.8), at(day, 8, 40, 30), speed=R.uniform(25, 29))
+    finally:
+        R = saved
+
+
 def weekend_day(day):
+    if 4 <= day.month <= 10 and RR.random() < 0.4:
+        road_ride(day)
     if R.random() < 0.1:
         return
     if R.random() < 0.5:
