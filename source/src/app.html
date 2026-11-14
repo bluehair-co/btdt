@@ -27,21 +27,26 @@
         </div>
         <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
-      <ul class="works-with" aria-label="Works with">
-        <li>Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li>
-        <li class="br" aria-hidden="true"></li><li>GPX</li><li>KML</li><li>GeoJSON</li><li>FIT</li><li>TCX</li>
-      </ul>
       <p id="welcomeStatus" class="status" role="status"></p>
-      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your files</button>
+      <div class="welcome-foot">
+        <ul class="works-with" aria-label="Works with">
+          <li>Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li>
+          <li class="br" aria-hidden="true"></li><li>GPX</li><li>KML</li><li>GeoJSON</li><li>FIT</li><li>TCX</li>
+        </ul>
+        <div class="welcome-links">
+          <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About</button>
+          <button type="button" class="about-open" id="filesBtn" aria-haspopup="dialog" aria-controls="getFiles"><span data-icon="help"></span>How to get your files</button>
+        </div>
+      </div>
     </div>
 
   </section>
 
-  <!-- About: closed until the button above opens it -->
+  <!-- About and How to get your files: closed until the links under the Load button open them -->
   <dialog class="about" id="about" aria-labelledby="aboutTitle">
     <div class="about-head">
       <h2 id="aboutTitle">About BT•DT</h2>
-      <button type="button" class="about-close" id="aboutClose" aria-label="Close"><span data-icon="close"></span></button>
+      <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
     </div>
     <div class="about-body">
       <p class="about-lead">BT•DT (been there, done that) turns your location history into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs. Start with your Google Timeline, add the activities from your watch or bike computer, or load any GPS track.</p>
@@ -50,6 +55,60 @@
         <span data-icon="shield"></span>
         <div>
           <h3 id="privacyTitle">Your data never leaves your device</h3>
+          <p>Your files are read in this browser and kept only here. There is no server, no account and no tracking, so nobody, me included, ever sees your files. Clearing the app's data in your browser removes it completely.</p>
+        </div>
+      </div>
+
+      <details>
+        <summary>How it works</summary>
+        <ul>
+          <li><b>Saved in your browser.</b> Your last import is kept in this browser's storage, so the app opens with it next time.</li>
+          <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
+          <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
+          <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri) and the map library. Add the app to your home screen and it opens offline.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Credits &amp; license</summary>
+        <h3>This project</h3>
+        <p>BT•DT is free to use, copy and change for <b>non-commercial</b> purposes, as long as you credit the original: “Based on BT•DT by BlueHair (www.bluehair.co)”. It is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>; the code is on <a href="https://github.com/bluehair-co/btdt" target="_blank" rel="noopener">GitHub</a>. The BlueHair name and logo are not part of the license.</p>
+        <h3>Built with</h3>
+        <ul class="about-credits">
+          <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>, the map library <small>BSD 2-Clause</small></li>
+          <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
+          <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
+          <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
+          <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
+          <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
+          <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
+          <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Who made this</summary>
+        <p>BT•DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
+      </details>
+    </div>
+    <div class="about-foot">
+      <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
+        <img src="bluehair-logo.png" alt="" width="44" height="44">
+        <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
+      </a>
+    </div>
+  </dialog>
+  <dialog class="about" id="getFiles" aria-labelledby="getFilesTitle">
+    <div class="about-head">
+      <h2 id="getFilesTitle">How to get your files</h2>
+      <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
+    </div>
+    <div class="about-body">
+      <div class="about-privacy" role="note" aria-labelledby="filesPrivacyTitle">
+        <span data-icon="shield"></span>
+        <div>
+          <h3 id="filesPrivacyTitle">Your data never leaves your device</h3>
           <p>Your files are read in this browser and kept only here. There is no server, no account and no tracking, so nobody, me included, ever sees your files. Clearing the app's data in your browser removes it completely.</p>
         </div>
       </div>
@@ -104,45 +163,6 @@
         <h3>Other apps</h3>
         <p>Komoot, Polar Flow, Suunto, Coros, Wahoo, OsmAnd and most trackers can export an activity or a track as <b>GPX</b>. Only recorded tracks have times; planned routes have none, so they can't be placed on your timeline.</p>
       </details>
-
-      <details>
-        <summary>How it works</summary>
-        <ul>
-          <li><b>Saved in your browser.</b> Your last import is kept in this browser's storage, so the app opens with it next time.</li>
-          <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
-          <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
-          <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri) and the map library. Add the app to your home screen and it opens offline.</li>
-        </ul>
-      </details>
-
-      <details>
-        <summary>Credits &amp; license</summary>
-        <h3>This project</h3>
-        <p>BT•DT is free to use, copy and change for <b>non-commercial</b> purposes, as long as you credit the original: “Based on BT•DT by BlueHair (www.bluehair.co)”. It is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>; the code is on <a href="https://github.com/bluehair-co/btdt" target="_blank" rel="noopener">GitHub</a>. The BlueHair name and logo are not part of the license.</p>
-        <h3>Built with</h3>
-        <ul class="about-credits">
-          <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>, the map library <small>BSD 2-Clause</small></li>
-          <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
-          <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
-          <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
-          <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
-          <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
-          <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
-          <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
-        </ul>
-      </details>
-
-      <details>
-        <summary>Who made this</summary>
-        <p>BT•DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
-      </details>
-    </div>
-    <div class="about-foot">
-      <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
-        <img src="bluehair-logo.png" alt="" width="44" height="44">
-        <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
-      </a>
     </div>
   </dialog>
   <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,.kml,.kmz,.tcx,.fit,.gz,application/json,application/geo+json,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/octet-stream" multiple>
