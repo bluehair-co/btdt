@@ -3588,7 +3588,14 @@ var ICONS = {
   // Transport
   WALKING: 'M13.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM9.8 8.9L7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3C14.8 12 16.8 13 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6l1.8-.7',
   RUNNING: 'M13.49 5.48c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm-3.6 13.9l1-4.4 2.1 2v6h2v-7.5l-2.1-2 .6-3c1.3 1.5 3.3 2.5 5.5 2.5v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1l-5.2 2.2v4.7h2v-3.4l1.8-.7-1.6 8.1-4.9-1-.4 2 7 1.4z',
-  CYCLING: 'M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z',
+  // Material's pedal_bike; the rider on a bike (directions_bike, the old Cycling icon) is kept as
+  // RIDER for the cargo bike.
+  CYCLING: 'm18.18 10-1.7-4.68A2.008 2.008 0 0 0 14.6 4H12v2h2.6l1.46 4h-4.81l-.36-1H12V7H7v2h1.75l1.82 5H9.9c-.44-2.23-2.31-3.88-4.65-3.99C2.45 9.87 0 12.2 0 15c0 2.8 2.2 5 5 5 2.46 0 4.45-1.69 4.9-4h4.2c.44 2.23 2.31 3.88 4.65 3.99 2.8.13 5.25-2.19 5.25-5 0-2.8-2.2-5-5-5h-.82zM7.82 16c-.4 1.17-1.49 2-2.82 2-1.68 0-3-1.32-3-3s1.32-3 3-3c1.33 0 2.42.83 2.82 2H5v2h2.82zm6.28-2h-1.4l-.73-2H15c-.44.58-.76 1.25-.9 2zm4.9 4c-1.68 0-3-1.32-3-3 0-.93.41-1.73 1.05-2.28l.96 2.64 1.88-.68-.97-2.67c.03 0 .06-.01.09-.01 1.68 0 3 1.32 3 3s-1.33 3-3.01 3z',
+  RIDER: 'M15.5 5.5c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zM5 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5zm5.8-10l2.4-2.4.8.8c1.3 1.3 3 2.1 5.1 2.1V9c-1.5 0-2.7-.6-3.6-1.5l-1.9-1.9c-.5-.4-1-.6-1.6-.6s-1.1.2-1.4.6L7.8 8.4c-.4.4-.6.9-.6 1.4 0 .6.2 1.1.6 1.4L11 14v5h2v-6.2l-2.2-2.3zM19 12c-2.8 0-5 2.2-5 5s2.2 5 5 5 5-2.2 5-5-2.2-5-5-5zm0 8.5c-1.9 0-3.5-1.6-3.5-3.5s1.6-3.5 3.5-3.5 3.5 1.6 3.5 3.5-1.6 3.5-3.5 3.5z',
+  // Cycling sports from the data (Strava) with a Material icon of their own: electric_bike and
+  // accessible_forward (for a handcycle).
+  ebike: 'M19 7h-.82l-1.7-4.68A2.008 2.008 0 0 0 14.6 1H12v2h2.6l1.46 4h-4.81l-.36-1H12V4H7v2h1.75l1.82 5H9.9c-.44-2.23-2.31-3.88-4.65-3.99C2.45 6.87 0 9.2 0 12c0 2.8 2.2 5 5 5 2.46 0 4.45-1.69 4.9-4h4.2c.44 2.23 2.31 3.88 4.65 3.99 2.8.13 5.25-2.19 5.25-5C24 9.2 21.8 7 19 7zM7.82 13c-.4 1.17-1.49 2-2.82 2-1.68 0-3-1.32-3-3s1.32-3 3-3c1.33 0 2.42.83 2.82 2H5v2h2.82zm6.28-2h-1.4l-.73-2H15c-.44.58-.76 1.25-.9 2zm4.9 4c-1.68 0-3-1.32-3-3 0-.93.41-1.73 1.05-2.28l.96 2.64 1.88-.68-.97-2.67c.02 0 .05-.01.08-.01 1.68 0 3 1.32 3 3s-1.32 3-3 3zm-8 5H7l6 3v-2h4l-6-3z',
+  handcycle: 'M17 2.54a2 2 0 1 0 0 4 2 2 0 1 0 0-4zM14 17h-2c0 1.65-1.35 3-3 3s-3-1.35-3-3 1.35-3 3-3v-2c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5zm3-3.5h-1.86l1.67-3.67C17.42 8.5 16.44 7 14.96 7h-5.2c-.81 0-1.54.47-1.87 1.2L7.22 10l1.92.53L9.79 9H12l-1.83 4.1c-.6 1.33.39 2.9 1.85 2.9H17v5h2v-5.5c0-1.1-.9-2-2-2z',
   CAR: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z',
   TAXI: 'M18.92 6.01C18.72 5.42 18.16 5 17.5 5H15V3H9v2H6.5c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z',
   MOTORCYCLE: 'M5 13a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zm14-2a4 4 0 1 0 0 8 4 4 0 0 0 0-8zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM8 12h5l2-4h3v2h-2l-1.6 3.2L16 16h-2.3l-1.5-2H8.6z',
@@ -3627,7 +3634,7 @@ var LINE_ICONS = {
   cargobike: '<path transform="translate(-0.6 2.6) scale(.84)" d="CARGO_RIDER"/><g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
     '<path d="M13 12.2h8.6l-1.2 3.4a2 2 0 0 1-1.9 1.4H13z" fill="currentColor"/><circle cx="19.8" cy="20.4" r="1.8"/><path d="M9.4 19.4h8.4"/></g>'
 };
-LINE_ICONS.cargobike = LINE_ICONS.cargobike.replace('CARGO_RIDER', ICONS.CYCLING.slice(0, ICONS.CYCLING.indexOf('M19 12')));
+LINE_ICONS.cargobike = LINE_ICONS.cargobike.replace('CARGO_RIDER', ICONS.RIDER.slice(0, ICONS.RIDER.indexOf('M19 12')));
 function icon(name, cls) {
   var open = '<svg class="ic' + (cls ? ' ' + cls : '') + '" viewBox="0 0 24 24" aria-hidden="true"';
   if (LINE_ICONS[name]) return open + '>' + LINE_ICONS[name] + '</svg>';
@@ -3671,7 +3678,14 @@ var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.
 function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
 function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
 // A ride on a cargo bike or a Halfbike shows that bike's icon.
-function tripIcon(i) { var g = D.gear ? D.gear[i] : 0; return g && (GEAR[g].kind === 'halfbike' || GEAR[g].kind === 'cargo') ? gearIcon(g) : modeOf(i); }
+// A trip's icon: its gear's when the gear has one of its own (Halfbike, cargo bike), else its
+// sport's when the data names one with an icon (an e-bike ride), else its transport's.
+var SPORT_ICON = { ebike: 'ebike', emtb: 'ebike', handcycle: 'handcycle' };
+function tripIcon(i) {
+  var g = D.gear ? D.gear[i] : 0, sp = D.sport && D.sport[i] && SPORTS[D.sport[i]];
+  if (g && (GEAR[g].kind === 'halfbike' || GEAR[g].kind === 'cargo')) return gearIcon(g);
+  return sp && SPORT_ICON[sp[0]] || modeOf(i);
+}
 
 // ---------- preferences ----------
 var PREFS_KEY = 'btdt.prefs';
@@ -6230,7 +6244,7 @@ function openList(list) {
 }
 function tripRowHtml(i, withDate) {
   var m = modeOf(i);
-  return '<button type="button" class="hit-row" data-i="' + i + '">' + badge(m, true) + '<span class="t"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + (withDate ? niceDate(D.day[i]) + ', ' : '') + clock(D.start[i], D.off[i]) + '</small></span>' +
+  return '<button type="button" class="hit-row" data-i="' + i + '">' + badge(m, true, 0, tripIcon(i)) + '<span class="t"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + (withDate ? niceDate(D.day[i]) + ', ' : '') + clock(D.start[i], D.off[i]) + '</small></span>' +
     '<span class="r num">' + dist(D.km[i]) + '<small>' + (D.end[i] > D.start[i] ? duration(D.end[i] - D.start[i]) : '') + '</small></span></button>';
 }
 $('tripBody').addEventListener('click', function (ev) {
@@ -7191,7 +7205,7 @@ function paintProj(fast) {
         if (img) ctx.drawImage(img, xy[0] - 8, xy[1] - 8, 16, 16);
         else {
           ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
-          ctx.fill(new Path2D(ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+          ctx.fill(new Path2D(ICONS[ic] || ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
         }
       } else {
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
@@ -8972,7 +8986,7 @@ function tlSelect(i, scroll) {
     }
   }
   var m = modeOf(i), ms = D.end[i] - D.start[i];
-  $('tlMapInfo').innerHTML = badge(m, true) + '<span class="t" style="flex:1"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) +
+  $('tlMapInfo').innerHTML = badge(m, true, 0, tripIcon(i)) + '<span class="t" style="flex:1"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) +
     ' · ' + dist(D.km[i]) + (ms > 0 ? ' · ' + duration(ms) : '') + '</small></span><button type="button" class="btn quiet" data-details="' + i + '" style="padding:6px 10px">Details</button>';
   var k = -1;
   for (var q = 0; q < TL.ref.length; q++) if (TL.type[q] === 1 && TL.ref[q] === i) { k = q; break; }
