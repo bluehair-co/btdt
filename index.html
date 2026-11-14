@@ -193,6 +193,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .map-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .map-legend i { width: 10px; height: 3px; border-radius: 2px; display: block; }
 .map-legend .heat-scale { width: 80px; height: 8px; border-radius: 4px; }
+.map-legend .hr-legend { gap: 7px; white-space: nowrap; }
+.map-legend .hr-legend span { gap: 3px; }
 
 /* Top bar: summary pill, day navigator or time slider. */
 .topbar { position: absolute; z-index: 25; top: calc(12px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); transition: left .2s ease; }
@@ -266,6 +268,16 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
 .trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
 .trip-chart { margin-top: 14px; }
+.hr-zones { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.hz-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; }
+.hz-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--grid); }
+.hz-bar i { display: block; height: 100%; }
+.hz-rows { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto auto; gap: 4px 10px; align-items: center; font-size: 12.5px; }
+.hz-row { display: contents; }
+.hz-row > i { width: 10px; height: 10px; border-radius: 3px; }
+.hz-row.none > * { opacity: .45; }
+.hz-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+.hz-row .hz-p { color: var(--muted); min-width: 3ch; }
 .tc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
 .tc-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--muted); min-height: 18px; }
 .tc-key i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
@@ -301,7 +313,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 }
 .tc-grid { stroke: var(--grid); stroke-width: 1; }
 .tc-ax { font-size: 9.5px; fill: var(--muted); font-family: var(--font-body); }
-.tc-ax.tc-hr { fill: var(--cc8); }
+.tc-ax.tc-hr { fill: var(--muted); font-style: italic; }
 .tc-cur { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 3 3; }
 .gear-kv { display: inline-flex; align-items: center; gap: 6px; }
 .gear-kv svg.ic { width: 18px; height: 18px; }
@@ -455,6 +467,12 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .rhythm-scale { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
 .rhythm-scale i { width: 12px; height: 10px; border-radius: 2px; display: block; }
 .list-rows { display: flex; flex-direction: column; }
+.hr-cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px 28px; }
+@media (max-width: 720px) { .hr-cols { grid-template-columns: minmax(0, 1fr); } }
+.hr-sub { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+#hrFitChart svg { display: block; overflow: visible; }
+#hrFitChart .hf-dot { cursor: pointer; }
+.hr-empty { font-size: 13px; color: var(--muted); margin: 8px 0; }
 .gear-bar { display: block; height: 4px; border-radius: 2px; background: var(--grid); margin-top: 6px; overflow: hidden; }
 .gear-bar > i { display: block; height: 100%; border-radius: 2px; }
 .list-rows .hit-row:last-child { border-bottom: 0; }
@@ -1051,6 +1069,15 @@ div.hit-row:hover { background: none; }
           <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
           <div class="list-rows" id="gearList"></div>
         </section>
+        <section class="card wide" id="hrCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
+            <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
+            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Settings.</span></div>
+          <div class="hr-cols">
+            <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
+            <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
+          </div>
+        </section>
         <section class="card wide">
           <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
           <div class="records" id="records"></div>
@@ -1200,6 +1227,8 @@ div.hit-row:hover { background: none; }
       <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
       <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
       <p class="fine" id="speedNote" hidden style="margin:0 0 8px">The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Heart rate paths</span><input type="checkbox" class="switch" id="layHr"></label>
+      <p class="fine" id="hrNote" hidden style="margin:0 0 8px">Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
       <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
@@ -1250,6 +1279,11 @@ div.hit-row:hover { background: none; }
     <div class="sec">
       <h3>Units</h3>
       <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
+    </div>
+    <div class="sec" id="hrSec" hidden>
+      <h3>Heart rate</h3>
+      <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>
+      <p class="fine" id="maxHrNote"></p>
     </div>
     <div class="sec">
       <h3>Appearance</h3>
@@ -4998,15 +5032,17 @@ function buildGroups(limit) {
     pathLayer.addLayer(l); groupLines.push(l);
   });
 }
+// What the coloured paths show: speed, or heart rate zones (which move with your maximum heart rate).
+function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
-  [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
+  [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths || PREFS.hrPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);
   });
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
   if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
-  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
+  if ((PREFS.speedPaths || PREFS.hrPaths) && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._m !== pathsKey() || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
 }
 
 // ---------- explorer squares ----------
@@ -5176,7 +5212,9 @@ function wll(x, y, s) { return [180 / Math.PI * Math.atan(Math.sinh(Math.PI - 2 
 function buildSpeed() {
   speedLayer.clearLayers();
   var z = map.getZoom(), s = 256 * Math.pow(2, z), vb = map.getBounds().pad(0.5);
-  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit; speedLayer._z = z; speedLayer._b = vb;
+  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit; speedLayer._z = z; speedLayer._b = vb; speedLayer._m = pathsKey();
+  // Heart rate paths draw the same way, from the activities that recorded it.
+  var hrm = PREFS.hrPaths, runs = hrm ? hrRuns : speedRuns, band = hrm ? hrZone : speedBand, colors = hrm ? HR_COLORS : SPEED_COLORS;
   var nw = wpx([vb.getNorth(), vb.getWest()], s), se = wpx([vb.getSouth(), vb.getEast()], s);
   var x0 = nw[0], y0 = nw[1], x1 = se[0], y1 = se[1], C = SPEED_CELL, R = 1 << 25;
   var cells = new Map(), links = new Map();
@@ -5187,8 +5225,8 @@ function buildSpeed() {
   }
   for (var k = 0; k < hits.length; k++) {
     var h = hits[k], bb = h.bb;
-    if (modeOf(h.i) === 'FLYING' || bb[0] > vb.getNorth() || bb[2] < vb.getSouth() || bb[1] > vb.getEast() || bb[3] < vb.getWest()) continue;
-    speedRuns(h.i).forEach(function (r) {
+    if (modeOf(h.i) === 'FLYING' || hrm && !tripHr(h.i) || bb[0] > vb.getNorth() || bb[2] < vb.getSouth() || bb[1] > vb.getEast() || bb[3] < vb.getWest()) continue;
+    runs(h.i).forEach(function (r) {
       var prev = -1, a = wpx(r.pts[0], s);
       for (var j = 1; j < r.pts.length; j++) {
         var b = wpx(r.pts[j], s);
@@ -5211,18 +5249,81 @@ function buildSpeed() {
   // One line per colour and thickness.
   var by = {};
   links.forEach(function (l) {
-    var A = cells.get(l.a), B = cells.get(l.b), w = l.n < 3 ? 0 : l.n < 10 ? 1 : 2, key = speedBand(l.v / l.n) * 3 + w;
+    var A = cells.get(l.a), B = cells.get(l.b), w = l.n < 3 ? 0 : l.n < 10 ? 1 : 2, key = band(l.v / l.n) * 3 + w;
     (by[key] || (by[key] = [])).push([wll(A.x / A.n, A.y / A.n, s), wll(B.x / B.n, B.y / B.n, s)]);
   });
   Object.keys(by).map(Number).sort(function (p, q) { return p % 3 - q % 3 || p - q; }).forEach(function (key) {
-    speedLayer.addLayer(L.polyline(by[key], { renderer: renderer, color: SPEED_COLORS[Math.floor(key / 3)], weight: [2.5, 3.5, 5][key % 3], opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
+    speedLayer.addLayer(L.polyline(by[key], { renderer: renderer, color: colors[Math.floor(key / 3)], weight: [2.5, 3.5, 5][key % 3], opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
   });
 }
 // After a zoom, or moving beyond what was gathered, gather again.
 function speedMoved() {
-  if (!PREFS.speedPaths || !map.hasLayer(speedLayer)) return;
+  if (!(PREFS.speedPaths || PREFS.hrPaths) || !map.hasLayer(speedLayer)) return;
   var b = speedLayer._b;
   if (speedLayer._z !== map.getZoom() || !b || !b.contains(map.getBounds())) buildSpeed();
+}
+// ---------- heart rate ----------
+// Heart rate an activity recorded (Strava, or any GPX, TCX or FIT file that has it): { t: seconds
+// after the start, v: bpm }, or null. Trips without it are left out of everything below.
+function tripHr(i) { var m = D.smeta && D.smeta[i]; return m && m.hr && m.hr.t.length >= 2 ? m.hr : null; }
+// Five zones as a share of your maximum heart rate: under 60%, 60–70, 70–80, 80–90 and 90% and over.
+var HR_ZONES = [
+  { n: 'Z1', name: 'Recovery', lo: 0 }, { n: 'Z2', name: 'Endurance', lo: 0.6 }, { n: 'Z3', name: 'Tempo', lo: 0.7 },
+  { n: 'Z4', name: 'Threshold', lo: 0.8 }, { n: 'Z5', name: 'Maximum', lo: 0.9 }];
+// The same in both themes, on the map and in the charts: grey-blue, blue, green, amber, red.
+var HR_COLORS = ['#8a9bb0', '#2a78d6', '#1baf7a', '#eda100', '#e34948'];
+// Your maximum heart rate: the one set in Settings, or else the highest any activity held (its 99th
+// percentile, so a strap's brief spike doesn't count). Kept per import.
+var hrAuto = { d: null, v: 0, n: 0 };
+function hrMaxAuto() {
+  if (hrAuto.d === D) return hrAuto;
+  var best = 0, n = 0;
+  for (var i = 0; D && i < D.start.length; i++) {
+    var h = tripHr(i);
+    if (!h) continue;
+    var v = h.v.slice().sort(function (a, b) { return a - b; }), p = v[Math.floor((v.length - 1) * 0.99)];
+    if (p < 230) best = Math.max(best, p);
+    n++;
+  }
+  hrAuto = { d: D, v: Math.round(best), n: n };
+  return hrAuto;
+}
+function hrMax() { return PREFS.maxHr >= 100 ? PREFS.maxHr : hrMaxAuto().v || 190; }
+function hrZone(bpm) { var f = bpm / hrMax(); for (var z = HR_ZONES.length - 1; z > 0; z--) if (f >= HR_ZONES[z].lo) return z; return 0; }
+function hrZoneRange(z) {
+  var m = hrMax(), lo = Math.round(HR_ZONES[z].lo * m), hi = z < HR_ZONES.length - 1 ? Math.round(HR_ZONES[z + 1].lo * m) - 1 : 0;
+  return z === 0 ? 'under ' + (hi + 1) : hi ? lo + '–' + hi : lo + '+';
+}
+// Seconds in each zone. A sample counts until the next one, but no more than twice the usual gap,
+// so a pause in the recording isn't counted as time in the zone it stopped in.
+function hrZoneTimes(h) {
+  var out = [0, 0, 0, 0, 0], gap = Infinity, j;
+  for (j = 1; j < h.t.length; j++) gap = Math.min(gap, h.t[j] - h.t[j - 1]);
+  if (!(gap > 0 && gap < Infinity)) gap = 5;
+  for (j = 0; j < h.t.length; j++) out[hrZone(h.v[j])] += j < h.t.length - 1 ? Math.min(h.t[j + 1] - h.t[j], 2 * gap) : gap;
+  return out;
+}
+// A trip's line as stretches of at least 20 seconds (as for speed paths), each with the average heart rate then.
+function hrRuns(i) {
+  var h = tripHr(i), tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
+  if (!h || p.length < 2 || !(ts[ts.length - 1] > 0)) return out;
+  var a = 0, j = 0;
+  while (a < p.length - 1) {
+    var z = a + 1, s = 0, n = 0;
+    while (z < p.length - 1 && ts[z] - ts[a] < 20) z++;
+    // The average of the samples in the stretch, or the value at its middle if none fall inside.
+    while (j < h.t.length && h.t[j] < ts[a]) j++;
+    for (var q = j; q < h.t.length && h.t[q] <= ts[z]; q++) { s += h.v[q]; n++; }
+    out.push({ v: n ? s / n : seriesAt(h.t, h.v, (ts[a] + ts[z]) / 2), pts: p.slice(a, z + 1) });
+    a = z;
+  }
+  return out;
+}
+function hrLegend() {
+  var any = false;
+  for (var k = 0; k < sel.length && !any; k++) any = !!tripHr(sel[k]);
+  if (!any) return '<span>No heart rate in the trips shown</span>';
+  return '<span class="speed-legend hr-legend" title="Zones of a maximum heart rate of ' + hrMax() + ' bpm">Heart rate ' + HR_ZONES.map(function (z, k) { return '<span title="' + z.name + ', ' + hrZoneRange(k) + ' bpm"><i style="background:' + HR_COLORS[k] + '"></i>' + z.n + '</span>'; }).join('') + '</span>';
 }
 function speedLegend() {
   var lab = speedBands().map(function (v) { return fmt(distVal(v)); });
@@ -5296,12 +5397,12 @@ function segDist(p, a, b) {
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
 function hitsAt(pt) {
-  if (!PREFS.paths && !PREFS.speedPaths) return [];
+  if (!PREFS.paths && !PREFS.speedPaths && !PREFS.hrPaths) return [];
   var c1 = map.containerPointToLatLng([pt.x - HIT_PX, pt.y + HIT_PX]), c2 = map.containerPointToLatLng([pt.x + HIT_PX, pt.y - HIT_PX]);
   var out = [];
   for (var k = 0; k < hits.length; k++) {
     var h = hits[k], bb = h.bb;
-    if (h.k >= visibleB) continue;
+    if (h.k >= visibleB || PREFS.hrPaths && !tripHr(h.i)) continue;
     // Quick box test first (lines across the date line skip it), then the exact distance in screen pixels.
     var wraps = bb[3] - bb[1] >= 180 || bb[1] < -180 || bb[3] > 180;
     if (!wraps && (bb[0] > c2.lat || bb[2] < c1.lat || bb[1] > c2.lng || bb[3] < c1.lng)) continue;
@@ -5349,6 +5450,16 @@ function hoverHtml(list) {
     (list.length > 5 ? '<div class="row"><span>+' + fmt(list.length - 5) + ' more</span></div>' : '');
 }
 
+// Stretches joined while they stay in one zone: [{ z, pts }].
+function hrLines(runs) {
+  var out = [];
+  runs.forEach(function (r) {
+    var z = hrZone(r.v), last = out[out.length - 1];
+    if (last && last.z === z) last.pts = last.pts.concat(r.pts.slice(1));
+    else out.push({ z: z, pts: r.pts.slice() });
+  });
+  return out;
+}
 // The trip that's open in the trip sheet, drawn on top.
 var hlTrip = null;
 function highlight(i) {
@@ -5359,7 +5470,10 @@ function highlight(i) {
       var pts = tripPath(i), c = groupOf(modeOf(i)).v;
       if (pts.length) {
         L.polyline(pts, { renderer: renderer, color: cssVar('--panel'), weight: 9, opacity: 0.9, interactive: false }).addTo(hlLayer);
-        L.polyline(pts, { renderer: renderer, color: cssVar(c), weight: 5, opacity: 1, interactive: false }).addTo(hlLayer);
+        // With heart rate paths on, an activity that recorded it is coloured by zone, as its chart is.
+        var runs = PREFS.hrPaths ? hrRuns(i) : [];
+        if (runs.length) hrLines(runs).forEach(function (l) { L.polyline(l.pts, { renderer: renderer, color: HR_COLORS[l.z], weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(hlLayer); });
+        else L.polyline(pts, { renderer: renderer, color: cssVar(c), weight: 5, opacity: 1, interactive: false }).addTo(hlLayer);
       }
     }
   }
@@ -5389,6 +5503,7 @@ function tripRows(i) {
     ['Straight line', isFinite(line) ? dist(line) : 'Unknown'],
     ['Average speed', ms > 0 ? speed(k / (ms / 36e5)) : 'Unknown'],
     ['CO₂', co2s(tripKg(i))],
+    tripHr(i) ? ['Heart rate', hrAvgMax(tripHr(i))] : null,
     D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + '</span>'] : null,
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
   ].filter(Boolean);
@@ -5406,6 +5521,24 @@ function tripRows(i) {
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
+}
+function hrAvgMax(h) {
+  var s = 0, mx = 0;
+  h.v.forEach(function (v) { s += v; mx = Math.max(mx, v); });
+  return Math.round(s / h.v.length) + ' bpm <span class="fine">avg · ' + mx + ' max</span>';
+}
+// Time in each heart rate zone, as a bar split by zone and a row per zone.
+function hrZonesBlock(i) {
+  var h = tripHr(i);
+  if (!h) return '';
+  var zt = hrZoneTimes(h), tot = zt.reduce(function (a, b) { return a + b; }, 0) || 1;
+  return '<div class="hr-zones"><div class="hz-head"><b>Heart rate zones</b><span class="fine">of a maximum of ' + hrMax() + ' bpm</span></div>' +
+    '<div class="hz-bar" role="img" aria-label="Time in each heart rate zone">' + zt.map(function (t, z) { return t ? '<i style="width:' + (t / tot * 100).toFixed(2) + '%;background:' + HR_COLORS[z] + '"></i>' : ''; }).join('') + '</div>' +
+    '<div class="hz-rows">' + HR_ZONES.map(function (Z, z) {
+      var p = Math.round(zt[z] / tot * 100);
+      return '<div class="hz-row' + (zt[z] ? '' : ' none') + '"><i style="background:' + HR_COLORS[z] + '"></i><span class="hz-n">' + Z.n + ' ' + Z.name + '</span><span class="fine">' + hrZoneRange(z) + ' bpm</span>' +
+        '<span class="num">' + (zt[z] ? duration(zt[z] * 1000) : '–') + '</span><span class="num hz-p">' + p + '%</span></div>';
+    }).join('') + '</div></div>';
 }
 // A Strava activity's own name is the title, with its sport under it.
 function tripHead(i, sub) {
@@ -5439,7 +5572,6 @@ function tripSpeeds(i) {
   }
   return out;
 }
-function tripHr(i) { var m = D.est[i] & STRAVA && D.smeta && D.smeta[i]; return m && m.hr && m.hr.t.length >= 2 ? m.hr : null; }
 // Round tick steps for a scale up to max.
 function niceStep(max, n) {
   var raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
@@ -5475,17 +5607,27 @@ function tripChart(i, where, W, H) {
   for (k = 0; k < steps.length; k++) if (dur / steps[k] <= w / 70) { ms = steps[k]; break; }
   for (var t = 0; t <= dur; t += ms) g += '<text x="' + x(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="tc-ax">' + (t >= 3600 ? Math.floor(t / 3600) + ':' + pad2(Math.round(t % 3600 / 60)) : Math.round(t / 60) + (t ? '′' : '')) + '</text>';
   var sl = sp.map(function (q) { return x(q[0]).toFixed(1) + ',' + ys(distVal(q[1])).toFixed(1); }).join(' ');
-  var hl = hr ? hr.t.map(function (t, j) { return x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1); }).join(' ') : '';
+  // The heart rate line is coloured by zone, as the route is with heart rate paths on.
+  var hl = '';
+  if (hr) {
+    var seg = [], sz = -1;
+    hr.t.forEach(function (t, j) {
+      var z = hrZone(hr.v[j]), pt = x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1);
+      if (z !== sz && seg.length) { seg.push(pt); hl += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + HR_COLORS[sz] + '" stroke-width="1.6" stroke-linejoin="round"/>'; seg = []; }
+      seg.push(pt); sz = z;
+    });
+    if (seg.length > 1) hl += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + HR_COLORS[sz] + '" stroke-width="1.6" stroke-linejoin="round"/>';
+  }
   charts[where] = { i: i, sp: sp, spT: sp.map(function (q) { return q[0]; }), spV: sp.map(function (q) { return q[1]; }), hr: hr, dur: dur, L0: L0, w: w, W: W };
   var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h';
   return '<div class="trip-chart" data-k="' + where + '">' +
-    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') +
+    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:linear-gradient(90deg,' + HR_COLORS.join(',') + ')"></i>Heart rate (bpm, by zone)</span>' : '') +
     // On a phone the panel goes with the map, so the button is only there on the Map tab.
     (where === 'sheet' && (wide() || tab === 'map') ? '<button type="button" class="icon-btn tc-open" data-act="chart" data-i="' + i + '" aria-label="Open the chart under the map" title="Open under the map">' + icon('expand') + '</button>' : '') + '</div>' +
     '<div class="tc-read" aria-live="off"></div>' +
     '<svg class="tc-svg" viewBox="0 0 ' + W + ' ' + H + '"' + (where === 'panel' ? ' width="' + W + '" height="' + H + '"' : '') + ' role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
     (sp.length >= 4 ? '<polyline points="' + sl + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round"/>' : '') +
-    (hr ? '<polyline points="' + hl + '" fill="none" stroke="var(--cc8)" stroke-width="1.4" stroke-linejoin="round"/>' : '') +
+    hl +
     '<line y1="' + T0 + '" y2="' + (T0 + h) + '" class="tc-cur" visibility="hidden"/></svg></div>';
 }
 // The value of a series (times tt, values vv) at time t.
@@ -5509,7 +5651,7 @@ function chartAt(ev, pan) {
     var cur = el.querySelector('.tc-cur'), X = (o.L0 + o.w * t / o.dur).toFixed(1), parts = [clock(D.start[o.i] + t * 1000, D.off[o.i])];
     cur.setAttribute('x1', X); cur.setAttribute('x2', X); cur.setAttribute('visibility', 'visible');
     if (o.sp.length >= 4) parts.push(speed(seriesAt(o.spT, o.spV, t)));
-    if (o.hr) parts.push(Math.round(seriesAt(o.hr.t, o.hr.v, t)) + ' bpm');
+    if (o.hr) { var b = Math.round(seriesAt(o.hr.t, o.hr.v, t)); parts.push(b + ' bpm ' + HR_ZONES[hrZone(b)].n); }
     el.querySelector('.tc-read').textContent = parts.join(' · ');
   });
   if (!map || !hlLayer || PREFS.proj !== 'merc' || tab !== 'map') return;
@@ -5613,7 +5755,7 @@ function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -6155,7 +6297,7 @@ $('speedBtn').addEventListener('click', function () {
 function legend() {
   var seen = {};
   for (var k = 0; k < sel.length; k++) seen[groupOf(modeOf(sel[k])).key] = 1;
-  var h = PREFS.speedPaths ? speedLegend() : '';
+  var h = PREFS.speedPaths ? speedLegend() : PREFS.hrPaths ? hrLegend() : '';
   if (PREFS.squares && D) h += sqLegend();
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
@@ -6422,7 +6564,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('hrNote').hidden = !PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   $('pinNote').hidden = !PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
@@ -6435,14 +6577,19 @@ function layersChanged() {
   if (PREFS.proj !== 'merc') drawProj();
   if (D) heatPoints();
 }
-// Paths and speed paths draw the same lines in different colours, so turning one on turns the other off.
-$('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (this.checked) PREFS.speedPaths = false; if (!this.checked && !PREFS.speedPaths) { setHovered([]); hideTip(); } layersChanged(); });
-$('laySpeed').addEventListener('change', function () {
-  PREFS.speedPaths = this.checked;
-  if (this.checked) { PREFS.paths = false; if (PREFS.proj !== 'merc') setProj('merc'); }
+// Paths, speed paths and heart rate paths draw the same lines in different colours, so turning one on turns the others off.
+$('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (this.checked) PREFS.speedPaths = PREFS.hrPaths = false; if (!this.checked && !PREFS.speedPaths && !PREFS.hrPaths) { setHovered([]); hideTip(); } layersChanged(); });
+function colouredPaths(key, on) {
+  PREFS.speedPaths = PREFS.hrPaths = false;
+  PREFS[key] = on;
+  if (on) { PREFS.paths = false; if (PREFS.proj !== 'merc') setProj('merc'); }
   else { setHovered([]); hideTip(); }
   layersChanged();
-});
+  // The open trip's line changes colour with heart rate paths.
+  if (hlTrip != null) highlight(hlTrip);
+}
+$('laySpeed').addEventListener('change', function () { colouredPaths('speedPaths', this.checked); });
+$('layHr').addEventListener('change', function () { colouredPaths('hrPaths', this.checked); });
 $('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
 $('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
@@ -6811,7 +6958,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderSquares(); renderGear(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -7398,7 +7545,7 @@ $('timeSeg').addEventListener('click', function (ev) { var b = ev.target.closest
 $('timeUnitSeg').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-u]'); if (b) { PREFS.timeU = b.dataset.u; savePrefs(); renderTime(); } });
 $('insightsPage').addEventListener('scroll', hideTip, { passive: true });
 var rsT = 0;
-window.addEventListener('resize', function () { clearTimeout(rsT); rsT = setTimeout(function () { if (tab === 'insights') drawTime(); }, 120); });
+window.addEventListener('resize', function () { clearTimeout(rsT); rsT = setTimeout(function () { if (tab === 'insights') { drawTime(); if (hrData && !$('hrCard').hidden) drawHrFit(); } }, 120); });
 
 // ---------- routes, places, records, countries ----------
 function renderRoutes() {
@@ -7490,6 +7637,126 @@ function renderGear() {
       '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
   }).join('');
 }
+// ---------- heart rate ----------
+// Fitness from heart rate: for each sport, the speed you usually go at (the median while moving,
+// rounded), and each month the median heart rate of the moments within 8% of that speed, after an
+// activity's first 5 minutes. The same speed at a lower heart rate means fitter.
+var HR_SKIP = 300, HR_NEAR = 0.08, HR_MIN_N = 24, hrData = null;
+function hrSportOf(i) {
+  var k = D.sport ? D.sport[i] : 0, m = modeOf(i);
+  // A motor does part of the work on an e-bike, so its heart rate says little about fitness.
+  if (k) return /^e(bike|mtb)$/.test(SPORTS[k][0]) ? null : { key: SPORTS[k][0], label: SPORTS[k][1] };
+  return m === 'CYCLING' || m === 'RUNNING' || m === 'WALKING' ? { key: m, label: LABEL[m] } : null;
+}
+function median(a) { a = a.slice().sort(function (x, y) { return x - y; }); return a.length ? a[a.length >> 1] : 0; }
+function hrFitness() {
+  var groups = {}, j, i, zt = [0, 0, 0, 0, 0], nHr = 0;
+  for (j = 0; j < sel.length; j++) {
+    i = sel[j];
+    var h = tripHr(i);
+    if (!h) continue;
+    nHr++;
+    hrZoneTimes(h).forEach(function (t, z) { zt[z] += t; });
+    var sp = hrSportOf(i), s = sp && tripSpeeds(i);
+    if (!s || s.length < 4) continue;
+    var g = groups[sp.key] || (groups[sp.key] = { key: sp.key, label: sp.label, v: [], b: [], m: [], i: [] });
+    var T = s.map(function (q) { return q[0]; }), V = s.map(function (q) { return q[1]; }), mk = D.year[i] * 12 + D.month[i];
+    for (var k = 0; k < h.t.length; k++) {
+      if (h.t[k] < HR_SKIP) continue;
+      var v = seriesAt(T, V, h.t[k]);
+      if (v > 2) { g.v.push(v); g.b.push(h.v[k]); g.m.push(mk); g.i.push(i); }
+    }
+  }
+  var list = Object.keys(groups).map(function (k) { return groups[k]; }).filter(function (g) { return g.v.length >= HR_MIN_N; });
+  list.forEach(function (g) {
+    // The usual speed, rounded in the units shown: to whole km/h (mph) from 15 up, to halves below.
+    var med = distVal(median(g.v)), r = med >= 15 ? Math.round(med) : Math.round(med * 2) / 2;
+    g.refShow = r; g.ref = r / distVal(1);
+    var by = {};
+    for (var k = 0; k < g.v.length; k++) {
+      if (Math.abs(g.v[k] - g.ref) > g.ref * HR_NEAR) continue;
+      var o = by[g.m[k]] || (by[g.m[k]] = { b: [], acts: {} });
+      o.b.push(g.b[k]); o.acts[g.i[k]] = 1;
+    }
+    g.months = Object.keys(by).map(Number).sort(function (a, b) { return a - b; }).filter(function (m) { return by[m].b.length >= HR_MIN_N; })
+      .map(function (m) { return { m: m, bpm: median(by[m].b), n: Object.keys(by[m].acts).length }; });
+    g.size = g.v.length;
+  });
+  list = list.filter(function (g) { return g.months.length; }).sort(function (a, b) { return b.size - a.size; });
+  return { groups: list, zt: zt, n: nHr };
+}
+function renderHeart() {
+  hrData = hrFitness();
+  $('hrCard').hidden = !hrData.n;
+  if (!hrData.n) return;
+  var G = hrData.groups;
+  if (!G.some(function (g) { return g.key === PREFS.hrSport; }) && G.length) PREFS.hrSport = G[0].key;
+  $('hrSportSeg').innerHTML = G.length > 1 ? G.map(function (g) { return '<button type="button" data-k="' + g.key + '" aria-pressed="' + (g.key === PREFS.hrSport) + '">' + esc(g.label) + '</button>'; }).join('') : '';
+  $('hrSportSeg').hidden = G.length < 2;
+  drawHrFit();
+  // Time in each zone over every activity with heart rate.
+  var zt = hrData.zt, tot = zt.reduce(function (a, b) { return a + b; }, 0) || 1;
+  $('hrZoneTotals').innerHTML = '<div class="hz-bar" role="img" aria-label="Time in each heart rate zone">' + zt.map(function (t, z) { return t ? '<i style="width:' + (t / tot * 100).toFixed(2) + '%;background:' + HR_COLORS[z] + '"></i>' : ''; }).join('') + '</div>' +
+    '<div class="hz-rows" style="margin-top:10px">' + HR_ZONES.map(function (Z, z) {
+      return '<div class="hz-row' + (zt[z] ? '' : ' none') + '"><i style="background:' + HR_COLORS[z] + '"></i><span class="hz-n">' + Z.n + ' ' + Z.name + '</span><span class="fine">' + hrZoneRange(z) + ' bpm</span>' +
+        '<span class="num">' + (zt[z] ? hoursLabel(zt[z] / 3600).replace(/ \d+ min$/, '') : '–') + '</span><span class="num hz-p">' + Math.round(zt[z] / tot * 100) + '%</span></div>';
+    }).join('') + '</div>' +
+    '<p class="fine" style="margin:10px 0 0">' + fmt(hrData.n) + ' activit' + (hrData.n === 1 ? 'y' : 'ies') + ' with heart rate, ' + hoursLabel(tot / 3600).replace(/ \d+ min$/, '') + ' in all. Maximum heart rate ' + hrMax() + ' bpm' + (PREFS.maxHr >= 100 ? ', as set in Settings.' : ', the highest they reached; set your own in Settings.') + '</p>';
+}
+function drawHrFit() {
+  var host = $('hrFitChart'), G = hrData && hrData.groups, g = G && G.filter(function (x) { return x.key === PREFS.hrSport; })[0];
+  host.textContent = '';
+  if (!g) {
+    $('hrFitTitle').textContent = 'Fitness';
+    host.innerHTML = '<p class="hr-empty">No rides, runs or walks with both heart rate and GPS speed here.</p>';
+    $('hrFitNote').textContent = '';
+    return;
+  }
+  var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h', M = g.months;
+  $('hrFitTitle').textContent = 'Fitness: heart rate at ' + fmt(g.refShow, g.refShow % 1 ? 1 : 0) + ' ' + unit + ' (' + g.label.toLowerCase() + ')';
+  var W = Math.max(240, host.clientWidth), H = 196, L0 = 34, R0 = 8, T0 = 8, B0 = 30, w = W - L0 - R0, h = H - T0 - B0;
+  var m0 = M[0].m, m1 = Math.max(M[M.length - 1].m, m0 + 1), lo = Infinity, hi = -Infinity;
+  M.forEach(function (o) { lo = Math.min(lo, o.bpm); hi = Math.max(hi, o.bpm); });
+  var st = Math.max(5, Math.round(niceStep(Math.max(10, hi - lo), 4))); lo = Math.floor((lo - 2) / st) * st; hi = Math.max(lo + st, Math.ceil((hi + 2) / st) * st);
+  var x = function (m) { return L0 + w * (m - m0) / (m1 - m0); }, y = function (b) { return T0 + h * (1 - (b - lo) / (hi - lo)); };
+  var svg = svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': $('hrFitTitle').textContent + ', by month' });
+  for (var v = lo; v <= hi + 1e-9; v += st) {
+    svg.appendChild(svgEl('line', { x1: L0, x2: W - R0, y1: y(v), y2: y(v), stroke: 'var(--grid)', 'stroke-width': 1 }));
+    var tx = svgEl('text', { x: L0 - 6, y: y(v) + 4, 'text-anchor': 'end' }); tx.textContent = fmt(v); svg.appendChild(tx);
+  }
+  // Month labels, as many as fit; January shows its year.
+  var every = Math.max(1, Math.ceil(44 / (w / Math.max(1, m1 - m0))));
+  for (var m = m0; m <= m1; m++) {
+    if ((m - m0) % every && m % 12) continue;
+    var t = svgEl('text', { x: x(m), y: H - 6, 'text-anchor': 'middle' }); t.textContent = m % 12 ? MONTHS[m % 12] : String(Math.floor(m / 12)); svg.appendChild(t);
+  }
+  // The trend: a straight line fitted through the months, weighted by activities.
+  var sw = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  M.forEach(function (o) { var wt = Math.sqrt(o.n); sw += wt; sx += wt * o.m; sy += wt * o.bpm; sxx += wt * o.m * o.m; sxy += wt * o.m * o.bpm; });
+  var den = sw * sxx - sx * sx, slope = M.length > 1 && den ? (sw * sxy - sx * sy) / den : 0, icpt = (sy - slope * sx) / sw;
+  if (M.length > 1) svg.appendChild(svgEl('line', { x1: x(M[0].m), x2: x(M[M.length - 1].m), y1: y(icpt + slope * M[0].m), y2: y(icpt + slope * M[M.length - 1].m), stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }));
+  // Months next to each other are joined; a month without enough riding leaves a gap.
+  var path = '';
+  M.forEach(function (o, k) { path += (k && M[k - 1].m === o.m - 1 ? 'L' : 'M') + x(o.m).toFixed(1) + ' ' + y(o.bpm).toFixed(1); });
+  svg.appendChild(svgEl('path', { d: path, fill: 'none', stroke: HR_COLORS[4], 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  M.forEach(function (o) {
+    var c = svgEl('circle', { cx: x(o.m), cy: y(o.bpm), r: 4, fill: 'var(--panel)', stroke: HR_COLORS[4], 'stroke-width': 2, class: 'hf-dot' });
+    var ti = svgEl('title', {}); ti.textContent = MONTHS_LONG[o.m % 12] + ' ' + Math.floor(o.m / 12) + ': ' + o.bpm + ' bpm at about ' + fmt(g.refShow, g.refShow % 1 ? 1 : 0) + ' ' + unit + ', from ' + o.n + ' activit' + (o.n === 1 ? 'y' : 'ies');
+    c.appendChild(ti); svg.appendChild(c);
+  });
+  host.appendChild(svg);
+  var first = M[0], last = M[M.length - 1], ch = Math.round(slope * (last.m - first.m));
+  $('hrFitNote').textContent = M.length < 2 ? 'Only one month here with enough ' + g.label.toLowerCase() + ' at this speed. Pick a longer period to see the trend.' :
+    Math.abs(ch) < 2 ? 'About the same since ' + MONTHS_LONG[first.m % 12] + ' ' + Math.floor(first.m / 12) + '.' :
+    (ch < 0 ? 'Down ' + -ch + ' bpm' : 'Up ' + ch + ' bpm') + ' at the same speed since ' + MONTHS_LONG[first.m % 12] + ' ' + Math.floor(first.m / 12) + (ch < 0 ? ': fitter.' : '. Lower means fitter; heat and tiredness push it up too.');
+}
+$('hrSportSeg').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-k]');
+  if (!b) return;
+  PREFS.hrSport = b.dataset.k; savePrefs();
+  setPressed('#hrSportSeg button', function (x) { return x.dataset.k === PREFS.hrSport; });
+  drawHrFit();
+});
 function renderRecords() {
   var best = {}, j, i, byDay = {};
   function rec(key, i_, v) { if (v > 0 && (!best[key] || v > best[key].v)) best[key] = { i: i_, v: v }; }
@@ -8418,6 +8685,7 @@ function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   buildFactors();
+  renderHrSettings();
   if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('homeNote').textContent = ''; $('forgetBtn').hidden = true; return; }
   $('forgetBtn').hidden = !!DEMO;
   if (DEMO) {
@@ -8433,6 +8701,23 @@ function renderSettings() {
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
 }
+// Maximum heart rate, for the zones: shown once an import has heart rate. Empty means worked out from the data.
+function renderHrSettings() {
+  var a = D ? hrMaxAuto() : { n: 0 };
+  $('hrSec').hidden = !a.n;
+  if (!a.n) return;
+  if (document.activeElement !== $('maxHr')) $('maxHr').value = PREFS.maxHr >= 100 ? PREFS.maxHr : '';
+  $('maxHr').placeholder = String(a.v);
+  $('maxHrNote').textContent = (PREFS.maxHr >= 100 ? 'Heart rate zones use the ' + PREFS.maxHr + ' bpm you set. Clear it to use the highest your activities reached, ' + a.v + ' bpm.' :
+    'Heart rate zones use the highest your ' + fmt(a.n) + ' activities with heart rate reached, ' + a.v + ' bpm. If you know your maximum is higher, set it here.') +
+    ' Zones: Z1 under 60%, Z2 60–70%, Z3 70–80%, Z4 80–90%, Z5 90% and over.';
+}
+$('maxHr').addEventListener('change', function () {
+  var v = Math.round(parseFloat(this.value));
+  PREFS.maxHr = v >= 100 && v <= 230 ? v : 0;
+  savePrefs(); renderHrSettings();
+  if (D) { dirty.map = dirty.insights = true; renderTab(); if (hlTrip != null) highlight(hlTrip); }
+});
 function describeHome(h) {
   var q = D.places[h], c = nearestCity(q.lat, q.lng);
   return (c ? (c.d > 8 ? 'near ' : 'in ') + c.name : 'at ' + ll(q.lat, q.lng)) + ' (' + ll(q.lat, q.lng) + ')';

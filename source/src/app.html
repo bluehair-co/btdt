@@ -235,6 +235,15 @@
           <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
           <div class="list-rows" id="gearList"></div>
         </section>
+        <section class="card wide" id="hrCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
+            <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
+            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Settings.</span></div>
+          <div class="hr-cols">
+            <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
+            <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
+          </div>
+        </section>
         <section class="card wide">
           <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
           <div class="records" id="records"></div>
@@ -384,6 +393,8 @@
       <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
       <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
       <p class="fine" id="speedNote" hidden style="margin:0 0 8px">The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Heart rate paths</span><input type="checkbox" class="switch" id="layHr"></label>
+      <p class="fine" id="hrNote" hidden style="margin:0 0 8px">Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
       <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
@@ -434,6 +445,11 @@
     <div class="sec">
       <h3>Units</h3>
       <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
+    </div>
+    <div class="sec" id="hrSec" hidden>
+      <h3>Heart rate</h3>
+      <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>
+      <p class="fine" id="maxHrNote"></p>
     </div>
     <div class="sec">
       <h3>Appearance</h3>
