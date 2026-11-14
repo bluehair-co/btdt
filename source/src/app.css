@@ -661,20 +661,22 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   body:has(#layersSheet.open) .topbar { left: calc((100% - 376px) / 2); }
   /* Filters is the same full-height panel on the left, where its button sits in the top bar;
      the top bar moves over into the space right of it, narrowing when it has to. */
-  #filtersSheet { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
-  #filtersSheet.open { transform: none; }
-  body:has(#filtersSheet.open) .topbar { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
-  .bar-top > .pnav-filters { order: -1; }
+  /* Imported data opens in the same place, from the top of the filters. */
+  :is(#filtersSheet, #importsSheet) { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
+  :is(#filtersSheet, #importsSheet).open { transform: none; }
+  body:has(:is(#filtersSheet, #importsSheet).open) .topbar { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
+  /* Settings is a right-hand panel like Views and layers, opened from the right of the top bar. */
+  body:has(#settingsSheet.open) .topbar { left: calc((100% - 376px) / 2); }
   /* The zoom buttons on the left move out from under the filters panel. */
   #map .leaflet-top.leaflet-left, .proj-zoom { transition: left .2s ease; }
-  body:has(#filtersSheet.open) #map .leaflet-top.leaflet-left { left: 436px; }
-  body:has(#filtersSheet.open) .proj-zoom { left: 452px; }
+  body:has(:is(#filtersSheet, #importsSheet).open) #map .leaflet-top.leaflet-left { left: 436px; }
+  body:has(:is(#filtersSheet, #importsSheet).open) .proj-zoom { left: 452px; }
   /* Clip the panels' scrollbars to their rounded corners. */
   .sheet { overflow: hidden; }
 }
 @media (min-width: 960px) and (max-width: 1299px) {
   /* Below 1300px the filters panel would reach the playback button, so it stops above the dock. */
-  #filtersSheet { bottom: calc(var(--dock-h) + var(--dock-gap) + 16px + var(--safe-b)); }
+  #filtersSheet, #importsSheet { bottom: calc(var(--dock-h) + var(--dock-gap) + 16px + var(--safe-b)); }
 }
 @media (min-width: 960px) and (max-width: 1199px) {
   /* Below 1200px the panel would reach the dock and the layers button, so it stops above them. */
@@ -724,7 +726,27 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
    (a sticky top counts from inside the page padding, hence -4px for 12px from the top). */
 .pnav { width: min(560px, 100%); margin-inline: auto; }
 #insightsPage .pnav { position: sticky; z-index: 5; top: -4px; margin-top: -4px; margin-bottom: 14px; margin-inline: max(-4px, calc((100% - 560px) / 2)); width: auto; max-width: 560px; }
-.pnav-filters { position: relative; flex: none; }
+/* Filters on the left of the top bar and Settings on the right, on phones as on wide screens. */
+.pnav-filters { position: relative; flex: none; order: -1; }
+.pnav-settings { flex: none; }
+.pnav-settings[aria-expanded="true"] { color: var(--accent); }
+/* Imported data: a row at the top of the filters that opens its own panel. */
+.data-row { display: flex; align-items: center; gap: 12px; width: 100%; margin: 12px 0 4px; padding: 12px 10px 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.data-row:hover { border-color: var(--accent); }
+.data-row > .ic { flex: none; width: 22px; height: 22px; fill: var(--accent); }
+.data-row > .ic:last-child { width: 20px; height: 20px; fill: var(--muted); }
+.data-row-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.data-row-txt b { font-size: 15px; font-weight: 600; }
+.data-row-txt small { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head-back { display: flex; align-items: center; gap: 2px; margin-left: -10px; }
+.head-back h2 { margin-top: 4px; }
+.file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.file-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); }
+.file-list li:first-child { border-top: 0; padding-top: 2px; }
+.file-list .ic { flex: none; width: 20px; height: 20px; fill: var(--muted); }
+.file-txt { min-width: 0; display: flex; flex-direction: column; }
+.file-txt b { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.file-txt small { font-size: 12px; color: var(--muted); }
 .pnav-filters .badge { position: absolute; top: 0; right: 0; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 
 /* countries over time */
