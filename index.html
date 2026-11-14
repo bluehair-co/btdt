@@ -663,7 +663,28 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
-.busy { position: fixed; z-index: 70; left: 50%; top: 40%; transform: translate(-50%, -50%); background: var(--panel); color: var(--fg); box-shadow: var(--shadow); border-radius: 12px; padding: 12px 16px; font-weight: 500; }
+/* Loading screen: see busy() in core.js. */
+.loader { position: fixed; z-index: 70; inset: 0; display: grid; place-items: center; background: color-mix(in srgb, var(--bg) 94%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); color: var(--fg); animation: ld-show .2s .12s ease both; }
+.loader[hidden] { display: none; }
+@keyframes ld-show { from { opacity: 0; } }
+.ld-box { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 16px; }
+.ld-donut { --c: var(--accent); position: relative; width: 148px; height: 148px; }
+.ld-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.ld-track { fill: none; stroke: var(--line); stroke-width: 9; }
+.ld-arc { fill: none; stroke: var(--c); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset .35s ease, stroke .5s ease; }
+.ld-donut.spin .ld-ring { animation: ld-spin 1.1s linear infinite; }
+@keyframes ld-spin { to { transform: rotate(270deg); } }
+.ld-disc { position: absolute; inset: 22px; border-radius: 50%; background: color-mix(in srgb, var(--c) 14%, transparent); transition: background .5s ease; }
+.ld-ico { position: absolute; inset: 0; display: grid; place-items: center; }
+.ld-ico .ic { width: 56px; height: 56px; fill: var(--c); transition: fill .5s ease; }
+.ld-ico.out { animation: ld-out .18s ease-in forwards; }
+.ld-ico.in { animation: ld-in .42s .12s cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes ld-out { to { opacity: 0; transform: scale(.5) translateY(8px); } }
+@keyframes ld-in { from { opacity: 0; transform: scale(.4) translateY(-10px); } }
+.ld-label { text-align: center; min-height: 46px; max-width: min(90vw, 420px); }
+.ld-t { font-weight: 500; overflow-wrap: anywhere; }
+.ld-p { font: 500 13px var(--font-mono); color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { .ld-ico.in, .ld-ico.out { animation: none; } .ld-donut.spin .ld-ring { animation-duration: 3s; } }
 .toast { position: fixed; z-index: 70; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow); }
 
 /* ---------- the landing picture behind Insights and Timeline ---------- */
@@ -1410,7 +1431,12 @@ div.hit-row:hover { background: none; }
 <div class="cal-pop" id="calPop" role="dialog" aria-label="Pick a day" hidden></div>
 
 <div id="tip" class="tip" hidden></div>
-<div id="busy" class="busy" hidden></div>
+<div id="busy" class="loader" role="status" aria-live="polite" hidden>
+  <div class="ld-box">
+    <div class="ld-donut"><div class="ld-disc"></div><svg class="ld-ring" viewBox="0 0 148 148" aria-hidden="true"><circle class="ld-track" cx="74" cy="74" r="64"/><circle class="ld-arc" cx="74" cy="74" r="64" stroke-dasharray="402.12" stroke-dashoffset="402.12"/></svg></div>
+    <div class="ld-label"><div class="ld-t"></div><div class="ld-p"></div></div>
+  </div>
+</div>
 <div id="toast" class="toast" hidden></div>
 <script>
 // Airports with scheduled flights (IATA|lat|lng|city|country|size), from OurAirports (public domain).
@@ -3687,6 +3713,17 @@ var ICONS = {
   rocket: 'M5 9.4h9.5c3.2 0 6.4 1.1 8.5 2.6-2.1 1.5-5.3 2.6-8.5 2.6H5zM15.5 10.8a1.2 1.2 0 1 0 0 2.4 1.2 1.2 0 0 0 0-2.4zM5 9.4L2.2 6.5h4.3l2.6 2.9zM5 14.6l-2.8 2.9h4.3l2.6-2.9zM1 10.5h3.2v3H1z',
   mars: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8.2 4.6c2.3-.9 5.3-.9 7.6 0C14.6 5.5 13.4 6 12 6s-2.6-.5-3.8-1.4zM4.4 12.4c2.6-.6 5-.2 7.2 1 2.4 1.3 5.1 1.6 8 .6-.2.8-.5 1.5-.9 2.2-2.6.6-5.1.2-7.6-1.1-2-1.1-4.2-1.4-6.4-.9-.2-.6-.3-1.2-.3-1.8zM15 8.4a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z',
   voyager: 'M1.5 4.5c4.6.4 7 3.7 7 7.5s-2.4 7.1-7 7.5c1.5-2 2.3-4.6 2.3-7.5S3 6.5 1.5 4.5zM9.3 9.6h4.2v4.8H9.3zM13.5 11.4h9.3v1.2h-9.3zM10.6 14.4h1.2l-2.3 5.4H8.3zM8.4 11.4h1v1.2h-1zM12 9.6l1.8-4h1.2l-1.8 4z',
+  // World landmarks for the loading screen (Material Icons, filled).
+  castle: 'M21 9v2h-2V3h-2v2h-2V3h-2v2h-2V3H9v2H7V3H5v8H3V9H1v12h9v-3c0-1.1.9-2 2-2s2 .9 2 2v3h9V9h-2zm-10 3H9V9h2v3zm4 0h-2V9h2v3z',
+  temple_buddhist: 'M21 9.02c0 1.09-.89 1.98-1.98 1.98H4.98C3.89 11 3 10.11 3 9.02H1c0 1.86 1.28 3.4 3 3.84V22h6v-3c0-1.1.9-2 2-2s2 .9 2 2v3h6v-9.14c.55-.14 3-1.04 3-3.86l-2 .02z M6 8.86V10h12V8.86c.55-.14 3-1.04 3-3.86l-2 .02C19 6.11 18.11 7 17.02 7H6.98C5.89 7 5 6.11 5 5.02H3c0 1.85 1.28 3.4 3 3.84z M12 1 8.25 6h7.5z',
+  mosque: 'M7 8h10c.29 0 .57.06.84.13.09-.33.16-.67.16-1.04 0-1.31-.65-2.53-1.74-3.25L12 1 7.74 3.84A3.887 3.887 0 0 0 6 7.09c0 .37.07.71.16 1.04.27-.07.55-.13.84-.13z M24 7c0-1.1-2-3-2-3s-2 1.9-2 3c0 .74.4 1.38 1 1.72V13h-2v-2c0-1.1-.9-2-2-2H7c-1.1 0-2 .9-2 2v2H3V8.72c.6-.34 1-.98 1-1.72 0-1.1-2-3-2-3S0 5.9 0 7c0 .74.4 1.38 1 1.72V21h9v-4c0-1.1.9-2 2-2s2 .9 2 2v4h9V8.72c.6-.34 1-.98 1-1.72z',
+  church: 'M18 12.22V9l-5-2.5V5h2V3h-2V1h-2v2H9v2h2v1.5L6 9v3.22L2 14v8h8v-3c0-1.1.9-2 2-2s2 .9 2 2v3h8v-8l-4-1.78zm-6 1.28c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+  account_balance: 'M4 10h3v7H4zm6.5 0h3v7h-3zM2 19h20v3H2zm15-9h3v7h-3zm-5-9L2 6v2h20V6z',
+  temple_hindu: 'M6.6 11h10.8l-.9-3h-9zM20 11v2H4v-2H2v11h8v-5h4v5h8V11zm-4.1-5L15 3V1h-2v2h-2.03V1h-2v2.12L8.1 6z',
+  stadium: 'M7 5 3 7V3l4 2zm11-2v4l4-2-4-2zm-7-1v4l4-2-4-2zm-6 8.04c1.38.49 3.77.96 7 .96s5.62-.47 7-.96C19 9.86 16.22 9 12 9s-7 .86-7 1.04zM15 17H9v4.88c-4.06-.39-7-1.54-7-2.88v-9c0-1.66 4.48-3 10-3s10 1.34 10 3v9c0 1.34-2.94 2.48-7 2.87V17z',
+  synagogue: 'M6 8v13h4v-5c0-1.1.9-2 2-2s2 .9 2 2v5h4V8l-6-5-6 5zm7.5 2c0 .83-.67 1.5-1.5 1.5s-1.5-.67-1.5-1.5.67-1.5 1.5-1.5 1.5.67 1.5 1.5zM3 5c-1.1 0-2 .9-2 2v1h4V7c0-1.1-.9-2-2-2zM1 9h4v12H1zm20-4c-1.1 0-2 .9-2 2v1h4V7c0-1.1-.9-2-2-2zm-2 4h4v12h-4z',
+  attractions: 'M10.43 18.75c.37-.46.94-.75 1.57-.75.63 0 1.19.29 1.56.75.39-.09.76-.21 1.12-.36l-1.42-3.18a3.522 3.522 0 0 1-2.56-.02l-1.43 3.19c.38.16.76.29 1.16.37zM5.15 10a7.06 7.06 0 0 0 .08 4c.63.05 1.22.4 1.56.99.33.57.35 1.23.11 1.79.27.27.56.53.87.76l1.52-3.39c-.47-.58-.75-1.32-.75-2.13 0-1.89 1.55-3.41 3.46-3.41s3.46 1.53 3.46 3.41c0 .82-.29 1.57-.78 2.16l1.5 3.35c.32-.24.62-.5.9-.79-.22-.55-.2-1.2.12-1.75.33-.57.9-.92 1.52-.99a7.025 7.025 0 0 0 .09-4.02c-.64-.04-1.26-.39-1.6-1-.36-.62-.35-1.36-.03-1.95-.91-.98-2.1-1.71-3.44-2.05C13.39 5.6 12.74 6 12 6s-1.39-.41-1.74-1.01a7.053 7.053 0 0 0-3.44 2.03c.33.6.35 1.35-.02 1.98-.35.62-.99.97-1.65 1zm-1.3-.42c-.78-.6-1.02-1.7-.51-2.58.51-.88 1.58-1.23 2.49-.85a8.53 8.53 0 0 1 4.18-2.42C10.15 2.75 10.99 2 12 2s1.85.75 1.98 1.73c1.63.39 3.07 1.24 4.18 2.42a1.99 1.99 0 0 1 2.49.85c.51.88.27 1.98-.51 2.58.23.77.35 1.58.35 2.42s-.12 1.65-.35 2.42c.78.6 1.02 1.7.51 2.58-.51.88-1.58 1.23-2.49.85-.4.43-.85.81-1.34 1.15l1.34 3H16.3l-.97-2.17c-.43.18-.88.33-1.34.44-.14.98-.98 1.73-1.99 1.73s-1.85-.75-1.98-1.73c-.48-.12-.94-.27-1.38-.46L7.66 22H5.78l1.36-3.03a8.72 8.72 0 0 1-1.3-1.12c-.92.38-1.99.03-2.5-.85s-.27-1.98.51-2.58c-.23-.77-.35-1.58-.35-2.42s.12-1.65.35-2.42z',
+  fort: 'M21 3v2h-2V3h-2v2h-2V3h-2v4l2 2v1H9V9l2-2V3H9v2H7V3H5v2H3V3H1v4l2 2v6l-2 2v4h9v-3c0-1.1.9-2 2-2s2 .9 2 2v3h9v-4l-2-2V9l2-2V3h-2z',
   flag: 'M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z',
   zoomOut: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z',
   zoomIn: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z',
@@ -3867,7 +3904,44 @@ function toast(text) {
   var t = $('toast'); t.textContent = text; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3500);
 }
-function busy(text) { $('busy').hidden = !text; $('busy').textContent = text || ''; }
+// The loading screen: a donut that fills with the reading progress (when the text ends in
+// "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
+// and world landmarks, each in its own colour, which the ring takes on too.
+var LOADER_ICONS = [
+  ['FLYING', '--m-air'], ['castle', '--accent'], ['CAR', '--m-road'], ['temple_buddhist', '--m-foot'], ['pin', '--dot'],
+  ['TRAIN', '--m-transit'], ['mosque', '--m-transit'], ['WALKING', '--m-foot'], ['church', '--m-bike'], ['pin', '--dot'],
+  ['CYCLING', '--m-bike'], ['account_balance', '--m-road'], ['FERRY', '--m-water'], ['temple_hindu', '--m-air'], ['pin', '--dot'],
+  ['BUS', '--m-road'], ['stadium', '--m-water'], ['TRAM', '--m-transit'], ['synagogue', '--m-road'], ['pin', '--dot'],
+  ['FLYING', '--m-air'], ['attractions', '--m-water'], ['WALKING', '--m-foot'], ['fort', '--accent'], ['pin', '--dot']
+];
+var LOADER_R = 64, LOADER_C = 2 * Math.PI * LOADER_R;
+function loaderIcon(first) {
+  var el = $('busy'), donut = el.querySelector('.ld-donut'), item = LOADER_ICONS[busy.i % LOADER_ICONS.length];
+  donut.style.setProperty('--c', 'var(' + item[1] + ')');
+  var old = donut.querySelector('.ld-ico:not(.out)'), n = document.createElement('div');
+  n.className = 'ld-ico' + (first ? '' : ' in'); n.innerHTML = icon(item[0]);
+  donut.appendChild(n);
+  if (old) { old.classList.add('out'); setTimeout(function () { old.remove(); }, 250); }
+}
+function busy(text) {
+  var el = $('busy');
+  if (!text) { el.hidden = true; clearInterval(busy.t); busy.t = null; return; }
+  // At 100% the file is read but still being worked through, so the arc spins from there on.
+  var m = /^(.*?)\s*·\s*(\d+)%$/.exec(text), pct = m && +m[2] < 100 ? +m[2] : null;
+  var arc = el.querySelector('.ld-arc'), donut = el.querySelector('.ld-donut');
+  el.querySelector('.ld-t').textContent = (m ? m[1] : text).replace(/…$/, '') + (m ? '' : '…');
+  el.querySelector('.ld-p').textContent = pct === null ? '' : pct + '%';
+  donut.classList.toggle('spin', pct === null);
+  arc.style.strokeDashoffset = LOADER_C * (pct === null ? 0.72 : 1 - pct / 100);
+  if (el.hidden) {
+    el.hidden = false;
+    busy.i = Math.floor(Math.random() * LOADER_ICONS.length);
+    donut.querySelectorAll('.ld-ico').forEach(function (x) { x.remove(); });
+    loaderIcon(true);
+    clearInterval(busy.t);
+    busy.t = setInterval(function () { busy.i++; loaderIcon(); }, 900);
+  }
+}
 
 // ---------- countries ----------
 var CB = null;
