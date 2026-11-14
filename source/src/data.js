@@ -186,6 +186,13 @@ function stravaInfo(i) {
   var c = m.csv || {};
   return { name: m.name || c['Activity Name'] || '', desc: m.desc || c['Activity Description'] || '', gear: m.gear || c['Activity Gear'] || '', info: m.gearInfo || null };
 }
+// Where a recorded activity came from: the app or device that wrote its file (Strava, Garmin,
+// Komoot…), '' when its file doesn't say. Activities saved before other apps were read are Strava's.
+function actApp(i) { var m = D.smeta && D.smeta[i]; return m && m.app != null ? m.app : 'Strava'; }
+function actFrom(i) { var a = actApp(i); return a ? 'on ' + a : 'in an activity file'; }
+// What the recorded activities are called in the filters and messages: the app's name when they all
+// come from one, else Activities.
+function actsLabel(st) { var k = st && st.apps ? Object.keys(st.apps) : ['Strava']; return k.length === 1 && k[0] ? k[0] : 'Activities'; }
 function tripName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s.name || ''; }
 // Gear kinds by name, brand or model: front-loading cargo bikes and the Halfbike.
 var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiania|riese|\bgsd\b|douze|carqon|packster|triobike|workcycles|load ?60|load ?75|\bbakfi/i;
@@ -429,6 +436,7 @@ function buildFilterUI() {
   $('ccSearch').hidden = M.countries.length < 12;
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
+  $('srcActs').textContent = actsLabel(D.stravaStats);
   var h0 = '', h1 = '';
   for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
   for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
@@ -719,13 +727,13 @@ function setStatus(text, isErr) {
   if (text && D) toast(text);
 }
 // Exports that are raw GPS points, whose trips are rebuilt from them: Records.json and Dawarich.
-function POINTS_SRC(s) { return s === SRC.records || s === SRC.dawarich; }
+function POINTS_SRC(s) { return isPointsSrc(s); }
 // What those are called in messages, from the files loaded.
 function pointsName(files) {
   var k = {};
   (files || []).forEach(function (f) { k[f.kind] = true; });
-  var r = k[KIND_LABEL[SRC.records]], d = k[KIND_LABEL[SRC.dawarich]];
-  return r && d ? 'Records.json and Dawarich' : d ? 'Dawarich' : 'Records.json';
+  var L = [[SRC.records, 'Records.json'], [SRC.dawarich, 'Dawarich'], [SRC.gps, 'your GPS tracks']].filter(function (x) { return k[KIND_LABEL[x[0]]]; }).map(function (x) { return x[1]; });
+  return L.length ? L.slice(0, -1).join(', ') + (L.length > 1 ? ' and ' : '') + L[L.length - 1] : 'Records.json';
 }
 // Combine exports. When several cover the same day, the newest kind of export wins for that day,
 // except for Records.json and Dawarich trips in the gaps it left (see inGap).
@@ -945,12 +953,15 @@ function withStrava(R) {
     if (off[k_] !== NO_OFF) { O.off[j] = off[k_]; O.day[j] = Math.floor((S.start[k_] + off[k_] * 60000) / 864e5); }
   });
   ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
-  O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched };
+  var apps = {};
+  for (k = 0; k < m; k++) { var sm = S.smeta && S.smeta[k], a = sm && sm.app != null ? sm.app : 'Strava'; apps[a] = (apps[a] || 0) + 1; }
+  O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched, apps: apps };
   return O;
 }
 function stravaText(st) {
   if (!st) return '';
-  return fmt(st.acts) + ' Strava ' + (st.acts === 1 ? 'activity' : 'activities') + ': ' + fmt(st.matched) + ' replaced ' + fmt(st.replaced) + ' Timeline trip' + (st.replaced === 1 ? '' : 's') +
+  var one = actsLabel(st), apps = Object.keys(st.apps || {}).filter(Boolean);
+  return fmt(st.acts) + (one === 'Activities' ? ' recorded ' + (st.acts === 1 ? 'activity' : 'activities') + (apps.length ? ' (' + apps.join(', ') + ')' : '') : ' ' + one + ' ' + (st.acts === 1 ? 'activity' : 'activities')) + ': ' + fmt(st.matched) + ' replaced ' + fmt(st.replaced) + ' Timeline trip' + (st.replaced === 1 ? '' : 's') +
     (st.added ? ', ' + fmt(st.added) + ' added where Timeline had nothing' : '') + '.';
 }
 function runParser(files) {
@@ -974,7 +985,7 @@ function runParser(files) {
       (function next(i) {
         if (i >= files.length) { done(); return; }
         busy('Reading ' + files[i].name + '…');
-        parseFile(files[i], function () {}).then(function (r) { r.name = files[i].name; results.push(r); })
+        parseFile(files[i], function () {}).then(function (r) { [].concat(r).forEach(function (x) { x.name = files[i].name; results.push(x); }); })
           .catch(function (err) { if (err && err.message === NOT_TIMELINE) skipped++; else errors.push(files[i].name + ': ' + (err && err.message || err)); })
           .then(function () { next(i + 1); });
       })(0);
@@ -982,8 +993,8 @@ function runParser(files) {
   });
 }
 function importFiles(list) {
-  var files = Array.prototype.filter.call(list, function (f) { return /\.(json|geojson|jsonl)$/i.test(f.name) || isStravaName(f.name); });
-  if (!files.length) { setStatus('No Timeline (.json), Dawarich or Strava files found there.', true); return; }
+  var files = Array.prototype.filter.call(list, function (f) { return isLocationName(f.name); });
+  if (!files.length) { setStatus('No location files found there. BT•DT reads Google Timeline and Dawarich (.json), Strava and Garmin exports (.zip), and .gpx, .kml, .kmz, .geojson, .tcx and .fit files.', true); return; }
   setStatus('');
   busy('Reading…');
   runParser(files).then(function (r) {
@@ -998,9 +1009,9 @@ function importFiles(list) {
       saveData(next);
       busy('');
       var nv = next.vs.length;
-      var onlyStrava = r.results.every(function (x) { return x.strava; });
-      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + r.results.length + ' file' + (r.results.length > 1 ? 's' : '') + '.';
-      if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without Timeline data.';
+      var onlyStrava = r.results.every(function (x) { return x.strava; }), nfiles = new Set(r.results.map(function (x) { return x.name; })).size;
+      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + nfiles + ' file' + (nfiles > 1 ? 's' : '') + '.';
+      if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without location data.';
       if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
       if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
       if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';

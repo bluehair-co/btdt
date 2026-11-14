@@ -113,12 +113,15 @@ function modeColor(m) { return groupOf(m).color; }
 function modeOf(i) { return MODES[D.mode[i]]; }
 // A trip's name: its Strava sport (Kayaking, Mountain bike…) when it has one, else its mode.
 function tripLabel(i) { var s = D.sport && D.sport[i]; if (s && SPORTS[s]) return SPORTS[s][1]; if (D.stype && D.stype[i]) return esc(D.stype[i]); var m = modeOf(i); return LABEL[m] || m; }
-// strava adds Strava's mark in the top right corner.
+// app (where a recorded activity came from) adds a mark in the top right corner: Strava's logo for
+// Strava, a small track for any other app or device.
 var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" fill="#fff"/></svg></span>';
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
 function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>' : ''; }
-function badge(m, small, strava, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (strava ? STRAVA_MARK : '') + '</span>'; }
+var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" fill="#fff"/></svg>';
+function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
+function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
 // A ride on a cargo bike or a Halfbike shows that bike's icon.
 function tripIcon(i) { var g = D.gear ? D.gear[i] : 0; return g && (GEAR[g].kind === 'halfbike' || GEAR[g].kind === 'cargo') ? gearIcon(g) : modeOf(i); }
 

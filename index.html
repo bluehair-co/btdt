@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="See everywhere you've been on a heatmap from your Google Timeline export: trips, flights, countries and how you get around. Free, works offline, and your file never leaves your device.">
+<meta name="description" content="See everywhere you've been on a heatmap from your Google Timeline export, Garmin, Strava or any GPX, KML, GeoJSON or FIT file: trips, flights, countries and how you get around. Free, works offline, and your files never leave your device.">
 <meta name="theme-color" content="#f7f2ee">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -264,6 +264,8 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge { position: relative; }
 .mode-badge .strava-mark { position: absolute; top: -5px; right: -5px; width: 17px; height: 17px; border-radius: 50%; background: #fc4c02; box-shadow: 0 0 0 2px var(--panel); display: flex; align-items: center; justify-content: center; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
+.mode-badge .rec-mark { background: #34405a; }
+.mode-badge .rec-mark svg { width: 10px; height: 10px; margin-top: 0; }
 .trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
 .trip-chart { margin-top: 14px; }
 .tc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
@@ -554,6 +556,11 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
 }
 .welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
+/* What the Load button reads: Timeline first, then the apps and formats. */
+.works-with { list-style: none; margin: -6px 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.works-with li { font-size: 12.5px; font-weight: 500; line-height: 1; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .92); }
+.works-with li.lead { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .3); color: #fff; }
+.works-with li.fmt { background: none; border-color: transparent; padding-left: 2px; padding-right: 2px; color: rgba(255, 255, 255, .7); font-family: var(--font-mono, inherit); font-size: 11.5px; letter-spacing: .02em; }
 .welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }
@@ -824,7 +831,7 @@ div.hit-row:hover { background: none; }
     <p class="demo-msg"><span class="wide-only">You’re exploring a demo: made-up data from three years of someone living in Amsterdam.</span><span class="narrow-only">Demo with made-up data</span></p>
   </div>
 
-  <!-- Welcome: shown until a Timeline file is loaded -->
+  <!-- Welcome: shown until location files are loaded -->
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
     <div class="welcome-art">
       <div class="stage bg"><img src="landing-bg-2752.webp" srcset="landing-bg-1600.webp 1600w, landing-bg-2752.webp 2752w" sizes="max(100vw, 179vh)" alt="" decoding="async" fetchpriority="high"></div>
@@ -832,10 +839,13 @@ div.hit-row:hover { background: none; }
       <h1 id="welcomeTitle" class="welcome-tagline">been there<span class="dot">·</span><br>done that</h1>
     </div>
     <div class="welcome-panel">
-      <p>See where you've been and how you get around, from your Google Timeline. Your file is read on this device and never uploaded.</p>
+      <p>See where you've been and how you get around, from your Google Timeline or the GPS files of your watch, bike computer and apps. Your files are read on this device and never uploaded.</p>
+      <ul class="works-with" aria-label="Works with">
+        <li class="lead">Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li><li class="fmt">GPX · KML · GeoJSON · FIT · TCX</li>
+      </ul>
       <div class="acts">
         <div class="split" id="loadSplit">
-          <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load Timeline file</label>
+          <label class="btn primary split-main" for="fileIn"><span data-icon="upload"></span>Load location files</label>
           <button type="button" class="btn primary split-more desktop-only" id="loadMore" aria-haspopup="menu" aria-expanded="false" aria-controls="loadMenu" aria-label="More ways to load"><span data-icon="down"></span></button>
           <div class="split-menu" id="loadMenu" role="menu" hidden>
             <button type="button" role="menuitem" id="loadFolder"><span data-icon="folder"></span>Load a whole folder</button>
@@ -844,7 +854,7 @@ div.hit-row:hover { background: none; }
         <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
       <p id="welcomeStatus" class="status" role="status"></p>
-      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your file</button>
+      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your files</button>
     </div>
 
   </section>
@@ -856,7 +866,7 @@ div.hit-row:hover { background: none; }
       <button type="button" class="about-close" id="aboutClose" aria-label="Close"><span data-icon="close"></span></button>
     </div>
     <div class="about-body">
-      <p class="about-lead">BT•DT (been there, done that) turns your Google Timeline into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs.</p>
+      <p class="about-lead">BT•DT (been there, done that) turns your location history into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs. Start with your Google Timeline, add the activities from your watch or bike computer, or load any GPS track.</p>
 
       <div class="about-privacy" role="note" aria-labelledby="privacyTitle">
         <span data-icon="shield"></span>
@@ -873,7 +883,9 @@ div.hit-row:hover { background: none; }
           <li><b>Timeline export from an iPhone</b> (Google Maps for iOS).</li>
           <li><b>Google Takeout</b> files from before Timeline moved to phones: <b>Records.json</b> (raw GPS points) and <b>Semantic Location History</b> (one file per month). Load them together with Timeline.json and the app uses the best of each.</li>
           <li><b>Dawarich</b>: an export from the Points page (GeoJSON or GPX, as the ZIP Dawarich gives you or unzipped), or the whole account export from <b>Export my data</b>. Trips and stays are worked out from its GPS points, with your visits' names and Dawarich's transport types when the account export has them.</li>
-          <li><b>Strava</b>: the account export ZIP, or single <b>.gpx</b>, <b>.tcx</b> or <b>.fit</b> files. Load them from <b>Settings → Load Strava export</b> once your Timeline is in. Each activity replaces the Timeline trip it covers and keeps its sport.</li>
+          <li><b>Strava</b>: the account export ZIP. Each activity replaces the Timeline trip it covers and keeps its sport, name and gear.</li>
+          <li><b>Garmin Connect</b>: the account export ZIP, or single <b>.fit</b>, <b>.gpx</b> or <b>.tcx</b> activities. <b>Fitbit</b>, <b>Polar</b>, <b>Suunto</b>, <b>Coros</b> and <b>Wahoo</b> activities load the same way. Each activity keeps its sport and its full GPS track, and replaces the Timeline trip it covers.</li>
+          <li><b>Any GPS track</b>: <b>.gpx</b> from Komoot, OsmAnd, GPSLogger and most apps, <b>.kml</b> or <b>.kmz</b> from Google Earth, and <b>.geojson</b>. A track of one journey is a trip; a log of whole days (a tracker that records everything) has its trips and stays worked out from its points, as with Dawarich.</li>
         </ul>
         <p>Flights don't need a file of their own: they come from Timeline, and long jumps Timeline missed are recognised as flights too. You can load several files at once, or a whole folder.</p>
       </details>
@@ -902,6 +914,17 @@ div.hit-row:hover { background: none; }
           <li>On strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and request your archive.</li>
           <li>Strava emails a ZIP. Load it as it is; only the activity files inside are read, so photos don't slow it down.</li>
         </ol>
+        <h3>Garmin Connect</h3>
+        <ol>
+          <li>For everything: request your data at <b>garmin.com → Account → Data Management → Export Your Data</b>. Garmin emails a ZIP; load it as it is.</li>
+          <li>For one activity: open it on connect.garmin.com, choose the gear menu and <b>Export Original</b> (a .fit file, in a ZIP) or <b>Export to GPX</b>.</li>
+        </ol>
+        <h3>Fitbit</h3>
+        <ol>
+          <li>On fitbit.com open an activity with GPS, choose the menu and <b>Export as TCX File</b>. Load the .tcx files, or several in a ZIP.</li>
+        </ol>
+        <h3>Other apps</h3>
+        <p>Komoot, Polar Flow, Suunto, Coros, Wahoo, OsmAnd and most trackers can export an activity or a track as <b>GPX</b>. Only recorded tracks have times; planned routes have none, so they can't be placed on your timeline.</p>
       </details>
 
       <details>
@@ -944,9 +967,9 @@ div.hit-row:hover { background: none; }
       </a>
     </div>
   </dialog>
-  <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,application/json,application/geo+json,application/zip,application/gpx+xml" multiple>
+  <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,.kml,.kmz,.tcx,.fit,.gz,application/json,application/geo+json,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/octet-stream" multiple>
   <input type="file" id="dirIn" class="visually-hidden" webkitdirectory multiple>
-  <input type="file" id="stravaIn" class="visually-hidden" accept=".zip,.gpx,.fit,.tcx,.gz,application/zip,application/gzip,application/gpx+xml" multiple>
+  <input type="file" id="stravaIn" class="visually-hidden" accept=".zip,.gpx,.fit,.tcx,.kml,.kmz,.geojson,.gz,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/geo+json,application/octet-stream" multiple>
 
   <!-- Map -->
   <section class="page" id="mapPage" aria-label="Map">
@@ -1165,7 +1188,7 @@ div.hit-row:hover { background: none; }
     <div class="sec" id="srcWrap" hidden>
       <h3>Source</h3>
       <div class="seg full" role="group" aria-label="Where trips come from" id="srcSeg">
-        <button type="button" data-src="all" aria-pressed="true">All</button><button type="button" data-src="strava" aria-pressed="false">Strava</button><button type="button" data-src="timeline" aria-pressed="false">Timeline</button>
+        <button type="button" data-src="all" aria-pressed="true">All</button><button type="button" data-src="strava" aria-pressed="false" id="srcActs">Strava</button><button type="button" data-src="timeline" aria-pressed="false">Timeline</button>
       </div>
     </div>
     <div class="sec">
@@ -1234,15 +1257,16 @@ div.hit-row:hover { background: none; }
       <p class="fine" id="dataSummary"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <label class="btn" for="fileIn"><span data-icon="upload"></span>Import more files</label>
-        <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load Strava export</label>
+        <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load activities</label>
         <button type="button" class="btn danger" id="forgetBtn">Remove from this device</button>
       </div>
       <details class="help">
-        <summary>Sharper bike rides from Strava</summary>
-        <p class="fine">Strava activities replace the Timeline trips recorded at the same time, so rides, runs and walks follow Strava's GPS track. Activities Timeline missed are added too.</p>
+        <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
+        <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
         <ol class="fine">
-          <li>On strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>.</li>
-          <li>Strava emails you a ZIP file. Load it here as it is, without unzipping. Single .gpx, .fit or .tcx files work too.</li>
+          <li><b>Strava:</b> on strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>. Load the ZIP it emails you as it is.</li>
+          <li><b>Garmin Connect:</b> request your data under <b>Account → Data Management → Export Your Data</b>, and load the ZIP as it is.</li>
+          <li>Single <b>.fit</b>, <b>.gpx</b>, <b>.tcx</b>, <b>.kml</b> or <b>.geojson</b> files from any app work too.</li>
         </ol>
       </details>
       <p class="status" id="importStatus" role="status"></p>
@@ -1306,7 +1330,8 @@ var CITIES = "Ushuaia,1,-489,-59s;Punta Arenas,1,4m,-77;Río Grande,1,-1s,8w;Pue
 // {start, end, day, mode, km, est} with their GPS trails, plus the places stayed.
 // Runs inside a Web Worker (or on the main thread as a fallback).
 // Supported: on-device Timeline.json (Android), iPhone Timeline export,
-// Takeout Semantic Location History monthly files, Takeout Records.json, Dawarich exports.
+// Takeout Semantic Location History monthly files, Takeout Records.json, Dawarich exports,
+// Strava exports, and GPX, KML/KMZ, GeoJSON, TCX and FIT files from any app or device.
 
 var MODE_ALIASES = {
   WALKING: ['WALKING', 'ON_FOOT', 'WALK', 'HIKING'],
@@ -1914,7 +1939,7 @@ function retypeGuessed(R) {
     if (!(e & GUESSED) || e & STRAVA || MODES[R.mode[i]] === 'FLYING') continue;
     var hrs = (R.end[i] - R.start[i]) / 36e5, avg = hrs > 0 ? R.km[i] / hrs : 0, g;
     var src = R.srcs ? R.srcs[i] : R.src;
-    if ((e & PATH_TRIP || src === SRC.dawarich) && R.pathOff[i + 1] - R.pathOff[i] >= 2) g = runMode(tripRun(R, i));
+    if ((e & PATH_TRIP || src === SRC.dawarich || src === SRC.gps) && R.pathOff[i + 1] - R.pathOff[i] >= 2) g = runMode(tripRun(R, i));
     else { g = guessMode(R.km[i], hrs); if (!g || g === 'FLYING') continue; }
     if (g === 'CAR' && avg > MAX_KMH.CAR) g = 'TRAIN';
     R.mode[i] = MODE_IDX[g];
@@ -2130,11 +2155,12 @@ var PATH_TRIP = 64;
 // slow legs at the ends. It is never below the overall average: 20 km in 30 minutes is no bike ride.
 var RUN_BIKE_KMH = 45, RUN_FAST_KM = 2;
 function runMode(run) {
-  var v = [], tot = 0, dist = 0;
+  // Legs under a minute (a dense recording, a point every few seconds) are joined until they last one.
+  var v = [], tot = 0, dist = 0, cd = 0, ch = 0;
   for (var j = 1; j < run.length; j++) {
     var h = (run[j][0] - run[j - 1][0]) / 36e5, d = km(run[j - 1][1], run[j][1]);
-    dist += d;
-    if (h >= 1 / 60 && d > 0.05) { v.push([d / h, d]); tot += d; }
+    dist += d; cd += d; ch += h;
+    if (ch >= 1 / 60) { if (cd > 0.05) { v.push([cd / ch, cd]); tot += cd; } cd = 0; ch = 0; }
   }
   if (!v.length) return 'WALKING';
   v.sort(function (x, y) { return x[0] - y[0]; });
@@ -2388,7 +2414,7 @@ function withTrack(R, T) {
   for (i = 0; i < n; i++) {
     var s = R.srcs ? R.srcs[i] : R.src;
     mode = MODES[R.mode[i]];
-    if (s === SRC.records || s === SRC.dawarich || s === SRC.strava || s === SRC.sim || est[i] & (RECORDS_GPS | STRAVA) || mode === 'FLYING') continue;
+    if (isPointsSrc(s) || s === SRC.strava || s === SRC.sim || est[i] & (RECORDS_GPS | STRAVA) || mode === 'FLYING') continue;
     var tr = trackFor(R, T, i, mode);
     if (!tr || tr.pts.length <= R.pathOff[i + 1] - R.pathOff[i]) continue;
     var a = [R.from[2 * i], R.from[2 * i + 1]], b = [R.to[2 * i], R.to[2 * i + 1]], dur = (R.end[i] - R.start[i]) / 1000;
@@ -2425,9 +2451,12 @@ function withTrack(R, T) {
 // Strava activities don't compete per day; they replace the Timeline trips they cover (see withStrava).
 // Simulated trips (an on-device-format file with "simulated": true at the top) don't compete per day
 // either; they replace whatever overlaps them in time (see merge).
-var SRC = { device: 0, ios: 1, semantic: 2, records: 3, dawarich: 4, sim: 8, strava: 9 };
+var SRC = { device: 0, ios: 1, semantic: 2, records: 3, dawarich: 4, gps: 5, sim: 8, strava: 9 };
+// Exports of raw GPS points, whose trips and stays are worked out from them.
+function isPointsSrc(s) { return s === SRC.records || s === SRC.dawarich || s === SRC.gps; }
 var KIND_LABEL = ['Timeline.json (on-device)', 'iPhone Timeline export', 'Takeout Semantic Location History', 'Takeout Records.json'];
 KIND_LABEL[SRC.dawarich] = 'Dawarich';
+KIND_LABEL[SRC.gps] = 'GPS tracks';
 KIND_LABEL[SRC.strava] = 'Strava';
 KIND_LABEL[SRC.sim] = 'Simulated trips';
 var MODES = Object.keys(MODE_ALIASES);
@@ -2473,7 +2502,7 @@ function finish(c, src) {
     vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid
   };
 }
-var NOT_TIMELINE = "This file doesn't look like Google Timeline data. Pick Timeline.json from your phone, Records.json / Semantic Location History files from Google Takeout, or a Dawarich export.";
+var NOT_TIMELINE = "This file doesn't look like location data BT•DT can read. Pick Timeline.json from your phone, Records.json or Semantic Location History from Google Takeout, a Dawarich or Strava export, or GPX, KML, GeoJSON, TCX or FIT files.";
 function parseTimeline(o) {
   var c = new Collector(), src;
   if (Array.isArray(o)) { src = SRC.ios; parseIos(o, c); }
@@ -2639,7 +2668,7 @@ function readGpx(txt) {
     if (b > 0 && b < 255) { hr.t.push(t.ms); hr.v.push(b); }
   }
   var trk = /<trk\b[^>]*>([\s\S]*?)<trkseg/.exec(txt);
-  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts, hr: hr };
+  return { type: tag(txt, 'type'), name: trk ? xmlText(tag(trk[1], 'name')) : '', pts: pts, ts: ts, hr: hr, app: gpxApp(txt.slice(0, 2000)) };
 }
 function readTcx(txt) {
   var re = /<Trackpoint\b[^>]*>([\s\S]*?)<\/Trackpoint>/g, m, pts = [], ts = [], hr = { t: [], v: [] }, sp = /<Activity\b[^>]*Sport\s*=\s*"([^"]*)"/.exec(txt);
@@ -2649,14 +2678,16 @@ function readTcx(txt) {
     var h = /<HeartRateBpm\b[^>]*>\s*<(?:\w+:)?Value>\s*([\d.]+)/.exec(m[1]), b = h ? parseFloat(h[1]) : NaN;
     if (t && b > 0 && b < 255) { hr.t.push(t.ms); hr.v.push(b); }
   }
-  return { type: sp ? sp[1] : '', pts: pts, ts: ts, hr: hr };
+  var cr = /<(Creator|Author)\b[^>]*>[\s\S]*?<Name>([^<]*)</.exec(txt);
+  return { type: sp ? sp[1] : '', pts: pts, ts: ts, hr: hr, app: cr ? appOf(cr[2]) : '' };
 }
 // FIT is Garmin's binary format. Only the record messages (time, position and heart rate) and the
 // sport are read; everything else is skipped by the sizes its definitions give.
 var FIT_EPOCH = 631065600000;
 function readFit(buf) {
   var v = new DataView(buf), hs = v.getUint8(0), end = Math.min(buf.byteLength, hs + v.getUint32(4, true)), p = hs;
-  var defs = {}, lastTs = 0, pts = [], ts = [], hr = { t: [], v: [] }, sport = null, subSport = null, virtual = false;
+  if (buf.byteLength < 14 || String.fromCharCode(v.getUint8(8), v.getUint8(9), v.getUint8(10), v.getUint8(11)) !== '.FIT') throw new Error(NOT_FIT);
+  var defs = {}, lastTs = 0, pts = [], ts = [], hr = { t: [], v: [] }, sport = null, subSport = null, virtual = false, maker = null;
   while (p < end) {
     var h = v.getUint8(p++), local, d, ct = null;
     if (h & 0x80) { local = (h >> 5) & 3; var o = h & 0x1f; ct = (lastTs & ~0x1f) + o; if (o < (lastTs & 0x1f)) ct += 0x20; }
@@ -2675,6 +2706,7 @@ function readFit(buf) {
       var fd = d.fields[k], at = p + fd[2];
       if (fd[1] === 4) rec[fd[0]] = fd[0] === 0 || fd[0] === 1 ? v.getInt32(at, d.le) : v.getUint32(at, d.le);
       else if (fd[1] === 1) rec[fd[0]] = v.getUint8(at);
+      else if (fd[1] === 2 && d.g === 0) rec[fd[0]] = v.getUint16(at, d.le);
     }
     p += d.size;
     if (rec[253] != null) lastTs = rec[253];
@@ -2685,6 +2717,9 @@ function readFit(buf) {
       }
       // Field 3 is the heart rate (255 when there is none).
       if (t != null && rec[3] > 0 && rec[3] < 255) { hr.t.push(FIT_EPOCH + t * 1000); hr.v.push(rec[3]); }
+    } else if (d.g === 0) {
+      // File id: field 1 is who made the device or app.
+      if (maker == null && rec[1] != null) maker = rec[1];
     } else if (d.g === 18 || d.g === 12) {
       var sp = rec[d.g === 18 ? 5 : 0], sub = rec[d.g === 18 ? 6 : 1];
       if (sp != null && sp !== 255 && sport == null) { sport = sp; subSport = sub; }
@@ -2693,7 +2728,7 @@ function readFit(buf) {
   }
   // Mountain bike and trail run are cycling and running with a sub-sport.
   var name = sport === 2 && subSport === 8 ? 'Mountain Bike Ride' : sport === 1 && subSport === 3 ? 'Trail Run' : FIT_SPORT[sport] || '';
-  return { type: virtual ? 'virtual' : name, sport: sport, subSport: subSport, pts: pts, ts: ts, hr: hr };
+  return { type: virtual ? 'virtual' : name, sport: sport, subSport: subSport, pts: pts, ts: ts, hr: hr, app: FIT_MAKER[maker] || '' };
 }
 function readActivity(name, buf) {
   var n = name.replace(/\.gz$/i, '');
@@ -2778,15 +2813,17 @@ function addStrava(c, type, a, meta) {
   // What the export said about the activity, for the trip's raw data.
   var sm = Object.assign({ typeUsed: type == null ? '' : String(type), fileType: a.type || '' }, a.sport != null ? { fitSport: a.sport, fitSubSport: a.subSport } : {}, meta || {});
   if (!sm.name && a.name) sm.name = a.name;
+  if (sm.app == null) sm.app = a.app || '';
   var hr = hrSeries(a.hr, ts[0], ts[n]), spd = speedSeries(pts, ts);
   if (hr) sm.hr = hr;
   if (spd) sm.spd = spd;
   (c.smeta || (c.smeta = [])).push(sm);
   return true;
 }
-function finishStrava(c) {
+function finishStrava(c, kind) {
   if (!c.start.length) throw new Error(NO_STRAVA);
   var r = finish(c, SRC.strava);
+  if (kind) r.kind = kind;
   for (var i = 0; i < r.est.length; i++) r.est[i] |= STRAVA;
   r.sport = Uint8Array.from(c.sport); r.stype = c.stype; r.smeta = c.smeta;
   r.strava = true;
@@ -2929,7 +2966,7 @@ function parseStravaZip(file, all, onProgress) {
       var en = acts[i], key = en.name.replace(/^.*?(activities\/)/, '$1');
       return zipRead(file, en).then(function (b) { return maybeGunzip(en.name, b); }).then(function (b) {
         var a = readActivity(en.name, b), row = types[key], t = row && row.type;
-        var meta = { file: key, csvType: t == null ? null : t, csv: row ? row.csv : null };
+        var meta = { file: key, app: 'Strava', csvType: t == null ? null : t, csv: row ? row.csv : null };
         if (row && row.name) meta.name = row.name;
         if (row && row.desc) meta.desc = row.desc;
         if (row && row.gear) { meta.gear = row.gear; if (gear[row.gear]) meta.gearInfo = gear[row.gear]; }
@@ -3038,9 +3075,9 @@ function kmLL(a0, a1, b0, b1) { return km([a0, a1], [b0, b1]); }
 // that gets at least 500 m from where it started, or ends at least 200 m from it, is a trip; its type is the one Dawarich gave the
 // track it is on (account export), or else guessed from its speed (see runMode).
 var DW_STAY_KM = 0.15, DW_STAY_MS = 10 * 60000;
-function dwBuild(P) {
-  var n0 = P.t.length, k, i, j;
-  if (!n0) throw new Error(NO_DAWARICH);
+function dwBuild(P, src) {
+  var n0 = P.t.length, k, i, j, none = src === SRC.gps ? NO_POINTS : NO_DAWARICH;
+  if (!n0) throw new Error(none);
   var ord = new Uint32Array(n0);
   for (k = 0; k < n0; k++) ord[k] = k;
   ord.sort(function (a, b) { return P.t[a] - P.t[b]; });
@@ -3135,8 +3172,8 @@ function dwBuild(P) {
     if (best && best.ll && km(best.ll, ll) < 0.3) ll = best.ll;
     c.visit({ ms: st, off: null }, { ms: et, off: null }, ll, 0, best ? best.name : '', '');
   });
-  if (!c.start.length && !c.vs.length) throw new Error(NO_DAWARICH);
-  var r = finish(c, SRC.dawarich), TL = new Float32Array(2 * n);
+  if (!c.start.length && !c.vs.length) throw new Error(none);
+  var r = finish(c, src || SRC.dawarich), TL = new Float32Array(2 * n);
   for (k = 0; k < n; k++) { TL[2 * k] = LA[k]; TL[2 * k + 1] = LO[k]; }
   r.track = { t: T.slice(0, n), ll: TL, dev: DV.slice(0, n) };
   return r;
@@ -3175,14 +3212,273 @@ function parseDawarichZip(file, all, onProgress) {
   }, Promise.resolve()).then(function () { return dwBuild(P); });
 }
 
+// ---------- Location files from other apps: GPX, KML/KMZ, GeoJSON, TCX, FIT ----------
+// Garmin, Komoot, Suunto, Polar, Wahoo, Coros, Fitbit, OsmAnd, GPSLogger and most trackers save
+// GPX, and fitness devices FIT (or TCX). A file holds one or more tracks of timed points. A track is
+// either a recorded activity (a ride, a run, a hike: one journey, often with its sport), which is
+// handled like a Strava activity and replaces the Timeline trips it covers, or a log of where you
+// were all day (a phone or tracker that records everything), whose trips and stays are worked out
+// from its points as with Dawarich (see dwBuild). TCX and FIT files are always activities. Any other
+// track is a log when it lasts over 16 hours, stops recording for over 90 minutes, or stays within
+// 150 m for over 90 minutes; otherwise it is an activity. Points with a time but no track (GeoJSON
+// points, KML placemarks) join the log. Tracks without times (planned routes) can't be placed in
+// time and are left out.
+var NO_POINTS = 'No timed GPS points were found in this file.';
+var NO_TIMES = 'This file has routes but no times, so there is nothing to place on your timeline (planned routes and courses have no times).';
+var NOT_FIT = "This isn't a FIT file.";
+var LOG_HOURS = 16, LOG_GAP_MS = 90 * 60000, LOG_STAY_MS = 90 * 60000;
+// The app or device that wrote a file, from its creator, for the trip details and the filters.
+var APPS = [['Strava', /strava/i], ['Komoot', /komoot/i], ['Suunto', /suunto/i], ['Polar', /polar/i], ['Wahoo', /wahoo|elemnt/i],
+  ['Coros', /coros/i], ['Fitbit', /fitbit/i], ['Zepp', /zepp|amazfit|huami/i], ['Huawei', /huawei/i], ['Samsung Health', /samsung/i],
+  ['OsmAnd', /osmand/i], ['Locus Map', /locus/i], ['GPSLogger', /gpslogger/i], ['OpenTracks', /opentracks/i], ['Ride with GPS', /ride ?with ?gps/i],
+  ['AllTrails', /alltrails/i], ['Gaia GPS', /gaia ?gps/i], ['Wikiloc', /wikiloc/i], ['Outdooractive', /outdooractive/i], ['Runkeeper', /runkeeper/i],
+  ['Hammerhead', /hammerhead|karoo/i], ['Zwift', /zwift/i], ['Bryton', /bryton/i], ['Apple Health', /healthfit|workoutdoors|rungap|apple/i],
+  ['Garmin', /garmin|forerunner|f[eē]nix|\bedge\s?\d|venu|vivoactive|instinct|enduro|epix|approach s|basecamp|etrex|gpsmap|oregon|montana/i]];
+function appOf(s) {
+  s = String(s || '');
+  for (var k = 0; k < APPS.length; k++) if (APPS[k][1].test(s)) return APPS[k][0];
+  return '';
+}
+// GPX names its writer in <gpx creator="…">, and some apps only in <metadata>.
+function gpxApp(head) {
+  var m = /<gpx\b[^>]*\bcreator\s*=\s*["']([^"']*)/i.exec(head);
+  return appOf(m ? m[1] : '') || appOf((/<metadata\b[\s\S]*?<\/metadata>/i.exec(head) || [''])[0]);
+}
+// FIT's manufacturer numbers (FIT profile) for the makers people record with.
+var FIT_MAKER = { 1: 'Garmin', 13: 'Garmin', 15: 'Garmin', 23: 'Suunto', 32: 'Wahoo', 71: 'TomTom', 123: 'Polar', 260: 'Zwift', 265: 'Strava', 267: 'Bryton', 289: 'Hammerhead', 294: 'Coros' };
+
+// Tracks and loose points gathered from one or more files, then sorted into activities and a log.
+function LocFiles() { this.tracks = []; this.P = new DwPoints(); this.untimed = 0; this.apps = {}; }
+// A track: { name, type, app, file, act (always an activity), pts: [[lat, lng]], ts: [ms], hr }.
+LocFiles.prototype.track = function (tr) {
+  var pts = [], ts = [], ord = tr.ts.map(function (_, k) { return k; }).filter(function (k) {
+    var p = tr.pts[k];
+    return tr.ts[k] > 0 && p && p[0] >= -90 && p[0] <= 90 && p[1] >= -180 && p[1] <= 180 && (p[0] || p[1]);
+  });
+  if (!ord.length) { if (tr.pts.length > 1) this.untimed++; return; }
+  ord.sort(function (a, b) { return tr.ts[a] - tr.ts[b]; });
+  ord.forEach(function (k) { if (!ts.length || tr.ts[k] > ts[ts.length - 1]) { pts.push(tr.pts[k]); ts.push(tr.ts[k]); } });
+  if (pts.length < 2) { if (pts.length) this.P.add(ts[0], pts[0][0], pts[0][1], 0); return; }
+  tr.pts = pts; tr.ts = ts; tr.hr = tr.hr || { t: [], v: [] };
+  this.tracks.push(tr);
+};
+// Whether a track is one recorded activity rather than a log of a day or more (see above).
+function isActivityTrack(tr) {
+  if (tr.act) return true;
+  var ts = tr.ts, pts = tr.pts, n = ts.length, i, j;
+  if (ts[n - 1] - ts[0] > LOG_HOURS * 36e5) return false;
+  for (i = 1; i < n; i++) if (ts[i] - ts[i - 1] > LOG_GAP_MS) return false;
+  for (i = 0; i < n; i = Math.max(i + 1, j - 1)) {
+    for (j = i + 1; j < n && km(pts[i], pts[j]) <= DW_STAY_KM; j++);
+    if (ts[j - 1] - ts[i] > LOG_STAY_MS) return false;
+  }
+  return true;
+}
+// The results for what was gathered: the activities (laid over Timeline like Strava's) and the trips
+// and stays from the log, each as its own result.
+LocFiles.prototype.finish = function (name) {
+  var c = new Collector(), P = this.P, apps = {}, out = [];
+  this.tracks.forEach(function (tr) {
+    if (isActivityTrack(tr)) {
+      var meta = { file: tr.file || name, app: tr.app || '' };
+      if (tr.name) meta.name = tr.name;
+      if (addStrava(c, tr.type, tr, meta)) apps[tr.app || ''] = 1;
+    } else for (var k = 0; k < tr.ts.length; k++) P.add(tr.ts[k], tr.pts[k][0], tr.pts[k][1], 0);
+  });
+  if (c.start.length) {
+    var list = Object.keys(apps), named = list.filter(Boolean);
+    out.push(finishStrava(c, named.length === 1 && list.length === 1 ? named[0] : 'Activity files'));
+  }
+  if (P.t.length) {
+    try { out.push(dwBuild(P, SRC.gps)); } catch (e) { if (!out.length) throw e; }
+  }
+  if (!out.length) throw new Error(this.untimed ? NO_TIMES : NO_POINTS);
+  return out.length === 1 ? out[0] : out;
+};
+
+// A text handler for streamText that reads every track of a GPX file (with its name, type and heart
+// rate), without holding the whole file. Waypoints and routes have no times and are skipped.
+function gpxTracks(L, file, app) {
+  var buf = '', cur = null, head = '', seen = false;
+  var re = /<trk\b[^>]*>|<\/trk>|<trkpt\b([^>]*?)\/>|<trkpt\b([^>]*)>([\s\S]*?)<\/trkpt>|<name>([\s\S]*?)<\/name>|<type>([\s\S]*?)<\/type>/g;
+  function done() { if (cur) L.track(cur); cur = null; }
+  return function (text, end) {
+    if (!seen) { head += text.slice(0, 4000 - head.length); if (head.length >= 4000 || end) { seen = true; app = app || gpxApp(head); } }
+    buf += text;
+    var m, last = 0;
+    re.lastIndex = 0;
+    while ((m = re.exec(buf))) {
+      last = re.lastIndex;
+      var s = m[0];
+      if (s.charAt(1) === '/') done();
+      else if (m[1] != null || m[2] != null) {
+        if (!cur) cur = { name: '', type: '', app: app, file: file, pts: [], ts: [], hr: { t: [], v: [] } };
+        var a = m[1] != null ? m[1] : m[2], inner = m[3] || '', t = parseTime(tag(inner, 'time'));
+        cur.pts.push([attr(a, 'lat'), attr(a, 'lon')]); cur.ts.push(t ? t.ms : NaN);
+        var b = t && /<(?:\w+:)?hr>/.test(inner) ? parseFloat(tag(inner, 'hr')) : NaN;
+        if (b > 0 && b < 255) { cur.hr.t.push(t.ms); cur.hr.v.push(b); }
+      } else if (/^<trk\b/.test(s)) { done(); cur = { name: '', type: '', app: app, file: file, pts: [], ts: [], hr: { t: [], v: [] } }; }
+      else if (cur && !cur.pts.length) {
+        if (m[4] != null && !cur.name) cur.name = xmlText(m[4]);
+        else if (m[5] != null && !cur.type) cur.type = xmlText(m[5]);
+      }
+    }
+    buf = buf.slice(last);
+    var k = buf.search(/<(?:\/?trk\b|trkpt\b|name>|type>)/);
+    buf = k >= 0 ? buf.slice(k) : buf.slice(-16);
+    if (end) done();
+  };
+}
+// The text of a KML file: Google Earth tracks (<gx:Track>, a <when> per <gx:coord>), and placemarks
+// with a time: a line with a time span becomes a track (times spread along it by distance), a point
+// with a time stamp or span becomes log points. Placemark names that say how you travelled
+// (Driving, Cycling…) or an activity (Morning run) give the track its type.
+function readKml(txt, L, file) {
+  var app = '';
+  var re = /<Placemark\b[\s\S]*?<\/Placemark>/g, m;
+  function coords(s) {
+    return s.trim().split(/\s+/).map(function (c) { var x = c.split(','); return [parseFloat(x[1]), parseFloat(x[0])]; })
+      .filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
+  }
+  while ((m = re.exec(txt))) {
+    var pm = m[0], name = xmlText(tag(pm, 'name')), span = /<TimeSpan\b[\s\S]*?<\/TimeSpan>/.exec(pm);
+    var b = span && parseTime(tag(span[0], 'begin')), e = span && parseTime(tag(span[0], 'end'));
+    var stamp = parseTime(tag((/<TimeStamp\b[\s\S]*?<\/TimeStamp>/.exec(pm) || [''])[0], 'when'));
+    var tre = /<(?:gx:)?Track\b[^>]*>([\s\S]*?)<\/(?:gx:)?Track>/g, tm, any = false;
+    while ((tm = tre.exec(pm))) {
+      var w = [], cs = [], x, wr = /<when>([^<]*)<\/when>/g, cr = /<gx:coord>([^<]*)<\/gx:coord>/g;
+      while ((x = wr.exec(tm[1]))) { var t = parseTime(x[1].trim()); w.push(t ? t.ms : NaN); }
+      while ((x = cr.exec(tm[1]))) { var c = x[1].trim().split(/\s+/); cs.push([parseFloat(c[1]), parseFloat(c[0])]); }
+      if (cs.length === w.length) { L.track({ name: name, type: name, app: app, file: file, pts: cs, ts: w }); any = true; }
+    }
+    if (any) continue;
+    var line = /<LineString\b[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/.exec(pm);
+    var pt = /<Point\b[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/.exec(pm);
+    if (line) {
+      var pts = coords(line[1]);
+      if (b && e && e.ms > b.ms && pts.length >= 2) {
+        var rel = pts.map(function () { return NaN; });
+        fillTimes(pts, rel, (e.ms - b.ms) / 1000);
+        L.track({ name: name, type: name, app: app, file: file, pts: pts, ts: rel.map(function (s) { return b.ms + s * 1000; }) });
+      } else if (pts.length >= 2) L.untimed++;
+    } else if (pt) {
+      var p = coords(pt[1])[0];
+      if (!p) continue;
+      if (b && e && e.ms > b.ms) { L.P.add(b.ms, p[0], p[1], 0); L.P.add((b.ms + e.ms) / 2, p[0], p[1], 0); L.P.add(e.ms, p[0], p[1], 0); }
+      else if (stamp || b) L.P.add((stamp || b).ms, p[0], p[1], 0);
+    }
+  }
+}
+// A GeoJSON feature: a point with a time joins the log (as in Dawarich's export); a line with a time
+// per point is a track. Times come from properties.coordTimes or coordinateProperties.times (as
+// written by togeojson and most converters), properties.times, or a fourth number in each position
+// (Unix time); a line with only a start and end time gets its times spread along it by distance.
+function geoFeature(o, L, file) {
+  if (!o || typeof o !== 'object') return;
+  if (o.type === 'FeatureCollection' && Array.isArray(o.features)) { o.features.forEach(function (f) { geoFeature(f, L, file); }); return; }
+  var g = o.geometry, p = o.properties || {};
+  if (!g) { dwPoint(o, L.P); return; }
+  if (g.type === 'Point') { dwPoint(o, L.P); return; }
+  if (g.type === 'GeometryCollection') { (g.geometries || []).forEach(function (x) { geoFeature({ type: 'Feature', geometry: x, properties: p }, L, file); }); return; }
+  var lines = g.type === 'LineString' ? [g.coordinates] : g.type === 'MultiLineString' ? g.coordinates : g.type === 'MultiPoint' ? [g.coordinates] : null;
+  if (!lines) return;
+  var cp = p.coordinateProperties || {}, times = p.coordTimes || cp.times || p.times || p.timestamps;
+  var type = p.type || p.activity_type || p.activityType || p.activity || p.sport || p.mode || '';
+  var name = p.name || p.title || '', st = dwTime(p.start_time || p.startTime || p.start || p.begin), et = dwTime(p.end_time || p.endTime || p.end);
+  lines.forEach(function (line, li) {
+    if (!Array.isArray(line)) return;
+    var tl = times && Array.isArray(times[0]) ? times[li] : li === 0 ? times : null;
+    var pts = [], ts = [];
+    line.forEach(function (c, k) {
+      if (!Array.isArray(c)) return;
+      pts.push([Number(c[1]), Number(c[0])]);
+      ts.push(tl ? dwTime(tl[k]) : c.length >= 4 ? dwTime(c[3]) : NaN);
+    });
+    if (!ts.some(function (t) { return t > 0; }) && st > 0 && et > st && pts.length >= 2 && lines.length === 1) {
+      var rel = pts.map(function () { return NaN; });
+      fillTimes(pts, rel, (et - st) / 1000);
+      ts = rel.map(function (s) { return st + s * 1000; });
+    }
+    if (g.type === 'MultiPoint') { pts.forEach(function (q, k) { L.P.add(ts[k], q[0], q[1], 0); }); return; }
+    L.track({ name: String(name), type: String(type), app: '', file: file, pts: pts, ts: ts });
+  });
+}
+// An activity file (TCX or FIT, which are always one activity; GPX here only from a ZIP's activity list).
+function actTrack(name, buf, L, app) {
+  var a = readActivity(name, buf);
+  a.act = true; a.app = app || a.app || ''; a.file = name.replace(/^.*\//, '');
+  L.track(a);
+}
+var LOC_RE = /\.(gpx|kml|kmz|geojson|tcx|fit)(\.gz)?$/i;
+function isLocationName(name) { return /\.(json|geojson|jsonl|zip|gpx|kml|kmz|tcx|fit)(\.gz)?$/i.test(name); }
+// One file's bytes (already gunzipped) into L. A KMZ is a ZIP holding the KML.
+function readLocBytes(name, buf, L, app) {
+  var n = name.replace(/\.gz$/i, '');
+  if (/\.(tcx|fit)$/i.test(n)) { actTrack(n, buf, L, app); return Promise.resolve(); }
+  if (/\.kmz$/i.test(n)) return zipEntries(new Blob([buf])).then(function (all) { return readZipLoc(new Blob([buf]), all, L, app, function () {}, 1); });
+  var txt = new TextDecoder().decode(buf), file = n.replace(/^.*\//, '');
+  if (/\.kml$/i.test(n)) readKml(txt, L, file);
+  else if (/\.gpx$/i.test(n)) gpxTracks(L, file, app)(txt, true);
+  else geoFeature(JSON.parse(txt), L, file);
+  return Promise.resolve();
+}
+// Every location file in a ZIP (Garmin's account export keeps its activity files in ZIPs inside it).
+function readZipLoc(file, all, L, app, onProgress, depth) {
+  var jobs = all.filter(function (e) { return LOC_RE.test(e.name) || depth < 2 && /\.zip$/i.test(e.name); });
+  if (!app && all.some(function (e) { return /(^|\/)DI_CONNECT\//.test(e.name); })) app = 'Garmin';
+  if (!app && all.some(function (e) { return /(^|\/)Fitbit\//i.test(e.name); })) app = 'Fitbit';
+  return jobs.reduce(function (pr, en, i) {
+    return pr.then(function () {
+      return zipRead(file, en).then(function (b) {
+        if (/\.zip$/i.test(en.name)) { var blob = new Blob([b]); return zipEntries(blob).then(function (inner) { return readZipLoc(blob, inner, L, app, function () {}, depth + 1); }); }
+        return maybeGunzip(en.name, b).then(function (b) { return readLocBytes(en.name, b, L, app); });
+      }).catch(function () { /* a damaged or unreadable entry is skipped */ }).then(function () { if (i % 10 === 0) onProgress((i + 1) / jobs.length); });
+    });
+  }, Promise.resolve());
+}
+// A ZIP that could be Dawarich's: its account export (points/….jsonl) is, and a ZIP of GPX or GeoJSON
+// files is when its first one was written by Dawarich (others, such as a ZIP of Komoot tours, are read
+// as location files).
+function dawarichZipCheck(file, all) {
+  if (all.some(function (e) { return /(^|\/)points\/.*\.jsonl$/i.test(e.name); })) return Promise.resolve(true);
+  var en = all.filter(function (e) { return /\.(geojson|json|gpx)$/i.test(e.name) && !/(^|\/)manifest\.json$/i.test(e.name); })[0];
+  if (!en) return Promise.resolve(false);
+  return zipStream(file, en).then(function (st) {
+    var reader = st.getReader();
+    return reader.read().then(function (r) {
+      reader.cancel().catch(function () {});
+      var head = r.value ? new TextDecoder().decode(r.value.slice(0, 4096)) : '', kind = dwSniff(en.name, head);
+      return kind === 'gpx' || kind === 'geojson' && isDawarichHead(head);
+    });
+  }).catch(function () { return true; });
+}
+// Whether a JSON file is GeoJSON from somewhere other than Dawarich (which keeps its own label).
+function isGeoJson(head) { return /^\s*\{[\s\S]*"type"\s*:\s*"(FeatureCollection|Feature)"/.test(head); }
+function isDawarichHead(head) { return /"(battery_status|tracker_id|raw_data|import_id|ping)"\s*:/.test(head); }
+
 function parseFile(file, onProgress) {
-  if (/\.zip$/i.test(file.name)) return zipEntries(file).then(function (all) {
-    return isDawarichZip(all) ? parseDawarichZip(file, all, onProgress) : parseStravaZip(file, all, onProgress);
+  if (/\.(zip|kmz)$/i.test(file.name)) return zipEntries(file).then(function (all) {
+    if (/\.zip$/i.test(file.name) && isDawarichZip(all)) return dawarichZipCheck(file, all).then(function (dw) {
+      if (dw) return parseDawarichZip(file, all, onProgress);
+      var L = new LocFiles();
+      return readZipLoc(file, all, L, '', onProgress, 0).then(function () { return L.finish(file.name); });
+    });
+    if (/\.zip$/i.test(file.name) && all.some(function (e) { return /(^|\/)activities\.csv$/i.test(e.name) || /(^|\/)activities\/[^/]+\.(gpx|tcx|fit)(\.gz)?$/i.test(e.name); })) return parseStravaZip(file, all, onProgress);
+    var L = new LocFiles();
+    return readZipLoc(file, all, L, '', onProgress, 0).then(function () { return L.finish(file.name); });
   });
   return file.slice(0, 4096).text().then(function (head) {
-    var dw = /\.gz$/i.test(file.name) ? null : dwSniff(file.name, head);
+    var gz = /\.gz$/i.test(file.name), dw = gz ? null : dwSniff(file.name, head);
+    if (dw === 'geojson' && !isDawarichHead(head)) dw = null;
     if (dw) return parseDawarichFile(file, dw, onProgress);
-    if (isStravaName(file.name)) return parseStravaFile(file);
+    var L = new LocFiles();
+    // A GPX can be a log of years: read it as a stream.
+    if (!gz && /\.gpx$/i.test(file.name)) return streamText(file.stream(), file.size, gpxTracks(L, file.name), onProgress).then(function () { return L.finish(file.name); });
+    if (LOC_RE.test(file.name) || isGeoJson(head)) {
+      return file.arrayBuffer().then(function (buf) { return maybeGunzip(file.name, buf); }).then(function (buf) {
+        return readLocBytes(/\.json$/i.test(file.name) ? file.name.replace(/\.json$/i, '.geojson') : file.name, buf, L, '');
+      }).then(function () { onProgress(1); return L.finish(file.name); });
+    }
     var kind = sniff(head);
     if (!kind) throw new Error(NOT_TIMELINE);
     if (kind === 'records') return parseRecordsStream(file, onProgress);
@@ -3200,8 +3496,8 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
       parseFile(f, function (p) {
         self.postMessage({ type: 'progress', text: 'Reading ' + f.name + label + ' · ' + Math.round(p * 100) + '%' });
       }).then(function (r) {
-        r.name = f.name;
-        self.postMessage({ type: 'file', result: r });
+        // A file of GPS tracks can hold activities and a log of where you were: one result for each.
+        [].concat(r).forEach(function (x) { x.name = f.name; self.postMessage({ type: 'file', result: x }); });
         next(i + 1);
       }).catch(function (err) {
         self.postMessage({ type: 'error', name: f.name, text: err && err.message || String(err), skipped: err && err.message === NOT_TIMELINE });
@@ -3210,7 +3506,7 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
+if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -3330,12 +3626,15 @@ function modeColor(m) { return groupOf(m).color; }
 function modeOf(i) { return MODES[D.mode[i]]; }
 // A trip's name: its Strava sport (Kayaking, Mountain bike…) when it has one, else its mode.
 function tripLabel(i) { var s = D.sport && D.sport[i]; if (s && SPORTS[s]) return SPORTS[s][1]; if (D.stype && D.stype[i]) return esc(D.stype[i]); var m = modeOf(i); return LABEL[m] || m; }
-// strava adds Strava's mark in the top right corner.
+// app (where a recorded activity came from) adds a mark in the top right corner: Strava's logo for
+// Strava, a small track for any other app or device.
 var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" fill="#fff"/></svg></span>';
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
 function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>' : ''; }
-function badge(m, small, strava, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (strava ? STRAVA_MARK : '') + '</span>'; }
+var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" fill="#fff"/></svg>';
+function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
+function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
 // A ride on a cargo bike or a Halfbike shows that bike's icon.
 function tripIcon(i) { var g = D.gear ? D.gear[i] : 0; return g && (GEAR[g].kind === 'halfbike' || GEAR[g].kind === 'cargo') ? gearIcon(g) : modeOf(i); }
 
@@ -3899,6 +4198,13 @@ function stravaInfo(i) {
   var c = m.csv || {};
   return { name: m.name || c['Activity Name'] || '', desc: m.desc || c['Activity Description'] || '', gear: m.gear || c['Activity Gear'] || '', info: m.gearInfo || null };
 }
+// Where a recorded activity came from: the app or device that wrote its file (Strava, Garmin,
+// Komoot…), '' when its file doesn't say. Activities saved before other apps were read are Strava's.
+function actApp(i) { var m = D.smeta && D.smeta[i]; return m && m.app != null ? m.app : 'Strava'; }
+function actFrom(i) { var a = actApp(i); return a ? 'on ' + a : 'in an activity file'; }
+// What the recorded activities are called in the filters and messages: the app's name when they all
+// come from one, else Activities.
+function actsLabel(st) { var k = st && st.apps ? Object.keys(st.apps) : ['Strava']; return k.length === 1 && k[0] ? k[0] : 'Activities'; }
 function tripName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s.name || ''; }
 // Gear kinds by name, brand or model: front-loading cargo bikes and the Halfbike.
 var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiania|riese|\bgsd\b|douze|carqon|packster|triobike|workcycles|load ?60|load ?75|\bbakfi/i;
@@ -4142,6 +4448,7 @@ function buildFilterUI() {
   $('ccSearch').hidden = M.countries.length < 12;
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
+  $('srcActs').textContent = actsLabel(D.stravaStats);
   var h0 = '', h1 = '';
   for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
   for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
@@ -4432,13 +4739,13 @@ function setStatus(text, isErr) {
   if (text && D) toast(text);
 }
 // Exports that are raw GPS points, whose trips are rebuilt from them: Records.json and Dawarich.
-function POINTS_SRC(s) { return s === SRC.records || s === SRC.dawarich; }
+function POINTS_SRC(s) { return isPointsSrc(s); }
 // What those are called in messages, from the files loaded.
 function pointsName(files) {
   var k = {};
   (files || []).forEach(function (f) { k[f.kind] = true; });
-  var r = k[KIND_LABEL[SRC.records]], d = k[KIND_LABEL[SRC.dawarich]];
-  return r && d ? 'Records.json and Dawarich' : d ? 'Dawarich' : 'Records.json';
+  var L = [[SRC.records, 'Records.json'], [SRC.dawarich, 'Dawarich'], [SRC.gps, 'your GPS tracks']].filter(function (x) { return k[KIND_LABEL[x[0]]]; }).map(function (x) { return x[1]; });
+  return L.length ? L.slice(0, -1).join(', ') + (L.length > 1 ? ' and ' : '') + L[L.length - 1] : 'Records.json';
 }
 // Combine exports. When several cover the same day, the newest kind of export wins for that day,
 // except for Records.json and Dawarich trips in the gaps it left (see inGap).
@@ -4658,12 +4965,15 @@ function withStrava(R) {
     if (off[k_] !== NO_OFF) { O.off[j] = off[k_]; O.day[j] = Math.floor((S.start[k_] + off[k_] * 60000) / 864e5); }
   });
   ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
-  O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched };
+  var apps = {};
+  for (k = 0; k < m; k++) { var sm = S.smeta && S.smeta[k], a = sm && sm.app != null ? sm.app : 'Strava'; apps[a] = (apps[a] || 0) + 1; }
+  O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched, apps: apps };
   return O;
 }
 function stravaText(st) {
   if (!st) return '';
-  return fmt(st.acts) + ' Strava ' + (st.acts === 1 ? 'activity' : 'activities') + ': ' + fmt(st.matched) + ' replaced ' + fmt(st.replaced) + ' Timeline trip' + (st.replaced === 1 ? '' : 's') +
+  var one = actsLabel(st), apps = Object.keys(st.apps || {}).filter(Boolean);
+  return fmt(st.acts) + (one === 'Activities' ? ' recorded ' + (st.acts === 1 ? 'activity' : 'activities') + (apps.length ? ' (' + apps.join(', ') + ')' : '') : ' ' + one + ' ' + (st.acts === 1 ? 'activity' : 'activities')) + ': ' + fmt(st.matched) + ' replaced ' + fmt(st.replaced) + ' Timeline trip' + (st.replaced === 1 ? '' : 's') +
     (st.added ? ', ' + fmt(st.added) + ' added where Timeline had nothing' : '') + '.';
 }
 function runParser(files) {
@@ -4687,7 +4997,7 @@ function runParser(files) {
       (function next(i) {
         if (i >= files.length) { done(); return; }
         busy('Reading ' + files[i].name + '…');
-        parseFile(files[i], function () {}).then(function (r) { r.name = files[i].name; results.push(r); })
+        parseFile(files[i], function () {}).then(function (r) { [].concat(r).forEach(function (x) { x.name = files[i].name; results.push(x); }); })
           .catch(function (err) { if (err && err.message === NOT_TIMELINE) skipped++; else errors.push(files[i].name + ': ' + (err && err.message || err)); })
           .then(function () { next(i + 1); });
       })(0);
@@ -4695,8 +5005,8 @@ function runParser(files) {
   });
 }
 function importFiles(list) {
-  var files = Array.prototype.filter.call(list, function (f) { return /\.(json|geojson|jsonl)$/i.test(f.name) || isStravaName(f.name); });
-  if (!files.length) { setStatus('No Timeline (.json), Dawarich or Strava files found there.', true); return; }
+  var files = Array.prototype.filter.call(list, function (f) { return isLocationName(f.name); });
+  if (!files.length) { setStatus('No location files found there. BT•DT reads Google Timeline and Dawarich (.json), Strava and Garmin exports (.zip), and .gpx, .kml, .kmz, .geojson, .tcx and .fit files.', true); return; }
   setStatus('');
   busy('Reading…');
   runParser(files).then(function (r) {
@@ -4711,9 +5021,9 @@ function importFiles(list) {
       saveData(next);
       busy('');
       var nv = next.vs.length;
-      var onlyStrava = r.results.every(function (x) { return x.strava; });
-      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + r.results.length + ' file' + (r.results.length > 1 ? 's' : '') + '.';
-      if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without Timeline data.';
+      var onlyStrava = r.results.every(function (x) { return x.strava; }), nfiles = new Set(r.results.map(function (x) { return x.name; })).size;
+      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + nfiles + ' file' + (nfiles > 1 ? 's' : '') + '.';
+      if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without location data.';
       if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
       if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
       if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';
@@ -5379,7 +5689,7 @@ function tripRows(i) {
   var m = modeOf(i), k = D.km[i], ms = D.end[i] - D.start[i], off = D.off[i], e = D.est[i];
   var line = haversine([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]), nGps = D.pathOff[i + 1] - D.pathOff[i];
   var t0 = localTime(D.start[i], zoneAt(D.from[2 * i], D.from[2 * i + 1]), off), t1 = localTime(D.end[i], zoneAt(D.to[2 * i], D.to[2 * i + 1]), off);
-  var src = e & 16 ? 'from Strava' : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
+  var src = e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
   var rows = [
     ['From', placeOf(i, false)], ['To', placeOf(i, true)],
     ['Start', t0.time + ' <span class="fine">' + t0.label + '</span>'],
@@ -5393,11 +5703,11 @@ function tripRows(i) {
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
   ].filter(Boolean);
   var notes = [];
-  if (e & 16) notes.push(D.repl[i] ? 'Recorded on Strava. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded on Strava. Timeline has no trip at this time.');
-  if (isDup(i)) notes.push('Strava recorded this trip too. It shows here because Timeline is the only source chosen; with Strava included, the Strava activity takes its place.');
+  if (e & 16) notes.push(D.repl[i] ? 'Recorded ' + esc(actFrom(i)) + '. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded ' + esc(actFrom(i)) + '. Timeline has no trip at this time.');
+  if (isDup(i)) notes.push('A recorded activity covers this trip too. It shows here because Timeline is the only source chosen; with ' + esc(actsLabel(D.stravaStats)) + ' included, the activity takes its place.');
   if (isSim(i)) notes.push('Simulated from a file you loaded, not recorded by Timeline. It replaces any exported trip at the same time.');
   if (e & PATH_TRIP) notes.push('Timeline kept GPS points here but no trip, so BT•DT made this trip from them.');
-  if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? 'Strava calls this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : 'Strava gives this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
+  if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? (actApp(i) ? esc(actApp(i)) + ' calls' : 'Its file calls') + ' this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : (actApp(i) ? esc(actApp(i)) + ' gives' : 'Its file gives') + ' this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
   else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed: from its speed, then from your labelled trips along the same line, and from railway stations at its ends.');
   if (e & RECORDS_GPS) notes.push('The line follows the GPS points from Records.json' + ((e & 3) === 1 ? ', and the distance is measured along them' + (D.orig[i] > 0 && Math.abs(D.orig[i] - k) > 0.05 * k ? ' (Timeline said ' + dist(D.orig[i]) + ').' : '.') : '.'));
   else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT•DT measures the distance along the GPS trail instead.');
@@ -5410,7 +5720,7 @@ function tripRows(i) {
 // A Strava activity's own name is the title, with its sport under it.
 function tripHead(i, sub) {
   var m = modeOf(i), r = tripRows(i), name = tripName(i);
-  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16, tripIcon(i)) + '<div><h3>' + (name ? esc(name) : tripLabel(i)) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (name ? tripLabel(i) + ' · ' : '') + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
+  return '<div class="trip-head">' + badge(m, false, D.est[i] & 16 ? actApp(i) || true : 0, tripIcon(i)) + '<div><h3>' + (name ? esc(name) : tripLabel(i)) + (D.est[i] & 4 ? ' <span class="guess">Guessed</span>' : '') + simTag(i) + '</h3><p>' + (name ? tripLabel(i) + ' · ' : '') + (sub || longDate(D.day[i]) + ' · ' + r.t0.time) + '</p></div></div>';
 }
 // A Strava activity's description, as written.
 function tripDesc(i) {
@@ -5632,13 +5942,13 @@ function openTrip(i, fromList) {
 // Everything BT•DT keeps about one trip, as JSON, to look into a trip without sharing the whole import.
 // BT•DT keeps what it read from the files, not the files themselves, so this is that.
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
-  [16, 'from Strava'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
+  [16, 'recorded activity'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
   [JUMPS, 'bad GPS points left out']];
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
   function ll(a, k) { return isFinite(a[2 * k]) ? [+a[2 * k].toFixed(6), +a[2 * k + 1].toFixed(6)] : null; }
   var e = D.est[i], s = D.srcs ? D.srcs[i] : null, o = {
-    source: s === SRC.strava ? 'Strava' : s === SRC.sim ? 'Simulated' : KIND_LABEL[s] || 'Unknown',
+    source: s === SRC.strava ? actApp(i) || 'Activity file' : s === SRC.sim ? 'Simulated' : KIND_LABEL[s] || 'Unknown',
     type: tripLabel(i).replace(/&amp;/g, '&'), mode: modeOf(i),
     sport: D.sport && D.sport[i] ? SPORTS[D.sport[i]][0] : null, stravaType: D.stype && D.stype[i] || null,
     start: iso(D.start[i]), end: iso(D.end[i]), utcOffsetMin: D.off[i] === NO_OFF ? null : D.off[i], localDay: isoDay(D.day[i]),
@@ -5649,7 +5959,7 @@ function rawTrip(i) {
   if (e & 16) {
     // The Timeline trips at the same time, including the ones this activity replaced.
     var sm = D.smeta && D.smeta[i];
-    o.strava = sm ? Object.assign({}, sm, { hr: undefined, spd: undefined }) : 'Not kept: load the Strava export again to see what it says about this activity.';
+    o.strava = sm ? Object.assign({}, sm, { hr: undefined, spd: undefined }) : 'Not kept: load the export again to see what it says about this activity.';
     // Heart rate: seconds after the start, bpm.
     if (sm && sm.hr) o.heartRate = sm.hr.t.map(function (t, k) { return [t, sm.hr.v[k]]; });
     o.timelineSameTime = [];
@@ -5707,7 +6017,7 @@ function exportFilters() {
   }
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
   if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
-  if (F.src !== 'all') o.source = F.src === 'strava' ? 'Strava' : 'Timeline';
+  if (F.src !== 'all') o.source = F.src === 'strava' ? actsLabel(D.stravaStats) : 'Timeline';
   if (F.gear.size !== gearIds().length) o.gear = gearIds().filter(function (g) { return F.gear.has(g); }).map(gearName);
   return o;
 }
@@ -8343,8 +8653,8 @@ function tlRender(force) {
       out += '<div class="tl-item tl-day" ' + top + '><b>' + longDate(d) + '</b><span>' + tripsText(pd.n) + ' · ' + dist(pd.km) + '</span></div>';
     } else if (TL.type[k] === 1) {
       var i = TL.ref[k], m = modeOf(i), ms = D.end[i] - D.start[i];
-      out += '<div class="tl-item" ' + top + '><button type="button" class="tl-trip" data-i="' + i + '" aria-pressed="' + (i === TL.sel) + '">' + badge(m, false, D.est[i] & 16, tripIcon(i)) +
-        '<span class="t"><b>' + esc(tripName(i) || tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · Strava' : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
+      out += '<div class="tl-item" ' + top + '><button type="button" class="tl-trip" data-i="' + i + '" aria-pressed="' + (i === TL.sel) + '">' + badge(m, false, D.est[i] & 16 ? actApp(i) || true : 0, tripIcon(i)) +
+        '<span class="t"><b>' + esc(tripName(i) || tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · ' + esc(actApp(i) || 'Activity') : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
         '<span class="r">' + dist(D.km[i]) + '<small>' + (ms > 0 ? duration(ms) : '') + '</small></span></button></div>';
     } else {
       out += '<div class="tl-item tl-end" ' + top + '>' + (sel.length ? 'That\'s all ' + tripsText(sel.length) + ' for ' + esc(filterText()) + '.' : 'No trips match your filters.') + '</div>';
@@ -8422,7 +8732,7 @@ function renderSettings() {
   $('forgetBtn').hidden = !!DEMO;
   if (DEMO) {
     $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
-      ', all made up. Nothing is saved. Import your own Timeline file to replace it.';
+      ', all made up. Nothing is saved. Import your own files to replace it.';
     $('homeNote').textContent = '';
     return;
   }

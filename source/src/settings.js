@@ -7,7 +7,7 @@ function renderSettings() {
   $('forgetBtn').hidden = !!DEMO;
   if (DEMO) {
     $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
-      ', all made up. Nothing is saved. Import your own Timeline file to replace it.';
+      ', all made up. Nothing is saved. Import your own files to replace it.';
     $('homeNote').textContent = '';
     return;
   }
