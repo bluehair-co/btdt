@@ -1040,15 +1040,18 @@ $('dirIn').addEventListener('change', function () { importFiles(this.files); thi
   document.addEventListener('click', function (e) { if (!menu.hidden && !$('loadSplit').contains(e.target)) show(false); });
   $('loadSplit').addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { show(false); more.focus(); } });
 })();
-// About: a dialog over the welcome picture, closed until asked for. A click on the backdrop closes it.
+// About and How to get your files: dialogs over the welcome picture, closed until asked for.
+// The close button or a click on the backdrop closes them.
 (function () {
-  var dlg = $('about');
-  function open() { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
-  $('aboutBtn').addEventListener('click', open);
+  function open(dlg) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+  [$('about'), $('getFiles')].forEach(function (dlg) {
+    dlg.querySelector('.about-close').addEventListener('click', function () { dlg.close ? dlg.close() : dlg.removeAttribute('open'); });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  });
+  $('aboutBtn').addEventListener('click', function () { open($('about')); });
+  $('filesBtn').addEventListener('click', function () { open($('getFiles')); });
   // Settings has a link too: the sheet closes first so the dialog isn't stacked over it.
-  $('settingsAbout').addEventListener('click', function () { closeSheets(); open(); });
-  $('aboutClose').addEventListener('click', function () { dlg.close ? dlg.close() : dlg.removeAttribute('open'); });
-  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  $('settingsAbout').addEventListener('click', function () { closeSheets(); open($('about')); });
 })();
 document.body.addEventListener('dragover', function (e) { e.preventDefault(); });
 document.body.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });

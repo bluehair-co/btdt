@@ -574,7 +574,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
 }
 .welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
-/* What the Load button reads, quietly under the buttons: the services, then the formats. */
+/* What the Load button reads, quietly under the line: the services, then the formats. */
 .works-with { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .02em; line-height: 1.4; color: rgba(255, 255, 255, .7); }
 .works-with li:not(.br):not(:last-child)::after { content: "·"; margin: 0 7px; opacity: .7; }
 .works-with li:has(+ .br)::after { content: none !important; }
@@ -602,9 +602,12 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .welcome-panel details.help ol { color: rgba(255, 255, 255, .82); }
 .welcome-panel details.help b { color: #fff; }
 .welcome-panel :focus-visible { outline-color: #fff; }
-/* About: a quiet link under the Load button that opens a glass dialog over the picture. */
-.about-open { display: flex; align-items: center; gap: 6px; margin: 18px 0 0; padding: 12px 0 0; width: 100%; border: 0; border-top: 1px solid rgba(255, 255, 255, .2); background: none; color: rgba(255, 255, 255, .9); font: 500 13px var(--font-body); cursor: pointer; text-align: left; }
-.about-open:hover { color: #fff; }
+/* Under a line: what the Load button reads, then two quiet links that open glass dialogs over the picture. */
+.welcome-foot { margin: 18px 0 0; padding: 14px 0 0; border-top: 1px solid rgba(255, 255, 255, .2); }
+.welcome-foot .works-with { margin: 0; }
+.welcome-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 22px; margin: 12px 0 0; }
+.about-open { display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 6px 0; border: 0; background: none; color: rgba(255, 255, 255, .9); font: 500 13px var(--font-body); cursor: pointer; }
+.about-open:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .about-open .ic { width: 16px; height: 16px; fill: currentColor; }
 .about {
   width: min(560px, calc(100vw - 32px)); max-height: min(720px, calc(100dvh - 48px)); padding: 0; overflow: hidden; display: none; flex-direction: column;
@@ -868,21 +871,26 @@ div.hit-row:hover { background: none; }
         </div>
         <button type="button" class="demo-open" id="demoBtn"><span data-icon="playCircle"></span><span>Try the demo</span></button>
       </div>
-      <ul class="works-with" aria-label="Works with">
-        <li>Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li>
-        <li class="br" aria-hidden="true"></li><li>GPX</li><li>KML</li><li>GeoJSON</li><li>FIT</li><li>TCX</li>
-      </ul>
       <p id="welcomeStatus" class="status" role="status"></p>
-      <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About · how to get your files</button>
+      <div class="welcome-foot">
+        <ul class="works-with" aria-label="Works with">
+          <li>Google Timeline</li><li>Garmin</li><li>Fitbit</li><li>Strava</li><li>Komoot</li><li>Dawarich</li>
+          <li class="br" aria-hidden="true"></li><li>GPX</li><li>KML</li><li>GeoJSON</li><li>FIT</li><li>TCX</li>
+        </ul>
+        <div class="welcome-links">
+          <button type="button" class="about-open" id="aboutBtn" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About</button>
+          <button type="button" class="about-open" id="filesBtn" aria-haspopup="dialog" aria-controls="getFiles"><span data-icon="help"></span>How to get your files</button>
+        </div>
+      </div>
     </div>
 
   </section>
 
-  <!-- About: closed until the button above opens it -->
+  <!-- About and How to get your files: closed until the links under the Load button open them -->
   <dialog class="about" id="about" aria-labelledby="aboutTitle">
     <div class="about-head">
       <h2 id="aboutTitle">About BT•DT</h2>
-      <button type="button" class="about-close" id="aboutClose" aria-label="Close"><span data-icon="close"></span></button>
+      <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
     </div>
     <div class="about-body">
       <p class="about-lead">BT•DT (been there, done that) turns your location history into a map of everywhere you've been, a timeline of every trip, and insights into how you get around and the CO₂ it costs. Start with your Google Timeline, add the activities from your watch or bike computer, or load any GPS track.</p>
@@ -891,6 +899,63 @@ div.hit-row:hover { background: none; }
         <span data-icon="shield"></span>
         <div>
           <h3 id="privacyTitle">Your data never leaves your device</h3>
+          <p>Your files are read in this browser and kept only here. There is no server, no account and no tracking, so nobody, me included, ever sees your files. Clearing the app's data in your browser removes it completely.</p>
+        </div>
+      </div>
+
+      <details>
+        <summary>How it works</summary>
+        <ul>
+          <li><b>Saved in your browser.</b> Your last import is kept in this browser's storage, so the app opens with it next time.</li>
+          <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
+          <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
+          <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, and the fonts. Add the app to your home screen and it opens offline.</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Credits &amp; license</summary>
+        <h3>This project</h3>
+        <p>BT•DT is free to use, copy and change for <b>non-commercial</b> purposes, as long as you credit the original: “Based on BT•DT by BlueHair (www.bluehair.co)”. It is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>; the code is on <a href="https://github.com/bluehair-co/btdt" target="_blank" rel="noopener">GitHub</a>. The BlueHair name and logo are not part of the license.</p>
+        <h3>Built with</h3>
+        <ul class="about-credits">
+          <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>, the map library <small>BSD 2-Clause</small></li>
+          <li><a href="https://d3js.org" target="_blank" rel="noopener">D3</a>, for the globe and Equal Earth views <small>ISC License</small></li>
+          <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
+          <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
+          <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
+          <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
+          <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
+          <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
+          <li>Icons from Google's <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Material Icons</a> <small>Apache License 2.0</small></li>
+          <li>Landing picture made with <a href="https://gemini.google.com" target="_blank" rel="noopener">Google Gemini</a> <small>AI-generated</small></li>
+          <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Who made this</summary>
+        <p>BT•DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
+      </details>
+    </div>
+    <div class="about-foot">
+      <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
+        <img src="bluehair-logo.png" alt="" width="44" height="44">
+        <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
+      </a>
+    </div>
+  </dialog>
+  <dialog class="about" id="getFiles" aria-labelledby="getFilesTitle">
+    <div class="about-head">
+      <h2 id="getFilesTitle">How to get your files</h2>
+      <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
+    </div>
+    <div class="about-body">
+      <div class="about-privacy" role="note" aria-labelledby="filesPrivacyTitle">
+        <span data-icon="shield"></span>
+        <div>
+          <h3 id="filesPrivacyTitle">Your data never leaves your device</h3>
           <p>Your files are read in this browser and kept only here. There is no server, no account and no tracking, so nobody, me included, ever sees your files. Clearing the app's data in your browser removes it completely.</p>
         </div>
       </div>
@@ -945,45 +1010,6 @@ div.hit-row:hover { background: none; }
         <h3>Other apps</h3>
         <p>Komoot, Polar Flow, Suunto, Coros, Wahoo, OsmAnd and most trackers can export an activity or a track as <b>GPX</b>. Only recorded tracks have times; planned routes have none, so they can't be placed on your timeline.</p>
       </details>
-
-      <details>
-        <summary>How it works</summary>
-        <ul>
-          <li><b>Saved in your browser.</b> Your last import is kept in this browser's storage, so the app opens with it next time.</li>
-          <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
-          <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
-          <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri) and the map library. Add the app to your home screen and it opens offline.</li>
-        </ul>
-      </details>
-
-      <details>
-        <summary>Credits &amp; license</summary>
-        <h3>This project</h3>
-        <p>BT•DT is free to use, copy and change for <b>non-commercial</b> purposes, as long as you credit the original: “Based on BT•DT by BlueHair (www.bluehair.co)”. It is licensed under <a href="https://creativecommons.org/licenses/by-nc/4.0/" target="_blank" rel="noopener">CC BY-NC 4.0</a>; the code is on <a href="https://github.com/bluehair-co/btdt" target="_blank" rel="noopener">GitHub</a>. The BlueHair name and logo are not part of the license.</p>
-        <h3>Built with</h3>
-        <ul class="about-credits">
-          <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>, the map library <small>BSD 2-Clause</small></li>
-          <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
-          <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
-          <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
-          <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
-          <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
-          <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
-          <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
-        </ul>
-      </details>
-
-      <details>
-        <summary>Who made this</summary>
-        <p>BT•DT is a hobby project, made for fun and for my own travels. It is vibe coded: built by describing what I wanted to an AI (Claude) rather than writing the code by hand. Expect rough edges, and check anything important against your own records.</p>
-      </details>
-    </div>
-    <div class="about-foot">
-      <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
-        <img src="bluehair-logo.png" alt="" width="44" height="44">
-        <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
-      </a>
     </div>
   </dialog>
   <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,.kml,.kmz,.tcx,.fit,.gz,application/json,application/geo+json,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/octet-stream" multiple>
@@ -3581,6 +3607,7 @@ var ICONS = {
   bolt: 'M7 2v11h3v9l7-12h-4l4-8z',
   ruler: 'M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z',
   info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
+  help: 'M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z',
   shield: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z',
   left2:'M17.59 18L19 16.59 14.42 12 19 7.41 17.59 6l-6 6zM11 18l1.41-1.41L7.83 12l4.58-4.59L11 6l-6 6z',
   right2: 'M6.41 6L5 7.41 9.58 12 5 16.59 6.41 18l6-6zM13 6l-1.41 1.41L16.17 12l-4.58 4.59L13 18l6-6z',
@@ -5098,15 +5125,18 @@ $('dirIn').addEventListener('change', function () { importFiles(this.files); thi
   document.addEventListener('click', function (e) { if (!menu.hidden && !$('loadSplit').contains(e.target)) show(false); });
   $('loadSplit').addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { show(false); more.focus(); } });
 })();
-// About: a dialog over the welcome picture, closed until asked for. A click on the backdrop closes it.
+// About and How to get your files: dialogs over the welcome picture, closed until asked for.
+// The close button or a click on the backdrop closes them.
 (function () {
-  var dlg = $('about');
-  function open() { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
-  $('aboutBtn').addEventListener('click', open);
+  function open(dlg) { if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', ''); }
+  [$('about'), $('getFiles')].forEach(function (dlg) {
+    dlg.querySelector('.about-close').addEventListener('click', function () { dlg.close ? dlg.close() : dlg.removeAttribute('open'); });
+    dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  });
+  $('aboutBtn').addEventListener('click', function () { open($('about')); });
+  $('filesBtn').addEventListener('click', function () { open($('getFiles')); });
   // Settings has a link too: the sheet closes first so the dialog isn't stacked over it.
-  $('settingsAbout').addEventListener('click', function () { closeSheets(); open(); });
-  $('aboutClose').addEventListener('click', function () { dlg.close ? dlg.close() : dlg.removeAttribute('open'); });
-  dlg.addEventListener('click', function (e) { if (e.target === dlg) dlg.close(); });
+  $('settingsAbout').addEventListener('click', function () { closeSheets(); open($('about')); });
 })();
 document.body.addEventListener('dragover', function (e) { e.preventDefault(); });
 document.body.addEventListener('drop', function (e) { e.preventDefault(); if (e.dataTransfer.files.length) importFiles(e.dataTransfer.files); });
