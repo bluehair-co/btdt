@@ -530,11 +530,11 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   box-shadow: 0 10px 40px rgba(10, 8, 30, .35);
 }
 .welcome-panel p { color: rgba(255, 255, 255, .88); margin: 0 0 18px; }
-/* What the Load button reads: Timeline first, then the apps and formats. */
-.works-with { list-style: none; margin: -6px 0 18px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.works-with li { font-size: 12.5px; font-weight: 500; line-height: 1; padding: 6px 10px; border-radius: 999px; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .16); color: rgba(255, 255, 255, .92); }
-.works-with li.lead { background: rgba(255, 255, 255, .22); border-color: rgba(255, 255, 255, .3); color: #fff; }
-.works-with li.fmt { background: none; border-color: transparent; padding-left: 2px; padding-right: 2px; color: rgba(255, 255, 255, .7); font-family: var(--font-mono, inherit); font-size: 11.5px; letter-spacing: .02em; }
+/* What the Load button reads, quietly under the buttons: the services, then the formats. */
+.works-with { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .02em; line-height: 1.4; color: rgba(255, 255, 255, .7); }
+.works-with li:not(.br):not(:last-child)::after { content: "·"; margin: 0 7px; opacity: .7; }
+.works-with li:has(+ .br)::after { content: none !important; }
+.works-with li.br { flex-basis: 100%; height: 0; }
 .welcome-panel .acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 12px; }
 .welcome-panel .btn.primary { font-size: 16px; padding: 12px 22px; background: #fff; color: #23224a; }
 .welcome-panel .btn.primary:hover { background: #fff3e4; }

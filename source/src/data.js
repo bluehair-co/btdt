@@ -1060,11 +1060,17 @@ var DEMO = null;
 $('demoBtn').addEventListener('click', function () {
   setStatus('');
   busy('Opening the demo…');
-  fetch('demo.json').then(function (res) {
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    return res.blob();
-  }).then(function (b) {
-    return runParser([new File([b], 'demo.json', { type: 'application/json' })]);
+  // The demo's Timeline, and the Strava activities the same made-up person recorded (runs, road
+  // rides and hikes with heart rate, from source/demo/make_activities.py). The demo opens without
+  // them if they don't load.
+  function get(url, name) {
+    return fetch(url).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.blob();
+    }).then(function (b) { return new File([b], name); });
+  }
+  Promise.all([get('demo.json', 'demo.json'), get('demo-activities.gpx.gz', 'demo-activities.gpx.gz').catch(function () { return null; })]).then(function (fs) {
+    return runParser(fs.filter(Boolean));
   }).then(function (r) {
     if (!r.results.length) throw new Error('no data');
     DEMO = { cc: PREFS.cc };
