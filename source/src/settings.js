@@ -3,6 +3,7 @@ function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   buildFactors();
+  renderHrSettings();
   if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('homeNote').textContent = ''; $('forgetBtn').hidden = true; return; }
   $('forgetBtn').hidden = !!DEMO;
   if (DEMO) {
@@ -18,6 +19,23 @@ function renderSettings() {
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
 }
+// Maximum heart rate, for the zones: shown once an import has heart rate. Empty means worked out from the data.
+function renderHrSettings() {
+  var a = D ? hrMaxAuto() : { n: 0 };
+  $('hrSec').hidden = !a.n;
+  if (!a.n) return;
+  if (document.activeElement !== $('maxHr')) $('maxHr').value = PREFS.maxHr >= 100 ? PREFS.maxHr : '';
+  $('maxHr').placeholder = String(a.v);
+  $('maxHrNote').textContent = (PREFS.maxHr >= 100 ? 'Heart rate zones use the ' + PREFS.maxHr + ' bpm you set. Clear it to use the highest your activities reached, ' + a.v + ' bpm.' :
+    'Heart rate zones use the highest your ' + fmt(a.n) + ' activities with heart rate reached, ' + a.v + ' bpm. If you know your maximum is higher, set it here.') +
+    ' Zones: Z1 under 60%, Z2 60–70%, Z3 70–80%, Z4 80–90%, Z5 90% and over.';
+}
+$('maxHr').addEventListener('change', function () {
+  var v = Math.round(parseFloat(this.value));
+  PREFS.maxHr = v >= 100 && v <= 230 ? v : 0;
+  savePrefs(); renderHrSettings();
+  if (D) { dirty.map = dirty.insights = true; renderTab(); if (hlTrip != null) highlight(hlTrip); }
+});
 function describeHome(h) {
   var q = D.places[h], c = nearestCity(q.lat, q.lng);
   return (c ? (c.d > 8 ? 'near ' : 'in ') + c.name : 'at ' + ll(q.lat, q.lng)) + ' (' + ll(q.lat, q.lng) + ')';

@@ -149,6 +149,8 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .map-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .map-legend i { width: 10px; height: 3px; border-radius: 2px; display: block; }
 .map-legend .heat-scale { width: 80px; height: 8px; border-radius: 4px; }
+.map-legend .hr-legend { gap: 7px; white-space: nowrap; }
+.map-legend .hr-legend span { gap: 3px; }
 
 /* Top bar: summary pill, day navigator or time slider. */
 .topbar { position: absolute; z-index: 25; top: calc(12px + var(--safe-t)); left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 24px)); transition: left .2s ease; }
@@ -222,6 +224,16 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mode-badge .strava-mark svg { width: 11px; height: 11px; margin-top: 1px; }
 .trip-desc { margin: 10px 0 0; font-size: 14px; white-space: normal; overflow-wrap: anywhere; }
 .trip-chart { margin-top: 14px; }
+.hr-zones { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+.hz-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; }
+.hz-bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--grid); }
+.hz-bar i { display: block; height: 100%; }
+.hz-rows { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto auto auto; gap: 4px 10px; align-items: center; font-size: 12.5px; }
+.hz-row { display: contents; }
+.hz-row > i { width: 10px; height: 10px; border-radius: 3px; }
+.hz-row.none > * { opacity: .45; }
+.hz-row .num { text-align: right; font-variant-numeric: tabular-nums; }
+.hz-row .hz-p { color: var(--muted); min-width: 3ch; }
 .tc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; }
 .tc-key { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; font-size: 12px; color: var(--muted); min-height: 18px; }
 .tc-key i { display: inline-block; width: 12px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 5px; }
@@ -257,7 +269,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 }
 .tc-grid { stroke: var(--grid); stroke-width: 1; }
 .tc-ax { font-size: 9.5px; fill: var(--muted); font-family: var(--font-body); }
-.tc-ax.tc-hr { fill: var(--cc8); }
+.tc-ax.tc-hr { fill: var(--muted); font-style: italic; }
 .tc-cur { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 3 3; }
 .gear-kv { display: inline-flex; align-items: center; gap: 6px; }
 .gear-kv svg.ic { width: 18px; height: 18px; }
@@ -411,6 +423,12 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .rhythm-scale { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); margin-top: 10px; }
 .rhythm-scale i { width: 12px; height: 10px; border-radius: 2px; display: block; }
 .list-rows { display: flex; flex-direction: column; }
+.hr-cols { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 18px 28px; }
+@media (max-width: 720px) { .hr-cols { grid-template-columns: minmax(0, 1fr); } }
+.hr-sub { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+#hrFitChart svg { display: block; overflow: visible; }
+#hrFitChart .hf-dot { cursor: pointer; }
+.hr-empty { font-size: 13px; color: var(--muted); margin: 8px 0; }
 .gear-bar { display: block; height: 4px; border-radius: 2px; background: var(--grid); margin-top: 6px; overflow: hidden; }
 .gear-bar > i { display: block; height: 100%; border-radius: 2px; }
 .list-rows .hit-row:last-child { border-bottom: 0; }
