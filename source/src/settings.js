@@ -4,20 +4,48 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   buildFactors();
   renderHrSettings();
-  if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('homeNote').textContent = ''; $('forgetBtn').hidden = true; return; }
-  $('forgetBtn').hidden = !!DEMO;
-  if (DEMO) {
-    $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
-      ', all made up. Nothing is saved. Import your own files to replace it.';
-    $('homeNote').textContent = '';
-    return;
-  }
-  var names = (D.files || []).map(function (f) { return f.name; }).filter(Boolean);
-  $('dataSummary').textContent = tripsText(tripTotal()) + (D.vs.length ? ' and ' + fmt(D.vs.length) + ' stays' : '') + ', ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
-    (names.length ? ', from ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '') : '') + '. Saved on this device only.' +
-    (D.stravaStats ? ' ' + stravaText(D.stravaStats) : '');
+  renderImports();
+  $('homeSec').hidden = !D || !!DEMO;
+  if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
+}
+// The files behind D, one row each: a file read as two kinds (a ZIP with a Timeline and activities) is one row.
+function importedFiles() {
+  var by = {}, out = [];
+  (D && D.files || []).forEach(function (f) {
+    if (!f.name) return;
+    var r = by[f.name];
+    if (!r) { r = by[f.name] = { name: f.name, kinds: [], n: 0, counted: true }; out.push(r); }
+    if (f.kind && r.kinds.indexOf(f.kind) < 0) r.kinds.push(f.kind);
+    if (f.n == null) r.counted = false; else r.n += f.n;
+  });
+  return out;
+}
+// Imported data: the summary, the import buttons and the list of files, opened from the top of the filters.
+function renderImports() {
+  var files = importedFiles(), list = $('fileList');
+  list.textContent = '';
+  files.forEach(function (f) {
+    var li = document.createElement('li');
+    li.innerHTML = '<span data-icon="' + (/\.zip$/i.test(f.name) ? 'folder' : 'file') + '"></span><span class="file-txt"><b>' + esc(f.name) + '</b><small>' +
+      esc([f.kinds.join(' and ')].concat(f.counted ? [tripsText(f.n)] : []).filter(Boolean).join(' · ')) + '</small></span>';
+    list.appendChild(li);
+  });
+  fillIcons(list);
+  $('filesHead').textContent = files.length ? 'Files (' + files.length + ')' : 'Files';
+  $('fileList').closest('.sec').hidden = !files.length;
+  if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('forgetBtn').hidden = true; $('dataRowSub').textContent = 'No data loaded'; return; }
+  $('forgetBtn').hidden = !!DEMO;
+  var span = niceDate(M.minD) + ' – ' + niceDate(M.maxD);
+  $('dataRowSub').textContent = (DEMO ? 'Demo data' : files.length + ' file' + (files.length === 1 ? '' : 's')) + ' · ' + span;
+  if (DEMO) {
+    $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + span +
+      ', all made up. Nothing is saved. Import your own files to replace it.';
+    return;
+  }
+  $('dataSummary').textContent = tripsText(tripTotal()) + (D.vs.length ? ' and ' + fmt(D.vs.length) + ' stays' : '') + ', ' + span + '. Saved on this device only.' +
+    (D.stravaStats ? ' ' + stravaText(D.stravaStats) : '');
 }
 // Maximum heart rate, for the zones: shown once an import has heart rate. Empty means worked out from the data.
 function renderHrSettings() {

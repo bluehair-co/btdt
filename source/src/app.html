@@ -191,6 +191,7 @@
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
+          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         <div class="scrub">
@@ -219,6 +220,7 @@
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -319,6 +321,7 @@
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -350,11 +353,11 @@
   <div class="sheet-head"><h2>Filters</h2>
     <div class="acts">
       <button type="button" class="btn quiet" id="resetFilters">Reset</button>
-      <button type="button" class="icon-btn" id="openSettings" aria-label="Settings"><span data-icon="gear"></span></button>
       <button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button>
     </div>
   </div>
   <div class="sheet-body">
+    <button type="button" class="data-row" id="openImports" aria-controls="importsSheet"><span data-icon="folder"></span><span class="data-row-txt"><b>Imported data</b><small id="dataRowSub"></small></span><span data-icon="right"></span></button>
     <div class="sec">
       <h3>Days</h3>
       <div class="seg full" role="group" aria-label="Which days" id="dayMode">
@@ -460,18 +463,25 @@
   </div>
 </aside>
 
-<!-- Settings -->
-<aside class="sheet center" id="settingsSheet" aria-label="Settings" role="dialog">
-  <div class="sheet-head"><h2>Settings</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+<!-- Imported data: opens from the top of the filters, in the same place -->
+<aside class="sheet" id="importsSheet" aria-label="Imported data" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="importsBack" aria-label="Back to filters"><span data-icon="left"></span></button><h2>Imported data</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <div class="sec">
-      <h3>Your data</h3>
+      <h3>Summary</h3>
       <p class="fine" id="dataSummary"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <label class="btn" for="fileIn"><span data-icon="upload"></span>Import more files</label>
         <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load activities</label>
         <button type="button" class="btn danger" id="forgetBtn">Remove from this device</button>
       </div>
+      <p class="status" id="importStatus" role="status"></p>
+    </div>
+    <div class="sec">
+      <h3 id="filesHead">Files</h3>
+      <ul class="file-list" id="fileList" aria-labelledby="filesHead"></ul>
+    </div>
+    <div class="sec">
       <details class="help">
         <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
         <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
@@ -481,8 +491,14 @@
           <li>Single <b>.fit</b>, <b>.gpx</b>, <b>.tcx</b>, <b>.kml</b> or <b>.geojson</b> files from any app work too.</li>
         </ol>
       </details>
-      <p class="status" id="importStatus" role="status"></p>
     </div>
+  </div>
+</aside>
+
+<!-- Settings -->
+<aside class="sheet right" id="settingsSheet" aria-label="Settings" role="dialog">
+  <div class="sheet-head"><h2>Settings</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body">
     <div class="sec">
       <h3>Units</h3>
       <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
@@ -496,7 +512,7 @@
       <h3>Appearance</h3>
       <div class="seg" role="group" aria-label="Theme" id="themeSeg"><button type="button" data-t="system" aria-pressed="true">System</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></div>
     </div>
-    <div class="sec">
+    <div class="sec" id="homeSec">
       <h3>Home</h3>
       <p class="fine" id="homeNote"></p>
     </div>
@@ -511,7 +527,7 @@
     </div>
     <div class="sec">
       <h3>About</h3>
-      <p class="fine">BT•DT (Been There · Done That) 2.0, a hobby project by BlueHair. How it works, how to export your data, credits and the license are in About.</p>
+      <p class="fine">BT•DT (Been There · Done That) 2.0, a hobby project by BlueHair. How it works, credits and the license are in About.</p>
       <button type="button" class="btn" id="settingsAbout" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About BT•DT</button>
     </div>
   </div>

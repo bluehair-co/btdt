@@ -705,20 +705,22 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   body:has(#layersSheet.open) .topbar { left: calc((100% - 376px) / 2); }
   /* Filters is the same full-height panel on the left, where its button sits in the top bar;
      the top bar moves over into the space right of it, narrowing when it has to. */
-  #filtersSheet { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
-  #filtersSheet.open { transform: none; }
-  body:has(#filtersSheet.open) .topbar { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
-  .bar-top > .pnav-filters { order: -1; }
+  /* Imported data opens in the same place, from the top of the filters. */
+  :is(#filtersSheet, #importsSheet) { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
+  :is(#filtersSheet, #importsSheet).open { transform: none; }
+  body:has(:is(#filtersSheet, #importsSheet).open) .topbar { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
+  /* Settings is a right-hand panel like Views and layers, opened from the right of the top bar. */
+  body:has(#settingsSheet.open) .topbar { left: calc((100% - 376px) / 2); }
   /* The zoom buttons on the left move out from under the filters panel. */
   #map .leaflet-top.leaflet-left, .proj-zoom { transition: left .2s ease; }
-  body:has(#filtersSheet.open) #map .leaflet-top.leaflet-left { left: 436px; }
-  body:has(#filtersSheet.open) .proj-zoom { left: 452px; }
+  body:has(:is(#filtersSheet, #importsSheet).open) #map .leaflet-top.leaflet-left { left: 436px; }
+  body:has(:is(#filtersSheet, #importsSheet).open) .proj-zoom { left: 452px; }
   /* Clip the panels' scrollbars to their rounded corners. */
   .sheet { overflow: hidden; }
 }
 @media (min-width: 960px) and (max-width: 1299px) {
   /* Below 1300px the filters panel would reach the playback button, so it stops above the dock. */
-  #filtersSheet { bottom: calc(var(--dock-h) + var(--dock-gap) + 16px + var(--safe-b)); }
+  #filtersSheet, #importsSheet { bottom: calc(var(--dock-h) + var(--dock-gap) + 16px + var(--safe-b)); }
 }
 @media (min-width: 960px) and (max-width: 1199px) {
   /* Below 1200px the panel would reach the dock and the layers button, so it stops above them. */
@@ -768,7 +770,27 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
    (a sticky top counts from inside the page padding, hence -4px for 12px from the top). */
 .pnav { width: min(560px, 100%); margin-inline: auto; }
 #insightsPage .pnav { position: sticky; z-index: 5; top: -4px; margin-top: -4px; margin-bottom: 14px; margin-inline: max(-4px, calc((100% - 560px) / 2)); width: auto; max-width: 560px; }
-.pnav-filters { position: relative; flex: none; }
+/* Filters on the left of the top bar and Settings on the right, on phones as on wide screens. */
+.pnav-filters { position: relative; flex: none; order: -1; }
+.pnav-settings { flex: none; }
+.pnav-settings[aria-expanded="true"] { color: var(--accent); }
+/* Imported data: a row at the top of the filters that opens its own panel. */
+.data-row { display: flex; align-items: center; gap: 12px; width: 100%; margin: 12px 0 4px; padding: 12px 10px 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.data-row:hover { border-color: var(--accent); }
+.data-row > .ic { flex: none; width: 22px; height: 22px; fill: var(--accent); }
+.data-row > .ic:last-child { width: 20px; height: 20px; fill: var(--muted); }
+.data-row-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.data-row-txt b { font-size: 15px; font-weight: 600; }
+.data-row-txt small { font-size: 12.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.head-back { display: flex; align-items: center; gap: 2px; margin-left: -10px; }
+.head-back h2 { margin-top: 4px; }
+.file-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.file-list li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--grid); }
+.file-list li:first-child { border-top: 0; padding-top: 2px; }
+.file-list .ic { flex: none; width: 20px; height: 20px; fill: var(--muted); }
+.file-txt { min-width: 0; display: flex; flex-direction: column; }
+.file-txt b { font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.file-txt small { font-size: 12px; color: var(--muted); }
 .pnav-filters .badge { position: absolute; top: 0; right: 0; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: var(--accent); color: var(--accent-fg); font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
 
 /* countries over time */
@@ -1035,6 +1057,7 @@ div.hit-row:hover { background: none; }
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
+          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         <div class="scrub">
@@ -1063,6 +1086,7 @@ div.hit-row:hover { background: none; }
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -1163,6 +1187,7 @@ div.hit-row:hover { background: none; }
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -1194,11 +1219,11 @@ div.hit-row:hover { background: none; }
   <div class="sheet-head"><h2>Filters</h2>
     <div class="acts">
       <button type="button" class="btn quiet" id="resetFilters">Reset</button>
-      <button type="button" class="icon-btn" id="openSettings" aria-label="Settings"><span data-icon="gear"></span></button>
       <button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button>
     </div>
   </div>
   <div class="sheet-body">
+    <button type="button" class="data-row" id="openImports" aria-controls="importsSheet"><span data-icon="folder"></span><span class="data-row-txt"><b>Imported data</b><small id="dataRowSub"></small></span><span data-icon="right"></span></button>
     <div class="sec">
       <h3>Days</h3>
       <div class="seg full" role="group" aria-label="Which days" id="dayMode">
@@ -1304,18 +1329,25 @@ div.hit-row:hover { background: none; }
   </div>
 </aside>
 
-<!-- Settings -->
-<aside class="sheet center" id="settingsSheet" aria-label="Settings" role="dialog">
-  <div class="sheet-head"><h2>Settings</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+<!-- Imported data: opens from the top of the filters, in the same place -->
+<aside class="sheet" id="importsSheet" aria-label="Imported data" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="importsBack" aria-label="Back to filters"><span data-icon="left"></span></button><h2>Imported data</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <div class="sec">
-      <h3>Your data</h3>
+      <h3>Summary</h3>
       <p class="fine" id="dataSummary"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <label class="btn" for="fileIn"><span data-icon="upload"></span>Import more files</label>
         <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load activities</label>
         <button type="button" class="btn danger" id="forgetBtn">Remove from this device</button>
       </div>
+      <p class="status" id="importStatus" role="status"></p>
+    </div>
+    <div class="sec">
+      <h3 id="filesHead">Files</h3>
+      <ul class="file-list" id="fileList" aria-labelledby="filesHead"></ul>
+    </div>
+    <div class="sec">
       <details class="help">
         <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
         <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
@@ -1325,8 +1357,14 @@ div.hit-row:hover { background: none; }
           <li>Single <b>.fit</b>, <b>.gpx</b>, <b>.tcx</b>, <b>.kml</b> or <b>.geojson</b> files from any app work too.</li>
         </ol>
       </details>
-      <p class="status" id="importStatus" role="status"></p>
     </div>
+  </div>
+</aside>
+
+<!-- Settings -->
+<aside class="sheet right" id="settingsSheet" aria-label="Settings" role="dialog">
+  <div class="sheet-head"><h2>Settings</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body">
     <div class="sec">
       <h3>Units</h3>
       <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
@@ -1340,7 +1378,7 @@ div.hit-row:hover { background: none; }
       <h3>Appearance</h3>
       <div class="seg" role="group" aria-label="Theme" id="themeSeg"><button type="button" data-t="system" aria-pressed="true">System</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></div>
     </div>
-    <div class="sec">
+    <div class="sec" id="homeSec">
       <h3>Home</h3>
       <p class="fine" id="homeNote"></p>
     </div>
@@ -1355,7 +1393,7 @@ div.hit-row:hover { background: none; }
     </div>
     <div class="sec">
       <h3>About</h3>
-      <p class="fine">BT•DT (Been There · Done That) 2.0, a hobby project by BlueHair. How it works, how to export your data, credits and the license are in About.</p>
+      <p class="fine">BT•DT (Been There · Done That) 2.0, a hobby project by BlueHair. How it works, credits and the license are in About.</p>
       <button type="button" class="btn" id="settingsAbout" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About BT•DT</button>
     </div>
   </div>
@@ -3594,6 +3632,7 @@ var ICONS = {
   close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
   left: 'M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z',
   down: 'M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6z',
+  file: 'M6 2c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6H6zm7 7V3.5L18.5 9H13z',
   folder: 'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',
   right: 'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z',
   play: 'M8 5v14l11-7z',
@@ -4665,7 +4704,7 @@ function setTab(t) {
   $('timelinePage').hidden = t !== 'timeline';
   document.querySelectorAll('.dock button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   hideTip();
-  if (openId && openId !== 'settingsSheet' && openId !== 'filtersSheet') closeSheets();
+  if (openId && openId !== 'settingsSheet' && openId !== 'filtersSheet' && openId !== 'importsSheet') closeSheets();
   var fresh = t === 'insights' && dirty.insights;
   renderTab();
   // Opening Insights plays the score showing (a fresh render plays it already).
@@ -4686,8 +4725,9 @@ function openSheet(id) {
   openId = id;
   $(id).classList.add('open');
   // On a wide screen the side panels sit next to the map, so it stays usable.
-  $('scrim').hidden = wide() && id !== 'settingsSheet';
+  $('scrim').hidden = wide();
   $('filtersBtn').setAttribute('aria-expanded', id === 'filtersSheet' ? 'true' : 'false');
+  document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', id === 'settingsSheet' ? 'true' : 'false'); });
   $('layersBtn').setAttribute('aria-expanded', id === 'layersSheet' ? 'true' : 'false');
 }
 function closeSheets(quiet) {
@@ -4698,6 +4738,7 @@ function closeSheets(quiet) {
   $('scrim').hidden = true;
   $('filtersBtn').setAttribute('aria-expanded', 'false');
   $('layersBtn').setAttribute('aria-expanded', 'false');
+  document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
   if (was === 'tripSheet') { highlight(null); setPinOn([]); placeLast = null; chartPanelClose(); }
 }
 function toggleSheet(id) { if (openId === id) closeSheets(); else openSheet(id); }
@@ -4710,10 +4751,13 @@ document.addEventListener('click', function (ev) {
     head.classList.toggle('info-open', op);
     info.setAttribute('aria-expanded', op ? 'true' : 'false');
   } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
+  else if (ev.target.closest('[data-open-settings]')) { if (openId === 'settingsSheet') closeSheets(); else { renderSettings(); openSheet('settingsSheet'); } }
   else if (ev.target.closest('[data-close]')) closeSheets();
 });
 $('scrim').addEventListener('click', function () { closeSheets(); });
-$('openSettings').addEventListener('click', function () { renderSettings(); openSheet('settingsSheet'); });
+// Imported data opens in the filters panel's place, and its back button returns to the filters.
+$('openImports').addEventListener('click', function () { renderImports(); openSheet('importsSheet'); });
+$('importsBack').addEventListener('click', function () { openSheet('filtersSheet'); });
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { closeSheets(); hideTip(); } });
 
 // ---------- tooltips (mouse only; taps open sheets instead) ----------
@@ -4928,7 +4972,7 @@ function merge(base, parts) {
   var nv = vout.length;
   var R = gather(all, out, src);
   R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vpid = []; R.vsrcs = new Uint8Array(nv);
-  R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind }; }));
+  R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind, n: p.start.length }; }));
   vout.forEach(function (x, j) {
     var p = all[x[0]], i = x[1];
     R.vs[j] = x[2]; R.ve[j] = x[3]; R.voff[j] = p.voff[i];
@@ -9046,20 +9090,48 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   buildFactors();
   renderHrSettings();
-  if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('homeNote').textContent = ''; $('forgetBtn').hidden = true; return; }
-  $('forgetBtn').hidden = !!DEMO;
-  if (DEMO) {
-    $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
-      ', all made up. Nothing is saved. Import your own files to replace it.';
-    $('homeNote').textContent = '';
-    return;
-  }
-  var names = (D.files || []).map(function (f) { return f.name; }).filter(Boolean);
-  $('dataSummary').textContent = tripsText(tripTotal()) + (D.vs.length ? ' and ' + fmt(D.vs.length) + ' stays' : '') + ', ' + niceDate(M.minD) + ' – ' + niceDate(M.maxD) +
-    (names.length ? ', from ' + names.slice(0, 3).join(', ') + (names.length > 3 ? ' and ' + (names.length - 3) + ' more' : '') : '') + '. Saved on this device only.' +
-    (D.stravaStats ? ' ' + stravaText(D.stravaStats) : '');
+  renderImports();
+  $('homeSec').hidden = !D || !!DEMO;
+  if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
+}
+// The files behind D, one row each: a file read as two kinds (a ZIP with a Timeline and activities) is one row.
+function importedFiles() {
+  var by = {}, out = [];
+  (D && D.files || []).forEach(function (f) {
+    if (!f.name) return;
+    var r = by[f.name];
+    if (!r) { r = by[f.name] = { name: f.name, kinds: [], n: 0, counted: true }; out.push(r); }
+    if (f.kind && r.kinds.indexOf(f.kind) < 0) r.kinds.push(f.kind);
+    if (f.n == null) r.counted = false; else r.n += f.n;
+  });
+  return out;
+}
+// Imported data: the summary, the import buttons and the list of files, opened from the top of the filters.
+function renderImports() {
+  var files = importedFiles(), list = $('fileList');
+  list.textContent = '';
+  files.forEach(function (f) {
+    var li = document.createElement('li');
+    li.innerHTML = '<span data-icon="' + (/\.zip$/i.test(f.name) ? 'folder' : 'file') + '"></span><span class="file-txt"><b>' + esc(f.name) + '</b><small>' +
+      esc([f.kinds.join(' and ')].concat(f.counted ? [tripsText(f.n)] : []).filter(Boolean).join(' · ')) + '</small></span>';
+    list.appendChild(li);
+  });
+  fillIcons(list);
+  $('filesHead').textContent = files.length ? 'Files (' + files.length + ')' : 'Files';
+  $('fileList').closest('.sec').hidden = !files.length;
+  if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('forgetBtn').hidden = true; $('dataRowSub').textContent = 'No data loaded'; return; }
+  $('forgetBtn').hidden = !!DEMO;
+  var span = niceDate(M.minD) + ' – ' + niceDate(M.maxD);
+  $('dataRowSub').textContent = (DEMO ? 'Demo data' : files.length + ' file' + (files.length === 1 ? '' : 's')) + ' · ' + span;
+  if (DEMO) {
+    $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + span +
+      ', all made up. Nothing is saved. Import your own files to replace it.';
+    return;
+  }
+  $('dataSummary').textContent = tripsText(tripTotal()) + (D.vs.length ? ' and ' + fmt(D.vs.length) + ' stays' : '') + ', ' + span + '. Saved on this device only.' +
+    (D.stravaStats ? ' ' + stravaText(D.stravaStats) : '');
 }
 // Maximum heart rate, for the zones: shown once an import has heart rate. Empty means worked out from the data.
 function renderHrSettings() {

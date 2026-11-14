@@ -580,7 +580,7 @@ function setTab(t) {
   $('timelinePage').hidden = t !== 'timeline';
   document.querySelectorAll('.dock button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   hideTip();
-  if (openId && openId !== 'settingsSheet' && openId !== 'filtersSheet') closeSheets();
+  if (openId && openId !== 'settingsSheet' && openId !== 'filtersSheet' && openId !== 'importsSheet') closeSheets();
   var fresh = t === 'insights' && dirty.insights;
   renderTab();
   // Opening Insights plays the score showing (a fresh render plays it already).
@@ -601,8 +601,9 @@ function openSheet(id) {
   openId = id;
   $(id).classList.add('open');
   // On a wide screen the side panels sit next to the map, so it stays usable.
-  $('scrim').hidden = wide() && id !== 'settingsSheet';
+  $('scrim').hidden = wide();
   $('filtersBtn').setAttribute('aria-expanded', id === 'filtersSheet' ? 'true' : 'false');
+  document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', id === 'settingsSheet' ? 'true' : 'false'); });
   $('layersBtn').setAttribute('aria-expanded', id === 'layersSheet' ? 'true' : 'false');
 }
 function closeSheets(quiet) {
@@ -613,6 +614,7 @@ function closeSheets(quiet) {
   $('scrim').hidden = true;
   $('filtersBtn').setAttribute('aria-expanded', 'false');
   $('layersBtn').setAttribute('aria-expanded', 'false');
+  document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', 'false'); });
   if (was === 'tripSheet') { highlight(null); setPinOn([]); placeLast = null; chartPanelClose(); }
 }
 function toggleSheet(id) { if (openId === id) closeSheets(); else openSheet(id); }
@@ -625,10 +627,13 @@ document.addEventListener('click', function (ev) {
     head.classList.toggle('info-open', op);
     info.setAttribute('aria-expanded', op ? 'true' : 'false');
   } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
+  else if (ev.target.closest('[data-open-settings]')) { if (openId === 'settingsSheet') closeSheets(); else { renderSettings(); openSheet('settingsSheet'); } }
   else if (ev.target.closest('[data-close]')) closeSheets();
 });
 $('scrim').addEventListener('click', function () { closeSheets(); });
-$('openSettings').addEventListener('click', function () { renderSettings(); openSheet('settingsSheet'); });
+// Imported data opens in the filters panel's place, and its back button returns to the filters.
+$('openImports').addEventListener('click', function () { renderImports(); openSheet('importsSheet'); });
+$('importsBack').addEventListener('click', function () { openSheet('filtersSheet'); });
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { closeSheets(); hideTip(); } });
 
 // ---------- tooltips (mouse only; taps open sheets instead) ----------
@@ -843,7 +848,7 @@ function merge(base, parts) {
   var nv = vout.length;
   var R = gather(all, out, src);
   R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vpid = []; R.vsrcs = new Uint8Array(nv);
-  R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind }; }));
+  R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind, n: p.start.length }; }));
   vout.forEach(function (x, j) {
     var p = all[x[0]], i = x[1];
     R.vs[j] = x[2]; R.ve[j] = x[3]; R.voff[j] = p.voff[i];
