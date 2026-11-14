@@ -86,7 +86,7 @@ function tlSelect(i, scroll) {
     }
   }
   var m = modeOf(i), ms = D.end[i] - D.start[i];
-  $('tlMapInfo').innerHTML = badge(m, true) + '<span class="t" style="flex:1"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) +
+  $('tlMapInfo').innerHTML = badge(m, true, 0, tripIcon(i)) + '<span class="t" style="flex:1"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) +
     ' · ' + dist(D.km[i]) + (ms > 0 ? ' · ' + duration(ms) : '') + '</small></span><button type="button" class="btn quiet" data-details="' + i + '" style="padding:6px 10px">Details</button>';
   var k = -1;
   for (var q = 0; q < TL.ref.length; q++) if (TL.type[q] === 1 && TL.ref[q] === i) { k = q; break; }

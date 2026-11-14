@@ -197,6 +197,7 @@ function tripName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s
 // Gear kinds by name, brand or model: front-loading cargo bikes and the Halfbike.
 var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiania|riese|\bgsd\b|douze|carqon|packster|triobike|workcycles|load ?60|load ?75|\bbakfi/i;
 var HALFBIKE_RE = /half ?bike|kolelinia/i;
+var STRIDA_RE = /strida/i;
 var GEAR = [{ name: 'No gear', n: 0 }];
 // D.gear numbers each trip's gear (0 = none). A gear's kind comes from bikes.csv and shoes.csv when
 // the export had them, else from what it was used for; its mode is the one it was used for most.
@@ -219,6 +220,7 @@ function buildGear() {
     x_.mode = best;
     var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.info && x_.info.kind;
     if (kind !== 'shoe' && HALFBIKE_RE.test(words)) kind = 'halfbike';
+    else if (kind !== 'shoe' && STRIDA_RE.test(words)) kind = 'strida';
     else if (kind !== 'shoe' && CARGO_RE.test(words)) kind = 'cargo';
     else if (!kind) kind = groupOf(best).key === 'bike' ? 'bike' : groupOf(best).key === 'foot' ? 'shoe' : 'other';
     x_.kind = kind;
@@ -280,9 +282,9 @@ function gearName(g) { return g >= NO_GEAR ? 'No gear (' + (LABEL[MODES[g - NO_G
 function gearOrder() { return GEAR.map(function (_, k) { return k; }).slice(1).sort(function (a, b) { return GEAR[b].n - GEAR[a].n; }); }
 function gearIcon(g) {
   var x = GEAR[g];
-  return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
+  return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'strida' ? 'strida' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
 }
-var GEAR_KIND = { halfbike: 'Halfbike', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes' };
+var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes' };
 function gearKind(g) { var x = GEAR[g]; return GEAR_KIND[x.kind] || LABEL[x.mode] || 'Gear'; }
 
 // ---------- filters ----------
