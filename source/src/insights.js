@@ -12,7 +12,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderSquares(); renderGear(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -599,7 +599,7 @@ $('timeSeg').addEventListener('click', function (ev) { var b = ev.target.closest
 $('timeUnitSeg').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-u]'); if (b) { PREFS.timeU = b.dataset.u; savePrefs(); renderTime(); } });
 $('insightsPage').addEventListener('scroll', hideTip, { passive: true });
 var rsT = 0;
-window.addEventListener('resize', function () { clearTimeout(rsT); rsT = setTimeout(function () { if (tab === 'insights') drawTime(); }, 120); });
+window.addEventListener('resize', function () { clearTimeout(rsT); rsT = setTimeout(function () { if (tab === 'insights') { drawTime(); if (hrData && !$('hrCard').hidden) drawHrFit(); } }, 120); });
 
 // ---------- routes, places, records, countries ----------
 function renderRoutes() {
@@ -691,6 +691,126 @@ function renderGear() {
       '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
   }).join('');
 }
+// ---------- heart rate ----------
+// Fitness from heart rate: for each sport, the speed you usually go at (the median while moving,
+// rounded), and each month the median heart rate of the moments within 8% of that speed, after an
+// activity's first 5 minutes. The same speed at a lower heart rate means fitter.
+var HR_SKIP = 300, HR_NEAR = 0.08, HR_MIN_N = 24, hrData = null;
+function hrSportOf(i) {
+  var k = D.sport ? D.sport[i] : 0, m = modeOf(i);
+  // A motor does part of the work on an e-bike, so its heart rate says little about fitness.
+  if (k) return /^e(bike|mtb)$/.test(SPORTS[k][0]) ? null : { key: SPORTS[k][0], label: SPORTS[k][1] };
+  return m === 'CYCLING' || m === 'RUNNING' || m === 'WALKING' ? { key: m, label: LABEL[m] } : null;
+}
+function median(a) { a = a.slice().sort(function (x, y) { return x - y; }); return a.length ? a[a.length >> 1] : 0; }
+function hrFitness() {
+  var groups = {}, j, i, zt = [0, 0, 0, 0, 0], nHr = 0;
+  for (j = 0; j < sel.length; j++) {
+    i = sel[j];
+    var h = tripHr(i);
+    if (!h) continue;
+    nHr++;
+    hrZoneTimes(h).forEach(function (t, z) { zt[z] += t; });
+    var sp = hrSportOf(i), s = sp && tripSpeeds(i);
+    if (!s || s.length < 4) continue;
+    var g = groups[sp.key] || (groups[sp.key] = { key: sp.key, label: sp.label, v: [], b: [], m: [], i: [] });
+    var T = s.map(function (q) { return q[0]; }), V = s.map(function (q) { return q[1]; }), mk = D.year[i] * 12 + D.month[i];
+    for (var k = 0; k < h.t.length; k++) {
+      if (h.t[k] < HR_SKIP) continue;
+      var v = seriesAt(T, V, h.t[k]);
+      if (v > 2) { g.v.push(v); g.b.push(h.v[k]); g.m.push(mk); g.i.push(i); }
+    }
+  }
+  var list = Object.keys(groups).map(function (k) { return groups[k]; }).filter(function (g) { return g.v.length >= HR_MIN_N; });
+  list.forEach(function (g) {
+    // The usual speed, rounded in the units shown: to whole km/h (mph) from 15 up, to halves below.
+    var med = distVal(median(g.v)), r = med >= 15 ? Math.round(med) : Math.round(med * 2) / 2;
+    g.refShow = r; g.ref = r / distVal(1);
+    var by = {};
+    for (var k = 0; k < g.v.length; k++) {
+      if (Math.abs(g.v[k] - g.ref) > g.ref * HR_NEAR) continue;
+      var o = by[g.m[k]] || (by[g.m[k]] = { b: [], acts: {} });
+      o.b.push(g.b[k]); o.acts[g.i[k]] = 1;
+    }
+    g.months = Object.keys(by).map(Number).sort(function (a, b) { return a - b; }).filter(function (m) { return by[m].b.length >= HR_MIN_N; })
+      .map(function (m) { return { m: m, bpm: median(by[m].b), n: Object.keys(by[m].acts).length }; });
+    g.size = g.v.length;
+  });
+  list = list.filter(function (g) { return g.months.length; }).sort(function (a, b) { return b.size - a.size; });
+  return { groups: list, zt: zt, n: nHr };
+}
+function renderHeart() {
+  hrData = hrFitness();
+  $('hrCard').hidden = !hrData.n;
+  if (!hrData.n) return;
+  var G = hrData.groups;
+  if (!G.some(function (g) { return g.key === PREFS.hrSport; }) && G.length) PREFS.hrSport = G[0].key;
+  $('hrSportSeg').innerHTML = G.length > 1 ? G.map(function (g) { return '<button type="button" data-k="' + g.key + '" aria-pressed="' + (g.key === PREFS.hrSport) + '">' + esc(g.label) + '</button>'; }).join('') : '';
+  $('hrSportSeg').hidden = G.length < 2;
+  drawHrFit();
+  // Time in each zone over every activity with heart rate.
+  var zt = hrData.zt, tot = zt.reduce(function (a, b) { return a + b; }, 0) || 1;
+  $('hrZoneTotals').innerHTML = '<div class="hz-bar" role="img" aria-label="Time in each heart rate zone">' + zt.map(function (t, z) { return t ? '<i style="width:' + (t / tot * 100).toFixed(2) + '%;background:' + HR_COLORS[z] + '"></i>' : ''; }).join('') + '</div>' +
+    '<div class="hz-rows" style="margin-top:10px">' + HR_ZONES.map(function (Z, z) {
+      return '<div class="hz-row' + (zt[z] ? '' : ' none') + '"><i style="background:' + HR_COLORS[z] + '"></i><span class="hz-n">' + Z.n + ' ' + Z.name + '</span><span class="fine">' + hrZoneRange(z) + ' bpm</span>' +
+        '<span class="num">' + (zt[z] ? hoursLabel(zt[z] / 3600).replace(/ \d+ min$/, '') : '–') + '</span><span class="num hz-p">' + Math.round(zt[z] / tot * 100) + '%</span></div>';
+    }).join('') + '</div>' +
+    '<p class="fine" style="margin:10px 0 0">' + fmt(hrData.n) + ' activit' + (hrData.n === 1 ? 'y' : 'ies') + ' with heart rate, ' + hoursLabel(tot / 3600).replace(/ \d+ min$/, '') + ' in all. Maximum heart rate ' + hrMax() + ' bpm' + (PREFS.maxHr >= 100 ? ', as set in Settings.' : ', the highest they reached; set your own in Settings.') + '</p>';
+}
+function drawHrFit() {
+  var host = $('hrFitChart'), G = hrData && hrData.groups, g = G && G.filter(function (x) { return x.key === PREFS.hrSport; })[0];
+  host.textContent = '';
+  if (!g) {
+    $('hrFitTitle').textContent = 'Fitness';
+    host.innerHTML = '<p class="hr-empty">No rides, runs or walks with both heart rate and GPS speed here.</p>';
+    $('hrFitNote').textContent = '';
+    return;
+  }
+  var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h', M = g.months;
+  $('hrFitTitle').textContent = 'Fitness: heart rate at ' + fmt(g.refShow, g.refShow % 1 ? 1 : 0) + ' ' + unit + ' (' + g.label.toLowerCase() + ')';
+  var W = Math.max(240, host.clientWidth), H = 196, L0 = 34, R0 = 8, T0 = 8, B0 = 30, w = W - L0 - R0, h = H - T0 - B0;
+  var m0 = M[0].m, m1 = Math.max(M[M.length - 1].m, m0 + 1), lo = Infinity, hi = -Infinity;
+  M.forEach(function (o) { lo = Math.min(lo, o.bpm); hi = Math.max(hi, o.bpm); });
+  var st = Math.max(5, Math.round(niceStep(Math.max(10, hi - lo), 4))); lo = Math.floor((lo - 2) / st) * st; hi = Math.max(lo + st, Math.ceil((hi + 2) / st) * st);
+  var x = function (m) { return L0 + w * (m - m0) / (m1 - m0); }, y = function (b) { return T0 + h * (1 - (b - lo) / (hi - lo)); };
+  var svg = svgEl('svg', { width: W, height: H, viewBox: '0 0 ' + W + ' ' + H, role: 'img', 'aria-label': $('hrFitTitle').textContent + ', by month' });
+  for (var v = lo; v <= hi + 1e-9; v += st) {
+    svg.appendChild(svgEl('line', { x1: L0, x2: W - R0, y1: y(v), y2: y(v), stroke: 'var(--grid)', 'stroke-width': 1 }));
+    var tx = svgEl('text', { x: L0 - 6, y: y(v) + 4, 'text-anchor': 'end' }); tx.textContent = fmt(v); svg.appendChild(tx);
+  }
+  // Month labels, as many as fit; January shows its year.
+  var every = Math.max(1, Math.ceil(44 / (w / Math.max(1, m1 - m0))));
+  for (var m = m0; m <= m1; m++) {
+    if ((m - m0) % every && m % 12) continue;
+    var t = svgEl('text', { x: x(m), y: H - 6, 'text-anchor': 'middle' }); t.textContent = m % 12 ? MONTHS[m % 12] : String(Math.floor(m / 12)); svg.appendChild(t);
+  }
+  // The trend: a straight line fitted through the months, weighted by activities.
+  var sw = 0, sx = 0, sy = 0, sxx = 0, sxy = 0;
+  M.forEach(function (o) { var wt = Math.sqrt(o.n); sw += wt; sx += wt * o.m; sy += wt * o.bpm; sxx += wt * o.m * o.m; sxy += wt * o.m * o.bpm; });
+  var den = sw * sxx - sx * sx, slope = M.length > 1 && den ? (sw * sxy - sx * sy) / den : 0, icpt = (sy - slope * sx) / sw;
+  if (M.length > 1) svg.appendChild(svgEl('line', { x1: x(M[0].m), x2: x(M[M.length - 1].m), y1: y(icpt + slope * M[0].m), y2: y(icpt + slope * M[M.length - 1].m), stroke: 'var(--muted)', 'stroke-width': 1.5, 'stroke-dasharray': '4 4' }));
+  // Months next to each other are joined; a month without enough riding leaves a gap.
+  var path = '';
+  M.forEach(function (o, k) { path += (k && M[k - 1].m === o.m - 1 ? 'L' : 'M') + x(o.m).toFixed(1) + ' ' + y(o.bpm).toFixed(1); });
+  svg.appendChild(svgEl('path', { d: path, fill: 'none', stroke: HR_COLORS[4], 'stroke-width': 2, 'stroke-linejoin': 'round' }));
+  M.forEach(function (o) {
+    var c = svgEl('circle', { cx: x(o.m), cy: y(o.bpm), r: 4, fill: 'var(--panel)', stroke: HR_COLORS[4], 'stroke-width': 2, class: 'hf-dot' });
+    var ti = svgEl('title', {}); ti.textContent = MONTHS_LONG[o.m % 12] + ' ' + Math.floor(o.m / 12) + ': ' + o.bpm + ' bpm at about ' + fmt(g.refShow, g.refShow % 1 ? 1 : 0) + ' ' + unit + ', from ' + o.n + ' activit' + (o.n === 1 ? 'y' : 'ies');
+    c.appendChild(ti); svg.appendChild(c);
+  });
+  host.appendChild(svg);
+  var first = M[0], last = M[M.length - 1], ch = Math.round(slope * (last.m - first.m));
+  $('hrFitNote').textContent = M.length < 2 ? 'Only one month here with enough ' + g.label.toLowerCase() + ' at this speed. Pick a longer period to see the trend.' :
+    Math.abs(ch) < 2 ? 'About the same since ' + MONTHS_LONG[first.m % 12] + ' ' + Math.floor(first.m / 12) + '.' :
+    (ch < 0 ? 'Down ' + -ch + ' bpm' : 'Up ' + ch + ' bpm') + ' at the same speed since ' + MONTHS_LONG[first.m % 12] + ' ' + Math.floor(first.m / 12) + (ch < 0 ? ': fitter.' : '. Lower means fitter; heat and tiredness push it up too.');
+}
+$('hrSportSeg').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-k]');
+  if (!b) return;
+  PREFS.hrSport = b.dataset.k; savePrefs();
+  setPressed('#hrSportSeg button', function (x) { return x.dataset.k === PREFS.hrSport; });
+  drawHrFit();
+});
 function renderRecords() {
   var best = {}, j, i, byDay = {};
   function rec(key, i_, v) { if (v > 0 && (!best[key] || v > best[key].v)) best[key] = { i: i_, v: v }; }

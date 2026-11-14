@@ -20,6 +20,7 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 - **Dawarich too.** Load an export from [Dawarich](https://dawarich.app), the self-hosted location history app: trips and stays are worked out from its GPS points.
 - **Strava too.** Load your Strava export and its activities replace the Timeline trips they cover, keeping their sport, name and gear, with a card for how far each bike and pair of shoes went.
 - **Garmin, Fitbit and any GPS file.** Garmin Connect exports, `.fit`, `.tcx`, `.gpx`, `.kml`/`.kmz` and `.geojson` files from Garmin, Fitbit, Komoot, Polar, Suunto, Coros, Wahoo, OsmAnd and most trackers. A recorded activity keeps its sport and full track like a Strava one; a log of whole days has its trips and stays worked out from its points.
+- **Heart rate.** Activities that recorded heart rate show time in each zone and a chart coloured by zone, heart rate paths colour the map by effort, and Insights tracks your fitness: your heart rate at your usual speed, month by month.
 
 | Insights | Timeline | On a phone |
 | --- | --- | --- |

@@ -154,15 +154,17 @@ function buildGroups(limit) {
     pathLayer.addLayer(l); groupLines.push(l);
   });
 }
+// What the coloured paths show: speed, or heart rate zones (which move with your maximum heart rate).
+function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
-  [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
+  [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths || PREFS.hrPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);
   });
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
   if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
-  if (PREFS.speedPaths && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
+  if ((PREFS.speedPaths || PREFS.hrPaths) && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._m !== pathsKey() || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
 }
 
 // ---------- explorer squares ----------
@@ -332,7 +334,9 @@ function wll(x, y, s) { return [180 / Math.PI * Math.atan(Math.sinh(Math.PI - 2 
 function buildSpeed() {
   speedLayer.clearLayers();
   var z = map.getZoom(), s = 256 * Math.pow(2, z), vb = map.getBounds().pad(0.5);
-  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit; speedLayer._z = z; speedLayer._b = vb;
+  speedLayer._ver = applyCount; speedLayer._d = D; speedLayer._u = PREFS.unit; speedLayer._z = z; speedLayer._b = vb; speedLayer._m = pathsKey();
+  // Heart rate paths draw the same way, from the activities that recorded it.
+  var hrm = PREFS.hrPaths, runs = hrm ? hrRuns : speedRuns, band = hrm ? hrZone : speedBand, colors = hrm ? HR_COLORS : SPEED_COLORS;
   var nw = wpx([vb.getNorth(), vb.getWest()], s), se = wpx([vb.getSouth(), vb.getEast()], s);
   var x0 = nw[0], y0 = nw[1], x1 = se[0], y1 = se[1], C = SPEED_CELL, R = 1 << 25;
   var cells = new Map(), links = new Map();
@@ -343,8 +347,8 @@ function buildSpeed() {
   }
   for (var k = 0; k < hits.length; k++) {
     var h = hits[k], bb = h.bb;
-    if (modeOf(h.i) === 'FLYING' || bb[0] > vb.getNorth() || bb[2] < vb.getSouth() || bb[1] > vb.getEast() || bb[3] < vb.getWest()) continue;
-    speedRuns(h.i).forEach(function (r) {
+    if (modeOf(h.i) === 'FLYING' || hrm && !tripHr(h.i) || bb[0] > vb.getNorth() || bb[2] < vb.getSouth() || bb[1] > vb.getEast() || bb[3] < vb.getWest()) continue;
+    runs(h.i).forEach(function (r) {
       var prev = -1, a = wpx(r.pts[0], s);
       for (var j = 1; j < r.pts.length; j++) {
         var b = wpx(r.pts[j], s);
@@ -367,18 +371,81 @@ function buildSpeed() {
   // One line per colour and thickness.
   var by = {};
   links.forEach(function (l) {
-    var A = cells.get(l.a), B = cells.get(l.b), w = l.n < 3 ? 0 : l.n < 10 ? 1 : 2, key = speedBand(l.v / l.n) * 3 + w;
+    var A = cells.get(l.a), B = cells.get(l.b), w = l.n < 3 ? 0 : l.n < 10 ? 1 : 2, key = band(l.v / l.n) * 3 + w;
     (by[key] || (by[key] = [])).push([wll(A.x / A.n, A.y / A.n, s), wll(B.x / B.n, B.y / B.n, s)]);
   });
   Object.keys(by).map(Number).sort(function (p, q) { return p % 3 - q % 3 || p - q; }).forEach(function (key) {
-    speedLayer.addLayer(L.polyline(by[key], { renderer: renderer, color: SPEED_COLORS[Math.floor(key / 3)], weight: [2.5, 3.5, 5][key % 3], opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
+    speedLayer.addLayer(L.polyline(by[key], { renderer: renderer, color: colors[Math.floor(key / 3)], weight: [2.5, 3.5, 5][key % 3], opacity: 0.9, lineCap: 'round', lineJoin: 'round', interactive: false }));
   });
 }
 // After a zoom, or moving beyond what was gathered, gather again.
 function speedMoved() {
-  if (!PREFS.speedPaths || !map.hasLayer(speedLayer)) return;
+  if (!(PREFS.speedPaths || PREFS.hrPaths) || !map.hasLayer(speedLayer)) return;
   var b = speedLayer._b;
   if (speedLayer._z !== map.getZoom() || !b || !b.contains(map.getBounds())) buildSpeed();
+}
+// ---------- heart rate ----------
+// Heart rate an activity recorded (Strava, or any GPX, TCX or FIT file that has it): { t: seconds
+// after the start, v: bpm }, or null. Trips without it are left out of everything below.
+function tripHr(i) { var m = D.smeta && D.smeta[i]; return m && m.hr && m.hr.t.length >= 2 ? m.hr : null; }
+// Five zones as a share of your maximum heart rate: under 60%, 60–70, 70–80, 80–90 and 90% and over.
+var HR_ZONES = [
+  { n: 'Z1', name: 'Recovery', lo: 0 }, { n: 'Z2', name: 'Endurance', lo: 0.6 }, { n: 'Z3', name: 'Tempo', lo: 0.7 },
+  { n: 'Z4', name: 'Threshold', lo: 0.8 }, { n: 'Z5', name: 'Maximum', lo: 0.9 }];
+// The same in both themes, on the map and in the charts: grey-blue, blue, green, amber, red.
+var HR_COLORS = ['#8a9bb0', '#2a78d6', '#1baf7a', '#eda100', '#e34948'];
+// Your maximum heart rate: the one set in Settings, or else the highest any activity held (its 99th
+// percentile, so a strap's brief spike doesn't count). Kept per import.
+var hrAuto = { d: null, v: 0, n: 0 };
+function hrMaxAuto() {
+  if (hrAuto.d === D) return hrAuto;
+  var best = 0, n = 0;
+  for (var i = 0; D && i < D.start.length; i++) {
+    var h = tripHr(i);
+    if (!h) continue;
+    var v = h.v.slice().sort(function (a, b) { return a - b; }), p = v[Math.floor((v.length - 1) * 0.99)];
+    if (p < 230) best = Math.max(best, p);
+    n++;
+  }
+  hrAuto = { d: D, v: Math.round(best), n: n };
+  return hrAuto;
+}
+function hrMax() { return PREFS.maxHr >= 100 ? PREFS.maxHr : hrMaxAuto().v || 190; }
+function hrZone(bpm) { var f = bpm / hrMax(); for (var z = HR_ZONES.length - 1; z > 0; z--) if (f >= HR_ZONES[z].lo) return z; return 0; }
+function hrZoneRange(z) {
+  var m = hrMax(), lo = Math.round(HR_ZONES[z].lo * m), hi = z < HR_ZONES.length - 1 ? Math.round(HR_ZONES[z + 1].lo * m) - 1 : 0;
+  return z === 0 ? 'under ' + (hi + 1) : hi ? lo + '–' + hi : lo + '+';
+}
+// Seconds in each zone. A sample counts until the next one, but no more than twice the usual gap,
+// so a pause in the recording isn't counted as time in the zone it stopped in.
+function hrZoneTimes(h) {
+  var out = [0, 0, 0, 0, 0], gap = Infinity, j;
+  for (j = 1; j < h.t.length; j++) gap = Math.min(gap, h.t[j] - h.t[j - 1]);
+  if (!(gap > 0 && gap < Infinity)) gap = 5;
+  for (j = 0; j < h.t.length; j++) out[hrZone(h.v[j])] += j < h.t.length - 1 ? Math.min(h.t[j + 1] - h.t[j], 2 * gap) : gap;
+  return out;
+}
+// A trip's line as stretches of at least 20 seconds (as for speed paths), each with the average heart rate then.
+function hrRuns(i) {
+  var h = tripHr(i), tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
+  if (!h || p.length < 2 || !(ts[ts.length - 1] > 0)) return out;
+  var a = 0, j = 0;
+  while (a < p.length - 1) {
+    var z = a + 1, s = 0, n = 0;
+    while (z < p.length - 1 && ts[z] - ts[a] < 20) z++;
+    // The average of the samples in the stretch, or the value at its middle if none fall inside.
+    while (j < h.t.length && h.t[j] < ts[a]) j++;
+    for (var q = j; q < h.t.length && h.t[q] <= ts[z]; q++) { s += h.v[q]; n++; }
+    out.push({ v: n ? s / n : seriesAt(h.t, h.v, (ts[a] + ts[z]) / 2), pts: p.slice(a, z + 1) });
+    a = z;
+  }
+  return out;
+}
+function hrLegend() {
+  var any = false;
+  for (var k = 0; k < sel.length && !any; k++) any = !!tripHr(sel[k]);
+  if (!any) return '<span>No heart rate in the trips shown</span>';
+  return '<span class="speed-legend hr-legend" title="Zones of a maximum heart rate of ' + hrMax() + ' bpm">Heart rate ' + HR_ZONES.map(function (z, k) { return '<span title="' + z.name + ', ' + hrZoneRange(k) + ' bpm"><i style="background:' + HR_COLORS[k] + '"></i>' + z.n + '</span>'; }).join('') + '</span>';
 }
 function speedLegend() {
   var lab = speedBands().map(function (v) { return fmt(distVal(v)); });
@@ -452,12 +519,12 @@ function segDist(p, a, b) {
   return Math.hypot(p.x - a.x - t * dx, p.y - a.y - t * dy);
 }
 function hitsAt(pt) {
-  if (!PREFS.paths && !PREFS.speedPaths) return [];
+  if (!PREFS.paths && !PREFS.speedPaths && !PREFS.hrPaths) return [];
   var c1 = map.containerPointToLatLng([pt.x - HIT_PX, pt.y + HIT_PX]), c2 = map.containerPointToLatLng([pt.x + HIT_PX, pt.y - HIT_PX]);
   var out = [];
   for (var k = 0; k < hits.length; k++) {
     var h = hits[k], bb = h.bb;
-    if (h.k >= visibleB) continue;
+    if (h.k >= visibleB || PREFS.hrPaths && !tripHr(h.i)) continue;
     // Quick box test first (lines across the date line skip it), then the exact distance in screen pixels.
     var wraps = bb[3] - bb[1] >= 180 || bb[1] < -180 || bb[3] > 180;
     if (!wraps && (bb[0] > c2.lat || bb[2] < c1.lat || bb[1] > c2.lng || bb[3] < c1.lng)) continue;
@@ -505,6 +572,16 @@ function hoverHtml(list) {
     (list.length > 5 ? '<div class="row"><span>+' + fmt(list.length - 5) + ' more</span></div>' : '');
 }
 
+// Stretches joined while they stay in one zone: [{ z, pts }].
+function hrLines(runs) {
+  var out = [];
+  runs.forEach(function (r) {
+    var z = hrZone(r.v), last = out[out.length - 1];
+    if (last && last.z === z) last.pts = last.pts.concat(r.pts.slice(1));
+    else out.push({ z: z, pts: r.pts.slice() });
+  });
+  return out;
+}
 // The trip that's open in the trip sheet, drawn on top.
 var hlTrip = null;
 function highlight(i) {
@@ -515,7 +592,10 @@ function highlight(i) {
       var pts = tripPath(i), c = groupOf(modeOf(i)).v;
       if (pts.length) {
         L.polyline(pts, { renderer: renderer, color: cssVar('--panel'), weight: 9, opacity: 0.9, interactive: false }).addTo(hlLayer);
-        L.polyline(pts, { renderer: renderer, color: cssVar(c), weight: 5, opacity: 1, interactive: false }).addTo(hlLayer);
+        // With heart rate paths on, an activity that recorded it is coloured by zone, as its chart is.
+        var runs = PREFS.hrPaths ? hrRuns(i) : [];
+        if (runs.length) hrLines(runs).forEach(function (l) { L.polyline(l.pts, { renderer: renderer, color: HR_COLORS[l.z], weight: 5, opacity: 1, lineCap: 'round', lineJoin: 'round', interactive: false }).addTo(hlLayer); });
+        else L.polyline(pts, { renderer: renderer, color: cssVar(c), weight: 5, opacity: 1, interactive: false }).addTo(hlLayer);
       }
     }
   }
@@ -545,6 +625,7 @@ function tripRows(i) {
     ['Straight line', isFinite(line) ? dist(line) : 'Unknown'],
     ['Average speed', ms > 0 ? speed(k / (ms / 36e5)) : 'Unknown'],
     ['CO₂', co2s(tripKg(i))],
+    tripHr(i) ? ['Heart rate', hrAvgMax(tripHr(i))] : null,
     D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + '</span>'] : null,
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
   ].filter(Boolean);
@@ -562,6 +643,24 @@ function tripRows(i) {
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
+}
+function hrAvgMax(h) {
+  var s = 0, mx = 0;
+  h.v.forEach(function (v) { s += v; mx = Math.max(mx, v); });
+  return Math.round(s / h.v.length) + ' bpm <span class="fine">avg · ' + mx + ' max</span>';
+}
+// Time in each heart rate zone, as a bar split by zone and a row per zone.
+function hrZonesBlock(i) {
+  var h = tripHr(i);
+  if (!h) return '';
+  var zt = hrZoneTimes(h), tot = zt.reduce(function (a, b) { return a + b; }, 0) || 1;
+  return '<div class="hr-zones"><div class="hz-head"><b>Heart rate zones</b><span class="fine">of a maximum of ' + hrMax() + ' bpm</span></div>' +
+    '<div class="hz-bar" role="img" aria-label="Time in each heart rate zone">' + zt.map(function (t, z) { return t ? '<i style="width:' + (t / tot * 100).toFixed(2) + '%;background:' + HR_COLORS[z] + '"></i>' : ''; }).join('') + '</div>' +
+    '<div class="hz-rows">' + HR_ZONES.map(function (Z, z) {
+      var p = Math.round(zt[z] / tot * 100);
+      return '<div class="hz-row' + (zt[z] ? '' : ' none') + '"><i style="background:' + HR_COLORS[z] + '"></i><span class="hz-n">' + Z.n + ' ' + Z.name + '</span><span class="fine">' + hrZoneRange(z) + ' bpm</span>' +
+        '<span class="num">' + (zt[z] ? duration(zt[z] * 1000) : '–') + '</span><span class="num hz-p">' + p + '%</span></div>';
+    }).join('') + '</div></div>';
 }
 // A Strava activity's own name is the title, with its sport under it.
 function tripHead(i, sub) {
@@ -595,7 +694,6 @@ function tripSpeeds(i) {
   }
   return out;
 }
-function tripHr(i) { var m = D.est[i] & STRAVA && D.smeta && D.smeta[i]; return m && m.hr && m.hr.t.length >= 2 ? m.hr : null; }
 // Round tick steps for a scale up to max.
 function niceStep(max, n) {
   var raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / mag;
@@ -631,17 +729,27 @@ function tripChart(i, where, W, H) {
   for (k = 0; k < steps.length; k++) if (dur / steps[k] <= w / 70) { ms = steps[k]; break; }
   for (var t = 0; t <= dur; t += ms) g += '<text x="' + x(t).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" class="tc-ax">' + (t >= 3600 ? Math.floor(t / 3600) + ':' + pad2(Math.round(t % 3600 / 60)) : Math.round(t / 60) + (t ? '′' : '')) + '</text>';
   var sl = sp.map(function (q) { return x(q[0]).toFixed(1) + ',' + ys(distVal(q[1])).toFixed(1); }).join(' ');
-  var hl = hr ? hr.t.map(function (t, j) { return x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1); }).join(' ') : '';
+  // The heart rate line is coloured by zone, as the route is with heart rate paths on.
+  var hl = '';
+  if (hr) {
+    var seg = [], sz = -1;
+    hr.t.forEach(function (t, j) {
+      var z = hrZone(hr.v[j]), pt = x(t).toFixed(1) + ',' + yh(hr.v[j]).toFixed(1);
+      if (z !== sz && seg.length) { seg.push(pt); hl += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + HR_COLORS[sz] + '" stroke-width="1.6" stroke-linejoin="round"/>'; seg = []; }
+      seg.push(pt); sz = z;
+    });
+    if (seg.length > 1) hl += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + HR_COLORS[sz] + '" stroke-width="1.6" stroke-linejoin="round"/>';
+  }
   charts[where] = { i: i, sp: sp, spT: sp.map(function (q) { return q[0]; }), spV: sp.map(function (q) { return q[1]; }), hr: hr, dur: dur, L0: L0, w: w, W: W };
   var unit = PREFS.unit === 'mi' ? 'mph' : 'km/h';
   return '<div class="trip-chart" data-k="' + where + '">' +
-    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:var(--cc8)"></i>Heart rate (bpm)</span>' : '') +
+    '<div class="tc-key">' + (sp.length >= 4 ? '<span><i style="background:' + col + '"></i>Speed (' + unit + ')</span>' : '') + (hr ? '<span><i style="background:linear-gradient(90deg,' + HR_COLORS.join(',') + ')"></i>Heart rate (bpm, by zone)</span>' : '') +
     // On a phone the panel goes with the map, so the button is only there on the Map tab.
     (where === 'sheet' && (wide() || tab === 'map') ? '<button type="button" class="icon-btn tc-open" data-act="chart" data-i="' + i + '" aria-label="Open the chart under the map" title="Open under the map">' + icon('expand') + '</button>' : '') + '</div>' +
     '<div class="tc-read" aria-live="off"></div>' +
     '<svg class="tc-svg" viewBox="0 0 ' + W + ' ' + H + '"' + (where === 'panel' ? ' width="' + W + '" height="' + H + '"' : '') + ' role="img" aria-label="' + (hr ? 'Speed and heart rate' : 'Speed') + ' over the trip">' + g +
     (sp.length >= 4 ? '<polyline points="' + sl + '" fill="none" stroke="' + col + '" stroke-width="1.6" stroke-linejoin="round"/>' : '') +
-    (hr ? '<polyline points="' + hl + '" fill="none" stroke="var(--cc8)" stroke-width="1.4" stroke-linejoin="round"/>' : '') +
+    hl +
     '<line y1="' + T0 + '" y2="' + (T0 + h) + '" class="tc-cur" visibility="hidden"/></svg></div>';
 }
 // The value of a series (times tt, values vv) at time t.
@@ -665,7 +773,7 @@ function chartAt(ev, pan) {
     var cur = el.querySelector('.tc-cur'), X = (o.L0 + o.w * t / o.dur).toFixed(1), parts = [clock(D.start[o.i] + t * 1000, D.off[o.i])];
     cur.setAttribute('x1', X); cur.setAttribute('x2', X); cur.setAttribute('visibility', 'visible');
     if (o.sp.length >= 4) parts.push(speed(seriesAt(o.spT, o.spV, t)));
-    if (o.hr) parts.push(Math.round(seriesAt(o.hr.t, o.hr.v, t)) + ' bpm');
+    if (o.hr) { var b = Math.round(seriesAt(o.hr.t, o.hr.v, t)); parts.push(b + ' bpm ' + HR_ZONES[hrZone(b)].n); }
     el.querySelector('.tc-read').textContent = parts.join(' · ');
   });
   if (!map || !hlLayer || PREFS.proj !== 'merc' || tab !== 'map') return;
@@ -769,7 +877,7 @@ function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' +
+  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -1311,7 +1419,7 @@ $('speedBtn').addEventListener('click', function () {
 function legend() {
   var seen = {};
   for (var k = 0; k < sel.length; k++) seen[groupOf(modeOf(sel[k])).key] = 1;
-  var h = PREFS.speedPaths ? speedLegend() : '';
+  var h = PREFS.speedPaths ? speedLegend() : PREFS.hrPaths ? hrLegend() : '';
   if (PREFS.squares && D) h += sqLegend();
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
@@ -1578,7 +1686,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('hrNote').hidden = !PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   $('pinNote').hidden = !PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
@@ -1591,14 +1699,19 @@ function layersChanged() {
   if (PREFS.proj !== 'merc') drawProj();
   if (D) heatPoints();
 }
-// Paths and speed paths draw the same lines in different colours, so turning one on turns the other off.
-$('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (this.checked) PREFS.speedPaths = false; if (!this.checked && !PREFS.speedPaths) { setHovered([]); hideTip(); } layersChanged(); });
-$('laySpeed').addEventListener('change', function () {
-  PREFS.speedPaths = this.checked;
-  if (this.checked) { PREFS.paths = false; if (PREFS.proj !== 'merc') setProj('merc'); }
+// Paths, speed paths and heart rate paths draw the same lines in different colours, so turning one on turns the others off.
+$('layPaths').addEventListener('change', function () { PREFS.paths = this.checked; if (this.checked) PREFS.speedPaths = PREFS.hrPaths = false; if (!this.checked && !PREFS.speedPaths && !PREFS.hrPaths) { setHovered([]); hideTip(); } layersChanged(); });
+function colouredPaths(key, on) {
+  PREFS.speedPaths = PREFS.hrPaths = false;
+  PREFS[key] = on;
+  if (on) { PREFS.paths = false; if (PREFS.proj !== 'merc') setProj('merc'); }
   else { setHovered([]); hideTip(); }
   layersChanged();
-});
+  // The open trip's line changes colour with heart rate paths.
+  if (hlTrip != null) highlight(hlTrip);
+}
+$('laySpeed').addEventListener('change', function () { colouredPaths('speedPaths', this.checked); });
+$('layHr').addEventListener('change', function () { colouredPaths('hrPaths', this.checked); });
 $('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
 $('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
