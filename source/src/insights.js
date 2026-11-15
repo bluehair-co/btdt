@@ -1606,11 +1606,11 @@ function mergeHtml(key) {
   }
   near.sort(function (a, b) { return a.d - b.d; });
   if (!near.length) return html;
-  return html + '<h4 class="place-h">Same place as…</h4><p class="fine">If a spot nearby is really this place under another Google ID, merge it here. The merge is saved on this device and can be undone.</p>' +
+  return html + '<h4 class="place-h">Same place as…</h4><p class="fine">If one of these spots nearby is really this place under another Google ID, tap <b>Merge</b> next to it: its visits join this place. The merge is saved on this device and can be undone.</p>' +
     '<div class="list-rows">' + near.slice(0, 5).map(function (x) {
       var s2 = spotsOf(spotStays(x.k))[0];
       return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(x.k) + '"><span class="t"><b>' + esc(spotName(s2)) + '</b><small>' + fmt(Math.round(x.d * 1000)) + ' m away · ' + fmt(s2.n) + ' visit' + (s2.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s2.lv]) + '</small></span></button>' +
-        '<span class="spot-acts"><a class="btn quiet" href="' + esc(mapsUrl(s2.lat, s2.lng, s2.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a><button type="button" class="btn quiet" data-pmerge="' + esc(x.k) + '" data-pinto="' + esc(key) + '">Merge into this</button></span></div>';
+        '<span class="spot-acts"><a class="btn quiet" href="' + esc(mapsUrl(s2.lat, s2.lng, s2.pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + 'Google Maps</a><button type="button" class="btn merge-btn" data-pmerge="' + esc(x.k) + '" data-pinto="' + esc(key) + '" aria-label="Merge ' + esc(spotName(s2)) + ' into this place">' + icon('layers') + 'Merge</button></span></div>';
     }).join('') + '</div>';
 }
 function openSpot(key) {

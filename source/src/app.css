@@ -848,7 +848,8 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .place-h { margin: 18px 0 4px; font-size: 14px; }
 .spot-row { border-bottom: 1px solid var(--grid); }
 .spot-row .hit-row { border-bottom: 0; }
-.spot-acts { display: flex; gap: 2px; justify-content: flex-end; margin-top: -8px; padding-bottom: 4px; }
+.spot-acts { display: flex; gap: 8px; justify-content: flex-end; align-items: center; margin-top: -4px; padding-bottom: 10px; }
+.spot-acts .merge-btn { border-color: var(--accent); color: var(--accent); font-weight: 600; }
 .spot-acts a.btn { text-decoration: none; }
 div.hit-row { cursor: default; }
 div.hit-row:hover { background: none; }
