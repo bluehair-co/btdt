@@ -710,6 +710,7 @@ function mrSpotCentre(key) {
 }
 // The place rule a spot is named by: the one its centre is in, switched on or not.
 function mrSpotRule(key) {
+  if (String(key).slice(0, 3) === 'mr:') return mrById(key.slice(3));
   var c = mrSpotCentre(key), best = null, bd = Infinity;
   if (!c) return null;
   mrList('places').forEach(function (r) {
@@ -737,9 +738,11 @@ function mrPlaceDialog(key) {
       '<button type="button" class="btn" id="mrPRadBtn">' + icon('pin') + 'Define radius</button></div><input type="hidden" id="mrPRad" value="' + rad + '"></div>' +
       '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
     buttons: [['Save', 'primary', function () { mrSavePlace(key, r, c); }]].concat(r ? [['Remove the name', 'danger', function () {
+      var vs = spotStays(key);
+      placeLast = null;
       MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
       mrChange('Name removed: ' + (r.name || r.id));
-      openSpot(key);
+      mrReopenSpot(vs);
     }]] : []).concat([['Cancel', 'quiet', null]]),
     after: function () {
       function upd() {
@@ -811,8 +814,18 @@ function mrSavePlace(key, r, c) {
   if (role) r.role = role; else delete r.role;
   r.radius_m = rad;
   if (hide) r.hide = true; else delete r.hide;
+  var vs = spotStays(key);
+  // The spot's key changes (see buildSpotKeys): its page is opened again below, not refreshed.
+  placeLast = null;
   mrChange((isNew ? 'Place named: ' : 'Place changed: ') + (name || role) + ' (' + rad + ' m)');
-  openSpot(key);
+  mrReopenSpot(vs);
+}
+// Naming a place merges the spots within its radius into one (and removing the name splits them
+// again), so its page opens again on the spot where most of its stays are now.
+function mrReopenSpot(vs) {
+  var n = {}, best = null;
+  vs.forEach(function (v) { var k = spotKey(v); n[k] = (n[k] || 0) + 1; if (!best || n[k] > n[best]) best = k; });
+  if (best) openSpot(best); else closeSheets();
 }
 $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-place]');

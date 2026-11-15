@@ -1327,6 +1327,12 @@ function buildSpotKeys() {
   // Merges: one place under two place IDs (see mergedSpots), then the ones you made by hand.
   var root = mergedSpots(keys);
   for (v = 0; v < n; v++) keys[v] = root(keys[v]);
+  // A place you named in MyRules is one spot: every stay within its radius, whatever its place ID.
+  if (mrActive('places').length) for (v = 0; v < n; v++) {
+    if (D.pv[v] < 0) continue;
+    var r = mrPlaceAt(D.vll[2 * v], D.vll[2 * v + 1]);
+    if (r) keys[v] = 'mr:' + r.id;
+  }
   D.skey = keys;
 }
 // Google sometimes gives one place a new place ID (re-registered, new owner, or an address and a
@@ -1435,7 +1441,13 @@ function spotsOf(vs) {
   var by = {}, order = [];
   vs.forEach(function (v) {
     var key = spotKey(v), s = by[key], dur = D.ve[v] - D.vs[v];
-    if (!s) { s = by[key] = { key: key, pid: key.slice(0, 3) === 'id:' ? key.slice(3) : D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false }; order.push(s); }
+    if (!s) {
+      s = by[key] = { key: key, pid: key.slice(0, 3) === 'id:' ? key.slice(3) : D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false };
+      // A named place's spot sits at the place's own centre.
+      var r = key.slice(0, 3) === 'mr:' && mrById(key.slice(3));
+      if (r && Array.isArray(r.at)) { s.lat = r.at[0]; s.lng = r.at[1]; s.pid = ''; }
+      order.push(s);
+    }
     s.n++; s.h += dur / 36e5;
     if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
     if (D.vname[v] && !s.name) s.name = D.vname[v];
@@ -1582,7 +1594,7 @@ function mergeHtml(key) {
   if (parts.length > 1) html += '<h4 class="place-h">Merged spot</h4><p class="fine">' + fmt(parts.length) + ' Google place IDs are counted as this one place' +
     (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within 25 m and your visits moved from one to the other)' : '') + '.</p>' +
     (parts.some(function (x) { return x.manual; }) || Object.keys(PREFS.spotMerge || {}).some(function (k) { return PREFS.spotMerge[k] === key; }) ? '<button type="button" class="btn quiet" data-punmerge="' + esc(key) + '">Undo the merges you made</button>' : '');
-  if (key.slice(0, 3) !== 'id:') return html;
+  if (key.slice(0, 3) !== 'id:' || !me) return html;
   var near = [], seen = {};
   for (var v = 0; v < D.vs.length; v++) {
     var k = spotKey(v);
