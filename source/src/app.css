@@ -889,6 +889,7 @@ div.hit-row:hover { background: none; }
 .mr-pick-t small { display: block; }
 .mr-pick .icon-btn { flex: none; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; }
 .mr-pick .icon-btn:disabled { opacity: .4; }
+.mr-pick-rec { align-self: center; }
 .mr-ghost-map { height: 210px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
 .mr-rad-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 /* Define radius: the whole screen is the map, with the slider and Save at the bottom */

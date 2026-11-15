@@ -933,6 +933,7 @@ div.hit-row:hover { background: none; }
 .mr-pick-t small { display: block; }
 .mr-pick .icon-btn { flex: none; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; }
 .mr-pick .icon-btn:disabled { opacity: .4; }
+.mr-pick-rec { align-self: center; }
 .mr-ghost-map { height: 210px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
 .mr-rad-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 /* Define radius: the whole screen is the map, with the slider and Save at the bottom */
@@ -10809,10 +10810,33 @@ function mrRoutineTrips(r) {
   }
   return out;
 }
+// The different ways a routine's trips take: trips whose lines lie within 150 m of each other for
+// 85% of their length (both ways round) are one way. Each way is named by its best trip (cleanest,
+// else the one with most points); the ways come most-taken first, so the first is the recommended
+// one. Kept for the last set of trips, as the dialog redraws often.
+var MR_WAYS = { key: '', ways: [] };
+function mrWays(trips) {
+  var key = trips.join(',');
+  if (MR_WAYS.key === key) return MR_WAYS.ways;
+  function samp(P, n) { if (P.length <= n) return P; var o = []; for (var k = 0; k < n; k++) o.push(P[Math.round(k * (P.length - 1) / (n - 1))]); return o; }
+  function near(A, B) { var c = 0; A.forEach(function (p) { if (mrToLine(p, B).d <= 0.15) c++; }); return c / A.length; }
+  var ws = [];
+  trips.map(function (i) { return { i: i, c: mrClean(i), n: D.pathOff[i + 1] - D.pathOff[i] }; }).filter(function (t) { return t.n >= 5; })
+    .sort(function (a, b) { return b.c - a.c || b.n - a.n; }).forEach(function (t) {
+      var P = mrTripPts(t.i), s = samp(P, 30), L = samp(P, 60);
+      var w = ws.filter(function (w) { return near(s, w.L) >= 0.85 && near(w.s, L) >= 0.85; })[0];
+      if (w) w.all.push(t.i); else ws.push({ i: t.i, s: s, L: L, all: [t.i] });
+    });
+  // Most-taken first; a way only one stray trip took comes last.
+  ws.sort(function (a, b) { return b.all.length - a.all.length; });
+  MR_WAYS = { key: key, ways: ws };
+  return ws;
+}
 function mrGhostHtml() {
   return '<div class="mr-ghost"><div class="mr-ghost-map" id="mrGhostMap"></div>' +
-    '<div class="mr-pick" id="mrPick" hidden><button type="button" class="icon-btn" id="mrPickPrev" aria-label="Previous trip">' + icon('left') + '</button>' +
-    '<span class="mr-pick-t" id="mrPickTxt" aria-live="polite"></span><button type="button" class="icon-btn" id="mrPickNext" aria-label="Next trip">' + icon('right') + '</button></div>' +
+    '<div class="mr-pick" id="mrPick" hidden><button type="button" class="icon-btn" id="mrPickPrev" aria-label="Previous way">' + icon('left') + '</button>' +
+    '<span class="mr-pick-t" id="mrPickTxt" aria-live="polite"></span><button type="button" class="icon-btn" id="mrPickNext" aria-label="Next way">' + icon('right') + '</button></div>' +
+    '<button type="button" class="btn quiet mr-pick-rec" id="mrPickRec" hidden>Back to the recommended line</button>' +
     '<small class="fine" id="mrGhostTxt"></small></div>';
 }
 // A learned line (not one from a polyline or a GeoJSON file)?
@@ -10846,23 +10870,27 @@ function mrGhostStart(draft) {
   function draw() {
     var r = mrGhostSnap(draft());
     if (!r) return;
-    var res = mrRoutineTrips(r), col = colour(r), sn = r.then && r.then.snap, line = null, from = null;
+    var res = mrRoutineTrips(r), col = colour(r), sn = r.then && r.then.snap, line = null, from = null, W = null;
     // The line it would draw its trips along, and the trips it could learn it from.
     MR_GHOST.cands = [];
     if (sn && !mrLearned(sn)) line = mrRouteLine({ then: r.then }, res.trips);
     else if (sn) {
-      MR_GHOST.cands = res.trips.map(function (i) { return [i, mrClean(i)]; }).filter(function (c) { return c[1] > 0; })
-        .sort(function (p, q) { return q[1] - p[1]; }).map(function (c) { return c[0]; });
+      var W = mrWays(res.trips);
+      MR_GHOST.cands = W.map(function (w) { return w.i; });
       from = typeof sn === 'object' && sn.trip ? mrRefTrips(sn.trip)[0] : MR_GHOST.cands[0];
       if (from != null) line = { pts: mrTripPts(from), from: from };
     }
-    var pk = $('mrPick'), k = from != null ? MR_GHOST.cands.indexOf(from) : -1;
+    var pk = $('mrPick'), k = -1;
+    if (W && from != null) W.forEach(function (w, j) { if (w.all.indexOf(from) >= 0) k = j; });
+    MR_GHOST.k = k;
     pk.hidden = !mrLearned(sn);
     if (!pk.hidden) {
+      var nw = W ? W.length : 0, ways = W && W[k] ? W[k].all.length : 0, rec = from != null && from === MR_GHOST.cands[0];
       $('mrPickTxt').innerHTML = from == null ? 'No trip clean enough to learn the line from' :
-        'Line from the trip on <b>' + esc(mrWhere(from)) + '</b>' + (k === 0 ? ' · recommended' : '') +
-        (MR_GHOST.cands.length ? '<small class="fine">' + (k >= 0 ? fmt(k + 1) + ' of ' : 'Not in this period · ') + fmt(MR_GHOST.cands.length) + ' clean trips</small>' : '');
-      $('mrPickPrev').disabled = $('mrPickNext').disabled = MR_GHOST.cands.length < 2 && k >= 0;
+        (nw > 1 && k >= 0 ? '<b>Way ' + fmt(k + 1) + ' of ' + fmt(nw) + '</b> · ' + fmt(ways) + ' trip' + (ways === 1 ? '' : 's') + (k === 0 ? ' · recommended' : '') : rec ? '<b>Recommended line</b>' : '<b>Your chosen line</b>') +
+        '<small class="fine">' + (nw === 1 && k === 0 ? 'Your ' + fmt(ways) + ' trips here all take this way. ' : k < 0 ? 'Its trip isn\'t in this period. ' : '') + 'From the trip on ' + esc(mrWhere(from)) + '</small>';
+      $('mrPickPrev').disabled = $('mrPickNext').disabled = nw < 2 && k >= 0;
+      $('mrPickRec').hidden = rec || from == null || !MR_GHOST.cands.length;
     }
     $('mrGhostTxt').innerHTML = res.trips.length ? '<b class="num">' + fmt(res.trips.length) + '</b> ' + (res.trips.length === 1 ? 'trip' : 'trips') + ' covered, shown as ghosts' +
       (r.then && r.then.mode ? ' · ' + fmt(res.change) + ' would become ' + esc((LABEL[r.then.mode] || r.then.mode).toLowerCase()) : '') : 'No trips covered with these settings.';
@@ -10894,16 +10922,18 @@ function mrGhostStart(draft) {
     if (MR_GHOST.first && bounds.isValid()) { MR_GHOST.first = false; MR_GHOST.map.invalidateSize(); MR_GHOST.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: false }); }
   }
   // The arrows: the next or previous clean trip, round and round.
+  // The arrows: the next or previous way, round and round. Recommended: back to the best trip of the
+  // way most trips take, worked out again from your data each time (saved as "learn").
   function step(by) {
-    var c = MR_GHOST.cands, n = c.length;
+    var c = MR_GHOST.cands, n = c.length, k = MR_GHOST.k;
     if (!n) return;
-    var r = mrGhostSnap(draft()), sn = r && r.then && r.then.snap, cur = typeof sn === 'object' && sn.trip ? mrRefTrips(sn.trip)[0] : c[0], k = c.indexOf(cur);
     var j = k < 0 ? 0 : (k + by + n) % n;
     MR_GHOST.pick = j === 0 ? null : c[j];
     draw();
   }
   $('mrPickPrev').onclick = function () { step(-1); };
   $('mrPickNext').onclick = function () { step(1); };
+  $('mrPickRec').onclick = function () { MR_GHOST.pick = null; draw(); };
   var box = $('mrDlgExtra'), tm = null;
   function later() { clearTimeout(tm); tm = setTimeout(draw, 150); }
   box.oninput = later; box.onchange = later;
