@@ -651,9 +651,9 @@ function renderPlaces() {
     if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
-      var kind = r && MR_KIND[r.role], cur = s.home || mrIsCurrent(r), ic = kind ? MR_KIND[r.role][1] : s.home ? 'home' : 'pin';
+      var kind = r && MR_KIND[r.role];
       var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
-      return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '"><span class="mode-badge sm" style="background:' + (cur ? 'var(--accent)' : r ? '#0f7c8c' : 'var(--m-other)') + '">' + icon(ic) + '</span>' +
+      return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
         '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
         '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span></button>';
     }).join('');
@@ -668,7 +668,7 @@ function renderPlaces() {
   if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
   $('topPlaces').innerHTML = list.slice(0, 8).map(function (o) {
     var q = D.places[o.p], cc = countryAt(q.lat, q.lng), home = o.p === D.home;
-    return '<button type="button" class="hit-row" data-place="' + o.p + '"><span class="mode-badge sm" style="background:' + (home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(home ? 'home' : 'pin') + '</span>' +
+    return '<button type="button" class="hit-row" data-place="' + o.p + '">' + lookBadge(mrLook(mrRuleOf(q), home), true) +
       '<span class="t"><b>' + esc(placeLabel(o.p)) + '</b><small>' + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + '</small></span>' +
       '<span class="r num">' + fmt(o.n) + '<small>trips</small></span></button>';
   }).join('');
@@ -676,6 +676,7 @@ function renderPlaces() {
 // Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
 // stayed in the filters. Shown once at least MIN_KINDS places have a kind.
 var MIN_KINDS = 5;
+var KIND_FLIP = ['pin', 'restaurant', 'cafe', 'cart', 'BUS', 'school'];   // 2 s each, see .kind-flip
 function renderKinds() {
   var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard');
   el.hidden = rules.length < MIN_KINDS;
@@ -686,13 +687,16 @@ function renderKinds() {
     all += h;
     if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; } else other += h;
   }
-  var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([1]));
+  var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([other, 1]));
   $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places), in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
     return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
       '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:#0f7c8c"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
-  }).join('') + '<p class="fine" style="margin-top:6px">Everywhere else: ' + hoursLabel(other).replace(/ \d+ min$/, '') + ' (' + Math.round(other / Math.max(all, 1e-9) * 100) + '%).</p>'
+  }).join('') +
+    // Everywhere else: the time at places without a kind, its badge flipping through kinds of place.
+    '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm kind-flip" style="background:var(--m-other)">' + KIND_FLIP.map(icon).join('') + '</span><span><b>Everywhere else</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +
+      '<div><div class="track"><i style="width:' + (other / mx * 100).toFixed(1) + '%;background:var(--m-other)"></i></div></div><div class="val">' + hoursLabel(other).replace(/ \d+ min$/, '') + '</div></div>'
     : '<p class="empty">No stays at those places in these filters.</p>';
 }
 // Explorer squares in the trips shown: how many, the biggest cluster and square, and new ones per year.
@@ -1560,7 +1564,7 @@ function placePage(o, keepScroll) {
   var seg = scopeSeg(o.vs.length, inF.length), scopeTxt = scoped ? esc(filterText()) : 'all your history';
   if (scoped && !inF.length) {
     var s0 = spotsOf(o.vs)[0], c0 = countryAt(s0.lat, s0.lng);
-    showPlaceHtml('<div class="trip-head"><span class="mode-badge" style="background:' + (o.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(o.home ? 'home' : 'pin') + '</span><div><h3>' + esc(o.title) + '</h3><p>' +
+    showPlaceHtml('<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
       esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + seg +
       '<p class="empty" style="margin-top:14px">No visits here in ' + scopeTxt + '. Change the filters or choose All history.</p>', keepScroll);
     return;
@@ -1585,7 +1589,7 @@ function placePage(o, keepScroll) {
   var oftenTxt = n < 2 ? 'Once' : perWeek >= 1 ? fmt(Math.round(perWeek * 10) / 10) + ' a week' : perMonth >= 1 ? fmt(Math.round(perMonth * 10) / 10) + ' a month' : 'Every ' + fmt(Math.round(1 / perMonth)) + ' months';
   var withIds = spots.filter(function (s) { return s.pid; }).length;
   placeVisits = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; });
-  var html = '<div class="trip-head"><span class="mode-badge" style="background:' + (o.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(o.home ? 'home' : 'pin') + '</span><div><h3>' + esc(o.title) + '</h3><p>' +
+  var html = '<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
     esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + seg +
     '<dl class="kv" style="margin-top:12px">' + [
       ['Visits', fmt(n)], ['How often', oftenTxt],
@@ -1597,7 +1601,7 @@ function placePage(o, keepScroll) {
   if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {
-      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '"><span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
+      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) + '<span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
         '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span></button>' +
         '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
         '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
@@ -1625,7 +1629,7 @@ function openPlace(p) {
   var lbl = placeLabel(p), vs = placeStays(lbl);
   if (!vs.length) return false;
   var q = D.places[p];
-  placePage({ title: lbl, vs: vs, home: p === D.home, spots: true, ll: [q.lat, q.lng] });
+  placePage({ title: lbl, vs: vs, home: p === D.home, spots: true, ll: [q.lat, q.lng], look: mrLook(mrRuleOf(q), p === D.home) });
   return true;
 }
 // One spot (a pin on the map).
@@ -1650,7 +1654,7 @@ function mergeHtml(key) {
   return html + '<h4 class="place-h">Same place as…</h4><p class="fine">If one of these spots nearby is really this place under another Google ID, tap <b>Merge</b> next to it: its visits join this place. The merge is saved on this device and can be undone.</p>' +
     '<div class="list-rows">' + near.slice(0, 5).map(function (x) {
       var s2 = spotsOf(spotStays(x.k))[0];
-      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(x.k) + '"><span class="t"><b>' + esc(spotName(s2)) + '</b><small>' + fmt(Math.round(x.d * 1000)) + ' m away · ' + fmt(s2.n) + ' visit' + (s2.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s2.lv]) + '</small></span></button>' +
+      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(x.k) + '">' + lookBadge(spotLook(s2), true) + '<span class="t"><b>' + esc(spotName(s2)) + '</b><small>' + fmt(Math.round(x.d * 1000)) + ' m away · ' + fmt(s2.n) + ' visit' + (s2.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s2.lv]) + '</small></span></button>' +
         '<span class="spot-acts"><a class="btn quiet" href="' + esc(mapsUrl(s2.lat, s2.lng, s2.pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + 'Google Maps</a><button type="button" class="btn merge-btn" data-pmerge="' + esc(x.k) + '" data-pinto="' + esc(key) + '" aria-label="Merge ' + esc(spotName(s2)) + ' into this place">' + icon('layers') + 'Merge</button></span></div>';
     }).join('') + '</div>';
 }
@@ -1659,7 +1663,7 @@ function openSpot(key) {
   var vs = spotStays(key);
   if (!vs.length) return false;
   var s = spotsOf(vs)[0], name = spotName(s), town = placeLabel(s.p), others = placeStays(town).length > vs.length;
-  placePage({ title: name, sub: name.indexOf(town) < 0 && town !== 'Home' ? town : '', vs: vs, home: s.home, spots: false, town: others ? s.p : null, spot: key });
+  placePage({ title: name, sub: name.indexOf(town) < 0 && town !== 'Home' ? town : '', vs: vs, home: s.home, spots: false, town: others ? s.p : null, spot: key, look: spotLook(s) });
   return true;
 }
 function showPlaceOnMap(lat, lng) {
