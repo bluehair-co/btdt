@@ -205,7 +205,7 @@ function mrPlaceName(q) {
   if (!r) return '';
   // A hidden place shows as the town it is in, never by its name or address.
   if (r.hide) { var c = nearestCity(q.lat, q.lng); return c ? (c.d > 8 ? 'Near ' : '') + c.name : ccName(countryAt(q.lat, q.lng)); }
-  return r.role === 'home' ? 'Home' : r.name || r.role || '';
+  return r.role === 'home' ? 'Home' : r.name || (r.role ? r.role.charAt(0).toUpperCase() + r.role.slice(1) : '');
 }
 
 // Applies the rules again after a change, keeping the filters (gear chips are rebuilt, all on).
@@ -217,6 +217,8 @@ function mrReapply() {
   mrApplyPlaces();
   M.anyGuess = mrAnyGuess();
   F.gear = new Set(gearIds());
+  // Pins carry place names in their titles: drawn again.
+  if (pinLayer) pinLayer._ver = null;
   buildFilterUI();
   apply();
   renderSettings();
@@ -557,3 +559,85 @@ function mrSaveGear(i) {
   }
   openTrip(i);
 }
+
+// ---------- naming a place from its pin ----------
+// A spot page (a regular place's pin) has Name this place: a name, what it is (home, work…), the
+// radius that counts as this place, and Hide. Saved as a place rule in MyRules; the map shows the
+// radius while the dialog is open, and the dialog counts the stays inside it.
+var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['sport', 'Sport']];
+function mrSpotCentre(key) {
+  var vs = spotStays(key), la = 0, lo = 0;
+  vs.forEach(function (v) { la += D.vll[2 * v]; lo += D.vll[2 * v + 1]; });
+  return vs.length ? [+(la / vs.length).toFixed(6), +(lo / vs.length).toFixed(6)] : null;
+}
+// The place rule a spot is named by: the one its centre is in, switched on or not.
+function mrSpotRule(key) {
+  var c = mrSpotCentre(key), best = null, bd = Infinity;
+  if (!c) return null;
+  mrList('places').forEach(function (r) {
+    if (!Array.isArray(r.at)) return;
+    var d = km(c, r.at) * 1000;
+    if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; }
+  });
+  return best;
+}
+function mrSpotHtml(key) {
+  var r = mrSpotRule(key);
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + esc(r.role) : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>') +
+    '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit name' : 'Name this place') + '</button></div>';
+}
+function mrPlaceDialog(key) {
+  var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0], circle = null;
+  if (!c) return;
+  var nm = r ? r.name || '' : s.name || '', role = r ? r.role || '' : s.home ? 'home' : '', rad = r ? +r.radius_m || 100 : 100;
+  mrAsk({
+    title: r ? 'Edit this place' : 'Name this place',
+    text: 'Stays within the radius take this name, in every list and on the map.',
+    extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrPName" value="' + esc(nm) + '" placeholder="e.g. Climbing gym"></label>' +
+      '<label class="field"><span>What it is</span><select id="mrPRole">' + MR_ROLES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === role ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></label>' +
+      '<label class="field"><span>Counts as this place within <b id="mrPRadTxt"></b></span><input type="range" id="mrPRad" min="25" max="1000" step="25" value="' + rad + '"></label>' +
+      '<small class="fine" id="mrPCount"></small>' +
+      '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
+    buttons: [['Save', 'primary', function () { mrSavePlace(key, r, c); }]].concat(r ? [['Remove the name', 'danger', function () {
+      MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
+      mrChange('Name removed: ' + (r.name || r.id));
+      openSpot(key);
+    }]] : []).concat([['Cancel', 'quiet', null]]),
+    after: function (d) {
+      function upd() {
+        var m = +$('mrPRad').value, n = 0;
+        $('mrPRadTxt').textContent = fmt(m) + ' m';
+        for (var v = 0; v < D.vs.length; v++) if (km(c, [D.vll[2 * v], D.vll[2 * v + 1]]) * 1000 <= m) n++;
+        $('mrPCount').textContent = fmt(n) + ' stay' + (n === 1 ? '' : 's') + ' within ' + fmt(m) + ' m of this place.';
+        if (circle) circle.setRadius(m);
+      }
+      // The radius on the map, which moves to the place (beside the dialog on a wide screen).
+      if (map && PREFS.proj === 'merc' && tab === 'map') {
+        circle = L.circle(c, { radius: rad, color: '#0f7c8c', weight: 2, fillOpacity: .12, interactive: false }).addTo(map);
+        map.setView(c, 16);
+        // On a wide screen the dialog moves to the left so the radius stays in sight.
+        if (wide()) d.classList.add('side');
+      }
+      $('mrPRad').addEventListener('input', upd);
+      d.addEventListener('close', function () { if (circle) circle.remove(); d.classList.remove('side'); }, { once: true });
+      upd();
+    }
+  });
+}
+function mrSavePlace(key, r, c) {
+  var name = $('mrPName').value.trim(), role = $('mrPRole').value, rad = +$('mrPRad').value, hide = $('mrPHide').checked;
+  if (!name && !role) { toast('Give the place a name'); return; }
+  mrEnsure();
+  var isNew = !r;
+  if (isNew) { r = { id: mrNewId(name || role), at: c }; (MR.doc.places || (MR.doc.places = [])).push(r); }
+  if (name) r.name = name; else delete r.name;
+  if (role) r.role = role; else delete r.role;
+  r.radius_m = rad;
+  if (hide) r.hide = true; else delete r.hide;
+  mrChange((isNew ? 'Place named: ' : 'Place changed: ') + (name || role) + ' (' + rad + ' m)');
+  openSpot(key);
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-mr-place]');
+  if (b) mrPlaceDialog(b.dataset.mrPlace);
+});
