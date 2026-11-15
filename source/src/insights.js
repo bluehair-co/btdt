@@ -1327,10 +1327,11 @@ function buildSpotKeys() {
   // Merges: one place under two place IDs (see mergedSpots), then the ones you made by hand.
   var root = mergedSpots(keys);
   for (v = 0; v < n; v++) keys[v] = root(keys[v]);
-  // A place you named in MyRules is one spot: every stay within its radius, whatever its place ID.
+  // A place you named in MyRules is one spot: every original place within its radius (see mrUnits),
+  // whatever the grouping above did with it.
   if (mrActive('places').length) for (v = 0; v < n; v++) {
     if (D.pv[v] < 0) continue;
-    var r = mrPlaceAt(D.vll[2 * v], D.vll[2 * v + 1]);
+    var r = mrStayPlace(v);
     if (r) keys[v] = 'mr:' + r.id;
   }
   D.skey = keys;
@@ -1460,7 +1461,7 @@ function spotsOf(vs) {
 // A spot's name: the one Takeout gave it, Home, or the town it's in.
 function spotName(s, k) {
   // Your own name from MyRules wins.
-  var mr = mrActive('places').length && mrPlaceName({ lat: s.lat, lng: s.lng });
+  var mr = mrActive('places').length && mrPlaceName(s);
   if (mr) return mr;
   if (s.name) return s.name;
   if (s.home) return 'Home';
