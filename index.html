@@ -898,6 +898,7 @@ div.hit-row { cursor: default; }
 div.hit-row:hover { background: none; }
 .pin-ic { display: flex; align-items: center; justify-content: center; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); background: var(--m-other); border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.35); }
 .pin-ic.home { background: var(--accent); }
+.pin-ic.named { background: #0f7c8c; }
 .pin-ic { transition: transform .15s; }
 .pin-ic.on { background: var(--dot); transform: rotate(-45deg) scale(1.35); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 35%, transparent), 0 2px 8px rgba(0,0,0,.4); }
 .pin-ic svg { transform: rotate(45deg); width: 60%; height: 60%; fill: #fff; }
@@ -1388,7 +1389,7 @@ div.hit-row:hover { background: none; }
       </div>
       <label class="toggle-row"><span class="lbl">Countries visited</span><input type="checkbox" class="switch" id="layCC"></label>
       <label class="toggle-row"><span class="lbl">Regular places</span><input type="checkbox" class="switch" id="layPins"></label>
-      <p class="fine" id="pinNote" hidden style="margin:0 0 8px">A pin on each spot you stayed at in these filters and have been to at least 3 times. Tap one for how often and when you go, how long you stay and every visit. Pins show on the Mercator view.</p>
+      <p class="fine" id="pinNote" hidden style="margin:0 0 8px">A pin on each spot you stayed at in these filters and have been to at least 3 times. Home is orange and the places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
     </div>
     <div class="sec">
       <button type="button" class="btn" id="fitBtn"><span data-icon="fit"></span>Zoom to my trips</button>
@@ -5952,8 +5953,10 @@ function buildPins() {
   var spots = spotsOf(inSel).sort(function (a, b) { return D.spotN[b.key] - D.spotN[a.key]; }).slice(0, PIN_MAX);
   spots.forEach(function (s) {
     var n = D.spotN[s.key], z = Math.round(Math.min(34, 20 + 4 * Math.log10(n)));
+    // A place you named in MyRules is teal, so named and unnamed pins tell apart.
+    var named = !s.home && mrActive('places').length && mrPlaceName({ lat: s.lat, lng: s.lng });
     var m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
+      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : named ? ' named' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
       title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true
     });
     m._key = s.key;

@@ -480,8 +480,10 @@ function buildPins() {
   var spots = spotsOf(inSel).sort(function (a, b) { return D.spotN[b.key] - D.spotN[a.key]; }).slice(0, PIN_MAX);
   spots.forEach(function (s) {
     var n = D.spotN[s.key], z = Math.round(Math.min(34, 20 + 4 * Math.log10(n)));
+    // A place you named in MyRules is teal, so named and unnamed pins tell apart.
+    var named = !s.home && mrActive('places').length && mrPlaceName({ lat: s.lat, lng: s.lng });
     var m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
+      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : named ? ' named' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
       title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true
     });
     m._key = s.key;
