@@ -8372,7 +8372,9 @@ function renderPlaces() {
 // Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
 // stayed in the filters. Shown once at least MIN_KINDS places have a kind.
 var MIN_KINDS = 5;
-var KIND_FLIP = ['pin', 'restaurant', 'cafe', 'cart', 'BUS', 'school'];   // 2 s each, see .kind-flip
+// Everywhere else flips through places that aren't one of the kinds (nor the plain pin of a place
+// without one), 2 s each: see .kind-flip.
+var KIND_FLIP = ['attractions', 'castle', 'stadium', 'account_balance', 'temple_buddhist', 'earth'];
 function renderKinds() {
   var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard');
   el.hidden = rules.length < MIN_KINDS;
