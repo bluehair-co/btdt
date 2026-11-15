@@ -272,10 +272,12 @@
             "work",
             "school",
             "family",
+            "friends",
             "sport",
             "restaurant",
             "cafe",
             "supermarket",
+            "store",
             "transit"
           ]
         },
