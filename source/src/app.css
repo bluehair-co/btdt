@@ -295,6 +295,41 @@ details.help b { color: var(--fg); font-weight: 500; }
 .guess.sim { color: #1f4f8a; background: #dde9fb; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .guess.sim { color: #a9cbff; background: #14284a; } }
 :root[data-theme="dark"] .guess.sim { color: #a9cbff; background: #14284a; }
+/* MyRules: gear it filled in is Inferred, in teal */
+.guess.inf { color: #0b6672; background: #d9f1f3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .guess.inf { color: #8fe0e8; background: #0f3439; } }
+:root[data-theme="dark"] .guess.inf { color: #8fe0e8; background: #0f3439; }
+.mr-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--panel); }
+.mr-card-head { display: flex; align-items: center; gap: 10px; }
+.mr-card-head .file-txt { flex: 1; }
+.mr-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #0f7c8c; color: #fff; flex: none; }
+.mr-ic .ic { width: 20px; height: 20px; fill: currentColor; }
+.mr-export { position: relative; }
+.mr-dot { position: absolute; top: 4px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.mr-unsaved { color: var(--accent); }
+.mr-rule { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--grid); }
+.mr-rule:last-child { border-bottom: 0; }
+.mr-rule .file-txt { flex: 1; }
+.mr-rule.off .file-txt, .mr-rule.off .mode-badge { opacity: .5; }
+.mr-rule .icon-btn { width: 32px; height: 32px; color: var(--muted); }
+.mr-rule .icon-btn .ic { width: 18px; height: 18px; }
+.mr-warn { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 8px 0; }
+.mr-trip { margin-top: 14px; }
+.mr-chg { border-left: 3px solid #0f7c8c; padding: 3px 0 3px 10px; margin: 8px 0; font-size: 13px; }
+.mr-dlg { width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; border: 0; border-radius: 18px; padding: 20px; background: var(--panel); color: var(--fg); box-shadow: var(--shadow); }
+.mr-dlg::backdrop { background: rgba(14, 10, 34, .45); }
+.mr-dlg h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; }
+.mr-dlg > p { margin: 0 0 10px; }
+.mr-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
+.mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
+.mr-form { display: flex; flex-direction: column; gap: 10px; }
+.mr-form select, .mr-form input[type=text], .mr-form input[type=date], .mr-form input[type=number] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.mr-form .field span { font-size: 12px; color: var(--muted); }
+.mr-opt { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 10px; cursor: pointer; }
+.mr-opt:has(input:checked) { border-color: var(--accent); }
+.mr-opt input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
+.mr-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mr-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
 
 /* Map tooltip and hover (mouse only) */
 .leaflet-container { font-family: var(--font-body); background: var(--grid); }
@@ -838,3 +873,4 @@ div.hit-row:hover { background: none; }
 .demo-msg { flex: 1; min-width: 0; margin: 0; color: rgba(255, 255, 255, .86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .demo-msg .narrow-only { display: none; }
 @media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
+.mr-dates input { width: auto; }

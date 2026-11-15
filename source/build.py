@@ -14,7 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'src')
 DIST = os.path.join(HERE, 'dist')
 V1 = os.path.join(HERE, 'place-data.html')
-JS = ['core.js', 'data.js', 'map.js', 'insights.js', 'timeline.js', 'settings.js']
+JS = ['core.js', 'data.js', 'map.js', 'insights.js', 'timeline.js', 'rules.js', 'settings.js']
 LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/'
 
 
@@ -88,7 +88,11 @@ def main():
     with open(os.path.join(DIST, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html)
     for name in os.listdir(os.path.join(HERE, 'static')):
-        shutil.copy(os.path.join(HERE, 'static', name), os.path.join(DIST, name))
+        src = os.path.join(HERE, 'static', name)
+        if os.path.isdir(src):
+            shutil.copytree(src, os.path.join(DIST, name), dirs_exist_ok=True)
+        else:
+            shutil.copy(src, os.path.join(DIST, name))
     print('Wrote dist/index.html (%d KB)' % (len(html.encode('utf-8')) // 1024))
 
 

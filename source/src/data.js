@@ -155,8 +155,8 @@ function setData(R) {
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
   if (!isFinite(minD)) minD = maxD = Math.floor(Date.now() / 864e5);
   buildGear();
-  var anyGuess = false;
-  for (i = 0; i < n && !anyGuess; i++) if (D.est[i] & 4) anyGuess = true;
+  mrApplyPlaces();
+  var anyGuess = mrAnyGuess();
   M = {
     years: Object.keys(yc).map(Number).sort(function (a, b) { return a - b; }),
     modes: MODES.filter(function (m) { return present[m]; }),
@@ -214,11 +214,28 @@ function buildGear() {
     if (s.info && !x.info) x.info = s.info;
     D.gear[i] = g; x.n++; x.modes[m] = (x.modes[m] || 0) + 1;
   }
+  // Gear from MyRules (see mrApplyGear): a period's gear joins Strava's when it names it, else it is
+  // a gear of its own, with the kind the rule gives.
+  var before = new Uint16Array(D.gear);
+  mrApplyGear(by, function (name, kind, mode) {
+    var g = by[name];
+    if (!g) { g = by[name] = GEAR.length; GEAR.push({ name: name, n: 0, modes: {}, info: null, rule: true }); }
+    if (kind && !GEAR[g].ruleKind) GEAR[g].ruleKind = kind === 'ebike' ? 'bike' : kind;
+    if (mode && !GEAR[g].ruleMode) GEAR[g].ruleMode = mode;
+    return g;
+  });
+  for (i = 0; i < n; i++) {
+    if (D.gear[i] === before[i]) continue;
+    if (before[i]) GEAR[before[i]].n--; else GEAR[0].n--;
+    var y = GEAR[D.gear[i]], mm = MODES[D.mode[i]];
+    y.n++; y.modes[mm] = (y.modes[mm] || 0) + 1;
+  }
   for (var k = 1; k < GEAR.length; k++) {
     var x_ = GEAR[k], best = null;
     for (var mm in x_.modes) if (!best || x_.modes[mm] > x_.modes[best]) best = mm;
+    if (!best) best = x_.ruleMode || 'CYCLING';
     x_.mode = best;
-    var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.info && x_.info.kind;
+    var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.ruleKind || x_.info && x_.info.kind;
     if (kind !== 'shoe' && HALFBIKE_RE.test(words)) kind = 'halfbike';
     else if (kind !== 'shoe' && STRIDA_RE.test(words)) kind = 'strida';
     else if (kind !== 'shoe' && CARGO_RE.test(words)) kind = 'cargo';
@@ -351,8 +368,8 @@ function apply() {
   for (k = 0; k < ord.length; k++) {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
-    if (F.guess === 'no' && D.est[i] & 4) continue;
-    if (F.guess === 'only' && !(D.est[i] & 4)) continue;
+    // Guessed types and gear MyRules filled in go together.
+    if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || D.mrGear[i])) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
     // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
     if (F.src !== 'timeline' && isDup(i)) continue;
@@ -373,6 +390,8 @@ function apply() {
     i = D.vorder[k];
     if (!F.years.has(D.vyear[i]) || !F.months.has(D.vmonth[i]) || !F.dows.has(D.vdow[i]) || !dayOk(D.vday[i])) continue;
     if (!allCC && !F.countries.has(D.vcc[i])) continue;
+    // Stays at a place MyRules hides.
+    if (D.vhide && D.vhide[i]) continue;
     outV.push(i);
   }
   selV = Int32Array.from(outV);
@@ -689,6 +708,8 @@ function placeLabel(id) {
   if (id < 0) return 'Unknown place';
   var q = D.places[id];
   if (q.label) return q.label;
+  var mrName = mrPlaceName(q);
+  if (mrName) return (q.label = mrName);
   if (q.ap) q.label = q.ap.city + ' (' + q.ap.code + ')';
   else if (q.name) q.label = q.name;
   else {
@@ -707,6 +728,9 @@ function tripRoute(i) {
 function findHome() {
   if (D.home !== undefined) return D.home;
   needPlaces();
+  // Home from MyRules wins over the guess.
+  var mh = mrHomePlace();
+  if (mh != null && mh >= 0) { D.home = mh; D.homeHow = 'your MyRules'; return mh; }
   var score = {}, best = -1, bs = 0, v, i, how = '';
   {
     for (v = 0; v < D.vs.length; v++) {
@@ -999,7 +1023,16 @@ function runParser(files) {
     }
   });
 }
+// MyRules files are picked out first (see mrIsFile) and loaded on their own; the rest are location files.
 function importFiles(list) {
+  var all = Array.prototype.slice.call(list);
+  Promise.all(all.map(mrIsFile)).then(function (is) {
+    var rules = all.filter(function (_, k) { return is[k]; }), rest = all.filter(function (_, k) { return !is[k]; });
+    if (rules.length) mrImport(rules);
+    if (rest.length || !rules.length) importLocationFiles(rest);
+  });
+}
+function importLocationFiles(list) {
   var files = Array.prototype.filter.call(list, function (f) { return isLocationName(f.name); });
   if (!files.length) { setStatus('No location files found there. BT•DT reads Google Timeline and Dawarich (.json), Strava and Garmin exports (.zip), and .gpx, .kml, .kmz, .geojson, .tcx and .fit files.', true); return; }
   setStatus('');
@@ -1089,6 +1122,8 @@ $('demoBtn').addEventListener('click', function () {
     PREFS.cc = true;
     syncLayersUI();
     RAW = null;
+    // Your own MyRules don't apply to the made-up person; a file loaded during the demo does, unsaved.
+    MR = null;
     setData(merge(null, r.results));
     // The demo opens on all of its data, the whole map in view.
     F.dm = 'all';
@@ -1150,8 +1185,13 @@ function loadSaved() {
     });
   });
 }
+// Remove from this device: MyRules changes not exported are offered for download first, then it asks.
 $('forgetBtn').addEventListener('click', function () {
-  var del = function (s) { return s.delete('trips'); };
+  if (MR && MR.changes.length) mrBeforeLosing('Remove', forgetAll);
+  else mrConfirm('Remove', 0, forgetAll);
+});
+function forgetAll() {
+  var del = function (s) { s.delete('myrules'); return s.delete('trips'); };
   Promise.all([withStore('btdt', 'readwrite', del).catch(function () {}), withStore('timeliner', 'readwrite', del).catch(function () {}), withStore('footprint', 'readwrite', del).catch(function () {})])
     .then(function () { location.reload(); });
-});
+}

@@ -1,0 +1,52 @@
+{
+  "$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.1.json",
+  "myrules": "0.1",
+  "about": { "name": "Example rules", "updated": "2026-11-14T21:40:00Z", "generator": "hand-written" },
+
+  "places": [
+    { "id": "home-oudwest", "name": "Home", "role": "home", "at": [52.3667, 4.8650], "radius_m": 75,
+      "when": { "from": "2019-05-01", "to": "2024-01-31" } },
+    { "id": "home-noord", "name": "Home", "role": "home", "at": [52.3901, 4.9187], "radius_m": 75,
+      "when": { "from": "2024-02-01" } },
+    { "id": "office-utrecht", "name": "Office", "role": "work", "at": [52.0894, 5.1077], "radius_m": 150,
+      "when": { "from": "2019-09-02", "to": "2022-06-30" } },
+    { "id": "amsterdam-centraal", "name": "Amsterdam Centraal", "role": "station", "at": [52.3791, 4.9003], "radius_m": 250 },
+    { "id": "utrecht-centraal", "name": "Utrecht Centraal", "role": "station", "at": [52.0894, 5.1101], "radius_m": 250 },
+    { "id": "parents", "name": "Parents' house", "role": "family", "at": [51.4416, 5.4697], "hide": true,
+      "note": "Keep off the map pins and heatmap" }
+  ],
+
+  "gear": [
+    { "id": "strida-evo", "name": "Strida EVO", "kind": "strida", "mode": "CYCLING",
+      "when": { "from": "2021-03-01", "to": "2023-08-31" }, "match": { "max_km": 25 } },
+    { "id": "gazelle", "name": "Gazelle Tour Populair", "kind": "bike", "mode": "CYCLING",
+      "when": { "from": "2018-06-01" }, "strava_name": "Gazelle",
+      "note": "The everyday bike. Rides over 25 km in the Strida years were on this one." },
+    { "id": "halfbike", "name": "Halfbike", "kind": "halfbike", "mode": "CYCLING",
+      "when": { "from": "2022-05-01", "to": "2022-09-30", "days": ["sat", "sun"] },
+      "match": { "max_km": 8 }, "except": [{ "start": "2022-06-12T10:05+02:00" }] }
+  ],
+
+  "routines": [
+    { "id": "commute-utrecht", "name": "Train to Utrecht",
+      "from": "@amsterdam-centraal", "to": "@utrecht-centraal", "both_ways": true,
+      "when": { "from": "2019-09-02", "to": "2022-06-30", "days": ["mon", "tue", "wed", "thu", "fri"],
+                "time": ["06:30", "10:00"], "skip": [["2020-03-16", "2021-09-24"]] },
+      "return_when": { "time": ["16:00", "20:00"] },
+      "then": { "mode": "TRAIN", "snap": "learn" },
+      "note": "Skip: working from home during Covid" },
+    { "id": "bike-to-station", "name": "Bike to the station",
+      "from": "@home-oudwest", "to": "@amsterdam-centraal", "both_ways": true,
+      "when": { "from": "2021-03-01", "to": "2022-06-30", "days": ["mon", "tue", "wed", "thu", "fri"] },
+      "then": { "mode": "CYCLING", "gear": "@strida-evo" } }
+  ],
+
+  "corrections": [
+    { "id": "fix-2024-03-06", "trip": { "start": "2024-03-06T08:12+01:00", "mode": "CAR" },
+      "then": { "mode": "TRAIN" }, "note": "Timeline said car; it was the Intercity" },
+    { "id": "drop-gps-mess", "trip": { "span": ["2023-11-02T13:00+01:00", "2023-11-02T15:30+01:00"] },
+      "then": { "hide": true }, "note": "Phone in a drawer at the office" },
+    { "id": "flight-bcn", "trip": { "day": "2022-04-14" },
+      "then": { "replace": { "mode": "FLYING", "from": "AMS", "to": "BCN", "depart": "09:40", "arrive": "11:55" } } }
+  ]
+}

@@ -626,7 +626,7 @@ function tripRows(i) {
     ['Average speed', ms > 0 ? speed(k / (ms / 36e5)) : 'Unknown'],
     ['CO₂', co2s(tripKg(i))],
     tripHr(i) ? ['Heart rate', hrAvgMax(tripHr(i))] : null,
-    D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + '</span>'] : null,
+    D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + mrTag(i) + '</span>'] : null,
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
   ].filter(Boolean);
   var notes = [];
@@ -879,7 +879,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
     (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
     (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
@@ -898,6 +898,11 @@ function openTrip(i, fromList) {
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
   [16, 'recorded activity'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
   [JUMPS, 'bad GPS points left out']];
+// What MyRules filled in, in Raw data and the exports.
+function mrRaw(i) {
+  var g = D.mrGear && D.mrGear[i];
+  return g ? { gear: GEAR[g.gear].name, rule: g.rule } : null;
+}
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
   function ll(a, k) { return isFinite(a[2 * k]) ? [+a[2 * k].toFixed(6), +a[2 * k + 1].toFixed(6)] : null; }
@@ -907,7 +912,8 @@ function rawTrip(i) {
     sport: D.sport && D.sport[i] ? SPORTS[D.sport[i]][0] : null, stravaType: D.stype && D.stype[i] || null,
     start: iso(D.start[i]), end: iso(D.end[i]), utcOffsetMin: D.off[i] === NO_OFF ? null : D.off[i], localDay: isoDay(D.day[i]),
     km: +D.km[i].toFixed(3), fileKm: D.orig[i] > 0 ? +D.orig[i].toFixed(3) : null,
-    flags: EST_FLAGS.filter(function (f) { return e & f[0]; }).map(function (f) { return f[1]; }),
+    flags: EST_FLAGS.filter(function (f) { return e & f[0]; }).map(function (f) { return f[1]; }).concat(mrRaw(i) ? ['gear from MyRules'] : []),
+    gear: D.gear[i] ? GEAR[D.gear[i]].name : null, myRules: mrRaw(i),
     from: ll(D.from, i), to: ll(D.to, i)
   };
   if (e & 16) {

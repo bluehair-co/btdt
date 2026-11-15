@@ -135,7 +135,7 @@ function tripLabel(i) { var s = D.sport && D.sport[i]; if (s && SPORTS[s]) retur
 var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" fill="#fff"/></svg></span>';
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
-function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>' : ''; }
+function simTag(i) { return (isSim(i) ? '<span class="guess sim">Simulated</span>' : '') + mrTag(i); }
 var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" fill="#fff"/></svg>';
 function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
 function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
@@ -478,24 +478,25 @@ function nearestAirport(lat, lng) {
   }
   return best;
 }
-var CT = null;
+// The towns by 1° cell. Not CT, which is the Countries over time strip's state in insights.js.
+var CITY_GRID = null;
 function buildCities() {
-  CT = {};
+  CITY_GRID = {};
   var la = 0, lo = 0;
   CITIES.split(';').forEach(function (e) {
     var f = e.split(','), n = f.length;
     la += parseInt(f[n - 2], 36); lo += parseInt(f[n - 1], 36);
     var c = { name: f.slice(0, n - 3).join(','), w: [1, 1.4, 2, 2.6][+f[n - 3]], lat: la / 100, lng: lo / 100 }, key = Math.floor(c.lat) + ',' + Math.floor(c.lng);
-    (CT[key] || (CT[key] = [])).push(c);
+    (CITY_GRID[key] || (CITY_GRID[key] = [])).push(c);
   });
 }
 // The town or city a place belongs to (within 60 km), with its distance in km.
 function nearestCity(lat, lng) {
-  if (!CT) buildCities();
+  if (!CITY_GRID) buildCities();
   // Bigger places win when a small town is only a little closer, as people name them that way.
   var best = null, bs = Infinity, bd = 0, la = Math.floor(lat), lo = Math.floor(lng);
   for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
-    var cell = CT[(la + dy) + ',' + (((lo + dx + 180) % 360 + 360) % 360 - 180)];
+    var cell = CITY_GRID[(la + dy) + ',' + (((lo + dx + 180) % 360 + 360) % 360 - 180)];
     if (cell) for (var k = 0; k < cell.length; k++) {
       var d = km([lat, lng], [cell[k].lat, cell[k].lng]);
       if (d < 60 && d / cell[k].w < bs) { bs = d / cell[k].w; bd = d; best = cell[k]; }

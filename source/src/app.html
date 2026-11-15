@@ -392,8 +392,8 @@
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
       <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
-        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed.</p>
-        <div class="seg" role="group" aria-label="Trips with a guessed type" id="guessSeg">
+        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed, and MyRules fill in gear <span class="guess inf">Inferred</span>.</p>
+        <div class="seg" role="group" aria-label="Trips with a guessed type or inferred gear" id="guessSeg">
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
       </div>
@@ -482,6 +482,10 @@
       <ul class="file-list" id="fileList" aria-labelledby="filesHead"></ul>
     </div>
     <div class="sec">
+      <h3>MyRules</h3>
+      <div id="mrCard"></div>
+    </div>
+    <div class="sec">
       <details class="help">
         <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
         <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
@@ -494,6 +498,22 @@
     </div>
   </div>
 </aside>
+
+<!-- MyRules: the rules from your .myrules.json and the ones made in the app, opened from Imported data -->
+<aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body">
+    <p class="fine">What you know that your files don't: your gear over time and your places. Gear fills in trips without recorded gear and shows as <span class="guess inf">Inferred</span>. Switch a rule off to see your data without it.</p>
+    <div id="mrBody"></div>
+  </div>
+</aside>
+<dialog class="mr-dlg" id="mrDlg" aria-labelledby="mrDlgTitle">
+  <h2 id="mrDlgTitle"></h2>
+  <p id="mrDlgText"></p>
+  <div id="mrDlgExtra"></div>
+  <div class="mr-dlg-btns" id="mrDlgBtns"></div>
+  <p class="fine" id="mrDlgNote"></p>
+</dialog>
 
 <!-- Settings -->
 <aside class="sheet right" id="settingsSheet" aria-label="Settings" role="dialog">
