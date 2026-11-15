@@ -143,7 +143,7 @@ function setData(R) {
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
-  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype };
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km };
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {
@@ -1056,8 +1056,14 @@ function importFiles(list) {
   var all = Array.prototype.slice.call(list);
   Promise.all(all.map(mrIsFile)).then(function (is) {
     var rules = all.filter(function (_, k) { return is[k]; }), rest = all.filter(function (_, k) { return !is[k]; });
-    if (rules.length) mrImport(rules);
-    if (rest.length || !rules.length) importLocationFiles(rest);
+    // A .geojson a routine names as its line is the line, not location data (see mrLineNames).
+    return Promise.all(rules.map(function (f) { return f.text().catch(function () { return ''; }); })).then(function (texts) {
+      var names = mrLineNames(texts), lines = rest.filter(function (f) { return names[f.name]; });
+      rest = rest.filter(function (f) { return !names[f.name]; });
+      var p = rules.length ? mrImport(rules) : Promise.resolve();
+      if (lines.length) p.then(function () { mrImportLines(lines); });
+      if (rest.length || !rules.length && !lines.length) importLocationFiles(rest);
+    });
   });
 }
 function importLocationFiles(list) {
