@@ -257,7 +257,7 @@ The app already shows two kinds of uncertainty: *type guessed from speed* and *S
 | Name a stay or mark it *Home* / *Work* | place, with `when` from the first to last stay there |
 | *Hide this place* | place with `hide: true` |
 
-On the map, every stay within a named place's radius counts as that one place: pins that fall inside it merge into a single pin, with one place page for all of it.
+On the map, every stay within a named place's radius counts as that one place: pins that fall inside it merge into a single pin, with one place page for all of it. The radius overrides the app's own grouping: it is checked against the places in your original data (each Google place, and each stay without one), so a place inside is always taken and one outside is always left, even if the app had grouped it with something on the other side of the line. Trips that start or end within the radius are labelled with its name.
 | Set a trip's type | correction with `start` |
 | *Same every weekday?* after correcting a commute (offered when 5+ similar trips exist) | routine |
 | *Not this trip* on an inferred value | entry in that rule's `except` |

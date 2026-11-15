@@ -105,6 +105,28 @@ function mrPlaceAt(lat, lng) {
   });
   return best;
 }
+// The places in your original data, before BT•DT groups anything: each Google place ID is one (at
+// the middle of its stays), and a stay without an ID is one on its own. A place rule takes or leaves
+// each of them whole, by where it is, whatever grouping the app did after (the 300 m places, IDs
+// within 100 m, merged IDs), so the radius you set is the only thing that decides.
+function mrUnits() {
+  if (D.mrUnits && D.mrUnits.nv === D.vs.length) return D.mrUnits;
+  var by = {}, list = [], of = new Int32Array(D.vs.length);
+  for (var v = 0; v < D.vs.length; v++) {
+    var pid = D.vpid && D.vpid[v], k = pid ? 'id:' + pid : 'v' + v, u = by[k];
+    if (!u) { u = by[k] = { key: k, k: list.length, la: 0, lo: 0, n: 0, name: '' }; list.push(u); }
+    u.la += D.vll[2 * v]; u.lo += D.vll[2 * v + 1]; u.n++;
+    if (!u.name && D.vname[v]) u.name = D.vname[v];
+    of[v] = u.k;
+  }
+  list.forEach(function (u) { u.lat = u.la / u.n; u.lng = u.lo / u.n; });
+  return (D.mrUnits = { nv: D.vs.length, list: list, of: of });
+}
+// The place rule a stay belongs to, by where its original place is.
+function mrStayPlace(v) {
+  var U = mrUnits(), u = U.list[U.of[v]];
+  return mrPlaceAt(u.lat, u.lng);
+}
 function mrNear(lat, lng, ref) {
   var r = mrById(ref);
   return r && Array.isArray(r.at) && isFinite(lat) && km([lat, lng], r.at) * 1000 <= Math.max(+r.radius_m || 100, 500);
@@ -225,7 +247,7 @@ function mrApplyPlaces() {
   mrActive('places').forEach(function (r) { MR_COUNT[r.id] = 0; });
   if (!MR || !MR.on) return;
   for (var v = 0; v < nv; v++) {
-    var r = mrPlaceAt(D.vll[2 * v], D.vll[2 * v + 1]);
+    var r = mrStayPlace(v);
     if (!r) continue;
     MR_COUNT[r.id]++;
     if (r.hide) D.vhide[v] = 1;
@@ -252,7 +274,10 @@ function mrHomePlace() {
 // Name for a place from a place rule: Home for a home, else the rule's name.
 function mrPlaceName(q) {
   if (q.ap) return '';
-  var r = mrPlaceAt(q.lat, q.lng);
+  // A place (D.places) or spot is a named place's only when it was made from its radius (tagPlaces,
+  // buildSpotKeys); anything else at those coordinates goes by its own name.
+  var r = q.mr ? mrById(q.mr) : q.key ? (q.key.slice(0, 3) === 'mr:' ? mrById(q.key.slice(3)) : null) : 'ap' in q ? null : mrPlaceAt(q.lat, q.lng);
+  if (r && (r.enabled === false || !MR || !MR.on)) r = null;
   if (!r) return '';
   // A hidden place shows as the town it is in, never by its name or address.
   if (r.hide) { var c = nearestCity(q.lat, q.lng); return c ? (c.d > 8 ? 'Near ' : '') + c.name : ccName(countryAt(q.lat, q.lng)); }
@@ -759,7 +784,7 @@ function mrPlaceDialog(key) {
 }
 function mrStaysWithin(c, m) {
   var n = 0;
-  for (var v = 0; v < D.vs.length; v++) if (km(c, [D.vll[2 * v], D.vll[2 * v + 1]]) * 1000 <= m) n++;
+  mrUnits().list.forEach(function (u) { if (km(c, [u.lat, u.lng]) * 1000 <= m) n += u.n; });
   return n;
 }
 // Define radius: a full-screen map of just the place, its radius and the stays around it, with a
@@ -781,20 +806,25 @@ function mrRadiusMap(c, rad, title, done) {
   addTiles(m);
   if (MR_RAD.layer) MR_RAD.layer.remove();
   MR_RAD.layer = L.layerGroup().addTo(m);
-  // The stays within 1.5 km, as dots: teal inside the radius, grey outside.
+  // The places in your original data within 1.5 km (see mrUnits), before any grouping: a dot each,
+  // bigger with more visits, teal inside the radius and grey outside.
   var dots = [];
-  for (var v = 0; v < D.vs.length; v++) {
-    var p = [D.vll[2 * v], D.vll[2 * v + 1]], dk = km(c, p) * 1000;
-    if (dk <= 1500) dots.push({ p: p, d: dk, m: L.circleMarker(p, { radius: 4, weight: 1, interactive: false }).addTo(MR_RAD.layer) });
-  }
+  mrUnits().list.forEach(function (u) {
+    var p = [u.lat, u.lng], dk = km(c, p) * 1000;
+    if (dk > 1500) return;
+    var mk = L.circleMarker(p, { radius: Math.min(11, 4 + 2.2 * Math.log10(u.n)), weight: 1.5 }).addTo(MR_RAD.layer);
+    mk.bindTooltip(esc(u.name || 'A place without a name') + ' · ' + fmt(u.n) + ' visit' + (u.n === 1 ? '' : 's'));
+    dots.push({ p: p, d: dk, n: u.n, m: mk });
+  });
   var circle = L.circle(c, { radius: rad, color: '#0f7c8c', weight: 3, fillOpacity: .14, interactive: false }).addTo(MR_RAD.layer);
   L.circleMarker(c, { radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(MR_RAD.layer);
   function paint() {
     var r = +$('mrRadIn').value, n = 0;
     circle.setRadius(r);
-    dots.forEach(function (x) { var inside = x.d <= r; if (inside) n++; x.m.setStyle({ color: inside ? '#0b6672' : '#8a918c', fillColor: inside ? '#0f7c8c' : '#b9bfbb', fillOpacity: inside ? .9 : .6 }); });
+    var np = 0;
+    dots.forEach(function (x) { var inside = x.d <= r; if (inside) { n += x.n; np++; } x.m.setStyle({ color: inside ? '#0b6672' : '#8a918c', fillColor: inside ? '#0f7c8c' : '#b9bfbb', fillOpacity: inside ? .9 : .6 }); });
     $('mrRadTxt').textContent = fmt(r) + ' m';
-    $('mrRadCount').textContent = fmt(n) + ' stay' + (n === 1 ? '' : 's') + ' inside';
+    $('mrRadCount').textContent = fmt(np) + ' place' + (np === 1 ? '' : 's') + ' from your data inside · ' + fmt(n) + ' stay' + (n === 1 ? '' : 's');
   }
   function fit() { m.fitBounds(circle.getBounds(), { padding: [30, 30], maxZoom: 18 }); }
   setTimeout(function () { m.invalidateSize(); fit(); }, 0);
