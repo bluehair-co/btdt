@@ -35,6 +35,7 @@ function renderImports() {
   fillIcons(list);
   $('filesHead').textContent = files.length ? 'Files (' + files.length + ')' : 'Files';
   $('fileList').closest('.sec').hidden = !files.length;
+  renderMyRules();
   if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('forgetBtn').hidden = true; $('dataRowSub').textContent = 'No data loaded'; return; }
   $('forgetBtn').hidden = !!DEMO;
   var span = niceDate(M.minD) + ' – ' + niceDate(M.maxD);
@@ -133,7 +134,7 @@ window.addEventListener('resize', function () {
   resizeT = setTimeout(function () { if (!D) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
 busy('Opening your saved trips…');
-loadSaved().then(function (R) {
+mrLoad().then(loadSaved).then(function (R) {
   busy('');
   if (R && !D) { setData(R); toast('Showing the trips saved on this device.'); }
 }).catch(function () { busy(''); });

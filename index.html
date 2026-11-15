@@ -339,6 +339,41 @@ details.help b { color: var(--fg); font-weight: 500; }
 .guess.sim { color: #1f4f8a; background: #dde9fb; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .guess.sim { color: #a9cbff; background: #14284a; } }
 :root[data-theme="dark"] .guess.sim { color: #a9cbff; background: #14284a; }
+/* MyRules: gear it filled in is Inferred, in teal */
+.guess.inf { color: #0b6672; background: #d9f1f3; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .guess.inf { color: #8fe0e8; background: #0f3439; } }
+:root[data-theme="dark"] .guess.inf { color: #8fe0e8; background: #0f3439; }
+.mr-card { border: 1px solid var(--line); border-radius: 14px; padding: 12px; background: var(--panel); }
+.mr-card-head { display: flex; align-items: center; gap: 10px; }
+.mr-card-head .file-txt { flex: 1; }
+.mr-ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: #0f7c8c; color: #fff; flex: none; }
+.mr-ic .ic { width: 20px; height: 20px; fill: currentColor; }
+.mr-export { position: relative; }
+.mr-dot { position: absolute; top: 4px; right: 5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.mr-unsaved { color: var(--accent); }
+.mr-rule { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--grid); }
+.mr-rule:last-child { border-bottom: 0; }
+.mr-rule .file-txt { flex: 1; }
+.mr-rule.off .file-txt, .mr-rule.off .mode-badge { opacity: .5; }
+.mr-rule .icon-btn { width: 32px; height: 32px; color: var(--muted); }
+.mr-rule .icon-btn .ic { width: 18px; height: 18px; }
+.mr-warn { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 8px 0; }
+.mr-trip { margin-top: 14px; }
+.mr-chg { border-left: 3px solid #0f7c8c; padding: 3px 0 3px 10px; margin: 8px 0; font-size: 13px; }
+.mr-dlg { width: min(440px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; border: 0; border-radius: 18px; padding: 20px; background: var(--panel); color: var(--fg); box-shadow: var(--shadow); }
+.mr-dlg::backdrop { background: rgba(14, 10, 34, .45); }
+.mr-dlg h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; }
+.mr-dlg > p { margin: 0 0 10px; }
+.mr-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
+.mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
+.mr-form { display: flex; flex-direction: column; gap: 10px; }
+.mr-form select, .mr-form input[type=text], .mr-form input[type=date], .mr-form input[type=number] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+.mr-form .field span { font-size: 12px; color: var(--muted); }
+.mr-opt { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 10px; cursor: pointer; }
+.mr-opt:has(input:checked) { border-color: var(--accent); }
+.mr-opt input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
+.mr-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mr-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
 
 /* Map tooltip and hover (mouse only) */
 .leaflet-container { font-family: var(--font-body); background: var(--grid); }
@@ -882,6 +917,7 @@ div.hit-row:hover { background: none; }
 .demo-msg { flex: 1; min-width: 0; margin: 0; color: rgba(255, 255, 255, .86); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .demo-msg .narrow-only { display: none; }
 @media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
+.mr-dates input { width: auto; }
 </style>
 </head>
 <body>
@@ -1279,8 +1315,8 @@ div.hit-row:hover { background: none; }
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
       <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
-        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed.</p>
-        <div class="seg" role="group" aria-label="Trips with a guessed type" id="guessSeg">
+        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed, and MyRules fill in gear <span class="guess inf">Inferred</span>.</p>
+        <div class="seg" role="group" aria-label="Trips with a guessed type or inferred gear" id="guessSeg">
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
       </div>
@@ -1369,6 +1405,10 @@ div.hit-row:hover { background: none; }
       <ul class="file-list" id="fileList" aria-labelledby="filesHead"></ul>
     </div>
     <div class="sec">
+      <h3>MyRules</h3>
+      <div id="mrCard"></div>
+    </div>
+    <div class="sec">
       <details class="help">
         <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
         <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
@@ -1381,6 +1421,22 @@ div.hit-row:hover { background: none; }
     </div>
   </div>
 </aside>
+
+<!-- MyRules: the rules from your .myrules.json and the ones made in the app, opened from Imported data -->
+<aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body">
+    <p class="fine">What you know that your files don't: your gear over time and your places. Gear fills in trips without recorded gear and shows as <span class="guess inf">Inferred</span>. Switch a rule off to see your data without it.</p>
+    <div id="mrBody"></div>
+  </div>
+</aside>
+<dialog class="mr-dlg" id="mrDlg" aria-labelledby="mrDlgTitle">
+  <h2 id="mrDlgTitle"></h2>
+  <p id="mrDlgText"></p>
+  <div id="mrDlgExtra"></div>
+  <div class="mr-dlg-btns" id="mrDlgBtns"></div>
+  <p class="fine" id="mrDlgNote"></p>
+</dialog>
 
 <!-- Settings -->
 <aside class="sheet right" id="settingsSheet" aria-label="Settings" role="dialog">
@@ -3773,7 +3829,7 @@ function tripLabel(i) { var s = D.sport && D.sport[i]; if (s && SPORTS[s]) retur
 var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" fill="#fff"/></svg></span>';
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
-function simTag(i) { return isSim(i) ? '<span class="guess sim">Simulated</span>' : ''; }
+function simTag(i) { return (isSim(i) ? '<span class="guess sim">Simulated</span>' : '') + mrTag(i); }
 var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" fill="#fff"/></svg>';
 function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
 function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
@@ -4353,8 +4409,8 @@ function setData(R) {
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
   if (!isFinite(minD)) minD = maxD = Math.floor(Date.now() / 864e5);
   buildGear();
-  var anyGuess = false;
-  for (i = 0; i < n && !anyGuess; i++) if (D.est[i] & 4) anyGuess = true;
+  mrApplyPlaces();
+  var anyGuess = mrAnyGuess();
   M = {
     years: Object.keys(yc).map(Number).sort(function (a, b) { return a - b; }),
     modes: MODES.filter(function (m) { return present[m]; }),
@@ -4412,11 +4468,28 @@ function buildGear() {
     if (s.info && !x.info) x.info = s.info;
     D.gear[i] = g; x.n++; x.modes[m] = (x.modes[m] || 0) + 1;
   }
+  // Gear from MyRules (see mrApplyGear): a period's gear joins Strava's when it names it, else it is
+  // a gear of its own, with the kind the rule gives.
+  var before = new Uint16Array(D.gear);
+  mrApplyGear(by, function (name, kind, mode) {
+    var g = by[name];
+    if (!g) { g = by[name] = GEAR.length; GEAR.push({ name: name, n: 0, modes: {}, info: null, rule: true }); }
+    if (kind && !GEAR[g].ruleKind) GEAR[g].ruleKind = kind === 'ebike' ? 'bike' : kind;
+    if (mode && !GEAR[g].ruleMode) GEAR[g].ruleMode = mode;
+    return g;
+  });
+  for (i = 0; i < n; i++) {
+    if (D.gear[i] === before[i]) continue;
+    if (before[i]) GEAR[before[i]].n--; else GEAR[0].n--;
+    var y = GEAR[D.gear[i]], mm = MODES[D.mode[i]];
+    y.n++; y.modes[mm] = (y.modes[mm] || 0) + 1;
+  }
   for (var k = 1; k < GEAR.length; k++) {
     var x_ = GEAR[k], best = null;
     for (var mm in x_.modes) if (!best || x_.modes[mm] > x_.modes[best]) best = mm;
+    if (!best) best = x_.ruleMode || 'CYCLING';
     x_.mode = best;
-    var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.info && x_.info.kind;
+    var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.ruleKind || x_.info && x_.info.kind;
     if (kind !== 'shoe' && HALFBIKE_RE.test(words)) kind = 'halfbike';
     else if (kind !== 'shoe' && STRIDA_RE.test(words)) kind = 'strida';
     else if (kind !== 'shoe' && CARGO_RE.test(words)) kind = 'cargo';
@@ -4549,8 +4622,8 @@ function apply() {
   for (k = 0; k < ord.length; k++) {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
-    if (F.guess === 'no' && D.est[i] & 4) continue;
-    if (F.guess === 'only' && !(D.est[i] & 4)) continue;
+    // Guessed types and gear MyRules filled in go together.
+    if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || D.mrGear[i])) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
     // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
     if (F.src !== 'timeline' && isDup(i)) continue;
@@ -4571,6 +4644,8 @@ function apply() {
     i = D.vorder[k];
     if (!F.years.has(D.vyear[i]) || !F.months.has(D.vmonth[i]) || !F.dows.has(D.vdow[i]) || !dayOk(D.vday[i])) continue;
     if (!allCC && !F.countries.has(D.vcc[i])) continue;
+    // Stays at a place MyRules hides.
+    if (D.vhide && D.vhide[i]) continue;
     outV.push(i);
   }
   selV = Int32Array.from(outV);
@@ -4887,6 +4962,8 @@ function placeLabel(id) {
   if (id < 0) return 'Unknown place';
   var q = D.places[id];
   if (q.label) return q.label;
+  var mrName = mrPlaceName(q);
+  if (mrName) return (q.label = mrName);
   if (q.ap) q.label = q.ap.city + ' (' + q.ap.code + ')';
   else if (q.name) q.label = q.name;
   else {
@@ -4905,6 +4982,9 @@ function tripRoute(i) {
 function findHome() {
   if (D.home !== undefined) return D.home;
   needPlaces();
+  // Home from MyRules wins over the guess.
+  var mh = mrHomePlace();
+  if (mh != null && mh >= 0) { D.home = mh; D.homeHow = 'your MyRules'; return mh; }
   var score = {}, best = -1, bs = 0, v, i, how = '';
   {
     for (v = 0; v < D.vs.length; v++) {
@@ -5197,7 +5277,16 @@ function runParser(files) {
     }
   });
 }
+// MyRules files are picked out first (see mrIsFile) and loaded on their own; the rest are location files.
 function importFiles(list) {
+  var all = Array.prototype.slice.call(list);
+  Promise.all(all.map(mrIsFile)).then(function (is) {
+    var rules = all.filter(function (_, k) { return is[k]; }), rest = all.filter(function (_, k) { return !is[k]; });
+    if (rules.length) mrImport(rules);
+    if (rest.length || !rules.length) importLocationFiles(rest);
+  });
+}
+function importLocationFiles(list) {
   var files = Array.prototype.filter.call(list, function (f) { return isLocationName(f.name); });
   if (!files.length) { setStatus('No location files found there. BT•DT reads Google Timeline and Dawarich (.json), Strava and Garmin exports (.zip), and .gpx, .kml, .kmz, .geojson, .tcx and .fit files.', true); return; }
   setStatus('');
@@ -5287,6 +5376,8 @@ $('demoBtn').addEventListener('click', function () {
     PREFS.cc = true;
     syncLayersUI();
     RAW = null;
+    // Your own MyRules don't apply to the made-up person; a file loaded during the demo does, unsaved.
+    MR = null;
     setData(merge(null, r.results));
     // The demo opens on all of its data, the whole map in view.
     F.dm = 'all';
@@ -5348,11 +5439,16 @@ function loadSaved() {
     });
   });
 }
+// Remove from this device: MyRules changes not exported are offered for download first, then it asks.
 $('forgetBtn').addEventListener('click', function () {
-  var del = function (s) { return s.delete('trips'); };
+  if (MR && MR.changes.length) mrBeforeLosing('Remove', forgetAll);
+  else mrConfirm('Remove', 0, forgetAll);
+});
+function forgetAll() {
+  var del = function (s) { s.delete('myrules'); return s.delete('trips'); };
   Promise.all([withStore('btdt', 'readwrite', del).catch(function () {}), withStore('timeliner', 'readwrite', del).catch(function () {}), withStore('footprint', 'readwrite', del).catch(function () {})])
     .then(function () { location.reload(); });
-});
+}
 
 // ---------- trips on the map ----------
 var map = null, pinLayer = null, speedLayer = null, sqLayer = null, pathLayer = null, renderer = null, ccLayer = null, heatLayer = null, hlLayer = null, posMarker = null, curLine = null;
@@ -5982,7 +6078,7 @@ function tripRows(i) {
     ['Average speed', ms > 0 ? speed(k / (ms / 36e5)) : 'Unknown'],
     ['CO₂', co2s(tripKg(i))],
     tripHr(i) ? ['Heart rate', hrAvgMax(tripHr(i))] : null,
-    D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + '</span>'] : null,
+    D.gear[i] ? ['Gear', '<span class="gear-kv"><span style="color:' + modeColor(M.gear[D.gear[i]].mode) + ';display:flex">' + icon(gearIcon(D.gear[i])) + '</span>' + esc(M.gear[D.gear[i]].name) + mrTag(i) + '</span>'] : null,
     ['GPS points', m === 'FLYING' ? 'None in the air' : fmt(nGps)]
   ].filter(Boolean);
   var notes = [];
@@ -6235,7 +6331,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
     (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
     (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
@@ -6254,6 +6350,11 @@ function openTrip(i, fromList) {
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
   [16, 'recorded activity'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
   [JUMPS, 'bad GPS points left out']];
+// What MyRules filled in, in Raw data and the exports.
+function mrRaw(i) {
+  var g = D.mrGear && D.mrGear[i];
+  return g ? { gear: GEAR[g.gear].name, rule: g.rule } : null;
+}
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
   function ll(a, k) { return isFinite(a[2 * k]) ? [+a[2 * k].toFixed(6), +a[2 * k + 1].toFixed(6)] : null; }
@@ -6263,7 +6364,8 @@ function rawTrip(i) {
     sport: D.sport && D.sport[i] ? SPORTS[D.sport[i]][0] : null, stravaType: D.stype && D.stype[i] || null,
     start: iso(D.start[i]), end: iso(D.end[i]), utcOffsetMin: D.off[i] === NO_OFF ? null : D.off[i], localDay: isoDay(D.day[i]),
     km: +D.km[i].toFixed(3), fileKm: D.orig[i] > 0 ? +D.orig[i].toFixed(3) : null,
-    flags: EST_FLAGS.filter(function (f) { return e & f[0]; }).map(function (f) { return f[1]; }),
+    flags: EST_FLAGS.filter(function (f) { return e & f[0]; }).map(function (f) { return f[1]; }).concat(mrRaw(i) ? ['gear from MyRules'] : []),
+    gear: D.gear[i] ? GEAR[D.gear[i]].name : null, myRules: mrRaw(i),
     from: ll(D.from, i), to: ll(D.to, i)
   };
   if (e & 16) {
@@ -9158,6 +9260,566 @@ function tlClose() {
 $('tlMapClose').addEventListener('click', tlClose);
 $('tlMapInfo').addEventListener('click', function (ev) { var b = ev.target.closest('[data-details]'); if (b) openTrip(+b.dataset.details); });
 
+// ---------- MyRules ----------
+// A MyRules file (*.myrules.json) holds what only you know: which bike you rode when, where home was.
+// It is applied on top of the location files, and every value it fills in is marked Inferred.
+// The format is in docs/myrules.md; this version applies gear periods, places, and gear set on one trip.
+// Routines and other corrections are kept in the file (and exported again) but not applied yet.
+// MR is null until a file is loaded or a rule is made in the app. It is saved in this browser's
+// IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
+// file was last loaded or exported, so nothing is lost by removing it from the device.
+var MR = null;
+var MR_SECTIONS = ['places', 'gear', 'routines', 'corrections'];
+var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes', other: 'Other' };
+var MR_COUNT = {};   // trips (gear) or stays (places) each rule changed, by id
+var MR_AMB = 0;      // trips more than one gear period fits equally well, which get none
+
+function mrList(sec) { return MR && MR.doc[sec] ? MR.doc[sec].filter(function (r) { return r && typeof r === 'object'; }) : []; }
+function mrActive(sec) { return MR && MR.on ? mrList(sec).filter(function (r) { return r.id && r.enabled !== false; }) : []; }
+function mrById(id) {
+  id = String(id || '').replace(/^@/, '');
+  for (var s = 0; s < MR_SECTIONS.length; s++) { var L = mrList(MR_SECTIONS[s]); for (var k = 0; k < L.length; k++) if (L[k].id === id) return L[k]; }
+  return null;
+}
+function mrNewId(name) {
+  var base = String(name || 'rule').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'rule', id = base, k = 2;
+  while (mrById(id)) id = base + '-' + k++;
+  return id;
+}
+function mrDayNum(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5) : null; }
+function mrMin(s) { var m = /^(\d{2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
+// A trip's local start: its day number, day of the week and minutes after midnight.
+function mrLocalMin(i) {
+  var off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(D.start[i]).getTimezoneOffset();
+  var t = D.start[i] + off * 60000;
+  return Math.floor((t - Math.floor(t / 864e5) * 864e5) / 60000);
+}
+// The local start of a trip as ISO 8601 with its UTC offset, to the minute: how rules point at one trip.
+function mrIsoLocal(i) {
+  var off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(D.start[i]).getTimezoneOffset();
+  var s = new Date(D.start[i] + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
+  return s + (off < 0 ? '-' : '+') + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60);
+}
+// A rule's when, ready to test trips against.
+function mrWhen(w) {
+  w = w || {};
+  var o = { from: mrDayNum(w.from), to: mrDayNum(w.to), days: null, t0: null, t1: null, skip: [] };
+  if (Array.isArray(w.days) && w.days.length) { o.days = {}; w.days.forEach(function (d) { var k = MR_DOW.indexOf(String(d).toLowerCase().slice(0, 3)); if (k >= 0) o.days[k] = 1; }); }
+  if (Array.isArray(w.time) && w.time.length === 2) { o.t0 = mrMin(w.time[0]); o.t1 = mrMin(w.time[1]); }
+  (Array.isArray(w.skip) ? w.skip : []).forEach(function (s) { if (Array.isArray(s)) o.skip.push([mrDayNum(s[0]), mrDayNum(s[1])]); });
+  // How long it lasts, for choosing between two rules that both fit: the shorter one wins.
+  o.len = o.from != null && o.to != null ? o.to - o.from : 1e9;
+  return o;
+}
+function mrWhenOk(w, i) {
+  var d = D.day[i];
+  if (w.from != null && d < w.from) return false;
+  if (w.to != null && d > w.to) return false;
+  if (w.days && !w.days[D.dow[i]]) return false;
+  if (w.t0 != null && w.t1 != null) {
+    var m = mrLocalMin(i);
+    if (w.t0 <= w.t1 ? m < w.t0 || m > w.t1 : m < w.t0 && m > w.t1) return false;
+  }
+  for (var k = 0; k < w.skip.length; k++) if ((w.skip[k][0] == null || d >= w.skip[k][0]) && (w.skip[k][1] == null || d <= w.skip[k][1])) return false;
+  return true;
+}
+// The trips a TripRef points at. start matches the one trip starting within 3 minutes of it (the
+// type it had, when given, picks between two); day every trip that day; span every trip starting in it.
+function mrFirstAfter(ms) {
+  var o = D.order, lo = 0, hi = o.length;
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (D.start[o[mid]] < ms) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+function mrRefTrips(ref) {
+  var out = [], k, i, o = D.order;
+  if (!ref || typeof ref !== 'object') return out;
+  if (ref.start) {
+    var t = Date.parse(ref.start);
+    if (!isFinite(t)) return out;
+    for (k = mrFirstAfter(t - 3 * 60000); k < o.length && D.start[o[k]] <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
+    if (out.length > 1 && ref.mode) out = out.filter(function (j) { return MODES[D.mode[j]] === ref.mode; });
+    return out.length === 1 ? out : [];
+  }
+  if (ref.span && ref.span.length === 2) {
+    var a = Date.parse(ref.span[0]), b = Date.parse(ref.span[1]);
+    for (k = mrFirstAfter(a); k < o.length && D.start[o[k]] <= b; k++) if (!isDup(o[k])) out.push(o[k]);
+    return out;
+  }
+  var d = mrDayNum(ref.day);
+  if (d != null) for (i = 0; i < D.day.length; i++) if (D.day[i] === d && !isDup(i)) out.push(i);
+  return out;
+}
+function mrExcept(r) {
+  var s = {};
+  (Array.isArray(r.except) ? r.except : []).forEach(function (ref) { mrRefTrips(ref).forEach(function (i) { s[i] = 1; }); });
+  return s;
+}
+// The place rules with a position, and the one a point is in (the nearest, if several).
+function mrPlaceAt(lat, lng) {
+  var best = null, bd = Infinity;
+  mrActive('places').forEach(function (r) {
+    if (!Array.isArray(r.at) || !isFinite(lat)) return;
+    var d = km([lat, lng], r.at) * 1000;
+    if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; }
+  });
+  return best;
+}
+function mrNear(lat, lng, ref) {
+  var r = mrById(ref);
+  return r && Array.isArray(r.at) && isFinite(lat) && km([lat, lng], r.at) * 1000 <= Math.max(+r.radius_m || 100, 500);
+}
+
+// Gear: called by buildGear once recorded gear is in. byName is buildGear's gear index by name.
+// A gear set on one trip (a correction) wins; then gear periods fill in the trips of their type
+// with no gear of their own. Recorded gear is never replaced by a period. Of the periods that fit
+// a trip, one with a match beats one without, then the shorter one wins; a tie leaves the trip
+// without gear (a wrong guess is worse than none).
+function mrApplyGear(byName, addGear) {
+  var n = D.day.length, i, k;
+  D.mrGear = []; D.mrAmb = []; MR_COUNT = {}; MR_AMB = 0;
+  if (!MR || !MR.on) return;
+  var periods = mrActive('gear').filter(function (r) { return MODE_IDX[r.mode] != null; }).map(function (r) {
+    var m = r.match || {};
+    return { r: r, mi: MODE_IDX[r.mode], w: mrWhen(r.when), ex: mrExcept(r), m: m, level: Object.keys(m).length ? 0 : 1 };
+  });
+  function gearOf(r) { return addGear(r.strava_name && byName[r.strava_name] ? r.strava_name : r.name || r.id, r.kind, r.mode); }
+  function fits(p, i) {
+    if (D.mode[i] !== p.mi || p.ex[i] || !mrWhenOk(p.w, i)) return false;
+    var m = p.m;
+    if (m.min_km != null && D.km[i] < m.min_km) return false;
+    if (m.max_km != null && D.km[i] > m.max_km) return false;
+    if (Array.isArray(m.sports) && m.sports.length && !(D.sport[i] && m.sports.indexOf(SPORTS[D.sport[i]][1] || SPORTS[D.sport[i]][0]) >= 0)) return false;
+    if (m.weekdays_only && (D.dow[i] === 0 || D.dow[i] === 6)) return false;
+    if (m.from && !mrNear(D.from[2 * i], D.from[2 * i + 1], m.from) && !mrNear(D.to[2 * i], D.to[2 * i + 1], m.from)) return false;
+    if (m.to && !mrNear(D.to[2 * i], D.to[2 * i + 1], m.to) && !mrNear(D.from[2 * i], D.from[2 * i + 1], m.to)) return false;
+    return true;
+  }
+  // Gear set on one trip.
+  mrActive('corrections').forEach(function (c) {
+    if (!c.then || !c.then.gear || !c.trip || c.trip.day || c.trip.span) return;
+    var ref = String(c.then.gear), r = ref.charAt(0) === '@' ? mrById(ref) : null;
+    if (ref.charAt(0) === '@' && (!r || r.enabled === false)) return;
+    var ex = mrExcept(c);
+    mrRefTrips(c.trip).forEach(function (i) {
+      if (ex[i]) return;
+      var g = r ? gearOf(r) : addGear(ref, null, MODES[D.mode[i]]);
+      D.gear[i] = g; D.mrGear[i] = { rule: c.id, gear: g };
+      MR_COUNT[c.id] = (MR_COUNT[c.id] || 0) + 1;
+    });
+  });
+  if (!periods.length) return;
+  for (i = 0; i < n; i++) {
+    if (D.gear[i] || isDup(i)) continue;
+    var best = [];
+    for (k = 0; k < periods.length; k++) {
+      var p = periods[k];
+      if (!fits(p, i)) continue;
+      if (!best.length || p.level < best[0].level || p.level === best[0].level && p.w.len < best[0].w.len) best = [p];
+      else if (p.level === best[0].level && p.w.len === best[0].w.len) best.push(p);
+    }
+    if (!best.length) continue;
+    if (best.length > 1) { D.mrAmb[i] = best.map(function (p) { return p.r.id; }); MR_AMB++; continue; }
+    D.gear[i] = gearOf(best[0].r);
+    D.mrGear[i] = { rule: best[0].r.id, gear: D.gear[i] };
+    MR_COUNT[best[0].r.id] = (MR_COUNT[best[0].r.id] || 0) + 1;
+  }
+}
+function mrInferred(i) { return !!(D.mrGear && D.mrGear[i]); }
+function mrTag(i) { return D && mrInferred(i) ? '<span class="guess inf">Inferred</span>' : ''; }
+
+// Places: hidden places leave their stays out of the map's pins and heatmap and the places in
+// Insights (trips to and from them still count); home from MyRules replaces the app's guess.
+function mrApplyPlaces() {
+  var nv = D.vs.length;
+  D.vhide = new Uint8Array(nv);
+  mrActive('places').forEach(function (r) { MR_COUNT[r.id] = 0; });
+  if (!MR || !MR.on) return;
+  for (var v = 0; v < nv; v++) {
+    var r = mrPlaceAt(D.vll[2 * v], D.vll[2 * v + 1]);
+    if (!r) continue;
+    MR_COUNT[r.id]++;
+    if (r.hide) D.vhide[v] = 1;
+  }
+}
+// The home rule that counts: the one that runs latest (open-ended wins).
+function mrHomeRule() {
+  var best = null, bt = -Infinity;
+  mrActive('places').forEach(function (r) {
+    if (r.role !== 'home' || !Array.isArray(r.at)) return;
+    var t = r.when && r.when.to ? mrDayNum(r.when.to) : Infinity;
+    if (t >= bt) { bt = t; best = r; }
+  });
+  return best;
+}
+// The place D.places has for the home rule, for findHome.
+function mrHomePlace() {
+  var r = mrHomeRule();
+  if (!r) return null;
+  var best = -1, bd = Math.max(+r.radius_m || 100, 300) / 1000;
+  D.places.forEach(function (q, k) { if (q.ap) return; var d = km([q.lat, q.lng], r.at); if (d <= bd) { bd = d; best = k; } });
+  return best;
+}
+// Name for a place from a place rule: Home for a home, else the rule's name.
+function mrPlaceName(q) {
+  if (q.ap) return '';
+  var r = mrPlaceAt(q.lat, q.lng);
+  if (!r) return '';
+  // A hidden place shows as the town it is in, never by its name or address.
+  if (r.hide) { var c = nearestCity(q.lat, q.lng); return c ? (c.d > 8 ? 'Near ' : '') + c.name : ccName(countryAt(q.lat, q.lng)); }
+  return r.role === 'home' ? 'Home' : r.name || r.role || '';
+}
+
+// Applies the rules again after a change, keeping the filters (gear chips are rebuilt, all on).
+function mrReapply() {
+  if (!D) { renderImports(); return; }
+  buildGear();
+  M.gear = GEAR; M.gearMode = GEAR_MODE;
+  D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
+  mrApplyPlaces();
+  M.anyGuess = mrAnyGuess();
+  F.gear = new Set(gearIds());
+  buildFilterUI();
+  apply();
+  renderSettings();
+  if (openId === 'mrSheet') mrRenderRules();
+}
+function mrAnyGuess() {
+  for (var i = 0; i < D.day.length; i++) if (D.est[i] & 4 || mrInferred(i)) return true;
+  return false;
+}
+
+// ---------- reading, saving and exporting ----------
+function mrSave() {
+  if (DEMO) return Promise.resolve();
+  if (!MR) return withStore('btdt', 'readwrite', function (s) { return s.delete('myrules'); }).catch(function () {});
+  return withStore('btdt', 'readwrite', function (s) { return s.put({ doc: MR.doc, name: MR.name, on: MR.on, changes: MR.changes, exported: MR.exported }, 'myrules'); }).catch(function () {});
+}
+function mrLoad() {
+  return withStore('btdt', 'readonly', function (s) { return s.get('myrules'); }).then(function (x) {
+    if (x && x.doc) MR = { doc: x.doc, name: x.name || 'my.myrules.json', on: x.on !== false, changes: x.changes || [], exported: x.exported || 0 };
+  }).catch(function () {});
+}
+// Something changed in the app: kept with a short description, until the next export.
+function mrChange(text) {
+  MR.changes.push({ t: Date.now(), text: text });
+  MR.doc.about = Object.assign({}, MR.doc.about, { updated: new Date().toISOString(), generator: 'BT•DT' });
+  mrSave();
+  mrReapply();
+}
+function mrEnsure() {
+  if (!MR) MR = { doc: { $schema: 'https://bluehair-co.github.io/btdt/schema/myrules-0.1.json', myrules: '0.1', about: { generator: 'BT•DT' } }, name: 'my.myrules.json', on: true, changes: [], exported: 0 };
+  return MR;
+}
+function mrExport() {
+  if (!MR) return;
+  saveFile(MR.name.replace(/(\.myrules)?\.json$/i, '') + '.myrules.json', [JSON.stringify(MR.doc, null, 2) + '\n'], 'application/json');
+  MR.changes = []; MR.exported = Date.now();
+  mrSave(); renderImports();
+  if (openId === 'mrSheet') mrRenderRules();
+}
+// Whether a file is a MyRules file: by its name, or a small .json whose start says "myrules".
+function mrIsFile(f) {
+  if (/\.myrules\.json$/i.test(f.name)) return Promise.resolve(true);
+  if (!/\.json$/i.test(f.name) || f.size > 5e6) return Promise.resolve(false);
+  return f.slice(0, 600).text().then(function (t) { return /^\s*\{[\s\S]*"myrules"\s*:/.test(t) && !/semanticSegments|timelineObjects|locations/.test(t); }).catch(function () { return false; });
+}
+function mrParse(text) {
+  var doc = JSON.parse(text);
+  if (!doc || typeof doc !== 'object' || typeof doc.myrules !== 'string') throw new Error('this isn\'t a MyRules file');
+  if (doc.myrules.split('.')[0] !== '0') throw new Error('it is MyRules version ' + doc.myrules + ', which this version of BT•DT can\'t read yet');
+  MR_SECTIONS.forEach(function (s) { if (doc[s] != null && !Array.isArray(doc[s])) throw new Error('"' + s + '" should be a list'); });
+  return doc;
+}
+// Loads MyRules files picked with the location files. With rules already here, asks whether to
+// merge (same id replaced) or replace; replacing unsaved changes first offers to download them.
+function mrImport(files) {
+  return Promise.all(files.map(function (f) { return f.text().then(function (t) { return { name: f.name, doc: mrParse(t) }; }); })).then(function (got) {
+    var doc = got[0].doc;
+    got.slice(1).forEach(function (g) { doc = mrMergeDocs(doc, g.doc); });
+    var name = got[got.length - 1].name;
+    if (!MR) { mrUse(doc, name, false); return; }
+    mrAsk({
+      title: 'Add to your MyRules?',
+      text: esc(name) + ' has ' + mrCount(doc) + '. You already have ' + mrCount(MR.doc) + '.',
+      buttons: [
+        ['Merge', 'primary', function () { mrUse(mrMergeDocs(MR.doc, doc), MR.name, true); }],
+        ['Replace', '', function () { mrBeforeLosing('Replace', function () { mrUse(doc, name, false); }); }],
+        ['Cancel', 'quiet', null]
+      ],
+      note: 'Merge keeps your rules and adds the new ones; a rule with the same id is replaced.'
+    });
+  }).catch(function (e) { setStatus('MyRules: ' + (e && e.message || e), true); });
+}
+function mrUse(doc, name, changed) {
+  var had = MR && MR.changes || [];
+  MR = { doc: doc, name: name, on: true, changes: changed ? had.concat([{ t: Date.now(), text: 'Merged ' + name }]) : [], exported: changed && MR ? MR.exported : 0 };
+  mrSave();
+  mrReapply();
+  setStatus('MyRules: loaded ' + mrCount(doc) + (D ? '.' : '. Load your location files to apply them.'));
+}
+function mrMergeDocs(a, b) {
+  var out = JSON.parse(JSON.stringify(a));
+  MR_SECTIONS.forEach(function (s) {
+    (b[s] || []).forEach(function (r) {
+      var L = out[s] || (out[s] = []), k = L.findIndex(function (x) { return x && x.id === r.id; });
+      if (k >= 0) L[k] = r; else L.push(r);
+    });
+  });
+  return out;
+}
+function mrCount(doc) {
+  var n = 0;
+  MR_SECTIONS.forEach(function (s) { n += (doc[s] || []).length; });
+  return n + ' rule' + (n === 1 ? '' : 's');
+}
+
+// ---------- dialogs ----------
+// One small dialog for the questions MyRules asks: a title, text, a few buttons.
+function mrAsk(o) {
+  var d = $('mrDlg');
+  $('mrDlgTitle').textContent = o.title;
+  $('mrDlgText').innerHTML = o.text;
+  $('mrDlgExtra').innerHTML = o.extra || '';
+  $('mrDlgNote').textContent = o.note || '';
+  var bt = $('mrDlgBtns');
+  bt.textContent = '';
+  o.buttons.forEach(function (b) {
+    var el = document.createElement('button');
+    el.type = 'button'; el.className = 'btn' + (b[1] ? ' ' + b[1] : ''); el.innerHTML = b[0];
+    el.addEventListener('click', function () { if (b[3] !== 'stay') d.close(); if (b[2]) b[2](el); });
+    bt.appendChild(el);
+  });
+  if (!d.open) d.showModal();
+  if (o.after) o.after(d);
+}
+// Before something that drops the rules here (removing everything, replacing them with another
+// file): when there are changes made in the app that weren't exported, offer to download them first.
+// what is the action ('Remove' or 'Replace'), go does it after the usual confirmation.
+function mrBeforeLosing(what, go) {
+  var n = MR && MR.changes.length || 0;
+  if (!n) { go(); return; }
+  var many = n + ' change' + (n === 1 ? '' : 's');
+  mrAsk({
+    title: 'Save your MyRules first?',
+    text: 'Your MyRules have <b>' + many + '</b> made in the app that are only on this device. ' + (what === 'Remove' ? 'Removing your data deletes them too.' : 'Replacing your rules deletes them.'),
+    extra: '<button type="button" class="btn quiet" id="mrSeeChanges" aria-expanded="false">See the ' + many + '</button><ul class="mr-changes" id="mrChangeList" hidden>' +
+      MR.changes.slice().reverse().map(function (c) { return '<li>' + esc(c.text) + ' <span class="fine">' + niceDate(Math.floor((c.t - new Date(c.t).getTimezoneOffset() * 60000) / 864e5)) + '</span></li>'; }).join('') + '</ul>',
+    buttons: [
+      [icon('upload') + 'Download MyRules', 'primary', function () { mrExport(); mrConfirm(what, 0, go); }],
+      [what === 'Remove' ? 'Remove without saving' : 'Replace without saving', 'danger', function () { mrConfirm(what, n, go); }],
+      ['Cancel', 'quiet', null]
+    ],
+    note: 'After the download starts you\'ll be asked to confirm.',
+    after: function () {
+      $('mrSeeChanges').addEventListener('click', function () {
+        var l = $('mrChangeList'); l.hidden = !l.hidden; this.setAttribute('aria-expanded', l.hidden ? 'false' : 'true');
+        this.textContent = (l.hidden ? 'See the ' : 'Hide the ') + many;
+      });
+    }
+  });
+}
+function mrConfirm(what, lost, go) {
+  // Opened after the first dialog closes.
+  setTimeout(function () {
+    var r = MR ? mrCount(MR.doc) : '';
+    mrAsk({
+      title: what === 'Remove' ? 'Remove your data from this device?' : 'Replace your MyRules?',
+      text: what === 'Remove' ? 'Your trips, stays' + (MR ? ' and MyRules (' + r + ')' : '') + ' will be deleted from this browser. Your original files are not affected.' : 'Your ' + r + ' will be replaced by the new file.',
+      buttons: [[(what === 'Remove' ? 'Remove' : 'Replace') + (lost ? ', and lose ' + lost + ' change' + (lost === 1 ? '' : 's') : ''), 'danger', go], ['Cancel', 'quiet', null]],
+      note: lost ? '' : MR && MR.exported ? 'Your exported MyRules file has all of your rules.' : ''
+    });
+  }, 0);
+}
+
+// ---------- Imported data: the MyRules card ----------
+function renderMyRules() {
+  var el = $('mrCard');
+  if (!el) return;
+  if (!MR) {
+    el.innerHTML = '<p class="fine">Add what only you know, like which bike you rode when or where home was. BT•DT fills in what your files leave out and marks it <span class="guess inf">Inferred</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear in its trip details to start.</p>';
+    return;
+  }
+  var nGear = 0, n = MR.changes.length;
+  for (var k in MR_COUNT) { var r = mrById(k); if (r && !Array.isArray(r.at)) nGear += MR_COUNT[k]; }
+  el.innerHTML = '<div class="mr-card"><div class="mr-card-head"><span class="mr-ic">' + icon('flag') + '</span><span class="file-txt"><b>' + esc(MR.name) + '</b><small>' + mrCount(MR.doc) + '</small></span>' +
+    '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply MyRules"' + (MR.on ? ' checked' : '') + '></div>' +
+    '<p class="fine" style="margin:8px 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button type="button" class="btn" id="mrOpen">Open rules</button>' +
+    '<button type="button" class="btn mr-export" id="mrExportBtn">' + icon('upload') + 'Export' + (n ? '<i class="mr-dot"></i>' : '') + '</button>' +
+    '<span class="fine mr-unsaved">' + (n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
+    '<p class="fine" style="margin-top:8px">The exported file includes your places, such as home.</p></div>';
+  $('mrOn').addEventListener('change', function () { MR.on = this.checked; mrSave(); mrReapply(); });
+  $('mrOpen').addEventListener('click', function () { mrRenderRules(); openSheet('mrSheet'); });
+  $('mrExportBtn').addEventListener('click', mrExport);
+}
+
+// ---------- the rules sheet ----------
+function mrWhenText(w) {
+  if (!w) return 'Always';
+  var f = mrDayNum(w.from), t = mrDayNum(w.to), s;
+  s = f != null && t != null ? niceDate(f) + ' – ' + niceDate(t) : f != null ? 'Since ' + niceDate(f) : t != null ? 'Until ' + niceDate(t) : 'Always';
+  if (Array.isArray(w.days) && w.days.length && w.days.length < 7) s += ' · ' + w.days.map(function (d) { var k = MR_DOW.indexOf(String(d).slice(0, 3)); return k >= 0 ? DOW[k] : d; }).join(', ');
+  if (Array.isArray(w.time)) s += ' · ' + w.time.join('–');
+  return s;
+}
+function mrRuleRow(sec, r, title, sub, ic, color, count) {
+  var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
+  return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt"><b>' + esc(title) + '</b><small>' + sub +
+    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + '</small></span>' +
+    (count != null ? '<span class="num fine">' + fmt(count) + '</span>' : '') +
+    '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
+    '<button type="button" class="icon-btn" data-mr-del="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Delete ' + esc(title) + '">' + icon('close') + '</button></div>';
+}
+function mrRenderRules() {
+  var h = '';
+  if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p>'; return; }
+  if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off in Imported data.</p>';
+  if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
+  var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines');
+  if (gear.length) h += '<div class="sec"><h3>Gear</h3>' + gear.map(function (r) {
+    var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
+    if (m.max_km != null) bits.push('under ' + dist(m.max_km));
+    if (m.min_km != null) bits.push('over ' + dist(m.min_km));
+    if (r.strava_name) bits.push('same as “' + esc(r.strava_name) + '”');
+    var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
+    return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR_COUNT[r.id] || 0);
+  }).join('') + '</div>';
+  if (places.length) h += '<div class="sec"><h3>Places</h3>' + places.map(function (r) {
+    var sub = [r.role ? r.role.charAt(0).toUpperCase() + r.role.slice(1) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
+    return mrRuleRow('places', r, r.name || r.id, sub, r.role === 'home' ? 'home' : r.hide ? 'shield' : 'pin', r.role === 'home' ? '#008300' : '#9aa49d', null);
+  }).join('') + '</div>';
+  if (cor.length) h += '<div class="sec"><h3>Corrections</h3>' + cor.map(function (c) {
+    var t = c.trip || {}, g = c.then && c.then.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null;
+    var when = t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
+    var sub = g ? 'Gear: ' + esc(gr ? gr.name || gr.id : g) : 'Not applied in this version of BT•DT';
+    return mrRuleRow('corrections', c, when || c.id, sub, g ? 'CYCLING' : 'info', g ? modeColor('CYCLING') : '#9aa49d', g ? MR_COUNT[c.id] || 0 : null);
+  }).join('') + '</div>';
+  if (rout.length) h += '<div class="sec"><h3>Routines</h3><p class="fine" style="margin-bottom:6px">Kept in your file and exported again, but not applied in this version of BT•DT yet.</p>' +
+    rout.map(function (r) { return mrRuleRow('routines', r, r.name || r.id, mrWhenText(r.when), r.then && r.then.mode || 'OTHER', '#9aa49d', null); }).join('') + '</div>';
+  if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear in its trip details to make one.</p>';
+  $('mrBody').innerHTML = h;
+}
+$('mrBody').addEventListener('change', function (ev) {
+  var id = ev.target.dataset.mrOn;
+  if (!id) return;
+  var r = mrById(id);
+  if (!r) return;
+  if (ev.target.checked) delete r.enabled; else r.enabled = false;
+  mrChange((ev.target.checked ? 'Switched on: ' : 'Switched off: ') + (r.name || r.id));
+});
+$('mrBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-mr-del]');
+  if (!b) return;
+  var p = b.dataset.mrDel.split(':'), sec = p[0], id = p.slice(1).join(':'), r = mrById(id);
+  mrAsk({
+    title: 'Delete this rule?', text: esc(r && (r.name || r.id) || id) + ' will be removed from your MyRules.',
+    buttons: [['Delete', 'danger', function () {
+      MR.doc[sec] = mrList(sec).filter(function (x) { return x.id !== id; });
+      mrChange('Deleted: ' + (r && (r.name || r.id) || id));
+    }], ['Cancel', 'quiet', null]]
+  });
+});
+$('mrBack').addEventListener('click', function () { openSheet('importsSheet'); });
+$('mrSheetExport').addEventListener('click', mrExport);
+
+// ---------- trip details ----------
+// What MyRules did to a trip, with Not this trip; and Set gear for rides, runs and walks.
+var MR_GEAR_MODES = { CYCLING: 1, RUNNING: 1, WALKING: 1 };
+function mrTripBlock(i) {
+  if (!D || isDup(i)) return '';
+  var h = '', g = D.mrGear && D.mrGear[i], amb = D.mrAmb && D.mrAmb[i];
+  if (g) {
+    var r = mrById(g.rule), isCor = r && r.trip;
+    h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + '<div class="fine">' + (isCor ? 'Set for this trip' : 'From the rule <i>' + esc(r ? r.name || r.id : g.rule) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) + '</div></div>';
+  }
+  if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
+  var btns = '';
+  if (g) btns += '<button type="button" class="btn" data-mr-act="not" data-t="' + i + '">Not this trip</button>';
+  if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
+  if (!h && !btns) return '';
+  return '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-mr-act]');
+  if (!b) return;
+  var i = +b.dataset.t;
+  if (b.dataset.mrAct === 'not') {
+    var g = D.mrGear[i], r = g && mrById(g.rule);
+    if (!r) return;
+    if (r.trip) { MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== r; }); mrChange('Removed the gear set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i])); }
+    else { (r.except || (r.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.mode[i]] }); mrChange('Not this trip: ' + (r.name || r.id) + ' on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i])); }
+    openTrip(i);
+  } else if (b.dataset.mrAct === 'gear') mrGearDialog(i);
+});
+
+// Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
+// (a gear period), with the dates from the first and last trip on that gear and a live count.
+function mrGearDialog(i) {
+  var mode = MODES[D.mode[i]], opts = gearOrder().filter(function (g) { return GEAR[g].mode === mode || GEAR[g].modes && GEAR[g].modes[mode]; });
+  function span(g) {
+    var a = Infinity, b = -Infinity;
+    for (var j = 0; j < D.day.length; j++) if (D.gear[j] === g) { a = Math.min(a, D.day[j]); b = Math.max(b, D.day[j]); }
+    return isFinite(a) ? [a, b] : [D.day[i], D.day[i]];
+  }
+  var kinds = mode === 'CYCLING' ? ['bike', 'strida', 'halfbike', 'cargo', 'ebike', 'other'] : ['shoe', 'other'];
+  mrAsk({
+    title: 'Set gear',
+    text: esc(tripRoute(i)) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) + ' · ' + dist(D.km[i]),
+    extra: '<div class="mr-form"><label class="field"><span>Gear</span><select id="mrG">' + opts.map(function (g) { return '<option value="' + g + '">' + esc(GEAR[g].name) + '</option>'; }).join('') + '<option value="new">New gear…</option></select></label>' +
+      '<div id="mrNew" hidden class="grid2"><label class="field"><span>Name</span><input type="text" id="mrName" placeholder="e.g. Strida EVO"></label><label class="field"><span>Kind</span><select id="mrKind">' + kinds.map(function (k) { return '<option value="' + k + '">' + MR_KINDS[k] + '</option>'; }).join('') + '</select></label></div>' +
+      '<label class="mr-opt"><input type="radio" name="mrScope" value="one"><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
+      '<label class="mr-opt"><input type="radio" name="mrScope" value="period" checked><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
+      '<span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
+      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="1" style="width:5em" aria-label="Maximum distance"> km (optional)</span>' +
+      '<small class="fine" id="mrCountTxt"></small></span></label></div>',
+    buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
+    note: 'Gear recorded by Strava or another activity file is never replaced by a period.',
+    after: function () {
+      var sel = $('mrG');
+      function prefill() {
+        var nw = sel.value === 'new';
+        $('mrNew').hidden = !nw;
+        var s = nw ? [D.day[i], D.day[i]] : span(+sel.value);
+        $('mrFrom').value = isoDay(s[0]); $('mrTo').value = nw ? '' : isoDay(s[1]);
+        count();
+      }
+      function count() {
+        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = parseFloat($('mrMax').value), c = 0;
+        for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
+        $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Inferred</span>, unless a narrower rule covers them.';
+      }
+      sel.addEventListener('change', prefill);
+      ['mrFrom', 'mrTo', 'mrMax'].forEach(function (id) { $(id).addEventListener('input', count); });
+      prefill();
+    }
+  });
+}
+function mrSaveGear(i) {
+  var sel = $('mrG').value, mode = MODES[D.mode[i]], one = document.querySelector('input[name="mrScope"]:checked').value === 'one';
+  var name = sel === 'new' ? $('mrName').value.trim() : GEAR[+sel].name, kind = sel === 'new' ? $('mrKind').value : GEAR[+sel].kind;
+  if (!name) { toast('Give the gear a name'); return; }
+  mrEnsure();
+  // A gear period of the same name already in MyRules is pointed at; Strava's gear by its name.
+  var existing = mrList('gear').filter(function (r) { return (r.name === name || r.strava_name === name) && r.mode === mode; })[0];
+  var recorded = sel !== 'new' && !existing && !GEAR[+sel].rule;
+  if (one) {
+    (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: mode }, then: { gear: existing ? '@' + existing.id : name } });
+    mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]));
+  } else {
+    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = parseFloat($('mrMax').value);
+    if (f) w.from = f;
+    if (t) w.to = t;
+    var r = { id: mrNewId(name), name: name, kind: kind === 'shoe' || MR_KINDS[kind] ? kind : 'other', mode: mode };
+    if (f || t) r.when = w;
+    if (mx > 0) r.match = { max_km: mx };
+    if (recorded) r.strava_name = name;
+    (MR.doc.gear || (MR.doc.gear = [])).push(r);
+    mrChange(name + ' period added (' + mrWhenText(r.when) + ')');
+  }
+  openTrip(i);
+}
+
 // ---------- settings ----------
 function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
@@ -9195,6 +9857,7 @@ function renderImports() {
   fillIcons(list);
   $('filesHead').textContent = files.length ? 'Files (' + files.length + ')' : 'Files';
   $('fileList').closest('.sec').hidden = !files.length;
+  renderMyRules();
   if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('forgetBtn').hidden = true; $('dataRowSub').textContent = 'No data loaded'; return; }
   $('forgetBtn').hidden = !!DEMO;
   var span = niceDate(M.minD) + ' – ' + niceDate(M.maxD);
@@ -9293,7 +9956,7 @@ window.addEventListener('resize', function () {
   resizeT = setTimeout(function () { if (!D) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
 busy('Opening your saved trips…');
-loadSaved().then(function (R) {
+mrLoad().then(loadSaved).then(function (R) {
   busy('');
   if (R && !D) { setData(R); toast('Showing the trips saved on this device.'); }
 }).catch(function () { busy(''); });
