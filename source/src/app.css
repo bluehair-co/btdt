@@ -891,3 +891,10 @@ div.hit-row:hover { background: none; }
 .mr-rad-btns { display: flex; justify-content: flex-end; gap: 8px; }
 .mr-rad-btns .btn.primary { min-width: 140px; }
 @media (min-width: 960px) { .mr-rad-panel { width: 480px; align-self: center; border-radius: 18px 18px 0 0; } }
+
+/* Time by kind of place: the kind's badge and name, then its bar. */
+.kind-row { grid-template-columns: minmax(130px, 40%) 1fr auto; align-items: center; }
+.kind-l { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.kind-l b { display: block; font-size: 13px; font-weight: 600; }
+.kind-l small { display: block; }
+.kind-row + .kind-row { margin-top: 10px; }

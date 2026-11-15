@@ -12,7 +12,7 @@ function renderInsights() {
     return;
   }
   needPlaces(); findHome();
-  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
+  renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderKinds(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
 }
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
@@ -627,33 +627,73 @@ function renderRoutes() {
       '<span class="r num">' + fmt(r.n) + '<small>trips</small></span></button>';
   }).join('');
 }
+// Where you spent time: each spot (as on the map's pins and place pages) by total time there. A spot
+// you or Google named, or home, is its own row; one without a name says which town it is in and
+// where in it, so two unnamed spots in one town never add up to the whole town.
+// Without stays, where trips ended, by place (300 m).
+function spotHint(s) {
+  var c = nearestCity(s.lat, s.lng);
+  if (!c) return '';
+  if (c.d > 8 || c.lat == null) return 'Near ' + c.name;
+  if (c.d < 0.4) return 'In the centre';
+  var dy = s.lat - c.lat, dx = (s.lng - c.lng) * Math.cos(c.lat * Math.PI / 180), a = (Math.atan2(dx, dy) * 180 / Math.PI + 360) % 360;
+  return dist(c.d) + ' ' + ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round(a / 45) % 8] + ' of the centre';
+}
 function renderPlaces() {
-  var by = {}, list = [], useStays = selV.length > 0, j, p;
-  if (useStays) {
-    for (j = 0; j < selV.length; j++) {
-      var v = selV[j]; p = D.pv[v];
-      var lbl = placeLabel(p), o = by[lbl] || (by[lbl] = { p: p, n: 0, h: 0 });
-      o.n++; o.h += (D.ve[v] - D.vs[v]) / 36e5;
-    }
-  } else {
-    for (j = 0; j < sel.length; j++) {
-      p = D.pb[sel[j]];
-      if (p < 0) continue;
-      var lb2 = placeLabel(p);
-      (by[lb2] || (by[lb2] = { p: p, n: 0, h: 0 })).n++;
-    }
-  }
-  for (var k in by) list.push(by[k]);
-  list.sort(function (a, b) { return useStays ? b.h - a.h : b.n - a.n; });
+  var useStays = selV.length > 0, list, j, p;
+  needPlaces(); findHome();
   $('placesTitle').textContent = useStays ? 'Where you spent time' : 'Where you went';
-  $('placesNote').textContent = useStays ? 'Places you stayed, by total time there. Tap one for its visits, spots and a Google Maps link.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
+  $('placesNote').textContent = useStays ? 'The places you stayed, by total time there: each spot on its own, as on the map\'s pins. Ones without a name say where in the town they are; name them from their page. Tap one for its visits and a Google Maps link.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
+  if (useStays) {
+    var vs = [];
+    for (j = 0; j < selV.length; j++) if (D.pv[selV[j]] >= 0) vs.push(selV[j]);
+    list = spotsOf(vs);
+    if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
+    $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
+      var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
+      var kind = r && MR_KIND[r.role], cur = s.home || mrIsCurrent(r), ic = kind ? MR_KIND[r.role][1] : s.home ? 'home' : 'pin';
+      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
+      return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '"><span class="mode-badge sm" style="background:' + (cur ? 'var(--accent)' : r ? '#0f7c8c' : 'var(--m-other)') + '">' + icon(ic) + '</span>' +
+        '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
+        '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span></button>';
+    }).join('');
+    return;
+  }
+  var by = {};
+  for (j = 0; j < sel.length; j++) {
+    p = D.pb[sel[j]];
+    if (p >= 0) (by[p] || (by[p] = { p: p, n: 0 })).n++;
+  }
+  list = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.n - a.n; });
   if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
   $('topPlaces').innerHTML = list.slice(0, 8).map(function (o) {
     var q = D.places[o.p], cc = countryAt(q.lat, q.lng), home = o.p === D.home;
     return '<button type="button" class="hit-row" data-place="' + o.p + '"><span class="mode-badge sm" style="background:' + (home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(home ? 'home' : 'pin') + '</span>' +
-      '<span class="t"><b>' + esc(placeLabel(o.p)) + '</b><small>' + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + (useStays ? ' · ' + fmt(o.n) + ' stay' + (o.n > 1 ? 's' : '') : '') + '</small></span>' +
-      '<span class="r num">' + (useStays ? hoursLabel(o.h).replace(/ \d+ min$/, '') : fmt(o.n) + '<small>trips</small>') + '</span></button>';
+      '<span class="t"><b>' + esc(placeLabel(o.p)) + '</b><small>' + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + '</small></span>' +
+      '<span class="r num">' + fmt(o.n) + '<small>trips</small></span></button>';
   }).join('');
+}
+// Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
+// stayed in the filters. Shown once at least MIN_KINDS places have a kind.
+var MIN_KINDS = 5;
+function renderKinds() {
+  var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard');
+  el.hidden = rules.length < MIN_KINDS;
+  if (el.hidden) return;
+  var by = {}, other = 0, all = 0, n = {};
+  for (var j = 0; j < selV.length; j++) {
+    var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = mrStayPlace(v);
+    all += h;
+    if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; } else other += h;
+  }
+  var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([1]));
+  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places), in these filters. Give more places a kind from their page on the map.';
+  $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
+    var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
+    return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
+      '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:#0f7c8c"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
+  }).join('') + '<p class="fine" style="margin-top:6px">Everywhere else: ' + hoursLabel(other).replace(/ \d+ min$/, '') + ' (' + Math.round(other / Math.max(all, 1e-9) * 100) + '%).</p>'
+    : '<p class="empty">No stays at those places in these filters.</p>';
 }
 // Explorer squares in the trips shown: how many, the biggest cluster and square, and new ones per year.
 function renderSquares() {
@@ -1251,8 +1291,9 @@ function renderCo2() {
     }).join('') : '<p class="empty">No emissions from these trips.</p>') + '</div>';
 }
 document.querySelector('#insightsPage .cards').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-i],[data-day],[data-place],[data-gear]');
+  var b = ev.target.closest('[data-i],[data-day],[data-place],[data-gear],[data-spot]');
   if (!b) return;
+  if (b.dataset.spot) { openSpot(b.dataset.spot); return; }
   if (b.dataset.gear) {
     // Only this gear's trips: the types it was used for on (with their sports), every other type and gear off.
     var g = +b.dataset.gear, used = M.gear[g].modes;
