@@ -652,8 +652,10 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 @media (max-width: 520px) { .welcome-panel { max-width: none; } }
 @media (min-width: 721px) and (min-aspect-ratio: 1/1) {
   .welcome { padding-bottom: calc(clamp(32px, 11vh, 120px) + var(--safe-b)); }
-  .welcome-panel { max-width: 350px; }
-  .welcome-panel > p:first-child { text-wrap: balance; }
+  /* A narrow card, so the left-aligned lines fill it: a headline in the display font, then the privacy note. */
+  .welcome-panel { max-width: 310px; }
+  .welcome-panel > p:first-child .lead { display: block; margin-bottom: 6px; font-family: var(--font-display); font-size: 20px; font-weight: 500; line-height: 1.3; color: #fff; text-wrap: balance; }
+  .welcome-panel > p:first-child .sub { display: block; font-size: 13.5px; color: rgba(255, 255, 255, .75); text-wrap: balance; }
 }
 .status { margin: 12px 0 0; font-size: 13px; color: var(--muted); }
 .status.err { color: #d0342c; }
