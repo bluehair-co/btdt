@@ -124,29 +124,42 @@ function rematchSports(S) {
     S.sport[i] = st.sport; S.mode[i] = MODE_IDX[st.mode]; S.est[i] &= ~GUESSED; S.stype[i] = '';
   }
 }
+// The types and Strava sports there are trips of (after MyRules corrections), for M and the filters.
+function modeStats() {
+  var present = {}, sp = {}, plain = {};
+  for (var i = 0; i < D.day.length; i++) {
+    present[MODES[D.mode[i]]] = 1;
+    if (D.sport[i]) sp[D.sport[i]] = (sp[D.sport[i]] || 0) + 1;
+    else plain[MODES[D.mode[i]]] = 1;
+  }
+  return { modes: MODES.filter(function (m) { return present[m]; }), sports: Object.keys(sp).map(Number).sort(function (a, b) { return a - b; }), sportN: sp, plain: plain };
+}
 function setData(R) {
   RAW = upgrade(R);
   rematchSports(RAW.strava);
   D = withStrava(RAW);
+  // MyRules corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
+  if (D === RAW) D = Object.assign({}, RAW);
   $('app').classList.remove('no-data');
-  var n = D.day.length, nv = D.vs.length, i, yc = {}, present = {}, sp = {}, plain = {};
+  var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype };
+  D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {
     var x = dayToDate(D.day[i]);
     D.year[i] = x.getUTCFullYear(); D.month[i] = x.getUTCMonth(); D.dow[i] = x.getUTCDay();
     D.hour[i] = localHour(D.start[i], D.off[i]);
-    yc[D.year[i]] = 1; present[MODES[D.mode[i]]] = 1;
-    if (D.sport[i]) sp[D.sport[i]] = (sp[D.sport[i]] || 0) + 1;
-    else plain[MODES[D.mode[i]]] = 1;
+    yc[D.year[i]] = 1;
   }
+  mrApplyCorrections();
+  var ms = modeStats();
   D.vyear = new Int16Array(nv); D.vmonth = new Int8Array(nv); D.vdow = new Int8Array(nv);
   for (i = 0; i < nv; i++) {
     var y = dayToDate(D.vday[i]);
     D.vyear[i] = y.getUTCFullYear(); D.vmonth[i] = y.getUTCMonth(); D.vdow[i] = y.getUTCDay();
     yc[D.vyear[i]] = 1;
   }
-  D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
   tagCountries();
   D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
@@ -159,14 +172,14 @@ function setData(R) {
   var anyGuess = mrAnyGuess();
   M = {
     years: Object.keys(yc).map(Number).sort(function (a, b) { return a - b; }),
-    modes: MODES.filter(function (m) { return present[m]; }),
+    modes: ms.modes,
     countries: D.ccList.map(function (_, k) { return k; }).filter(function (k) { return D.ccCount[k] > 0; })
       .sort(function (a, b) { return D.ccCount[b] - D.ccCount[a]; }),
     minD: minD, maxD: maxD, anyGuess: anyGuess, navDays: [],
     // Strava sports present, by mode, in the order SPORTS lists them.
-    sports: Object.keys(sp).map(Number).sort(function (a, b) { return a - b; }), sportN: sp,
+    sports: ms.sports, sportN: ms.sportN,
     // Modes with trips that have no sport (from Timeline, or a Strava type BT•DT doesn't know).
-    plain: plain,
+    plain: ms.plain,
     // Gear from Strava (see buildGear): index 0 is trips with no gear.
     gear: GEAR, gearMode: GEAR_MODE
   };
@@ -193,7 +206,9 @@ function actFrom(i) { var a = actApp(i); return a ? 'on ' + a : 'in an activity 
 // What the recorded activities are called in the filters and messages: the app's name when they all
 // come from one, else Activities.
 function actsLabel(st) { var k = st && st.apps ? Object.keys(st.apps) : ['Strava']; return k.length === 1 && k[0] ? k[0] : 'Activities'; }
-function tripName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s.name || ''; }
+function recName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s.name || ''; }
+// A trip's title: the one a MyRules correction gives it, else its activity's name.
+function tripName(i) { return D.mrName && D.mrName[i] ? D.mrName[i].name : recName(i); }
 // Gear kinds by name, brand or model: front-loading cargo bikes and the Halfbike.
 var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiania|riese|\bgsd\b|douze|carqon|packster|triobike|workcycles|load ?60|load ?75|\bbakfi/i;
 var HALFBIKE_RE = /half ?bike|kolelinia/i;
@@ -369,7 +384,9 @@ function apply() {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
     // Guessed types and gear MyRules filled in go together.
-    if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || D.mrGear[i])) continue;
+    if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || mrInferred(i))) continue;
+    // Trips a MyRules correction hides.
+    if (D.mrHide[i]) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
     // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
     if (F.src !== 'timeline' && isDup(i)) continue;

@@ -1,6 +1,6 @@
 # MyRules files — draft spec v0.1
 
-*Version 0.1, 15 Nov 2026. BT•DT applies gear periods, places and gear set on a single trip (§9, slice 1). Routines and the other corrections are read, kept and exported again, but not applied yet.*
+*Version 0.1, 15 Nov 2026. BT•DT applies gear periods, places and corrections (`mode`, `gear`, `name`, `hide`; §9, slices 1 and 2). Routines and `replace` corrections are read, kept and exported again, but not applied yet.*
 
 A **MyRules file** holds the things only you know about your own history: which bike you owned when, where home and work were, the train you took to work every weekday, the day Timeline got completely wrong. You load it next to your location files. BT•DT applies it on top of what it read from them, and marks everything it changed as **inferred**, so a guess never passes for a recording.
 
@@ -199,8 +199,14 @@ One-off fixes for a trip, a day or a span.
 | Action | Meaning |
 |---|---|
 | `mode`, `gear`, `name` | Set the type, gear or title. Corrections are explicit, so they replace recorded values too. `gear` is a gear period's id (`"@strida-evo"`) or a gear's name as your activity files record it (`"Gazelle"`). |
-| `hide` | Leave the matched trips out everywhere (map, totals, export). Undo shows them again. |
+| `hide` | Leave the matched trips out everywhere (map, totals, export). Undo shows them again. `"hide": false` on a later or narrower correction shows a trip a wider one hid. |
 | `replace` | Replace everything in the span or day with one trip, written like a simulated trip (airports by IATA code or place id). This is a one-line version of the existing `"simulated": true` files. |
+
+A correction on a day or span that sets `gear` only fills trips without recorded gear; only one on a single trip (`start`) replaces it. A trip's `start` matches the trip that starts within 3 minutes of it; add the type the files gave it (`"mode"` in the TripRef) to pick between two. Setting a type also clears *guessed from speed*, and a Strava sport of another type.
+
+### 5.5 How corrections show in the app
+
+Anything a correction sets is marked **Edited** rather than *Inferred*: it is your own fix, not a guess, so the *Guessed and inferred* filter leaves it alone. The trip details list each change ("Type: Train (was cycling)") with **Undo**, which drops that action from a correction on one trip, or adds the trip to the `except` of a correction on a day or span. **Edit trip** in the trip details sets the type, title and *Hide this trip*, and writes them into one correction for that trip (made when needed, updated after, removed once empty); *Set gear → Just this trip* writes into the same one. Hidden trips can be opened again from the correction in the rules sheet.
 
 ---
 
@@ -278,8 +284,8 @@ The browser copy is often the only copy of rules made in the app, so the app has
 
 ## 9. Suggested build order
 
-1. **Slice 1: gear periods and places** (the smallest useful piece, and the most reliable inference). Load and save the file, the Imported data card and rules list, inferred flag and badges, trip details section with *Not this trip*, the gear assignment sheet that writes rules, export, and the Filters change.
-2. **Slice 2: corrections.** `mode`, `gear`, `name`, `hide`; *Set type* in trip details writes them.
+1. **Slice 1: gear periods and places** (done; the smallest useful piece, and the most reliable inference). Load and save the file, the Imported data card and rules list, inferred flag and badges, trip details section with *Not this trip*, the gear assignment sheet that writes rules, export, and the Filters change.
+2. **Slice 2: corrections** (done). `mode`, `gear`, `name`, `hide`; *Edit trip* in trip details writes them. `replace` comes later.
 3. **Slice 3: routines with `mode`**, then `snap: "learn"`, then polyline and GeoJSON lines.
 4. **Later:** publish the schema at a stable URL, a small MyRules validator page.
 
