@@ -254,10 +254,20 @@ function mrApplyPlaces() {
   }
 }
 // The home rule that counts: the one that runs latest (open-ended wins).
+// Home, work and school can be current or past: past ones have a when.to before today.
+var MR_LIFE = { home: 'Home', work: 'Work', school: 'School' };
+function mrIsPast(r) { var t = r && r.when && mrDayNum(r.when.to); return t != null && t < todayDay(); }
+function mrIsCurrent(r) { return !!(r && MR_LIFE[r.role] && !mrIsPast(r)); }
+// The place rule a spot or place (D.places) was made from, if it is switched on.
+function mrRuleOf(q) {
+  var r = q.mr ? mrById(q.mr) : q.key && q.key.slice(0, 3) === 'mr:' ? mrById(q.key.slice(3)) : null;
+  return r && r.enabled !== false && MR && MR.on ? r : null;
+}
 function mrHomeRule() {
   var best = null, bt = -Infinity;
   mrActive('places').forEach(function (r) {
-    if (r.role !== 'home' || !Array.isArray(r.at)) return;
+    // Only a current home: with only past ones, home is guessed from the nights again.
+    if (r.role !== 'home' || !Array.isArray(r.at) || mrIsPast(r)) return;
     var t = r.when && r.when.to ? mrDayNum(r.when.to) : Infinity;
     if (t >= bt) { bt = t; best = r; }
   });
@@ -281,7 +291,8 @@ function mrPlaceName(q) {
   if (!r) return '';
   // A hidden place shows as the town it is in, never by its name or address.
   if (r.hide) { var c = nearestCity(q.lat, q.lng); return c ? (c.d > 8 ? 'Near ' : '') + c.name : ccName(countryAt(q.lat, q.lng)); }
-  return r.role === 'home' ? 'Home' : r.name || (r.role ? r.role.charAt(0).toUpperCase() + r.role.slice(1) : '');
+  if (MR_LIFE[r.role] && mrIsPast(r)) return r.name || 'Former ' + r.role;
+  return r.role === 'home' ? 'Home' : r.name || (r.role ? MR_LIFE[r.role] || r.role.charAt(0).toUpperCase() + r.role.slice(1) : '');
 }
 
 // Applies the rules again after a change, keeping the filters (gear chips are rebuilt, all on; types
@@ -508,7 +519,7 @@ function mrRenderRules() {
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR_COUNT[r.id] || 0);
   }).join('') + '</div>';
   if (places.length) h += '<div class="sec"><h3>Places</h3>' + places.map(function (r) {
-    var sub = [r.role ? r.role.charAt(0).toUpperCase() + r.role.slice(1) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
+    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : r.role.charAt(0).toUpperCase() + r.role.slice(1)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || r.id, sub, r.role === 'home' ? 'home' : r.hide ? 'shield' : 'pin', r.role === 'home' ? '#008300' : '#9aa49d', null);
   }).join('') + '</div>';
   if (cor.length) h += '<div class="sec"><h3>Corrections</h3>' + cor.map(function (c) {
@@ -747,18 +758,22 @@ function mrSpotRule(key) {
 }
 function mrSpotHtml(key) {
   var r = mrSpotRule(key);
-  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + esc(r.role) : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>') +
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(r.role) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>') +
     '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit name' : 'Name this place') + '</button></div>';
 }
 function mrPlaceDialog(key) {
   var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0];
   if (!c) return;
   var nm = r ? r.name || '' : s.name || '', role = r ? r.role || '' : s.home ? 'home' : '', rad = r ? +r.radius_m || 100 : 100;
+  // Past: until the date the rule has, else the last stay there.
+  var past = mrIsPast(r), until = r && r.when && r.when.to || isoDay(D.vday[s.lv]);
   mrAsk({
     title: r ? 'Edit this place' : 'Name this place',
     text: 'Stays within the radius take this name, in every list and on the map.',
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrPName" value="' + esc(nm) + '" placeholder="e.g. Climbing gym"></label>' +
       '<label class="field"><span>What it is</span><select id="mrPRole">' + MR_ROLES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === role ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></label>' +
+      '<div id="mrPLife"' + (MR_LIFE[role] ? '' : ' hidden') + '><label class="mr-opt"><input type="radio" name="mrPNow" value="now"' + (past ? '' : ' checked') + '><span><b>Current</b><small class="fine">Its pin gets the sunrise colour.</small></span></label>' +
+      '<label class="mr-opt"><input type="radio" name="mrPNow" value="past"' + (past ? ' checked' : '') + '><span><b>Past</b><span class="mr-dates">Until <input type="date" id="mrPTo" value="' + esc(until) + '" aria-label="Until"></span></span></label></div>' +
       '<div class="field"><span>Counts as this place within</span><div class="mr-rad-row"><span><b id="mrPRadTxt"></b> <small class="fine" id="mrPCount"></small></span>' +
       '<button type="button" class="btn" id="mrPRadBtn">' + icon('pin') + 'Define radius</button></div><input type="hidden" id="mrPRad" value="' + rad + '"></div>' +
       '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
@@ -775,6 +790,8 @@ function mrPlaceDialog(key) {
         $('mrPRadTxt').textContent = fmt(m) + ' m';
         $('mrPCount').textContent = '· ' + fmt(n) + ' stay' + (n === 1 ? '' : 's');
       }
+      $('mrPRole').addEventListener('change', function () { $('mrPLife').hidden = !MR_LIFE[this.value]; });
+      $('mrPTo').addEventListener('input', function () { document.querySelector('input[name="mrPNow"][value="past"]').checked = true; });
       $('mrPRadBtn').addEventListener('click', function () {
         mrRadiusMap(c, +$('mrPRad').value, $('mrPName').value.trim() || 'This place', function (m) { $('mrPRad').value = m; upd(); });
       });
@@ -844,10 +861,14 @@ function mrSavePlace(key, r, c) {
   if (role) r.role = role; else delete r.role;
   r.radius_m = rad;
   if (hide) r.hide = true; else delete r.hide;
+  // Current or past, for home, work and school: past ends on its until date.
+  var wasPast = mrIsPast(r), past = !!MR_LIFE[role] && document.querySelector('input[name="mrPNow"]:checked').value === 'past';
+  if (past) { var to = $('mrPTo').value || isoDay(todayDay() - 1); if (mrDayNum(to) >= todayDay()) to = isoDay(todayDay() - 1); r.when = Object.assign({}, r.when, { to: to }); }
+  else if (MR_LIFE[role] && r.when) { delete r.when.to; if (!Object.keys(r.when).length) delete r.when; }
   var vs = spotStays(key);
   // The spot's key changes (see buildSpotKeys): its page is opened again below, not refreshed.
   placeLast = null;
-  mrChange((isNew ? 'Place named: ' : 'Place changed: ') + (name || role) + ' (' + rad + ' m)');
+  mrChange((isNew ? 'Place named: ' : 'Place changed: ') + (name || role) + ' (' + rad + ' m' + (MR_LIFE[role] ? ', ' + (past ? 'past, until ' + niceDate(mrDayNum(r.when.to)) : 'current') : '') + ')');
   mrReopenSpot(vs);
 }
 // Naming a place merges the spots within its radius into one (and removing the name splits them
