@@ -82,7 +82,7 @@ function initMap() {
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
   posMarker._mode = null;
   var spT = 0;
-  map.on('moveend', function () { clearTimeout(spT); spT = setTimeout(speedMoved, 120); });
+  map.on('moveend', function () { clearTimeout(spT); spT = setTimeout(speedMoved, 120); renderPins(); });
   map.on('click', function (e) { onMapTap(map.latLngToContainerPoint(e.latlng), e.originalEvent); });
   if (!coarse) {
     var raf = 0, last = null;
@@ -163,6 +163,7 @@ function layerToggles() {
   });
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
+  else if (PREFS.pins && !pinLayer.getLayers().length) renderPins();
   if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
   if ((PREFS.speedPaths || PREFS.hrPaths) && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._m !== pathsKey() || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
 }
@@ -455,12 +456,19 @@ function speedLegend() {
 // A pin on each spot (see spotKey) you stayed at in the filters and have stayed at at least
 // PIN_MIN times over your whole history, so one-off stops don't crowd the map. Tapping one
 // opens its place page.
-var PIN_MIN = 3, PIN_MAX = 400, pinOn = {}, pinKeys = [];
+var PIN_MIN = 3, PIN_MAX = 400, pinOn = {}, pinKeys = [], pinSpots = [];
+// Zoomed out, pins closer than PIN_CELL pixels are grouped into one round marker with how many
+// places it holds (tap it to zoom in on them), and only pins in view are drawn, so hundreds of
+// pins don't slow the map down. From PIN_ALL_Z in, every pin shows. The pins of the place page
+// that's open always show on their own; a group with home in it has home's colour and icon.
+var PIN_CELL = 56, PIN_ALL_Z = 15;
 // The pins of the place page that's open stand out (red, larger, in front); the rest fade.
 function setPinOn(keys) {
   pinKeys = keys || [];
   pinOn = {}; pinKeys.forEach(function (k) { pinOn[k] = 1; });
-  if (!pinLayer) return;
+  renderPins();
+}
+function pinStyle() {
   var any = pinKeys.length > 0;
   pinLayer.eachLayer(function (m) {
     var on = !!pinOn[m._key], el = m.getElement && m.getElement();
@@ -472,13 +480,14 @@ function setPinOn(keys) {
 function buildPins() {
   pinLayer.clearLayers();
   pinLayer._ver = selVer(); pinLayer._d = D;
+  pinSpots = [];
   if (!D) return;
   needPlaces(); findHome();
   if (!D.spotN) { D.spotN = {}; for (var v = 0; v < D.vs.length; v++) if (D.pv[v] >= 0) { var k0 = spotKey(v); D.spotN[k0] = (D.spotN[k0] || 0) + 1; } }
   var inSel = [];
   for (var j = 0; j < selV.length; j++) if (D.pv[selV[j]] >= 0 && D.spotN[spotKey(selV[j])] >= PIN_MIN) inSel.push(selV[j]);
   var spots = spotsOf(inSel).sort(function (a, b) { return D.spotN[b.key] - D.spotN[a.key]; }).slice(0, PIN_MAX);
-  spots.forEach(function (s) {
+  pinSpots = spots.map(function (s) {
     var n = D.spotN[s.key], z = Math.round(Math.min(34, 20 + 4 * Math.log10(n)));
     // A place you named in MyRules is teal, so named and unnamed pins tell apart.
     var named = !s.home && mrActive('places').length && mrPlaceName(s);
@@ -489,9 +498,47 @@ function buildPins() {
     m._key = s.key;
     m.on('click', function (e) { if (e.originalEvent) L.DomEvent.stop(e.originalEvent); openSpot(s.key); });
     m.on('add', function () { var el = m.getElement(); if (el && el.firstChild) el.firstChild.classList.toggle('on', !!pinOn[s.key]); });
-    pinLayer.addLayer(m);
+    return { s: s, m: m, ll: L.latLng(s.lat, s.lng), named: !!named };
   });
   setPinOn(pinKeys);
+}
+// Draws the pins in view, grouped when zoomed out (see PIN_CELL). Called after each move.
+function renderPins() {
+  if (!pinLayer || !map || !map.hasLayer(pinLayer)) return;
+  pinLayer.clearLayers();
+  if (!pinSpots.length) return;
+  var z = map.getZoom(), view = map.getBounds().pad(0.25), groups = [], solo = [];
+  // Most visited first (pinSpots' order), each joining the first group within PIN_CELL pixels of it:
+  // groups gather around the busiest places and never overlap much.
+  pinSpots.forEach(function (p) {
+    if (!view.contains(p.ll)) return;
+    if (z >= PIN_ALL_Z || pinOn[p.s.key]) { solo.push(p); return; }
+    var pt = map.project(p.ll, z);
+    for (var k = 0; k < groups.length; k++) if (Math.abs(groups[k].pt.x - pt.x) < PIN_CELL && Math.abs(groups[k].pt.y - pt.y) < PIN_CELL) { groups[k].g.push(p); return; }
+    groups.push({ pt: pt, g: [p] });
+  });
+  solo.forEach(function (p) { pinLayer.addLayer(p.m); });
+  groups.forEach(function (gr) {
+    var g = gr.g;
+    if (g.length === 1) { pinLayer.addLayer(g[0].m); return; }
+    var named = 0, visits = 0, home = g.some(function (p) { return p.s.home; });
+    g.forEach(function (p) { visits += D.spotN[p.s.key]; if (p.named) named++; });
+    var size = Math.round(Math.min(46, 26 + 6 * Math.log10(g.length)));
+    // At the busiest place in it, so it doesn't drift as you zoom; with home in it, it is home's colour.
+    var c = L.marker(g[0].ll, {
+      icon: L.divIcon({ className: '', html: '<div class="pin-cl' + (home ? ' home' : named ? ' named' : '') + '" style="width:' + size + 'px;height:' + size + 'px">' + (home ? icon('home') : '') + fmt(g.length) + '</div>', iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+      title: fmt(g.length) + ' places' + (home ? ', home among them' : '') + (named ? ', ' + fmt(named) + ' named' : '') + ' · ' + fmt(visits) + ' visits. Tap to zoom in.', riseOnHover: true, zIndexOffset: home ? 500 : 0
+    });
+    c.on('click', function (e) {
+      if (e.originalEvent) L.DomEvent.stop(e.originalEvent);
+      var b = L.latLngBounds(g.map(function (p) { return p.ll; }));
+      // Pins at the same spot: zoom in to where they come apart.
+      if (b.getNorthEast().equals(b.getSouthWest())) map.setView(b.getCenter(), Math.max(z + 2, PIN_ALL_Z));
+      else map.fitBounds(b, { padding: [60, 60], maxZoom: Math.max(z + 1, Math.min(PIN_ALL_Z, map.getBoundsZoom(b, false, [120, 120]))) });
+    });
+    pinLayer.addLayer(c);
+  });
+  pinStyle();
 }
 function ccVer() { return selVer() + '|' + ccReach().key; }
 function selVer() { return sel.length + ':' + (sel[0] || 0) + ':' + (sel[sel.length - 1] || 0) + ':' + selV.length; }

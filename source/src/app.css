@@ -857,6 +857,10 @@ div.hit-row:hover { background: none; }
 .pin-ic.named { background: #0f7c8c; }
 .pin-ic { transition: transform .15s; }
 .pin-ic.on { background: var(--dot); transform: rotate(-45deg) scale(1.35); box-shadow: 0 0 0 3px color-mix(in srgb, var(--dot) 35%, transparent), 0 2px 8px rgba(0,0,0,.4); }
+.pin-cl { display: flex; align-items: center; justify-content: center; border-radius: 50%; background: var(--m-other); color: #fff; font-size: 12px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; border: 2px solid #fff; box-shadow: 0 0 0 4px color-mix(in srgb, var(--m-other) 30%, transparent), 0 1px 4px rgba(0,0,0,.35); cursor: pointer; }
+.pin-cl.home { background: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 30%, transparent), 0 1px 4px rgba(0,0,0,.35); gap: 1px; }
+.pin-cl svg { width: 14px; height: 14px; fill: #fff; }
+.pin-cl.named { background: #0f7c8c; box-shadow: 0 0 0 4px rgba(15,124,140,.3), 0 1px 4px rgba(0,0,0,.35); }
 .pin-ic svg { transform: rotate(45deg); width: 60%; height: 60%; fill: #fff; }
 
 /* Demo: a link under Load on the welcome panel, and a bar over every page while the demo is open.
