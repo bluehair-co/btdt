@@ -676,7 +676,7 @@ function renderPlaces() {
 // Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
 // stayed in the filters. Shown once at least MIN_KINDS places have a kind.
 var MIN_KINDS = 5;
-// Everywhere else flips through places that aren't one of the kinds (nor the plain pin of a place
+// Other places flips through places that aren't one of the kinds (nor the plain pin of a place
 // without one), 2 s each: see .kind-flip.
 var KIND_FLIP = ['attractions', 'castle', 'stadium', 'account_balance', 'temple_buddhist', 'earth'];
 function renderKinds() {
@@ -696,8 +696,8 @@ function renderKinds() {
     return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
       '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:#0f7c8c"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
   }).join('') +
-    // Everywhere else: the time at places without a kind, its badge flipping through kinds of place.
-    '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm kind-flip" style="background:var(--m-other)">' + KIND_FLIP.map(icon).join('') + '</span><span><b>Everywhere else</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +
+    // Other places: the time at places without a kind, its badge flipping through kinds of place.
+    '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm kind-flip" style="background:var(--m-other)">' + KIND_FLIP.map(icon).join('') + '</span><span><b>Other places</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +
       '<div><div class="track"><i style="width:' + (other / mx * 100).toFixed(1) + '%;background:var(--m-other)"></i></div></div><div class="val">' + hoursLabel(other).replace(/ \d+ min$/, '') + '</div></div>'
     : '<p class="empty">No stays at those places in these filters.</p>';
 }
