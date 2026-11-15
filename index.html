@@ -4172,24 +4172,25 @@ function nearestAirport(lat, lng) {
   }
   return best;
 }
-var CT = null;
+// The towns by 1° cell. Not CT, which is the Countries over time strip's state in insights.js.
+var CITY_GRID = null;
 function buildCities() {
-  CT = {};
+  CITY_GRID = {};
   var la = 0, lo = 0;
   CITIES.split(';').forEach(function (e) {
     var f = e.split(','), n = f.length;
     la += parseInt(f[n - 2], 36); lo += parseInt(f[n - 1], 36);
     var c = { name: f.slice(0, n - 3).join(','), w: [1, 1.4, 2, 2.6][+f[n - 3]], lat: la / 100, lng: lo / 100 }, key = Math.floor(c.lat) + ',' + Math.floor(c.lng);
-    (CT[key] || (CT[key] = [])).push(c);
+    (CITY_GRID[key] || (CITY_GRID[key] = [])).push(c);
   });
 }
 // The town or city a place belongs to (within 60 km), with its distance in km.
 function nearestCity(lat, lng) {
-  if (!CT) buildCities();
+  if (!CITY_GRID) buildCities();
   // Bigger places win when a small town is only a little closer, as people name them that way.
   var best = null, bs = Infinity, bd = 0, la = Math.floor(lat), lo = Math.floor(lng);
   for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
-    var cell = CT[(la + dy) + ',' + (((lo + dx + 180) % 360 + 360) % 360 - 180)];
+    var cell = CITY_GRID[(la + dy) + ',' + (((lo + dx + 180) % 360 + 360) % 360 - 180)];
     if (cell) for (var k = 0; k < cell.length; k++) {
       var d = km([lat, lng], [cell[k].lat, cell[k].lng]);
       if (d < 60 && d / cell[k].w < bs) { bs = d / cell[k].w; bd = d; best = cell[k]; }
