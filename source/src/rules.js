@@ -2,8 +2,9 @@
 // A MyRules file (*.myrules.json) holds what only you know: which bike you rode when, where home was.
 // It is applied on top of the location files. Values a rule fills in are marked Inferred; values a
 // correction sets on a trip (its type, title, gear, or hiding it) are marked Edited.
-// The format is in docs/myrules.md; this version applies gear periods, places and corrections.
-// Routines and corrections that replace trips are kept in the file (and exported again) but not applied yet.
+// The format is in docs/myrules.md; this version applies gear periods, places, routines (type, gear
+// and lines) and corrections.
+// Corrections that replace trips are kept in the file (and exported again) but not applied yet.
 // MR is null until a file is loaded or a rule is made in the app. It is saved in this browser's
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
@@ -127,6 +128,11 @@ function mrStayPlace(v) {
   var U = mrUnits(), u = U.list[U.of[v]];
   return mrPlaceAt(u.lat, u.lng);
 }
+function mrNearestPlace(at) {
+  var best = -1, bd = Infinity;
+  D.places.forEach(function (q, k) { if (q.ap) return; var d = km([q.lat, q.lng], at); if (d < bd) { bd = d; best = k; } });
+  return best;
+}
 function mrNear(lat, lng, ref) {
   var r = mrById(ref);
   return r && Array.isArray(r.at) && isFinite(lat) && km([lat, lng], r.at) * 1000 <= Math.max(+r.radius_m || 100, 500);
@@ -174,6 +180,15 @@ function mrApplyGear(byName, addGear) {
     });
     MR_COUNT[c.id] = Math.max(MR_COUNT[c.id] || 0, hit);
   });
+  // Gear from a routine, on its trips without gear: more specific than a gear period.
+  for (i = 0; i < n; i++) {
+    var rt = D.mrRoute[i], rr = rt && mrById(rt.rule), rg = rr && rr.then && rr.then.gear;
+    if (!rg || D.gear[i]) continue;
+    var gr = String(rg).charAt(0) === '@' ? mrById(rg) : null;
+    if (String(rg).charAt(0) === '@' && (!gr || gr.enabled === false)) continue;
+    D.gear[i] = gr ? gearOf(gr) : addGear(String(rg), null, MODES[D.mode[i]]);
+    D.mrGear[i] = { rule: rr.id, gear: D.gear[i] };
+  }
   if (!periods.length) return;
   for (i = 0; i < n; i++) {
     if (D.gear[i] || isDup(i)) continue;
@@ -192,8 +207,8 @@ function mrApplyGear(byName, addGear) {
   }
 }
 // Inferred: gear a gear period filled in. Edited: anything a correction set.
-function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor); }
-function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor)); }
+function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i]); }
+function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor)); }
 function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrInferred(i) ? '<span class="guess inf">Inferred</span>' : ''); }
 
 // Corrections, ready to apply: the switched-on ones that point at trips, those on a day or span
@@ -215,10 +230,12 @@ function mrCorrections() {
 function mrApplyCorrections() {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
-  D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype);
-  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n);
-  MR_COUNT = {}; MR_COR = null;
+  D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
+  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.snap = []; D.mrLine = {};
+  MR_COUNT = {}; MR_COR = null; MR_NOFIT = {};
   if (!MR || !MR.on) return;
+  // Routines first, so a correction on the same trip wins over them.
+  mrApplyRoutines();
   mrCorrections().forEach(function (x) {
     var t = x.c.then, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = 0;
     x.trips.forEach(function (i) {
@@ -236,6 +253,164 @@ function mrApplyCorrections() {
       else if (t.hide === false && D.mrHide[i]) { D.mrHide[i] = 0; hit = 1; }
     });
     if (hit) MR_COUNT[x.c.id] = x.trips.length;
+  });
+  // Lines last: a trip a correction moved to another type keeps its routine's line only if it still matches.
+  mrApplySnaps();
+}
+
+// ---------- routines ----------
+// A routine matches trips that start within 500 m of its from and end within 500 m of its to (a
+// place's own radius if larger), inside its when; with both_ways, the trip back too, inside
+// return_when (else when). from and to are a place rule ("@office") or a position ([lat, lng]).
+// Of the routines that match a trip, the one with the shorter when wins, then the later one in the
+// file. then.mode sets the type when the files had none or it was guessed (or always, with force);
+// then.gear fills trips without gear (in mrApplyGear); then.snap draws the trip along a line.
+var MR_NOFIT = {};   // trips a routine's line didn't fit, by routine id
+function mrEnd(ref) {
+  if (Array.isArray(ref) && ref.length === 2 && isFinite(ref[0])) return { at: [+ref[0], +ref[1]], rad: 0.5 };
+  if (ref && typeof ref === 'object' && Array.isArray(ref.at)) return { at: ref.at, rad: Math.max(0.5, (+ref.radius_m || 0) / 1000) };
+  var r = mrById(ref);
+  return r && Array.isArray(r.at) ? { at: r.at, rad: Math.max(0.5, (+r.radius_m || 0) / 1000) } : null;
+}
+function mrRoutineList() {
+  return mrActive('routines').map(function (r, k) {
+    var a = mrEnd(r.from), b = mrEnd(r.to), w = mrWhen(r.when);
+    if (!a || !b) return null;
+    var rw = r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w;
+    return { r: r, k: k, a: a, b: b, w: w, rw: rw, ex: mrExcept(r), then: r.then && typeof r.then === 'object' ? r.then : {} };
+  }).filter(Boolean);
+}
+function mrNearEnd(e, i, end) { var o = end ? 'to' : 'from', lat = D[o][2 * i]; return isFinite(lat) && km([lat, D[o][2 * i + 1]], e.at) <= e.rad; }
+// 1: the trip goes from → to; -1: to → from (both_ways); 0: no match.
+function mrRouteDir(x, i) {
+  if (x.ex[i]) return 0;
+  if (mrNearEnd(x.a, i, false) && mrNearEnd(x.b, i, true) && mrWhenOk(x.w, i)) return 1;
+  if (x.r.both_ways && mrNearEnd(x.b, i, false) && mrNearEnd(x.a, i, true) && mrWhenOk(x.rw, i)) return -1;
+  return 0;
+}
+function mrApplyRoutines() {
+  var L = mrRoutineList(), n = D.day.length, b = D.base;
+  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; });
+  if (!L.length) return;
+  for (var i = 0; i < n; i++) {
+    if (isDup(i) || MODES[b.mode[i]] === 'FLYING') continue;
+    var best = null, bd = 0;
+    for (var k = 0; k < L.length; k++) {
+      var d = mrRouteDir(L[k], i);
+      if (d && (!best || L[k].w.len <= best.w.len)) { best = L[k]; bd = d; }
+    }
+    if (!best) continue;
+    D.mrRoute[i] = { rule: best.r.id, dir: bd };
+    MR_COUNT[best.r.id]++;
+    var m = best.then.mode, mi = m != null ? MODE_IDX[m] : null;
+    if (mi == null || mi === b.mode[i]) continue;
+    if (!best.r.force && !(b.est[i] & GUESSED) && MODES[b.mode[i]] !== 'UNKNOWN') continue;
+    D.mode[i] = mi;
+    D.est[i] &= ~GUESSED;
+    if (D.sport[i] && SPORTS[D.sport[i]][2] !== m) D.sport[i] = 0;
+    if (D.stype) D.stype[i] = '';
+    D.mrMode[i] = { rule: best.r.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED), inf: true };
+  }
+}
+
+// ---------- lines (snap) ----------
+// A routine's then.snap draws its trips along one line instead of their own GPS points: "learn" (the
+// cleanest of its trips, or the one { "trip": TripRef } names), { "polyline": "…" } (Google's
+// encoding, 5 decimals) or { "geojson": "file.geojson" } (a LineString loaded with the rules, kept in
+// MR.lines). Each trip takes the stretch between the points nearest its start and end, its own times
+// spread along it by distance, and the line's length as its distance. A trip whose own points stray
+// over 1 km from the line for more than a third of them isn't snapped ("didn't fit").
+function mrDecodePolyline(s) {
+  var pts = [], idx = 0, lat = 0, lng = 0;
+  s = String(s || '');
+  while (idx < s.length) {
+    var v = [0, 0];
+    for (var c = 0; c < 2; c++) {
+      var shift = 0, res = 0, by;
+      do { by = s.charCodeAt(idx++) - 63; res |= (by & 0x1f) << shift; shift += 5; } while (by >= 0x20 && idx <= s.length);
+      v[c] = res & 1 ? ~(res >> 1) : res >> 1;
+    }
+    lat += v[0]; lng += v[1];
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  return pts;
+}
+function mrTripPts(i) {
+  var out = [];
+  for (var q = D.pathOff[i]; q < D.pathOff[i + 1]; q++) out.push([D.pathPts[2 * q], D.pathPts[2 * q + 1]]);
+  return out;
+}
+// How clean a trip's own trail is, to learn a line from: GPS points per km with no gap over 2 minutes,
+// a recorded activity or a Records.json line counting double. 0 when it can't be used.
+function mrClean(i) {
+  var o0 = D.pathOff[i], o1 = D.pathOff[i + 1], n = o1 - o0;
+  if (n < 10 || !(D.km[i] > 0.3)) return 0;
+  for (var q = o0 + 1; q < o1; q++) if (D.pathT[q] - D.pathT[q - 1] > 120) return 0;
+  return n / D.km[i] * (D.base.est[i] & (16 | 32) ? 2 : 1);
+}
+// The line a routine draws its trips along, from → to. src says where it came from.
+function mrRouteLine(x, trips) {
+  var sn = x.then.snap, pts = null, src = '', from = null;
+  if (!sn) return null;
+  if (typeof sn === 'object' && sn.polyline) { pts = mrDecodePolyline(sn.polyline); src = 'the line in your MyRules'; }
+  else if (typeof sn === 'object' && sn.geojson) {
+    pts = MR.lines && MR.lines[sn.geojson];
+    src = pts ? sn.geojson : '';
+    if (!pts) return { missing: sn.geojson };
+  } else {
+    // Learned: the trip the rule names, else the cleanest one.
+    var pick = typeof sn === 'object' && sn.trip ? mrRefTrips(sn.trip)[0] : null, best = 0;
+    if (pick == null) trips.forEach(function (i) { var c = mrClean(i); if (c > best) { best = c; pick = i; } });
+    if (pick == null) return null;
+    pts = mrTripPts(pick);
+    if (D.mrRoute[pick] && D.mrRoute[pick].dir < 0) pts.reverse();
+    src = 'trip'; from = pick;
+  }
+  return pts && pts.length >= 2 ? { pts: pts, src: src, from: from } : null;
+}
+function mrLL(p, c) { return [(p[1] - c[1]) * Math.cos(c[0] * Math.PI / 180) * 111.32, (p[0] - c[0]) * 110.57]; }
+// Distance (km) from a point to the line, and the index of its nearest point.
+function mrToLine(p, L) {
+  var bd = Infinity, bi = 0;
+  for (var k = 0; k < L.length - 1; k++) {
+    var a = mrLL(L[k], p), b = mrLL(L[k + 1], p), dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+    var t = l ? Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / l)) : 0, x = a[0] + t * dx, y = a[1] + t * dy, d = Math.sqrt(x * x + y * y);
+    if (d < bd) { bd = d; bi = t < 0.5 ? k : k + 1; }
+  }
+  return { d: bd, k: bi };
+}
+function mrSnapTrip(i, L) {
+  var a = [D.from[2 * i], D.from[2 * i + 1]], b = [D.to[2 * i], D.to[2 * i + 1]];
+  if (!isFinite(a[0]) || !isFinite(b[0])) return null;
+  // Its own points, at most 40 of them, mostly near the line.
+  var own = mrTripPts(i), off = 0, step = Math.max(1, Math.ceil(own.length / 40)), cnt = 0;
+  for (var q = 0; q < own.length; q += step) { cnt++; if (mrToLine(own[q], L).d > 1) off++; }
+  if (cnt && off > cnt / 3) return null;
+  var ia = mrToLine(a, L), ib = mrToLine(b, L);
+  if (ia.d > 1 || ib.d > 1 || ia.k === ib.k) return null;
+  var seg = ia.k < ib.k ? L.slice(ia.k, ib.k + 1) : L.slice(ib.k, ia.k + 1).reverse();
+  var cum = [0], len = 0;
+  for (q = 1; q < seg.length; q++) { len += km(seg[q - 1], seg[q]); cum.push(len); }
+  var dur = Math.max(0, (D.end[i] - D.start[i]) / 1000);
+  return { pts: seg, ts: cum.map(function (c) { return len ? dur * c / len : 0; }), km: len };
+}
+function mrApplySnaps() {
+  mrRoutineList().forEach(function (x) {
+    if (!x.then.snap) return;
+    var trips = [];
+    for (var i = 0; i < D.day.length; i++) if (D.mrRoute[i] && D.mrRoute[i].rule === x.r.id && MODES[D.mode[i]] !== 'FLYING') trips.push(i);
+    var line = mrRouteLine(x, trips);
+    D.mrLine[x.r.id] = line;
+    if (!line || !line.pts) return;
+    MR_NOFIT[x.r.id] = 0;
+    trips.forEach(function (i) {
+      if (i === line.from) return;
+      var s = mrSnapTrip(i, line.pts);
+      if (!s) { MR_NOFIT[x.r.id]++; return; }
+      s.rule = x.r.id;
+      D.snap[i] = s;
+      D.km[i] = s.km;
+    });
   });
 }
 
@@ -326,11 +501,11 @@ function mrAnyGuess() {
 function mrSave() {
   if (DEMO) return Promise.resolve();
   if (!MR) return withStore('btdt', 'readwrite', function (s) { return s.delete('myrules'); }).catch(function () {});
-  return withStore('btdt', 'readwrite', function (s) { return s.put({ doc: MR.doc, name: MR.name, on: MR.on, changes: MR.changes, exported: MR.exported }, 'myrules'); }).catch(function () {});
+  return withStore('btdt', 'readwrite', function (s) { return s.put({ doc: MR.doc, name: MR.name, on: MR.on, changes: MR.changes, exported: MR.exported, lines: MR.lines || {} }, 'myrules'); }).catch(function () {});
 }
 function mrLoad() {
   return withStore('btdt', 'readonly', function (s) { return s.get('myrules'); }).then(function (x) {
-    if (x && x.doc) MR = { doc: x.doc, name: x.name || 'my.myrules.json', on: x.on !== false, changes: x.changes || [], exported: x.exported || 0 };
+    if (x && x.doc) MR = { doc: x.doc, name: x.name || 'my.myrules.json', on: x.on !== false, changes: x.changes || [], exported: x.exported || 0, lines: x.lines || {} };
   }).catch(function () {});
 }
 // Something changed in the app: kept with a short description, until the next export.
@@ -356,6 +531,38 @@ function mrIsFile(f) {
   if (/\.myrules\.json$/i.test(f.name)) return Promise.resolve(true);
   if (!/\.json$/i.test(f.name) || f.size > 5e6) return Promise.resolve(false);
   return f.slice(0, 600).text().then(function (t) { return /^\s*\{[\s\S]*"myrules"\s*:/.test(t) && !/semanticSegments|timelineObjects|locations/.test(t); }).catch(function () { return false; });
+}
+// GeoJSON lines for routines' snap: a .geojson file whose name a routine (here or in the MyRules
+// files loaded with it) gives as its snap.geojson is a line, not location data. Its first LineString
+// (or the longest part of a MultiLineString) is kept in MR.lines, saved with the rules.
+function mrLineNames(texts) {
+  var names = {};
+  mrList('routines').forEach(function (r) { var g = r.then && r.then.snap && r.then.snap.geojson; if (g) names[g] = 1; });
+  (texts || []).forEach(function (t) { var re = /"geojson"\s*:\s*"([^"]+)"/g, m; while ((m = re.exec(t))) names[m[1]] = 1; });
+  return names;
+}
+function mrGeoLine(text) {
+  var g = JSON.parse(text), best = null;
+  function take(c) { if (Array.isArray(c) && c.length >= 2 && (!best || c.length > best.length)) best = c; }
+  (function walk(o) {
+    if (!o || typeof o !== 'object') return;
+    if (o.type === 'FeatureCollection') (o.features || []).forEach(walk);
+    else if (o.type === 'Feature') walk(o.geometry);
+    else if (o.type === 'LineString') take(o.coordinates);
+    else if (o.type === 'MultiLineString') (o.coordinates || []).forEach(take);
+    else if (o.type === 'GeometryCollection') (o.geometries || []).forEach(walk);
+  })(g);
+  if (!best) throw new Error('it has no line');
+  return best.map(function (c) { return [+(+c[1]).toFixed(6), +(+c[0]).toFixed(6)]; });
+}
+function mrImportLines(files) {
+  return Promise.all(files.map(function (f) { return f.text().then(function (t) { return [f.name, mrGeoLine(t)]; }); })).then(function (got) {
+    mrEnsure();
+    MR.lines = MR.lines || {};
+    got.forEach(function (g) { MR.lines[g[0]] = g[1]; });
+    mrSave(); mrReapply();
+    setStatus('MyRules: loaded the line' + (got.length > 1 ? 's' : '') + ' ' + got.map(function (g) { return g[0]; }).join(', ') + '.');
+  }).catch(function (e) { setStatus('MyRules line: ' + (e && e.message || e), true); });
 }
 function mrParse(text) {
   var doc = JSON.parse(text);
@@ -386,7 +593,7 @@ function mrImport(files) {
 }
 function mrUse(doc, name, changed) {
   var had = MR && MR.changes || [];
-  MR = { doc: doc, name: name, on: true, changes: changed ? had.concat([{ t: Date.now(), text: 'Merged ' + name }]) : [], exported: changed && MR ? MR.exported : 0 };
+  MR = { doc: doc, name: name, on: true, changes: changed ? had.concat([{ t: Date.now(), text: 'Merged ' + name }]) : [], exported: changed && MR ? MR.exported : 0, lines: MR && MR.lines || {} };
   mrSave();
   mrReapply();
   setStatus('MyRules: loaded ' + mrCount(doc) + (D ? '.' : '. Load your location files to apply them.'));
@@ -537,8 +744,17 @@ function mrRenderRules() {
     return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied ? MR_COUNT[c.id] || 0 : null);
   }).join('') + '</div>';
-  if (rout.length) h += '<div class="sec"><h3>Routines</h3><p class="fine" style="margin-bottom:6px">Kept in your file and exported again, but not applied in this version of BT•DT yet.</p>' +
-    rout.map(function (r) { return mrRuleRow('routines', r, r.name || r.id, mrWhenText(r.when), r.then && r.then.mode || 'OTHER', '#9aa49d', null); }).join('') + '</div>';
+  if (rout.length) h += '<div class="sec"><h3>Routines</h3>' + rout.map(function (r) {
+    var t = r.then || {}, a = mrEnd(r.from), b = mrEnd(r.to), ln = D && D.mrLine && D.mrLine[r.id], bits = [];
+    function end(ref, e) { var pr = typeof ref === 'string' ? mrById(ref) : null; return pr ? pr.name || pr.role || pr.id : e ? (needPlaces(), placeLabel(mrNearestPlace(e.at))) : '?'; }
+    bits.push(esc(end(r.from, a)) + (r.both_ways ? ' ⇄ ' : ' → ') + esc(end(r.to, b)));
+    bits.push(mrWhenText(r.when));
+    if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing or guessed'));
+    if (t.gear) { var gr = String(t.gear).charAt(0) === '@' ? mrById(t.gear) : null; bits.push('Gear: ' + esc(gr ? gr.name || gr.id : t.gear)); }
+    if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + (MR_NOFIT[r.id] ? ' · ' + fmt(MR_NOFIT[r.id]) + ' didn\'t fit' : '') : 'Line: no trip clean enough to learn it from yet');
+    if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
+    return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? MR_COUNT[r.id] || 0 : null);
+  }).join('') + '</div>';
   if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
   $('mrBody').innerHTML = h;
 }
@@ -584,12 +800,23 @@ function mrTripBlock(i) {
     var hc = mrCorrections().filter(function (x) { return x.c.then.hide === true && x.trips.indexOf(i) >= 0; }).pop();
     h += '<div class="mr-chg"><b>Hidden</b> from the map, lists and totals' + (hc ? src(hc.c.id, 'hide') : '') + '</div>';
   }
-  if (md) h += '<div class="mr-chg"><b>Type:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' <span class="fine">(was ' + esc((LABEL[md.was] || md.was).toLowerCase()) + (md.guessed ? ', guessed' : '') + ')</span>' + src(md.rule, 'mode') + '</div>';
+  if (md) h += '<div class="mr-chg"><b>Type:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' <span class="fine">(was ' + esc((LABEL[md.was] || md.was).toLowerCase()) + (md.guessed ? ', guessed' : '') + ')</span>' + src(md.rule, md.inf ? '' : 'mode') + '</div>';
   if (nm) h += '<div class="mr-chg"><b>Title:</b> ' + esc(nm.name) + (recName(i) ? ' <span class="fine">(was “' + esc(recName(i)) + '”)</span>' : '') + src(nm.rule, 'name') + '</div>';
   if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
+  var rt = D.mrRoute && D.mrRoute[i], rr = rt && mrById(rt.rule), sn = D.snap && D.snap[i], ln = rr && D.mrLine[rr.id];
+  if (rr) {
+    h += '<div class="mr-chg"><b>Routine:</b> ' + esc(rr.name || rr.id) + ' <span class="fine">(' + (rt.dir > 0 ? 'there' : 'back') + ')</span>';
+    if (sn) h += '<div class="fine">Drawn along ' + (ln && ln.src === 'trip' ? 'the line of the trip on ' + esc(mrWhere(ln.from)) : esc(ln ? ln.src : 'its line')) + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + ').</div>';
+    else if (ln && ln.from === i) h += '<div class="fine">This trip\'s GPS trail is the line the routine\'s other trips are drawn along.</div>';
+    else if (ln && ln.missing) h += '<div class="fine">Its line, ' + esc(ln.missing) + ', isn\'t loaded: load it with your location files.</div>';
+    else if (rr.then && rr.then.snap && ln) h += '<div class="fine">Not drawn along the routine\'s line: this trip went another way.</div>';
+    h += '</div>';
+  }
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
-  if (g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-t="' + i + '">Not this trip</button>';
+  // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
+  if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
+  if (rr && rr.then && rr.then.snap && ln && !ln.missing && ln.from !== i && (ln.src === 'trip' || rr.then.snap === 'learn') && mrClean(i)) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(rr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
   return '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
 }
@@ -603,8 +830,14 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
   var i = +b.dataset.t, act = b.dataset.mrAct;
-  if (act === 'not') {
-    var g = D.mrGear[i], r = g && mrById(g.rule);
+  if (act === 'line') {
+    var lr = mrById(b.dataset.r);
+    if (!lr) return;
+    lr.then.snap = { trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] } };
+    mrChange('Line for ' + (lr.name || lr.id) + ' taken from the trip on ' + mrWhere(i));
+    openTrip(i);
+  } else if (act === 'not') {
+    var r = mrById(b.dataset.r);
     if (!r) return;
     (r.except || (r.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
     mrChange('Not this trip: ' + (r.name || r.id) + ' on ' + mrWhere(i));
@@ -662,7 +895,7 @@ function mrSaveEdit(i) {
   else if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
   mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
   if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
-  else openTrip(i);
+  else { openTrip(i); if (type !== oldMode) setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
 }
 
 // Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
@@ -882,3 +1115,64 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-place]');
   if (b) mrPlaceDialog(b.dataset.mrPlace);
 });
+
+// ---------- making a routine from a fixed trip ----------
+// After you change a trip's type, when you made 5 or more trips like it (the same ends within
+// 500 m, on the same kind of day, starting within 2 hours of it), BT•DT offers to make a routine of
+// it: the type for all of them, both ways when you made the trip back too, and optionally their line.
+var MR_RAIL = { TRAIN: 1, TRAM: 1, SUBWAY: 1, FERRY: 1, BUS: 1, CABLE: 1 };
+function mrHm(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60); }
+function mrLike(i) {
+  var a = { at: [D.from[2 * i], D.from[2 * i + 1]], rad: 0.5 }, b = { at: [D.to[2 * i], D.to[2 * i + 1]], rad: 0.5 };
+  if (!isFinite(a.at[0]) || !isFinite(b.at[0]) || km(a.at, b.at) < 1) return null;
+  var wk = D.dow[i] > 0 && D.dow[i] < 6, m0 = mrLocalMin(i), there = [], back = [];
+  for (var j = 0; j < D.day.length; j++) {
+    if (isDup(j) || D.mrHide[j] || (D.dow[j] > 0 && D.dow[j] < 6) !== wk || MODES[D.mode[j]] === 'FLYING') continue;
+    var dm = Math.abs(mrLocalMin(j) - m0);
+    if (mrNearEnd(a, j, false) && mrNearEnd(b, j, true) && Math.min(dm, 1440 - dm) <= 120) there.push(j);
+    else if (mrNearEnd(b, j, false) && mrNearEnd(a, j, true)) back.push(j);
+  }
+  return { a: a, b: b, wk: wk, there: there, back: back };
+}
+function mrOfferRoutine(i, mode) {
+  var x = mrLike(i);
+  if (!x || x.there.length < 6) return;
+  needPlaces();
+  var A = placeLabel(D.pa[i]), B = placeLabel(D.pb[i]), lab = LABEL[mode] || mode;
+  var days = x.there.map(function (j) { return D.day[j]; }).concat(x.back.map(function (j) { return D.day[j]; }));
+  var d0 = Math.min.apply(null, days), d1 = Math.max.apply(null, days), m0 = mrLocalMin(i);
+  var bm = x.back.map(mrLocalMin).sort(function (p, q) { return p - q; }), mb = bm.length ? bm[bm.length >> 1] : null;
+  var modes = {};
+  x.there.concat(x.back).forEach(function (j) { var m = LABEL[MODES[D.mode[j]]] || MODES[D.mode[j]]; modes[m] = (modes[m] || 0) + 1; });
+  mrAsk({
+    title: 'Same on other days?',
+    text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + mrHm(m0) +
+      (x.back.length ? ', and ' + fmt(x.back.length) + ' back' : '') + '. Your files have them as ' + Object.keys(modes).map(function (m) { return esc(m.toLowerCase()) + ' (' + fmt(modes[m]) + ')'; }).join(', ') + '.',
+    extra: '<div class="mr-form">' +
+      '<span class="mr-dates">From <input type="date" id="mrRFrom" value="' + isoDay(d0) + '" aria-label="From"> to <input type="date" id="mrRTo" value="' + isoDay(d1) + '" aria-label="To (empty: until now)"></span>' +
+      '<span class="mr-dates">Leaving between <input type="time" id="mrRT0" value="' + mrHm(m0 - 90) + '" aria-label="Earliest start"> and <input type="time" id="mrRT1" value="' + mrHm(m0 + 90) + '" aria-label="Latest start"></span>' +
+      (x.back.length ? '<label class="mr-opt"><input type="checkbox" id="mrRBoth"' + (x.back.length >= 3 ? ' checked' : '') + '><span><b>Both ways</b><span class="mr-dates">Back between <input type="time" id="mrRB0" value="' + (mb != null ? mrHm(mb - 120) : '15:00') + '" aria-label="Earliest return"> and <input type="time" id="mrRB1" value="' + (mb != null ? mrHm(mb + 120) : '20:00') + '" aria-label="Latest return"></span></span></label>' : '') +
+      '<label class="mr-opt"><input type="checkbox" id="mrRForce"><span><b>Also where your files recorded another type</b><small class="fine">Off: only trips whose type was missing or guessed from speed.</small></span></label>' +
+      '<label class="mr-opt"><input type="checkbox" id="mrRSnap"' + (MR_RAIL[mode] ? ' checked' : '') + '><span><b>Draw them along one line</b><small class="fine">Learned from the cleanest of these trips; trips that went another way keep their own.</small></span></label></div>',
+    buttons: [['Make a routine', 'primary', function () { mrSaveRoutine(i, mode, x, A, B); }], ['Not now', 'quiet', null]],
+    note: 'Saved in MyRules. What it fills in is marked Inferred, and you can leave out any trip.'
+  });
+}
+function mrEndRef(e) { var r = mrPlaceAt(e.at[0], e.at[1]); return r ? '@' + r.id : [+e.at[0].toFixed(5), +e.at[1].toFixed(5)]; }
+function mrSaveRoutine(i, mode, x, A, B) {
+  var lab = LABEL[mode] || mode, w = {}, f = $('mrRFrom').value, t = $('mrRTo').value;
+  if (f) w.from = f;
+  if (t) w.to = t;
+  if (x.wk) w.days = ['mon', 'tue', 'wed', 'thu', 'fri']; else w.days = ['sat', 'sun'];
+  if ($('mrRT0').value && $('mrRT1').value) w.time = [$('mrRT0').value, $('mrRT1').value];
+  var r = { id: mrNewId(lab + ' ' + A + ' ' + B), name: lab + ' ' + A + ' – ' + B, from: mrEndRef(x.a), to: mrEndRef(x.b), when: w, then: { mode: mode } };
+  if ($('mrRBoth') && $('mrRBoth').checked) { r.both_ways = true; if ($('mrRB0').value && $('mrRB1').value) r.return_when = { time: [$('mrRB0').value, $('mrRB1').value] }; }
+  if ($('mrRForce').checked) r.force = true;
+  if ($('mrRSnap').checked) r.then.snap = 'learn';
+  mrEnsure();
+  (MR.doc.routines || (MR.doc.routines = [])).push(r);
+  mrChange('Routine added: ' + r.name);
+  openTrip(i);
+  toast(r.name + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.');
+}
+

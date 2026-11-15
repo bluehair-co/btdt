@@ -8,6 +8,8 @@ var PATH_NOTE = 'Lines follow the GPS trail Timeline recorded for each trip. Tri
 function tripPath(i) {
   var a = [D.from[2 * i], D.from[2 * i + 1]], b = [D.to[2 * i], D.to[2 * i + 1]];
   if (modeOf(i) === 'FLYING' && isFinite(a[0]) && isFinite(b[0])) return greatCircle(a, b);
+  // Drawn along a MyRules routine's line (see mrApplySnaps).
+  if (D.snap && D.snap[i]) return D.snap[i].pts.slice();
   var o0 = D.pathOff[i], o1 = D.pathOff[i + 1], pts = [];
   for (var j = o0; j < o1; j++) pts.push([D.pathPts[2 * j], D.pathPts[2 * j + 1]]);
   if (pts.length < 2) pts = [a, b].filter(function (p) { return isFinite(p[0]); });
@@ -15,6 +17,7 @@ function tripPath(i) {
 }
 // The trail with the time of each point, in seconds since the trip started.
 function trail(i) {
+  if (D.snap && D.snap[i]) return { pts: D.snap[i].pts.slice(), ts: D.snap[i].ts.slice() };
   var pts = tripPath(i), dur = Math.max(0, (D.end[i] - D.start[i]) / 1000), ts = [], o0 = D.pathOff[i], o1 = D.pathOff[i + 1];
   if (modeOf(i) !== 'FLYING' && o1 - o0 >= 2) for (var j = o0; j < o1; j++) ts.push(D.pathT[j]);
   else for (var k = 0; k < pts.length; k++) ts.push(pts.length > 1 ? dur * k / (pts.length - 1) : 0);
@@ -645,6 +648,8 @@ function highlight(i) {
     if (i != null && PREFS.proj === 'merc') {
       var pts = tripPath(i), c = groupOf(modeOf(i)).v;
       if (pts.length) {
+        // A trip drawn along a MyRules line: its own GPS points, dashed and faded, under it.
+        if (D.snap && D.snap[i]) { var own = mrTripPts(i); if (own.length > 1) L.polyline(own, { renderer: renderer, color: cssVar(c), weight: 2, opacity: 0.5, dashArray: '4 6', interactive: false }).addTo(hlLayer); }
         L.polyline(pts, { renderer: renderer, color: cssVar('--panel'), weight: 9, opacity: 0.9, interactive: false }).addTo(hlLayer);
         // With heart rate paths on, an activity that recorded it is coloured by zone, as its chart is.
         var runs = PREFS.hrPaths ? hrRuns(i) : [];
@@ -669,7 +674,7 @@ function tripRows(i) {
   var m = modeOf(i), k = D.km[i], ms = D.end[i] - D.start[i], off = D.off[i], e = D.est[i];
   var line = haversine([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]), nGps = D.pathOff[i + 1] - D.pathOff[i];
   var t0 = localTime(D.start[i], zoneAt(D.from[2 * i], D.from[2 * i + 1]), off), t1 = localTime(D.end[i], zoneAt(D.to[2 * i], D.to[2 * i + 1]), off);
-  var src = e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
+  var src = D.snap && D.snap[i] ? 'along your routine\'s line' : e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
   var rows = [
     ['From', placeOf(i, false)], ['To', placeOf(i, true)],
     ['Start', t0.time + ' <span class="fine">' + t0.label + '</span>'],
@@ -955,13 +960,17 @@ var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straigh
 // What MyRules filled in, in Raw data and the exports.
 function mrRaw(i) {
   var g = D.mrGear && D.mrGear[i], m = D.mrMode && D.mrMode[i], n = D.mrName && D.mrName[i], o = [];
-  if (m) o.push({ field: 'mode', value: MODES[D.mode[i]], was: m.was, rule: m.rule });
+  if (m) o.push({ field: 'mode', value: MODES[D.mode[i]], was: m.was, rule: m.rule, inferred: !!m.inf });
   if (n) o.push({ field: 'name', value: n.name, was: recName(i) || null, rule: n.rule });
   if (g) o.push({ field: 'gear', value: GEAR[g.gear].name, rule: g.rule, inferred: !g.cor });
+  var sn = D.snap && D.snap[i], rt = D.mrRoute && D.mrRoute[i];
+  if (rt) o.push({ field: 'routine', value: rt.rule, direction: rt.dir > 0 ? 'there' : 'back' });
+  if (sn) o.push({ field: 'line', value: sn.pts.map(function (p) { return [+p[0].toFixed(6), +p[1].toFixed(6)]; }), km: +sn.km.toFixed(3), was: +D.base.km[i].toFixed(3), rule: sn.rule, inferred: true });
   return o.length ? o : null;
 }
 function mrFlags(i) {
-  return (mrInferred(i) ? ['gear from MyRules'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
+  return (D.mrGear && D.mrGear[i] && !D.mrGear[i].cor ? ['gear from MyRules'] : []).concat(D.mrMode && D.mrMode[i] && D.mrMode[i].inf ? ['type from a MyRules routine'] : [])
+    .concat(D.snap && D.snap[i] ? ['line from a MyRules routine'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
 }
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
@@ -1592,7 +1601,14 @@ function heatPoints() {
     for (k = 0; k < sel.length; k++) {
       i = sel[k];
       var o0 = D.pathOff[i], o1 = D.pathOff[i + 1];
-      if (modeOf(i) !== 'FLYING' && o1 - o0 >= 2) {
+      if (D.snap && D.snap[i] && modeOf(i) !== 'FLYING') {
+        // Along its MyRules line.
+        var sp = D.snap[i];
+        for (j = 0; j < sp.pts.length; j++) {
+          lat.push(sp.pts[j][0]); lng.push(sp.pts[j][1]); trip.push(k); link.push(j > 0 ? 1 : 0);
+          w.push(by === 'time' ? Math.max(0.05, Math.min(10, ((sp.ts[j + 1] || sp.ts[j]) - sp.ts[j]) / 60)) : 1);
+        }
+      } else if (modeOf(i) !== 'FLYING' && o1 - o0 >= 2) {
         for (j = o0; j < o1; j++) {
           lat.push(D.pathPts[2 * j]); lng.push(D.pathPts[2 * j + 1]); trip.push(k);
           // Don't draw a line the long way round across the date line.

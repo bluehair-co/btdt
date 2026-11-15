@@ -376,6 +376,18 @@
               "type": "string"
             }
           }
+        },
+        {
+          "type": "object",
+          "required": [
+            "trip"
+          ],
+          "properties": {
+            "trip": {
+              "$ref": "#/$defs/tripRef"
+            }
+          },
+          "description": "Learn the line from this trip"
         }
       ]
     },
@@ -430,7 +442,15 @@
               "$ref": "#/$defs/mode"
             },
             "gear": {
-              "$ref": "#/$defs/ref"
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/ref"
+                },
+                {
+                  "type": "string",
+                  "description": "A gear's name as your activity files record it"
+                }
+              ]
             },
             "snap": {
               "$ref": "#/$defs/snap"

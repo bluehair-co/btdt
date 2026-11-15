@@ -1,6 +1,6 @@
 # MyRules files — draft spec v0.1
 
-*Version 0.1, 15 Nov 2026. BT•DT applies gear periods, places and corrections (`mode`, `gear`, `name`, `hide`; §9, slices 1 and 2). Routines and `replace` corrections are read, kept and exported again, but not applied yet.*
+*Version 0.1, 15 Nov 2026. BT•DT applies gear periods, places, routines (`mode`, `gear`, `snap`) and corrections (`mode`, `gear`, `name`, `hide`); §9, slices 1 to 3. `replace` corrections are read, kept and exported again, but not applied yet.*
 
 A **MyRules file** holds the things only you know about your own history: which bike you owned when, where home and work were, the train you took to work every weekday, the day Timeline got completely wrong. You load it next to your location files. BT•DT applies it on top of what it read from them, and marks everything it changed as **inferred**, so a guess never passes for a recording.
 
@@ -186,6 +186,21 @@ A routine matches trips that start within 500 m of `from` and end within 500 m o
 
 **What snapping does.** It cuts the line between the points nearest the trip's start and end, and spreads the trip's own start and end times along it in proportion to distance. The distance becomes the line's length. The original GPS points are kept and drawn dashed in the trip details, and **Raw data** still shows them. A trip whose own points stray more than 1 km from the line for over a third of its length is not snapped, because it was probably a different route that day (a diversion, a bus replacement) and is listed in the rule's details as "didn't fit".
 
+**In BT•DT.**
+
+- `from` and `to` are a place (`"@office"`) or a position (`[52.364, 4.866]`), matched within 500 m (or the place's radius, if larger).
+- Of the routines that match a trip, the one with the shorter `when` wins, then the later one in the file.
+- `mode` follows the table above. A routine's `gear` fills trips without gear, before gear periods.
+- **The learned line** comes from the matching trip with the most GPS points per km and no gap over 2 minutes. A recorded activity or a Records.json line counts double.
+- **Picking another line:** *Use this trip's line* in a trip's details writes `"snap": { "trip": TripRef }`.
+- **GeoJSON lines:** a `.geojson` named by a routine's `snap.geojson` is read as that line (its LineString, or the longest part of a MultiLineString) when loaded with the rules or after them. It is kept with your rules in the browser.
+- **How it shows:** snapped trips and types a routine set are marked *Inferred*. The rules sheet says where each line came from and how many trips didn't fit.
+- **Making a routine in the app:** after you change a trip's type with *Edit trip*, the app offers *Same on other days?* if you made 5 or more trips like it. Like it means the same ends within 500 m, on the same kind of day, starting within 2 hours of it. It fills in:
+  - the dates and a time window;
+  - *Both ways*, with the time you usually come back;
+  - *Also where your files recorded another type* (`force`);
+  - *Draw them along one line* (`snap: "learn"`, on by default for public transport).
+
 ### 5.4 Corrections
 
 One-off fixes for a trip, a day or a span.
@@ -289,7 +304,7 @@ The browser copy is often the only copy of rules made in the app, so the app has
 
 1. **Slice 1: gear periods and places** (done; the smallest useful piece, and the most reliable inference). Load and save the file, the Imported data card and rules list, inferred flag and badges, trip details section with *Not this trip*, the gear assignment sheet that writes rules, export, and the Filters change.
 2. **Slice 2: corrections** (done). `mode`, `gear`, `name`, `hide`; *Edit trip* in trip details writes them. `replace` comes later.
-3. **Slice 3: routines with `mode`**, then `snap: "learn"`, then polyline and GeoJSON lines.
+3. **Slice 3: routines** (done). `mode`, `gear` and `snap` (learned, polyline and GeoJSON lines); *Same on other days?* after *Edit trip* writes them.
 4. **Later:** publish the schema at a stable URL, a small MyRules validator page.
 
 ---
