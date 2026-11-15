@@ -874,3 +874,5 @@ div.hit-row:hover { background: none; }
 .demo-msg .narrow-only { display: none; }
 @media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
 .mr-dates input { width: auto; }
+.mr-dlg.side { margin: auto auto auto 16px; }
+.mr-dlg.side::backdrop { background: rgba(14, 10, 34, .12); }

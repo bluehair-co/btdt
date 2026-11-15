@@ -1447,10 +1447,16 @@ function spotsOf(vs) {
 }
 // A spot's name: the one Takeout gave it, Home, or the town it's in.
 function spotName(s, k) {
+  // Your own name from MyRules wins.
+  var mr = mrActive('places').length && mrPlaceName({ lat: s.lat, lng: s.lng });
+  if (mr) return mr;
   if (s.name) return s.name;
   if (s.home) return 'Home';
   if (s.nearHome) return 'Near home';
-  return k != null ? 'Spot ' + (k + 1) : 'Spot in ' + placeLabel(s.p);
+  // Just outside a place you named, it is the town's spot, not the named place's.
+  var town = placeLabel(s.p), q = D.places[s.p];
+  if (q && mrPlaceName(q) === town) { var c = nearestCity(s.lat, s.lng); if (c) town = c.name; }
+  return k != null ? 'Spot ' + (k + 1) : 'Spot in ' + town;
 }
 // Time spent there by weekday and hour, local time, as minutes per cell.
 function presence(vs) {
@@ -1542,7 +1548,7 @@ function placePage(o, keepScroll) {
         '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
         '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
     }).join('') + '</div>' + (spots.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '');
-  if (o.spot) html += mergeHtml(o.spot);
+  if (o.spot) html += mrSpotHtml(o.spot) + mergeHtml(o.spot);
   html += '<h4 class="place-h">Visits</h4><div class="list-rows" id="placeVisits">' + placeVisits.slice(0, 20).map(visitRow).join('') + '</div>' +
     (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
