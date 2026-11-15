@@ -676,6 +676,7 @@ function renderPlaces() {
 // Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
 // stayed in the filters. Shown once at least MIN_KINDS places have a kind.
 var MIN_KINDS = 5;
+var KIND_FLIP = ['pin', 'restaurant', 'cafe', 'cart', 'BUS', 'school'];   // 2 s each, see .kind-flip
 function renderKinds() {
   var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard');
   el.hidden = rules.length < MIN_KINDS;
@@ -686,13 +687,16 @@ function renderKinds() {
     all += h;
     if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; } else other += h;
   }
-  var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([1]));
+  var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([other, 1]));
   $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places), in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
     return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
       '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:#0f7c8c"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
-  }).join('') + '<p class="fine" style="margin-top:6px">Everywhere else: ' + hoursLabel(other).replace(/ \d+ min$/, '') + ' (' + Math.round(other / Math.max(all, 1e-9) * 100) + '%).</p>'
+  }).join('') +
+    // Everywhere else: the time at places without a kind, its badge flipping through kinds of place.
+    '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm kind-flip" style="background:var(--m-other)">' + KIND_FLIP.map(icon).join('') + '</span><span><b>Everywhere else</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +
+      '<div><div class="track"><i style="width:' + (other / mx * 100).toFixed(1) + '%;background:var(--m-other)"></i></div></div><div class="val">' + hoursLabel(other).replace(/ \d+ min$/, '') + '</div></div>'
     : '<p class="empty">No stays at those places in these filters.</p>';
 }
 // Explorer squares in the trips shown: how many, the biggest cluster and square, and new ones per year.
