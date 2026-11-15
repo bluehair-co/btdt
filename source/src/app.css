@@ -310,6 +310,9 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-rule { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--grid); }
 .mr-rule:last-child { border-bottom: 0; }
 .mr-rule .file-txt { flex: 1; }
+.mr-edit { cursor: pointer; border-radius: 8px; min-width: 0; }
+.mr-edit:hover b, .mr-edit:focus-visible b { color: var(--accent); }
+.mr-edit .mr-chev { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; color: var(--muted); }
 .mr-rule.off .file-txt, .mr-rule.off .mode-badge { opacity: .5; }
 .mr-rule .icon-btn { width: 32px; height: 32px; color: var(--muted); }
 .mr-rule .icon-btn .ic { width: 18px; height: 18px; }
@@ -880,6 +883,8 @@ div.hit-row:hover { background: none; }
 .demo-msg .narrow-only { display: none; }
 @media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
 .mr-dates input { width: auto; }
+.mr-ghost { display: flex; flex-direction: column; gap: 6px; }
+.mr-ghost-map { height: 210px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
 .mr-rad-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 /* Define radius: the whole screen is the map, with the slider and Save at the bottom */
 .mr-rad { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--fg); }

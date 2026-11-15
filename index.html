@@ -354,6 +354,9 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-rule { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--grid); }
 .mr-rule:last-child { border-bottom: 0; }
 .mr-rule .file-txt { flex: 1; }
+.mr-edit { cursor: pointer; border-radius: 8px; min-width: 0; }
+.mr-edit:hover b, .mr-edit:focus-visible b { color: var(--accent); }
+.mr-edit .mr-chev { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; color: var(--muted); }
 .mr-rule.off .file-txt, .mr-rule.off .mode-badge { opacity: .5; }
 .mr-rule .icon-btn { width: 32px; height: 32px; color: var(--muted); }
 .mr-rule .icon-btn .ic { width: 18px; height: 18px; }
@@ -924,6 +927,8 @@ div.hit-row:hover { background: none; }
 .demo-msg .narrow-only { display: none; }
 @media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
 .mr-dates input { width: auto; }
+.mr-ghost { display: flex; flex-direction: column; gap: 6px; }
+.mr-ghost-map { height: 210px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
 .mr-rad-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 /* Define radius: the whole screen is the map, with the slider and Save at the bottom */
 .mr-rad { width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: var(--bg); color: var(--fg); }
@@ -8329,9 +8334,9 @@ function renderPlaces() {
     if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
-      var kind = r && MR_KIND[r.role], cur = s.home || mrIsCurrent(r), ic = kind ? MR_KIND[r.role][1] : s.home ? 'home' : 'pin';
+      var kind = r && MR_KIND[r.role];
       var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
-      return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '"><span class="mode-badge sm" style="background:' + (cur ? 'var(--accent)' : r ? '#0f7c8c' : 'var(--m-other)') + '">' + icon(ic) + '</span>' +
+      return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
         '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
         '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span></button>';
     }).join('');
@@ -8346,7 +8351,7 @@ function renderPlaces() {
   if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
   $('topPlaces').innerHTML = list.slice(0, 8).map(function (o) {
     var q = D.places[o.p], cc = countryAt(q.lat, q.lng), home = o.p === D.home;
-    return '<button type="button" class="hit-row" data-place="' + o.p + '"><span class="mode-badge sm" style="background:' + (home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(home ? 'home' : 'pin') + '</span>' +
+    return '<button type="button" class="hit-row" data-place="' + o.p + '">' + lookBadge(mrLook(mrRuleOf(q), home), true) +
       '<span class="t"><b>' + esc(placeLabel(o.p)) + '</b><small>' + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + '</small></span>' +
       '<span class="r num">' + fmt(o.n) + '<small>trips</small></span></button>';
   }).join('');
@@ -9238,7 +9243,7 @@ function placePage(o, keepScroll) {
   var seg = scopeSeg(o.vs.length, inF.length), scopeTxt = scoped ? esc(filterText()) : 'all your history';
   if (scoped && !inF.length) {
     var s0 = spotsOf(o.vs)[0], c0 = countryAt(s0.lat, s0.lng);
-    showPlaceHtml('<div class="trip-head"><span class="mode-badge" style="background:' + (o.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(o.home ? 'home' : 'pin') + '</span><div><h3>' + esc(o.title) + '</h3><p>' +
+    showPlaceHtml('<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
       esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + seg +
       '<p class="empty" style="margin-top:14px">No visits here in ' + scopeTxt + '. Change the filters or choose All history.</p>', keepScroll);
     return;
@@ -9263,7 +9268,7 @@ function placePage(o, keepScroll) {
   var oftenTxt = n < 2 ? 'Once' : perWeek >= 1 ? fmt(Math.round(perWeek * 10) / 10) + ' a week' : perMonth >= 1 ? fmt(Math.round(perMonth * 10) / 10) + ' a month' : 'Every ' + fmt(Math.round(1 / perMonth)) + ' months';
   var withIds = spots.filter(function (s) { return s.pid; }).length;
   placeVisits = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; });
-  var html = '<div class="trip-head"><span class="mode-badge" style="background:' + (o.home ? 'var(--accent)' : 'var(--m-other)') + '">' + icon(o.home ? 'home' : 'pin') + '</span><div><h3>' + esc(o.title) + '</h3><p>' +
+  var html = '<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
     esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + seg +
     '<dl class="kv" style="margin-top:12px">' + [
       ['Visits', fmt(n)], ['How often', oftenTxt],
@@ -9275,7 +9280,7 @@ function placePage(o, keepScroll) {
   if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {
-      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '"><span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
+      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) + '<span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
         '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span></button>' +
         '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
         '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
@@ -9303,7 +9308,7 @@ function openPlace(p) {
   var lbl = placeLabel(p), vs = placeStays(lbl);
   if (!vs.length) return false;
   var q = D.places[p];
-  placePage({ title: lbl, vs: vs, home: p === D.home, spots: true, ll: [q.lat, q.lng] });
+  placePage({ title: lbl, vs: vs, home: p === D.home, spots: true, ll: [q.lat, q.lng], look: mrLook(mrRuleOf(q), p === D.home) });
   return true;
 }
 // One spot (a pin on the map).
@@ -9328,7 +9333,7 @@ function mergeHtml(key) {
   return html + '<h4 class="place-h">Same place as…</h4><p class="fine">If one of these spots nearby is really this place under another Google ID, tap <b>Merge</b> next to it: its visits join this place. The merge is saved on this device and can be undone.</p>' +
     '<div class="list-rows">' + near.slice(0, 5).map(function (x) {
       var s2 = spotsOf(spotStays(x.k))[0];
-      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(x.k) + '"><span class="t"><b>' + esc(spotName(s2)) + '</b><small>' + fmt(Math.round(x.d * 1000)) + ' m away · ' + fmt(s2.n) + ' visit' + (s2.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s2.lv]) + '</small></span></button>' +
+      return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(x.k) + '">' + lookBadge(spotLook(s2), true) + '<span class="t"><b>' + esc(spotName(s2)) + '</b><small>' + fmt(Math.round(x.d * 1000)) + ' m away · ' + fmt(s2.n) + ' visit' + (s2.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s2.lv]) + '</small></span></button>' +
         '<span class="spot-acts"><a class="btn quiet" href="' + esc(mapsUrl(s2.lat, s2.lng, s2.pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + 'Google Maps</a><button type="button" class="btn merge-btn" data-pmerge="' + esc(x.k) + '" data-pinto="' + esc(key) + '" aria-label="Merge ' + esc(spotName(s2)) + ' into this place">' + icon('layers') + 'Merge</button></span></div>';
     }).join('') + '</div>';
 }
@@ -9337,7 +9342,7 @@ function openSpot(key) {
   var vs = spotStays(key);
   if (!vs.length) return false;
   var s = spotsOf(vs)[0], name = spotName(s), town = placeLabel(s.p), others = placeStays(town).length > vs.length;
-  placePage({ title: name, sub: name.indexOf(town) < 0 && town !== 'Home' ? town : '', vs: vs, home: s.home, spots: false, town: others ? s.p : null, spot: key });
+  placePage({ title: name, sub: name.indexOf(town) < 0 && town !== 'Home' ? town : '', vs: vs, home: s.home, spots: false, town: others ? s.p : null, spot: key, look: spotLook(s) });
   return true;
 }
 function showPlaceOnMap(lat, lng) {
@@ -10095,6 +10100,7 @@ function mrAsk(o) {
   $('mrDlgTitle').textContent = o.title;
   $('mrDlgText').innerHTML = o.text;
   $('mrDlgExtra').innerHTML = o.extra || '';
+  $('mrDlgExtra').oninput = $('mrDlgExtra').onchange = null;
   $('mrDlgNote').textContent = o.note || '';
   var bt = $('mrDlgBtns');
   bt.textContent = '';
@@ -10179,7 +10185,7 @@ function mrWhenText(w) {
 }
 function mrRuleRow(sec, r, title, sub, ic, color, count) {
   var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
-  return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt"><b>' + esc(title) + '</b><small>' + sub +
+  return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt mr-edit" role="button" tabindex="0" data-mr-edit="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Edit ' + esc(title) + '"><b>' + esc(title) + icon('right', 'mr-chev') + '</b><small>' + sub +
     (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + '</small></span>' +
     (count != null ? '<span class="num fine">' + fmt(count) + '</span>' : '') +
     '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
@@ -10201,7 +10207,7 @@ function mrRenderRules() {
   }).join('') + '</div>';
   if (places.length) h += '<div class="sec"><h3>Places</h3>' + places.map(function (r) {
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
-    return mrRuleRow('places', r, r.name || r.id, sub, r.role === 'home' ? 'home' : r.hide ? 'shield' : 'pin', r.role === 'home' ? '#008300' : '#9aa49d', null);
+    return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
   }).join('') + '</div>';
   if (cor.length) h += '<div class="sec"><h3>Corrections</h3>' + cor.map(function (c) {
     var t = c.trip || {}, th = c.then || {}, g = th.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null, bits = [];
@@ -10240,9 +10246,15 @@ $('mrBody').addEventListener('change', function (ev) {
   if (ev.target.checked) delete r.enabled; else r.enabled = false;
   mrChange((ev.target.checked ? 'Switched on: ' : 'Switched off: ') + (r.name || r.id));
 });
+$('mrBody').addEventListener('keydown', function (ev) {
+  var ed = (ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-mr-edit]') && ev.target;
+  if (ed) { ev.preventDefault(); mrEditRule(ed.dataset.mrEdit); }
+});
 $('mrBody').addEventListener('click', function (ev) {
   var o = ev.target.closest('[data-mr-trip]');
   if (o) { openTrip(+o.dataset.mrTrip); return; }
+  var ed = ev.target.closest('[data-mr-edit]');
+  if (ed) { mrEditRule(ed.dataset.mrEdit); return; }
   var b = ev.target.closest('[data-mr-del]');
   if (!b) return;
   var p = b.dataset.mrDel.split(':'), sec = p[0], id = p.slice(1).join(':'), r = mrById(id);
@@ -10368,6 +10380,7 @@ function mrSaveEdit(i) {
   if (isNew) { if (!Object.keys(t).length) return; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   else if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
   mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
+  if (openId === 'mrSheet') return;
   if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
   else { openTrip(i); if (type !== oldMode) setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
 }
@@ -10441,6 +10454,101 @@ function mrSaveGear(i) {
   openTrip(i);
 }
 
+// ---------- editing a rule from MyRules ----------
+// Tap a rule in MyRules to change it in a dialog over the list, which is drawn again when you save,
+// so you can go on to the next one. Places and trip fixes use the same dialogs as their pages; gear
+// periods and routines have their own here.
+function mrEditRule(ref) {
+  var k = ref.indexOf(':'), sec = ref.slice(0, k), r = mrById(ref.slice(k + 1));
+  if (!r) return;
+  if (sec === 'gear') { mrGearRuleDialog(r); return; }
+  if (sec === 'routines') { mrRoutineDialog(r); return; }
+  if (!D) { toast('Load your Timeline file to edit this'); return; }
+  if (sec === 'places') {
+    if (!Array.isArray(r.at)) { toast('This place has no position to edit'); return; }
+    needPlaces(); mrPlaceDialog('mr:' + r.id); return;
+  }
+  if (sec === 'corrections') {
+    var x = mrCorrections().filter(function (y) { return y.c === r; })[0];
+    if (x && x.trips.length) mrEditDialog(x.trips[0]);
+    else toast('This trip isn\'t in the data you loaded');
+  }
+}
+function mrDateRow(w) {
+  w = w || {};
+  return '<div class="field"><span>Period</span><span class="mr-dates"><input type="date" id="mrWFrom" value="' + esc(w.from || '') + '" aria-label="From"> to <input type="date" id="mrWTo" value="' + esc(w.to || '') + '" aria-label="To (empty: until now)"></span></div>';
+}
+// The period from the dialog's dates, keeping the days and times it had.
+function mrDatesInto(r) {
+  var w = Object.assign({}, r.when), f = $('mrWFrom').value, t = $('mrWTo').value;
+  if (f && t && f > t) { toast('The period ends before it starts'); return false; }
+  if (f) w.from = f; else delete w.from;
+  if (t) w.to = t; else delete w.to;
+  if (Object.keys(w).length) r.when = w; else delete r.when;
+  return true;
+}
+function mrGearRuleDialog(r) {
+  var kinds = r.mode === 'CYCLING' || !r.mode ? ['bike', 'strida', 'halfbike', 'cargo', 'ebike', 'other'] : ['shoe', 'other'];
+  if (r.kind && kinds.indexOf(r.kind) < 0) kinds.push(r.kind);
+  var mx = r.match && r.match.max_km;
+  mrAsk({
+    title: 'Edit gear period',
+    text: 'Every ' + esc((LABEL[r.mode] || r.mode || 'cycling').toLowerCase()) + ' trip without recorded gear in this period gets this gear.',
+    extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '"></label>' +
+      '<label class="field"><span>Kind</span><select id="mrGKind">' + kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === r.kind ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('') + '</select></label></div>' +
+      mrDateRow(r.when) +
+      '<label class="field"><span>Only trips under (km, optional)</span><input type="number" id="mrGMax" min="0" step="1" value="' + (mx != null ? mx : '') + '"></label></div>',
+    buttons: [['Save', 'primary', function () {
+      var name = $('mrGName').value.trim(), m = parseFloat($('mrGMax').value);
+      if (!name) { toast('Give the gear a name'); return; }
+      if (!mrDatesInto(r)) return;
+      r.name = name; r.kind = $('mrGKind').value;
+      var match = Object.assign({}, r.match);
+      if (m > 0) match.max_km = m; else delete match.max_km;
+      if (Object.keys(match).length) r.match = match; else delete r.match;
+      mrChange('Gear period changed: ' + name + ' (' + mrWhenText(r.when) + ')');
+    }], ['Cancel', 'quiet', null]]
+  });
+}
+function mrRoutineDialog(r) {
+  var t = r.then || {};
+  mrAsk({
+    title: 'Edit routine',
+    text: 'Trips between its two ends in this period get what you set here.',
+    extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
+      '<label class="field"><span>Type</span><select id="mrRMode"><option value="">Leave the type as it is</option>' + MODES.filter(function (m) { return m !== 'UNKNOWN'; }).map(function (m) {
+        return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
+      }).join('') + '</select></label>' +
+      mrDateRow(r.when) +
+      '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
+      '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing or guessed one.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
+    buttons: [['Save', 'primary', function () {
+      var d = form(true);
+      if (!d) return;
+      Object.keys(r).forEach(function (k) { delete r[k]; });
+      Object.assign(r, d);
+      mrChange('Routine changed: ' + (r.name || r.id));
+    }], ['Cancel', 'quiet', null]],
+    after: function () { mrGhostStart(function () { return form(false); }); }
+  });
+  // The routine as the dialog has it: a copy, so the preview never changes the saved one.
+  function form(saving) {
+    var d = JSON.parse(JSON.stringify(r)), name = $('mrRName').value.trim(), mode = $('mrRMode').value;
+    var f = $('mrWFrom').value, to = $('mrWTo').value;
+    if (f && to && f > to) { if (saving) toast('The period ends before it starts'); return null; }
+    var w = Object.assign({}, d.when);
+    if (f) w.from = f; else delete w.from;
+    if (to) w.to = to; else delete w.to;
+    if (Object.keys(w).length) d.when = w; else delete d.when;
+    if (name) d.name = name; else delete d.name;
+    d.then = Object.assign({}, d.then);
+    if (mode) d.then.mode = mode; else delete d.then.mode;
+    if ($('mrRBoth').checked) d.both_ways = true; else delete d.both_ways;
+    if ($('mrRForce').checked) d.force = true; else delete d.force;
+    return d;
+  }
+}
+
 // ---------- naming a place from its pin ----------
 // A spot page (a regular place's pin) has Name this place: a name, what it is (home, work…), the
 // radius that counts as this place (set on its own map with Define radius), and Hide. Saved as a
@@ -10451,6 +10559,14 @@ var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 
 var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'home'], sport: ['Sport', 'RUNNING'],
   restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], transit: ['Public transport', 'BUS'] };
 function mrKindName(role) { return MR_KIND[role] ? MR_KIND[role][0] : role ? role.charAt(0).toUpperCase() + role.slice(1) : ''; }
+// How a place looks wherever it's shown (pins, lists, its page): the icon of its kind, in the sunrise
+// colour when it's your current home, work or school, teal when you named it, grey otherwise.
+function mrLook(r, home) {
+  var ic = r && MR_KIND[r.role] ? MR_KIND[r.role][1] : home ? 'home' : 'pin';
+  return { ic: r && r.hide ? 'shield' : ic, bg: home || mrIsCurrent(r) ? 'var(--accent)' : r ? '#0f7c8c' : 'var(--m-other)' };
+}
+function spotLook(s) { return mrLook(mrRuleOf(s), s.home); }
+function lookBadge(L, sm) { return '<span class="mode-badge' + (sm ? ' sm' : '') + '" style="background:' + L.bg + '">' + icon(L.ic) + '</span>'; }
 function mrSpotCentre(key) {
   var vs = spotStays(key), la = 0, lo = 0;
   vs.forEach(function (v) { la += D.vll[2 * v]; lo += D.vll[2 * v + 1]; });
@@ -10474,11 +10590,11 @@ function mrSpotHtml(key) {
     '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit name' : 'Name this place') + '</button></div>';
 }
 function mrPlaceDialog(key) {
-  var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0];
+  var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0] || {};
   if (!c) return;
   var nm = r ? r.name || '' : s.name || '', role = r ? r.role || '' : s.home ? 'home' : '', rad = r ? +r.radius_m || 100 : 100;
   // Past: until the date the rule has, else the last stay there.
-  var past = mrIsPast(r), until = r && r.when && r.when.to || isoDay(D.vday[s.lv]);
+  var past = mrIsPast(r), until = r && r.when && r.when.to || isoDay(s.lv != null ? D.vday[s.lv] : todayDay() - 1);
   mrAsk({
     title: r ? 'Edit this place' : 'Name this place',
     text: 'Stays within the radius take this name, in every list and on the map.',
@@ -10494,7 +10610,7 @@ function mrPlaceDialog(key) {
       placeLast = null;
       MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
       mrChange('Name removed: ' + (r.name || r.id));
-      mrReopenSpot(vs);
+      if (openId !== 'mrSheet') mrReopenSpot(vs);
     }]] : []).concat([['Cancel', 'quiet', null]]),
     after: function () {
       function upd() {
@@ -10581,7 +10697,8 @@ function mrSavePlace(key, r, c) {
   // The spot's key changes (see buildSpotKeys): its page is opened again below, not refreshed.
   placeLast = null;
   mrChange((isNew ? 'Place named: ' : 'Place changed: ') + (name || role) + ' (' + rad + ' m' + (MR_LIFE[role] ? ', ' + (past ? 'past, until ' + niceDate(mrDayNum(r.when.to)) : 'current') : '') + ')');
-  mrReopenSpot(vs);
+  // Edited from MyRules: you stay there (mrChange draws the list again).
+  if (openId !== 'mrSheet') mrReopenSpot(vs);
 }
 // Naming a place merges the spots within its radius into one (and removing the name splits them
 // again), so its page opens again on the spot where most of its stays are now.
@@ -10627,18 +10744,85 @@ function mrOfferRoutine(i, mode) {
     title: 'Same on other days?',
     text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + mrHm(m0) +
       (x.back.length ? ', and ' + fmt(x.back.length) + ' back' : '') + '. Your files have them as ' + Object.keys(modes).map(function (m) { return esc(m.toLowerCase()) + ' (' + fmt(modes[m]) + ')'; }).join(', ') + '.',
-    extra: '<div class="mr-form">' +
+    extra: '<div class="mr-form">' + mrGhostHtml() +
       '<span class="mr-dates">From <input type="date" id="mrRFrom" value="' + isoDay(d0) + '" aria-label="From"> to <input type="date" id="mrRTo" value="' + isoDay(d1) + '" aria-label="To (empty: until now)"></span>' +
       '<span class="mr-dates">Leaving between <input type="time" id="mrRT0" value="' + mrHm(m0 - 90) + '" aria-label="Earliest start"> and <input type="time" id="mrRT1" value="' + mrHm(m0 + 90) + '" aria-label="Latest start"></span>' +
       (x.back.length ? '<label class="mr-opt"><input type="checkbox" id="mrRBoth"' + (x.back.length >= 3 ? ' checked' : '') + '><span><b>Both ways</b><span class="mr-dates">Back between <input type="time" id="mrRB0" value="' + (mb != null ? mrHm(mb - 120) : '15:00') + '" aria-label="Earliest return"> and <input type="time" id="mrRB1" value="' + (mb != null ? mrHm(mb + 120) : '20:00') + '" aria-label="Latest return"></span></span></label>' : '') +
       '<label class="mr-opt"><input type="checkbox" id="mrRForce"><span><b>Also where your files recorded another type</b><small class="fine">Off: only trips whose type was missing or guessed from speed.</small></span></label>' +
       '<label class="mr-opt"><input type="checkbox" id="mrRSnap"' + (MR_RAIL[mode] ? ' checked' : '') + '><span><b>Draw them along one line</b><small class="fine">Learned from the cleanest of these trips; trips that went another way keep their own.</small></span></label></div>',
     buttons: [['Make a routine', 'primary', function () { mrSaveRoutine(i, mode, x, A, B); }], ['Not now', 'quiet', null]],
+    after: function () { mrGhostStart(function () { return mrOfferDraft(i, mode, x, A, B); }); },
     note: 'Saved in MyRules. What it fills in is marked Inferred, and you can leave out any trip.'
   });
 }
+// ---------- a routine's trips as ghosts ----------
+// While you make or edit a routine, a small map in the dialog shows the trips it would cover as
+// ghost lines (faint, so the more often you took a way the stronger it shows), drawn again as you change its period, times or options, with how
+// many there are and how many would change type.
+var MR_GHOST = null;
+function mrRoutineTrips(r) {
+  var out = { trips: [], change: 0 };
+  var a = mrEnd(r.from), b = mrEnd(r.to);
+  if (!D || !a || !b) return out;
+  var w = mrWhen(r.when), x = { r: r, a: a, b: b, w: w, rw: r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w, ex: mrExcept(r) };
+  var m = r.then && r.then.mode, mi = m != null ? MODE_IDX[m] : null, base = D.base || D;
+  for (var i = 0; i < D.day.length; i++) {
+    if (isDup(i) || MODES[base.mode[i]] === 'FLYING' || !mrRouteDir(x, i)) continue;
+    out.trips.push(i);
+    if (mi != null && mi !== base.mode[i] && (r.force || base.est[i] & GUESSED || MODES[base.mode[i]] === 'UNKNOWN')) out.change++;
+  }
+  return out;
+}
+function mrGhostHtml() { return '<div class="mr-ghost"><div class="mr-ghost-map" id="mrGhostMap"></div><small class="fine" id="mrGhostTxt"></small></div>'; }
+// draft() builds the routine from the dialog as it is now.
+function mrGhostStart(draft) {
+  var el = $('mrGhostMap');
+  if (MR_GHOST) { MR_GHOST.map.remove(); MR_GHOST = null; }
+  if (!el) return;
+  if (!window.L || !D) { el.hidden = true; }
+  else {
+    MR_GHOST = { map: L.map(el, { zoomControl: false, attributionControl: true, preferCanvas: true }), first: true };
+    MR_GHOST.map.setView([0, 0], 2, { animate: false });
+    addTiles(MR_GHOST.map);
+    MR_GHOST.layer = L.layerGroup().addTo(MR_GHOST.map);
+  }
+  function draw() {
+    var r = draft();
+    if (!r) return;
+    var res = mrRoutineTrips(r), col = r.then && r.then.mode ? modeColor(r.then.mode) : '#7a8580';
+    // The canvas needs a real colour, not a CSS variable.
+    var vm = /^var\((--[\w-]+)\)$/.exec(col);
+    if (vm) col = cssVar(vm[1]) || '#7a8580';
+    $('mrGhostTxt').innerHTML = res.trips.length ? '<b class="num">' + fmt(res.trips.length) + '</b> ' + (res.trips.length === 1 ? 'trip' : 'trips') + ' covered, shown as ghosts' +
+      (r.then && r.then.mode ? ' · ' + fmt(res.change) + ' would become ' + esc((LABEL[r.then.mode] || r.then.mode).toLowerCase()) : '') : 'No trips covered with these settings.';
+    if (!MR_GHOST) return;
+    MR_GHOST.layer.clearLayers();
+    var bounds = L.latLngBounds([]);
+    // At most 400 lines: enough to see the pattern, light enough to redraw while typing.
+    res.trips.slice(-400).forEach(function (i) {
+      var pts = mrTripPts(i);
+      if (pts.length < 2) pts = [[D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]];
+      pts = pts.filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
+      if (pts.length < 2) return;
+      L.polyline(pts, { color: col, weight: 3, opacity: .3, interactive: false }).addTo(MR_GHOST.layer);
+      bounds.extend(pts[0]); bounds.extend(pts[pts.length - 1]);
+    });
+    [mrEnd(r.from), mrEnd(r.to)].forEach(function (e) {
+      if (!e) return;
+      L.circleMarker(e.at, { radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(MR_GHOST.layer);
+      bounds.extend(e.at);
+    });
+    // Framed once, on the ends and the trips; later changes keep your view.
+    if (MR_GHOST.first && bounds.isValid()) { MR_GHOST.first = false; MR_GHOST.map.invalidateSize(); MR_GHOST.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: false }); }
+  }
+  var box = $('mrDlgExtra'), tm = null;
+  function later() { clearTimeout(tm); tm = setTimeout(draw, 150); }
+  box.oninput = later; box.onchange = later;
+  setTimeout(function () { if (MR_GHOST) MR_GHOST.map.invalidateSize(); draw(); }, 0);
+}
 function mrEndRef(e) { var r = mrPlaceAt(e.at[0], e.at[1]); return r ? '@' + r.id : [+e.at[0].toFixed(5), +e.at[1].toFixed(5)]; }
-function mrSaveRoutine(i, mode, x, A, B) {
+// The routine the Same on other days? dialog would make, as it is filled in now.
+function mrOfferDraft(i, mode, x, A, B) {
   var lab = LABEL[mode] || mode, w = {}, f = $('mrRFrom').value, t = $('mrRTo').value;
   if (f) w.from = f;
   if (t) w.to = t;
@@ -10648,6 +10832,10 @@ function mrSaveRoutine(i, mode, x, A, B) {
   if ($('mrRBoth') && $('mrRBoth').checked) { r.both_ways = true; if ($('mrRB0').value && $('mrRB1').value) r.return_when = { time: [$('mrRB0').value, $('mrRB1').value] }; }
   if ($('mrRForce').checked) r.force = true;
   if ($('mrRSnap').checked) r.then.snap = 'learn';
+  return r;
+}
+function mrSaveRoutine(i, mode, x, A, B) {
+  var r = mrOfferDraft(i, mode, x, A, B);
   mrEnsure();
   (MR.doc.routines || (MR.doc.routines = [])).push(r);
   mrChange('Routine added: ' + r.name);
