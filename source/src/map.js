@@ -489,16 +489,20 @@ function buildPins() {
   var spots = spotsOf(inSel).sort(function (a, b) { return D.spotN[b.key] - D.spotN[a.key]; }).slice(0, PIN_MAX);
   pinSpots = spots.map(function (s) {
     var n = D.spotN[s.key], z = Math.round(Math.min(34, 20 + 4 * Math.log10(n)));
-    // A place you named in MyRules is teal, so named and unnamed pins tell apart.
+    // A place you named in MyRules is teal, so named and unnamed pins tell apart. Your current home,
+    // work and school have the sunrise colour (like the home BT•DT finds), past ones are teal, each
+    // with its own icon.
+    var r = mrRuleOf(s), life = r && MR_LIFE[r.role] ? r.role : '', cur = s.home || mrIsCurrent(r);
     var named = !s.home && mrActive('places').length && mrPlaceName(s);
+    var ic = life || (s.home ? 'home' : 'pin');
     var m = L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (s.home ? ' home' : named ? ' named' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(s.home ? 'home' : 'pin') + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
+      icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (cur ? ' home' : named ? ' named' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(ic) + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
       title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true
     });
     m._key = s.key;
     m.on('click', function (e) { if (e.originalEvent) L.DomEvent.stop(e.originalEvent); openSpot(s.key); });
     m.on('add', function () { var el = m.getElement(); if (el && el.firstChild) el.firstChild.classList.toggle('on', !!pinOn[s.key]); });
-    return { s: s, m: m, ll: L.latLng(s.lat, s.lng), named: !!named };
+    return { s: s, m: m, ll: L.latLng(s.lat, s.lng), named: !!named, cur: cur };
   });
   setPinOn(pinKeys);
 }
@@ -521,13 +525,14 @@ function renderPins() {
   groups.forEach(function (gr) {
     var g = gr.g;
     if (g.length === 1) { pinLayer.addLayer(g[0].m); return; }
-    var named = 0, visits = 0, home = g.some(function (p) { return p.s.home; });
+    var named = 0, visits = 0, home = g.some(function (p) { return p.s.home; }), cur = g.some(function (p) { return p.cur; });
     g.forEach(function (p) { visits += D.spotN[p.s.key]; if (p.named) named++; });
     var size = Math.round(Math.min(46, 26 + 6 * Math.log10(g.length)));
-    // At the busiest place in it, so it doesn't drift as you zoom; with home in it, it is home's colour.
+    // At the busiest place in it, so it doesn't drift as you zoom; with home, or your current work or
+    // school, in it, it has the sunrise colour.
     var c = L.marker(g[0].ll, {
-      icon: L.divIcon({ className: '', html: '<div class="pin-cl' + (home ? ' home' : named ? ' named' : '') + '" style="width:' + size + 'px;height:' + size + 'px">' + (home ? icon('home') : '') + fmt(g.length) + '</div>', iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
-      title: fmt(g.length) + ' places' + (home ? ', home among them' : '') + (named ? ', ' + fmt(named) + ' named' : '') + ' · ' + fmt(visits) + ' visits. Tap to zoom in.', riseOnHover: true, zIndexOffset: home ? 500 : 0
+      icon: L.divIcon({ className: '', html: '<div class="pin-cl' + (cur ? ' home' : named ? ' named' : '') + '" style="width:' + size + 'px;height:' + size + 'px">' + (home ? icon('home') : '') + fmt(g.length) + '</div>', iconSize: [size, size], iconAnchor: [size / 2, size / 2] }),
+      title: fmt(g.length) + ' places' + (home ? ', home among them' : '') + (named ? ', ' + fmt(named) + ' named' : '') + ' · ' + fmt(visits) + ' visits. Tap to zoom in.', riseOnHover: true, zIndexOffset: cur ? 500 : 0
     });
     c.on('click', function (e) {
       if (e.originalEvent) L.DomEvent.stop(e.originalEvent);

@@ -762,6 +762,9 @@ function findHome() {
       // A stay that covers 3 am local time counts as a night there.
       var off = D.voff[v] !== NO_OFF ? D.voff[v] * 60000 : -new Date(D.vs[v]).getTimezoneOffset() * 60000;
       var s = D.vs[v] + off, e = D.ve[v] + off, night = Math.ceil((s - 3 * 36e5) / 864e5) * 864e5 + 3 * 36e5;
+      // Not a place MyRules says is something else, or a home you have left.
+      var rq = D.pv[v] >= 0 && D.places[D.pv[v]].mr && mrRuleOf(D.places[D.pv[v]]);
+      if (rq && rq.role && (rq.role !== 'home' || mrIsPast(rq))) continue;
       if (night <= e) score[D.pv[v]] = (score[D.pv[v]] || 0) + Math.min(30, Math.floor((e - night) / 864e5) + 1);
     }
     if (Object.keys(score).length) how = 'where most nights were spent';
