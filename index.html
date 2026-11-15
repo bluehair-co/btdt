@@ -928,6 +928,11 @@ div.hit-row:hover { background: none; }
 @media (max-width: 600px) { :root.demo { --demo-h: 44px; } .demo-msg .wide-only { display: none; } .demo-msg .narrow-only { display: inline; } }
 .mr-dates input { width: auto; }
 .mr-ghost { display: flex; flex-direction: column; gap: 6px; }
+.mr-pick { display: flex; align-items: center; gap: 6px; }
+.mr-pick-t { flex: 1; text-align: center; font-size: 13px; line-height: 1.35; }
+.mr-pick-t small { display: block; }
+.mr-pick .icon-btn { flex: none; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; }
+.mr-pick .icon-btn:disabled { opacity: .4; }
 .mr-ghost-map { height: 210px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); background: var(--bg); }
 .mr-rad-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
 /* Define radius: the whole screen is the map, with the slider and Save at the bottom */
@@ -9844,9 +9849,10 @@ function mrTripPts(i) {
 // a recorded activity or a Records.json line counting double. 0 when it can't be used.
 function mrClean(i) {
   var o0 = D.pathOff[i], o1 = D.pathOff[i + 1], n = o1 - o0;
-  if (n < 10 || !(D.km[i] > 0.3)) return 0;
+  var len = (D.base || D).km[i];   // the files' distance: a snapped trip's is the line's
+  if (n < 10 || !(len > 0.3)) return 0;
   for (var q = o0 + 1; q < o1; q++) if (D.pathT[q] - D.pathT[q - 1] > 120) return 0;
-  return n / D.km[i] * (D.base.est[i] & (16 | 32) ? 2 : 1);
+  return n / len * (D.base.est[i] & (16 | 32) ? 2 : 1);
 }
 // The line a routine draws its trips along, from → to. src says where it came from.
 function mrRouteLine(x, trips) {
@@ -10542,9 +10548,10 @@ function mrRoutineDialog(r) {
       }).join('') + '</select></label>' +
       mrDateRow(r.when) +
       '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
-      '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing or guessed one.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
+      '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing or guessed one.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
+      '<label class="toggle-row"><span class="lbl">Draw them along one line<small class="fine" style="display:block">Trips that went another way keep their own.</small></span><input type="checkbox" class="switch" id="mrRSnap"' + (t.snap ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
     buttons: [['Save', 'primary', function () {
-      var d = form(true);
+      var d = mrGhostSnap(form(true));
       if (!d) return;
       Object.keys(r).forEach(function (k) { delete r[k]; });
       Object.assign(r, d);
@@ -10566,6 +10573,8 @@ function mrRoutineDialog(r) {
     if (mode) d.then.mode = mode; else delete d.then.mode;
     if ($('mrRBoth').checked) d.both_ways = true; else delete d.both_ways;
     if ($('mrRForce').checked) d.force = true; else delete d.force;
+    if (!$('mrRSnap').checked) delete d.then.snap;
+    else if (!d.then.snap) d.then.snap = 'learn';
     return d;
   }
 }
@@ -10778,56 +10787,104 @@ function mrOfferRoutine(i, mode) {
 }
 // ---------- a routine's trips as ghosts ----------
 // While you make or edit a routine, a small map in the dialog shows the trips it would cover as
-// ghost lines (faint, so the more often you took a way the stronger it shows), drawn again as you change its period, times or options, with how
-// many there are and how many would change type.
+// ghost lines (faint, so the more often you took a way the stronger it shows), drawn again as you
+// change its period, times or options, with how many there are and how many would change type.
+// With Draw them along one line, the line it uses is drawn on top, solid. A learned line comes from
+// the cleanest trip (the recommended one); the arrows under the map go through the other clean
+// trips, best first, and the one you stop on is saved as the routine's { trip } (back on the
+// recommended one, it stays "learn", so it follows your data).
 var MR_GHOST = null;
 function mrRoutineTrips(r) {
-  var out = { trips: [], change: 0 };
+  var out = { trips: [], change: 0, dir: {} };
   var a = mrEnd(r.from), b = mrEnd(r.to);
   if (!D || !a || !b) return out;
   var w = mrWhen(r.when), x = { r: r, a: a, b: b, w: w, rw: r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w, ex: mrExcept(r) };
   var m = r.then && r.then.mode, mi = m != null ? MODE_IDX[m] : null, base = D.base || D;
   for (var i = 0; i < D.day.length; i++) {
-    if (isDup(i) || MODES[base.mode[i]] === 'FLYING' || !mrRouteDir(x, i)) continue;
-    out.trips.push(i);
+    if (isDup(i) || MODES[base.mode[i]] === 'FLYING') continue;
+    var dr = mrRouteDir(x, i);
+    if (!dr) continue;
+    out.trips.push(i); out.dir[i] = dr;
     if (mi != null && mi !== base.mode[i] && (r.force || base.est[i] & GUESSED || MODES[base.mode[i]] === 'UNKNOWN')) out.change++;
   }
   return out;
 }
-function mrGhostHtml() { return '<div class="mr-ghost"><div class="mr-ghost-map" id="mrGhostMap"></div><small class="fine" id="mrGhostTxt"></small></div>'; }
+function mrGhostHtml() {
+  return '<div class="mr-ghost"><div class="mr-ghost-map" id="mrGhostMap"></div>' +
+    '<div class="mr-pick" id="mrPick" hidden><button type="button" class="icon-btn" id="mrPickPrev" aria-label="Previous trip">' + icon('left') + '</button>' +
+    '<span class="mr-pick-t" id="mrPickTxt" aria-live="polite"></span><button type="button" class="icon-btn" id="mrPickNext" aria-label="Next trip">' + icon('right') + '</button></div>' +
+    '<small class="fine" id="mrGhostTxt"></small></div>';
+}
+// A learned line (not one from a polyline or a GeoJSON file)?
+function mrLearned(sn) { return !!sn && !(typeof sn === 'object' && (sn.polyline || sn.geojson)); }
+// The trip you chose with the arrows, written into the routine the dialog makes.
+function mrGhostSnap(d) {
+  if (!d || !MR_GHOST || MR_GHOST.pick === undefined || !d.then || !mrLearned(d.then.snap)) return d;
+  var i = MR_GHOST.pick;
+  d.then.snap = i == null ? 'learn' : { trip: { start: mrIsoLocal(i), mode: MODES[(D.base || D).mode[i]] } };
+  return d;
+}
 // draft() builds the routine from the dialog as it is now.
 function mrGhostStart(draft) {
   var el = $('mrGhostMap');
-  if (MR_GHOST) { MR_GHOST.map.remove(); MR_GHOST = null; }
+  if (MR_GHOST && MR_GHOST.map) MR_GHOST.map.remove();
+  MR_GHOST = { map: null, first: true, pick: undefined, cands: [] };
   if (!el) return;
-  if (!window.L || !D) { el.hidden = true; }
+  if (!window.L || !D) el.hidden = true;
   else {
-    MR_GHOST = { map: L.map(el, { zoomControl: false, attributionControl: true, preferCanvas: true }), first: true };
+    MR_GHOST.map = L.map(el, { zoomControl: false, attributionControl: true, preferCanvas: true });
     MR_GHOST.map.setView([0, 0], 2, { animate: false });
     addTiles(MR_GHOST.map);
     MR_GHOST.layer = L.layerGroup().addTo(MR_GHOST.map);
   }
-  function draw() {
-    var r = draft();
-    if (!r) return;
-    var res = mrRoutineTrips(r), col = r.then && r.then.mode ? modeColor(r.then.mode) : '#7a8580';
+  function colour(r) {
+    var col = r.then && r.then.mode ? modeColor(r.then.mode) : '#7a8580';
     // The canvas needs a real colour, not a CSS variable.
     var vm = /^var\((--[\w-]+)\)$/.exec(col);
-    if (vm) col = cssVar(vm[1]) || '#7a8580';
+    return vm ? cssVar(vm[1]) || '#7a8580' : col;
+  }
+  function draw() {
+    var r = mrGhostSnap(draft());
+    if (!r) return;
+    var res = mrRoutineTrips(r), col = colour(r), sn = r.then && r.then.snap, line = null, from = null;
+    // The line it would draw its trips along, and the trips it could learn it from.
+    MR_GHOST.cands = [];
+    if (sn && !mrLearned(sn)) line = mrRouteLine({ then: r.then }, res.trips);
+    else if (sn) {
+      MR_GHOST.cands = res.trips.map(function (i) { return [i, mrClean(i)]; }).filter(function (c) { return c[1] > 0; })
+        .sort(function (p, q) { return q[1] - p[1]; }).map(function (c) { return c[0]; });
+      from = typeof sn === 'object' && sn.trip ? mrRefTrips(sn.trip)[0] : MR_GHOST.cands[0];
+      if (from != null) line = { pts: mrTripPts(from), from: from };
+    }
+    var pk = $('mrPick'), k = from != null ? MR_GHOST.cands.indexOf(from) : -1;
+    pk.hidden = !mrLearned(sn);
+    if (!pk.hidden) {
+      $('mrPickTxt').innerHTML = from == null ? 'No trip clean enough to learn the line from' :
+        'Line from the trip on <b>' + esc(mrWhere(from)) + '</b>' + (k === 0 ? ' · recommended' : '') +
+        (MR_GHOST.cands.length ? '<small class="fine">' + (k >= 0 ? fmt(k + 1) + ' of ' : 'Not in this period · ') + fmt(MR_GHOST.cands.length) + ' clean trips</small>' : '');
+      $('mrPickPrev').disabled = $('mrPickNext').disabled = MR_GHOST.cands.length < 2 && k >= 0;
+    }
     $('mrGhostTxt').innerHTML = res.trips.length ? '<b class="num">' + fmt(res.trips.length) + '</b> ' + (res.trips.length === 1 ? 'trip' : 'trips') + ' covered, shown as ghosts' +
       (r.then && r.then.mode ? ' · ' + fmt(res.change) + ' would become ' + esc((LABEL[r.then.mode] || r.then.mode).toLowerCase()) : '') : 'No trips covered with these settings.';
-    if (!MR_GHOST) return;
+    if (!MR_GHOST.map) return;
     MR_GHOST.layer.clearLayers();
     var bounds = L.latLngBounds([]);
-    // At most 400 lines: enough to see the pattern, light enough to redraw while typing.
+    // At most 400 ghosts: enough to see the pattern, light enough to redraw while typing.
     res.trips.slice(-400).forEach(function (i) {
+      if (line && i === line.from) return;
       var pts = mrTripPts(i);
       if (pts.length < 2) pts = [[D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]];
       pts = pts.filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
       if (pts.length < 2) return;
-      L.polyline(pts, { color: col, weight: 3, opacity: .3, interactive: false }).addTo(MR_GHOST.layer);
+      L.polyline(pts, { color: col, weight: 3, opacity: .22, interactive: false }).addTo(MR_GHOST.layer);
       bounds.extend(pts[0]); bounds.extend(pts[pts.length - 1]);
     });
+    // The line in use, always on top: solid, with a white edge so it stands out of the ghosts.
+    if (line && line.pts && line.pts.length > 1) {
+      L.polyline(line.pts, { color: '#fff', weight: 8, opacity: .95, interactive: false }).addTo(MR_GHOST.layer);
+      L.polyline(line.pts, { color: col, weight: 4.5, opacity: 1, interactive: false }).addTo(MR_GHOST.layer);
+      line.pts.forEach(function (p) { bounds.extend(p); });
+    }
     [mrEnd(r.from), mrEnd(r.to)].forEach(function (e) {
       if (!e) return;
       L.circleMarker(e.at, { radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(MR_GHOST.layer);
@@ -10836,10 +10893,21 @@ function mrGhostStart(draft) {
     // Framed once, on the ends and the trips; later changes keep your view.
     if (MR_GHOST.first && bounds.isValid()) { MR_GHOST.first = false; MR_GHOST.map.invalidateSize(); MR_GHOST.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: false }); }
   }
+  // The arrows: the next or previous clean trip, round and round.
+  function step(by) {
+    var c = MR_GHOST.cands, n = c.length;
+    if (!n) return;
+    var r = mrGhostSnap(draft()), sn = r && r.then && r.then.snap, cur = typeof sn === 'object' && sn.trip ? mrRefTrips(sn.trip)[0] : c[0], k = c.indexOf(cur);
+    var j = k < 0 ? 0 : (k + by + n) % n;
+    MR_GHOST.pick = j === 0 ? null : c[j];
+    draw();
+  }
+  $('mrPickPrev').onclick = function () { step(-1); };
+  $('mrPickNext').onclick = function () { step(1); };
   var box = $('mrDlgExtra'), tm = null;
   function later() { clearTimeout(tm); tm = setTimeout(draw, 150); }
   box.oninput = later; box.onchange = later;
-  setTimeout(function () { if (MR_GHOST) MR_GHOST.map.invalidateSize(); draw(); }, 0);
+  setTimeout(function () { if (MR_GHOST.map) MR_GHOST.map.invalidateSize(); draw(); }, 0);
 }
 function mrEndRef(e) { var r = mrPlaceAt(e.at[0], e.at[1]); return r ? '@' + r.id : [+e.at[0].toFixed(5), +e.at[1].toFixed(5)]; }
 // The routine the Same on other days? dialog would make, as it is filled in now.
@@ -10856,7 +10924,7 @@ function mrOfferDraft(i, mode, x, A, B) {
   return r;
 }
 function mrSaveRoutine(i, mode, x, A, B) {
-  var r = mrOfferDraft(i, mode, x, A, B);
+  var r = mrGhostSnap(mrOfferDraft(i, mode, x, A, B));
   mrEnsure();
   (MR.doc.routines || (MR.doc.routines = [])).push(r);
   mrChange('Routine added: ' + r.name);
