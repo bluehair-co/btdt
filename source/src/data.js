@@ -1137,16 +1137,16 @@ var DEMO = null;
 $('demoBtn').addEventListener('click', function () {
   setStatus('');
   busy('Opening the demo…');
-  // The demo's Timeline, and the Strava activities the same made-up person recorded (runs, road
-  // rides and hikes with heart rate, from source/demo/make_activities.py). The demo opens without
-  // them if they don't load.
+  // The demo's Timeline, and the Strava export of the activities the same made-up person recorded
+  // (runs, road rides, Halfbike loops and hikes with heart rate, and the Halfbike as gear, from
+  // source/demo/make_activities.py). The demo opens without them if they don't load.
   function get(url, name) {
     return fetch(url).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.blob();
     }).then(function (b) { return new File([b], name); });
   }
-  Promise.all([get('demo.json', 'demo.json'), get('demo-activities.gpx.gz', 'demo-activities.gpx.gz').catch(function () { return null; })]).then(function (fs) {
+  Promise.all([get('demo.json', 'demo.json'), get('demo-activities.zip', 'demo-activities.zip').catch(function () { return null; })]).then(function (fs) {
     return runParser(fs.filter(Boolean));
   }).then(function (r) {
     if (!r.results.length) throw new Error('no data');

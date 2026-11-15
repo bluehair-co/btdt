@@ -4,27 +4,35 @@ demo shows what loading activity files adds (sports, a full GPS track, speed and
 
   python3 source/demo/make_activities.py      (after make_demo.py)
 
-Reads static/demo.json and writes static/demo-activities.gpx.gz: one GPX file as Strava writes it,
-with a track for every run, every weekend road ride, and the longer walks on holidays (as hikes),
-taken from the Timeline trips at the same times so each activity replaces its Timeline trip. The
+Reads static/demo.json and writes static/demo-activities.zip, laid out like Strava's account export:
+activities.csv (name, type and gear of each activity), bikes.csv, and a GPX file per activity in
+activities/. There is an activity for every run, every weekend road ride, every Halfbike loop (a
+ride that starts and ends at home and is shorter than a road ride, see make_demo.py; recorded with
+the Halfbike, so the demo shows gear), and the longer walks on holidays (as hikes), taken from the
+Timeline trips at the same times so each activity replaces its Timeline trip. The
 points are a dense recording along the Timeline trail (a point every few seconds), with the pace
 changing as it would and a heart rate that follows the effort. Fitness improves slowly over the
 three years, so the Heart rate card's trend goes down at the same speed. Fixed seed, same output
 every run.
 """
 import datetime as dt
-import gzip
+import csv
+import io
 import json
 import math
 import os
 import random
+import zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, '..', 'static', 'demo.json')
-OUT = os.path.join(HERE, '..', 'static', 'demo-activities.gpx.gz')
+OUT = os.path.join(HERE, '..', 'static', 'demo-activities.zip')
 R = random.Random(42)
 START = dt.datetime(2023, 11, 13, tzinfo=dt.timezone.utc)
 HOME = (52.36395, 4.86560)
+SOFIA_HOME = (42.68225, 23.33380)
+# The Halfbike, as bikes.csv lists it; its rides name it in activities.csv's Activity Gear.
+HALFBIKE = ('Halfbike', 'Kolelinia', 'Halfbike 3')
 
 
 def km(a, b):
@@ -48,7 +56,9 @@ KINDS = {
     'run': dict(type=9, every=4, hr=(118, 6.2), wobble=0.08, zone=(16, 0.9)),
     'ride': dict(type=1, every=6, hr=(92, 2.5), wobble=0.12, zone=(0, 0)),
     'hike': dict(type=4, every=8, hr=(92, 7.0), wobble=0.2, zone=(0, 0)),
+    'halfbike': dict(type=1, every=5, hr=(98, 2.8), wobble=0.12, zone=(0, 0)),
 }
+STRAVA_TYPE = {'run': 'Run', 'ride': 'Ride', 'hike': 'Hike', 'halfbike': 'Ride'}
 
 
 def name_for(kind, local):
@@ -58,6 +68,8 @@ def name_for(kind, local):
         return R.choice(['%s Ride' % part, 'Amstel loop', 'Waterland', 'Coffee ride', '%s Ride' % part])
     if kind == 'hike':
         return '%s Hike' % part
+    if kind == 'halfbike':
+        return R.choice(['%s Halfbike' % part, 'Standing up', 'Halfbike loop', '%s Ride' % part])
     return R.choice(['%s Run' % part, '%s Run' % part, 'Vondelpark laps', 'Easy run'])
 
 
@@ -134,6 +146,8 @@ def main():
             kind = 'run'
         elif mode == 'CYCLING' and dist >= 25:
             kind = 'ride'
+        elif mode == 'CYCLING' and any(km(start, h) < 0.1 and km(latlng(a['end']['latLng']), h) < 0.1 for h in (HOME, SOFIA_HOME)):
+            kind = 'halfbike'
         elif mode == 'WALKING' and dist >= 3 and km(start, HOME) > 300:
             kind = 'hike'
         if not kind:
@@ -142,22 +156,39 @@ def main():
         if not trail or len(trail) < 2:
             continue
         acts.append((kind, parse(s['startTime']), parse(s['endTime']), trail))
-    out = ['<?xml version="1.0" encoding="UTF-8"?>\n<gpx creator="StravaGPX" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">\n']
-    for kind, t0, t1, trail in acts:
+    rows = io.StringIO()
+    w = csv.writer(rows, lineterminator='\n')
+    w.writerow(['Activity ID', 'Activity Date', 'Activity Name', 'Activity Type', 'Activity Description', 'Elapsed Time',
+                'Distance', 'Max Heart Rate', 'Relative Effort', 'Commute', 'Activity Private Note', 'Activity Gear', 'Filename'])
+    files = []
+    for n, (kind, t0, t1, trail) in enumerate(acts):
         pts = activity(kind, t0, t1, trail)
-        out.append('<trk><name>%s</name><type>%d</type><trkseg>\n' % (name_for(kind, t0), KINDS[kind]['type']))
+        name = name_for(kind, t0)
+        aid = 10000000000 + n * 7919
+        fn = 'activities/%d.gpx' % aid
+        out = ['<?xml version="1.0" encoding="UTF-8"?>\n<gpx creator="StravaGPX" version="1.1" xmlns="http://www.topografix.com/GPX/1/1">\n']
+        out.append('<trk><name>%s</name><type>%d</type><trkseg>\n' % (name, KINDS[kind]['type']))
         for lat, lng, t, hr in pts:
             out.append('<trkpt lat="%.6f" lon="%.6f"><time>%s</time><extensions><hr>%d</hr></extensions></trkpt>\n'
                        % (lat, lng, t.astimezone(dt.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'), hr))
-        out.append('</trkseg></trk>\n')
-    out.append('</gpx>\n')
-    data = ''.join(out).encode('utf-8')
-    with open(OUT, 'wb') as f:
-        f.write(gzip.compress(data, 9, mtime=0))
+        out.append('</trkseg></trk>\n</gpx>\n')
+        files.append((fn, ''.join(out)))
+        dist = sum(km(pts[i][:2], pts[i + 1][:2]) for i in range(len(pts) - 1))
+        w.writerow([aid, t0.astimezone(dt.timezone.utc).strftime('%b %d, %Y, %I:%M:%S %p'), name, STRAVA_TYPE[kind], '',
+                    int((t1 - t0).total_seconds()), '%.2f' % dist, max(p[3] for p in pts), '', 'false', '',
+                    HALFBIKE[0] if kind == 'halfbike' else '', fn])
+    bikes = 'Bike Name,Bike Brand,Bike Model,Bike Default Sport Types\n%s,%s,%s,\n' % HALFBIKE
+    # A fixed date on every entry, so the ZIP is the same every run.
+    stamp = (2026, 11, 8, 0, 0, 0)
+    size = 0
+    with zipfile.ZipFile(OUT, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as z:
+        for fn, text in [('activities.csv', rows.getvalue()), ('bikes.csv', bikes)] + files:
+            z.writestr(zipfile.ZipInfo(fn, stamp), text.encode('utf-8'), zipfile.ZIP_DEFLATED, 9)
+            size += len(text)
     counts = {}
     for a in acts:
         counts[a[0]] = counts.get(a[0], 0) + 1
-    print('Wrote %s: %s, %d KB (%d KB unzipped)' % (os.path.relpath(OUT), counts, os.path.getsize(OUT) // 1024, len(data) // 1024))
+    print('Wrote %s: %s, %d KB (%d KB unzipped)' % (os.path.relpath(OUT), counts, os.path.getsize(OUT) // 1024, size // 1024))
 
 
 if __name__ == '__main__':
