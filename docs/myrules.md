@@ -256,6 +256,8 @@ The app already shows two kinds of uncertainty: *type guessed from speed* and *S
 | Set a trip's gear, choosing *All rides without gear from … to …* (dates prefilled from the first and last ride with this gear) | gear period |
 | Name a stay or mark it *Home* / *Work* | place, with `when` from the first to last stay there |
 | *Hide this place* | place with `hide: true` |
+
+On the map, every stay within a named place's radius counts as that one place: pins that fall inside it merge into a single pin, with one place page for all of it.
 | Set a trip's type | correction with `start` |
 | *Same every weekday?* after correcting a commute (offered when 5+ similar trips exist) | routine |
 | *Not this trip* on an inferred value | entry in that rule's `except` |

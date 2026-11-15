@@ -8899,6 +8899,12 @@ function buildSpotKeys() {
   // Merges: one place under two place IDs (see mergedSpots), then the ones you made by hand.
   var root = mergedSpots(keys);
   for (v = 0; v < n; v++) keys[v] = root(keys[v]);
+  // A place you named in MyRules is one spot: every stay within its radius, whatever its place ID.
+  if (mrActive('places').length) for (v = 0; v < n; v++) {
+    if (D.pv[v] < 0) continue;
+    var r = mrPlaceAt(D.vll[2 * v], D.vll[2 * v + 1]);
+    if (r) keys[v] = 'mr:' + r.id;
+  }
   D.skey = keys;
 }
 // Google sometimes gives one place a new place ID (re-registered, new owner, or an address and a
@@ -9007,7 +9013,13 @@ function spotsOf(vs) {
   var by = {}, order = [];
   vs.forEach(function (v) {
     var key = spotKey(v), s = by[key], dur = D.ve[v] - D.vs[v];
-    if (!s) { s = by[key] = { key: key, pid: key.slice(0, 3) === 'id:' ? key.slice(3) : D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false }; order.push(s); }
+    if (!s) {
+      s = by[key] = { key: key, pid: key.slice(0, 3) === 'id:' ? key.slice(3) : D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false };
+      // A named place's spot sits at the place's own centre.
+      var r = key.slice(0, 3) === 'mr:' && mrById(key.slice(3));
+      if (r && Array.isArray(r.at)) { s.lat = r.at[0]; s.lng = r.at[1]; s.pid = ''; }
+      order.push(s);
+    }
     s.n++; s.h += dur / 36e5;
     if (D.vs[v] > s.last) { s.last = D.vs[v]; s.lv = v; }
     if (D.vname[v] && !s.name) s.name = D.vname[v];
@@ -9154,7 +9166,7 @@ function mergeHtml(key) {
   if (parts.length > 1) html += '<h4 class="place-h">Merged spot</h4><p class="fine">' + fmt(parts.length) + ' Google place IDs are counted as this one place' +
     (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within 25 m and your visits moved from one to the other)' : '') + '.</p>' +
     (parts.some(function (x) { return x.manual; }) || Object.keys(PREFS.spotMerge || {}).some(function (k) { return PREFS.spotMerge[k] === key; }) ? '<button type="button" class="btn quiet" data-punmerge="' + esc(key) + '">Undo the merges you made</button>' : '');
-  if (key.slice(0, 3) !== 'id:') return html;
+  if (key.slice(0, 3) !== 'id:' || !me) return html;
   var near = [], seen = {};
   for (var v = 0; v < D.vs.length; v++) {
     var k = spotKey(v);
@@ -10024,6 +10036,7 @@ function mrSpotCentre(key) {
 }
 // The place rule a spot is named by: the one its centre is in, switched on or not.
 function mrSpotRule(key) {
+  if (String(key).slice(0, 3) === 'mr:') return mrById(key.slice(3));
   var c = mrSpotCentre(key), best = null, bd = Infinity;
   if (!c) return null;
   mrList('places').forEach(function (r) {
@@ -10051,9 +10064,11 @@ function mrPlaceDialog(key) {
       '<button type="button" class="btn" id="mrPRadBtn">' + icon('pin') + 'Define radius</button></div><input type="hidden" id="mrPRad" value="' + rad + '"></div>' +
       '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
     buttons: [['Save', 'primary', function () { mrSavePlace(key, r, c); }]].concat(r ? [['Remove the name', 'danger', function () {
+      var vs = spotStays(key);
+      placeLast = null;
       MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
       mrChange('Name removed: ' + (r.name || r.id));
-      openSpot(key);
+      mrReopenSpot(vs);
     }]] : []).concat([['Cancel', 'quiet', null]]),
     after: function () {
       function upd() {
@@ -10125,8 +10140,18 @@ function mrSavePlace(key, r, c) {
   if (role) r.role = role; else delete r.role;
   r.radius_m = rad;
   if (hide) r.hide = true; else delete r.hide;
+  var vs = spotStays(key);
+  // The spot's key changes (see buildSpotKeys): its page is opened again below, not refreshed.
+  placeLast = null;
   mrChange((isNew ? 'Place named: ' : 'Place changed: ') + (name || role) + ' (' + rad + ' m)');
-  openSpot(key);
+  mrReopenSpot(vs);
+}
+// Naming a place merges the spots within its radius into one (and removing the name splits them
+// again), so its page opens again on the spot where most of its stays are now.
+function mrReopenSpot(vs) {
+  var n = {}, best = null;
+  vs.forEach(function (v) { var k = spotKey(v); n[k] = (n[k] || 0) + 1; if (!best || n[k] > n[best]) best = k; });
+  if (best) openSpot(best); else closeSheets();
 }
 $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-place]');
