@@ -562,8 +562,8 @@ function mrSaveGear(i) {
 
 // ---------- naming a place from its pin ----------
 // A spot page (a regular place's pin) has Name this place: a name, what it is (home, work…), the
-// radius that counts as this place, and Hide. Saved as a place rule in MyRules; the map shows the
-// radius while the dialog is open, and the dialog counts the stays inside it.
+// radius that counts as this place (set on its own map with Define radius), and Hide. Saved as a
+// place rule in MyRules.
 var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['sport', 'Sport']];
 function mrSpotCentre(key) {
   var vs = spotStays(key), la = 0, lo = 0;
@@ -587,7 +587,7 @@ function mrSpotHtml(key) {
     '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit name' : 'Name this place') + '</button></div>';
 }
 function mrPlaceDialog(key) {
-  var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0], circle = null;
+  var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0];
   if (!c) return;
   var nm = r ? r.name || '' : s.name || '', role = r ? r.role || '' : s.home ? 'home' : '', rad = r ? +r.radius_m || 100 : 100;
   mrAsk({
@@ -595,34 +595,73 @@ function mrPlaceDialog(key) {
     text: 'Stays within the radius take this name, in every list and on the map.',
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrPName" value="' + esc(nm) + '" placeholder="e.g. Climbing gym"></label>' +
       '<label class="field"><span>What it is</span><select id="mrPRole">' + MR_ROLES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === role ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></label>' +
-      '<label class="field"><span>Counts as this place within <b id="mrPRadTxt"></b></span><input type="range" id="mrPRad" min="25" max="1000" step="25" value="' + rad + '"></label>' +
-      '<small class="fine" id="mrPCount"></small>' +
+      '<div class="field"><span>Counts as this place within</span><div class="mr-rad-row"><span><b id="mrPRadTxt"></b> <small class="fine" id="mrPCount"></small></span>' +
+      '<button type="button" class="btn" id="mrPRadBtn">' + icon('pin') + 'Define radius</button></div><input type="hidden" id="mrPRad" value="' + rad + '"></div>' +
       '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
     buttons: [['Save', 'primary', function () { mrSavePlace(key, r, c); }]].concat(r ? [['Remove the name', 'danger', function () {
       MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
       mrChange('Name removed: ' + (r.name || r.id));
       openSpot(key);
     }]] : []).concat([['Cancel', 'quiet', null]]),
-    after: function (d) {
+    after: function () {
       function upd() {
-        var m = +$('mrPRad').value, n = 0;
+        var m = +$('mrPRad').value, n = mrStaysWithin(c, m);
         $('mrPRadTxt').textContent = fmt(m) + ' m';
-        for (var v = 0; v < D.vs.length; v++) if (km(c, [D.vll[2 * v], D.vll[2 * v + 1]]) * 1000 <= m) n++;
-        $('mrPCount').textContent = fmt(n) + ' stay' + (n === 1 ? '' : 's') + ' within ' + fmt(m) + ' m of this place.';
-        if (circle) circle.setRadius(m);
+        $('mrPCount').textContent = '· ' + fmt(n) + ' stay' + (n === 1 ? '' : 's');
       }
-      // The radius on the map, which moves to the place (beside the dialog on a wide screen).
-      if (map && PREFS.proj === 'merc' && tab === 'map') {
-        circle = L.circle(c, { radius: rad, color: '#0f7c8c', weight: 2, fillOpacity: .12, interactive: false }).addTo(map);
-        map.setView(c, 16);
-        // On a wide screen the dialog moves to the left so the radius stays in sight.
-        if (wide()) d.classList.add('side');
-      }
-      $('mrPRad').addEventListener('input', upd);
-      d.addEventListener('close', function () { if (circle) circle.remove(); d.classList.remove('side'); }, { once: true });
+      $('mrPRadBtn').addEventListener('click', function () {
+        mrRadiusMap(c, +$('mrPRad').value, $('mrPName').value.trim() || 'This place', function (m) { $('mrPRad').value = m; upd(); });
+      });
       upd();
     }
   });
+}
+function mrStaysWithin(c, m) {
+  var n = 0;
+  for (var v = 0; v < D.vs.length; v++) if (km(c, [D.vll[2 * v], D.vll[2 * v + 1]]) * 1000 <= m) n++;
+  return n;
+}
+// Define radius: a full-screen map of just the place, its radius and the stays around it, with a
+// slider and Save. It opens over the name dialog, which gets the radius back on Save.
+var MR_RAD = null;
+function mrRadiusMap(c, rad, title, done) {
+  var d = $('mrRadDlg');
+  if (!window.L) { toast('The map couldn\'t load. Check your internet connection.'); return; }
+  $('mrRadTitle').textContent = title;
+  $('mrRadIn').value = rad;
+  d.showModal();
+  if (!MR_RAD) {
+    MR_RAD = { map: L.map('mrRadMap', { zoomControl: false, attributionControl: true, preferCanvas: true }) };
+    L.control.zoom({ position: 'topright' }).addTo(MR_RAD.map);
+  }
+  var m = MR_RAD.map;
+  // A view first: layers can't be drawn on a map without one.
+  m.setView(c, 16, { animate: false });
+  addTiles(m);
+  if (MR_RAD.layer) MR_RAD.layer.remove();
+  MR_RAD.layer = L.layerGroup().addTo(m);
+  // The stays within 1.5 km, as dots: teal inside the radius, grey outside.
+  var dots = [];
+  for (var v = 0; v < D.vs.length; v++) {
+    var p = [D.vll[2 * v], D.vll[2 * v + 1]], dk = km(c, p) * 1000;
+    if (dk <= 1500) dots.push({ p: p, d: dk, m: L.circleMarker(p, { radius: 4, weight: 1, interactive: false }).addTo(MR_RAD.layer) });
+  }
+  var circle = L.circle(c, { radius: rad, color: '#0f7c8c', weight: 3, fillOpacity: .14, interactive: false }).addTo(MR_RAD.layer);
+  L.circleMarker(c, { radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(MR_RAD.layer);
+  function paint() {
+    var r = +$('mrRadIn').value, n = 0;
+    circle.setRadius(r);
+    dots.forEach(function (x) { var inside = x.d <= r; if (inside) n++; x.m.setStyle({ color: inside ? '#0b6672' : '#8a918c', fillColor: inside ? '#0f7c8c' : '#b9bfbb', fillOpacity: inside ? .9 : .6 }); });
+    $('mrRadTxt').textContent = fmt(r) + ' m';
+    $('mrRadCount').textContent = fmt(n) + ' stay' + (n === 1 ? '' : 's') + ' inside';
+  }
+  function fit() { m.fitBounds(circle.getBounds(), { padding: [30, 30], maxZoom: 18 }); }
+  setTimeout(function () { m.invalidateSize(); fit(); }, 0);
+  paint();
+  $('mrRadIn').oninput = paint;
+  $('mrRadIn').onchange = fit;
+  $('mrRadSave').onclick = function () { d.close(); done(+$('mrRadIn').value); };
+  $('mrRadCancel').onclick = function () { d.close(); };
 }
 function mrSavePlace(key, r, c) {
   var name = $('mrPName').value.trim(), role = $('mrPRole').value, rad = +$('mrPRad').value, hide = $('mrPHide').checked;

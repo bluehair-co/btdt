@@ -507,6 +507,14 @@
     <div id="mrBody"></div>
   </div>
 </aside>
+<dialog class="mr-rad" id="mrRadDlg" aria-labelledby="mrRadTitle">
+  <div id="mrRadMap" class="mr-rad-map"></div>
+  <div class="mr-rad-panel">
+    <div class="mr-rad-head"><h2 id="mrRadTitle"></h2><span><b id="mrRadTxt" class="num"></b> <span class="fine" id="mrRadCount"></span></span></div>
+    <input type="range" id="mrRadIn" min="25" max="1000" step="25" aria-label="Radius">
+    <div class="mr-rad-btns"><button type="button" class="btn quiet" id="mrRadCancel">Cancel</button><button type="button" class="btn primary" id="mrRadSave">Save radius</button></div>
+  </div>
+</dialog>
 <dialog class="mr-dlg" id="mrDlg" aria-labelledby="mrDlgTitle">
   <h2 id="mrDlgTitle"></h2>
   <p id="mrDlgText"></p>
