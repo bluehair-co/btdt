@@ -171,7 +171,6 @@
   </dialog>
   <input type="file" id="fileIn" class="visually-hidden" accept=".json,.geojson,.jsonl,.zip,.gpx,.kml,.kmz,.tcx,.fit,.gz,application/json,application/geo+json,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/octet-stream" multiple>
   <input type="file" id="dirIn" class="visually-hidden" webkitdirectory multiple>
-  <input type="file" id="stravaIn" class="visually-hidden" accept=".zip,.gpx,.fit,.tcx,.kml,.kmz,.geojson,.gz,application/zip,application/gzip,application/gpx+xml,application/vnd.google-earth.kml+xml,application/geo+json,application/octet-stream" multiple>
 
   <!-- Map -->
   <section class="page" id="mapPage" aria-label="Map">
@@ -477,7 +476,6 @@
       <p class="fine" id="dataSummary"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <label class="btn" for="fileIn"><span data-icon="upload"></span>Import more files</label>
-        <label class="btn" for="stravaIn"><span data-icon="upload"></span>Load activities</label>
         <button type="button" class="btn danger" id="forgetBtn">Remove from this device</button>
       </div>
       <p class="status" id="importStatus" role="status"></p>
@@ -495,7 +493,7 @@
         <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
         <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
         <ol class="fine">
-          <li><b>Strava:</b> on strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>. Load the ZIP it emails you as it is.</li>
+          <li><b>Strava:</b> on strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>. Load the ZIP it emails you as it is with <b>Import more files</b>.</li>
           <li><b>Garmin Connect:</b> request your data under <b>Account → Data Management → Export Your Data</b>, and load the ZIP as it is.</li>
           <li>Single <b>.fit</b>, <b>.gpx</b>, <b>.tcx</b>, <b>.kml</b> or <b>.geojson</b> files from any app work too.</li>
         </ol>

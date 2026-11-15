@@ -1098,7 +1098,6 @@ function importLocationFiles(list) {
   });
 }
 $('fileIn').addEventListener('change', function () { closeSheets(); importFiles(this.files); this.value = ''; });
-$('stravaIn').addEventListener('change', function () { closeSheets(); importFiles(this.files); this.value = ''; });
 $('dirIn').addEventListener('change', function () { importFiles(this.files); this.value = ''; });
 // The welcome Load button's chevron opens a small menu (like a split Send button) with Load a whole folder.
 (function () {
