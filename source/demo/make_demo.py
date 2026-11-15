@@ -46,6 +46,7 @@ TZ = {
     'GST': lambda t: 240, 'AST': lambda t: 180, 'ICT': lambda t: 420, 'JST': lambda t: 540,
     'PET': lambda t: -300, 'COT': lambda t: -300, 'SAST': lambda t: 120, 'EAT': lambda t: 180,
 }
+TZ['BG'] = TZ['EET']                                    # Bulgaria
 
 
 def stamp(t, tz):
@@ -530,6 +531,7 @@ AIR = {
     'MDE': A('José María Córdova', 6.16450, -75.42310, 'COT'), 'CTG': A('Rafael Núñez', 10.44240, -75.51300, 'COT'),
     'DOH': A('Hamad International', 25.27310, 51.60810, 'AST'), 'JRO': A('Kilimanjaro airport', -3.42940, 37.07450, 'EAT'),
     'SEU': A('Seronera airstrip', -2.45800, 34.82250, 'EAT'), 'ZNZ': A('Zanzibar airport', -6.22200, 39.22490, 'EAT'),
+    'SOF': A('Sofia airport', 42.69300, 23.40820, 'BG'),
 }
 
 
@@ -885,10 +887,106 @@ def tanzania(day):
     return me.since.date()
 
 
+# ---------------------------------------------------------------- Halfbike
+# The made-up person rides a Halfbike (a standing bike) now and then: loops from home on Sunday
+# mornings in Amsterdam, and around Sofia on a week visiting friends in Lozenets. The loops follow
+# real streets: source/demo/halfbike_routes.json, from BRouter (OpenStreetMap data) by
+# fetch_halfbike_routes.py. They start and end at home, which is how make_activities.py tells them
+# from other rides (road rides are longer). They draw from their own generator, so adding them left
+# the rest of the demo as it was.
+with open(os.path.join(HERE, 'halfbike_routes.json'), encoding='utf-8') as _f:
+    STREETS = {k: [tuple(p) for p in v] for k, v in json.load(_f).items()}
+HR = random.Random(20251115)
+HALFBIKE_AMS = {
+    dt.date(2025, 6, 15): 'ams-amstel', dt.date(2025, 8, 24): 'ams-westerpark', dt.date(2025, 11, 2): 'ams-oost',
+    dt.date(2026, 3, 29): 'ams-ij', dt.date(2026, 5, 10): 'ams-bos', dt.date(2026, 7, 12): 'ams-sloterplas',
+    dt.date(2026, 10, 4): 'ams-amstel',
+}
+SOFIA_DAY = dt.date(2025, 5, 27)
+SOFIA_DAYS = 5   # nights away
+
+
+def own_rng(fn, *args):
+    """Runs fn with R swapped for the Halfbike generator."""
+    global R
+    saved, R = R, HR
+    try:
+        return fn(*args)
+    finally:
+        R = saved
+
+
+def halfbike_ride(depart, name):
+    """A Halfbike loop from home along its street route, at a relaxed standing-bike pace."""
+    route = STREETS[name]
+    return me.go(me.place, 'CYCLING', route[1:-1], depart, speed=R.uniform(13.5, 16.5), every=60)
+
+
+def halfbike_ams(day):
+    halfbike_ride(at(day, 7, 30, 20), HALFBIKE_AMS[day])
+
+
+def sofia(day):
+    """Six days with friends in Lozenets, Sofia: a flight from Schiphol, Halfbike loops around the
+    city most mornings, dinners out, and back."""
+    to_schiphol(day, 6, 40)
+    fly(AIR['SOF'], at(day, 9, 55, 5))
+    flat = H('friends Lozenets', 42.68225, 23.33380)
+    me.go(flat, 'IN_PASSENGER_VEHICLE', STREETS['sof-airport-home'][:-1], later(30, 50), speed=32)
+    rides = ['sof-borisova', 'sof-south-park', 'sof-dragalevtsi', 'sof-centre']
+    dinners = [H('restaurant Vitosha Blvd', 42.68940, 23.31950), H('mehana Lozenets', 42.67950, 23.32800),
+               H('bar Oborishte', 42.69600, 23.33850), H('restaurant Ivan Vazov', 42.68420, 23.32020)]
+    d = day
+    for k in range(1, 5):
+        d = day + dt.timedelta(days=k)
+        halfbike_ride(local(d, 8, 0, 30), rides[k - 1])
+        if R.random() < 0.6:
+            sight = R.choice([H('Alexander Nevsky Cathedral', 42.69590, 23.33270), H('NDK', 42.68480, 23.31890),
+                              H('Vitosha Blvd', 42.69280, 23.32040), H('Ivan Vazov Theatre', 42.69440, 23.32560)])
+            hop(sight, 'IN_TRAM' if km(flat['ll'], sight['ll']) > 2.5 else 'WALKING', local(d, 13, 0, 45))
+            hop(flat, 'WALKING', later(60, 150))
+        dinner = dinners[k - 1]
+        hop(dinner, 'WALKING', local(d, 19, 30, 30))
+        hop(flat, 'WALKING', later(90, 150))
+    d = day + dt.timedelta(days=SOFIA_DAYS)
+    me.go(AIR['SOF'], 'IN_PASSENGER_VEHICLE', STREETS['sof-home-airport'][1:], local(d, 15, 0, 15), speed=32)
+    fly(AIR['AMS'], later(80, 110))
+    from_schiphol()
+    return me.since.date()
+
+
+def skip_days(first, last, state):
+    """Lives the ordinary days from first to last into a throwaway copy, so the main generator draws
+    the same numbers it did before these days became a trip, and later days stay as they were."""
+    global me, SEGS
+    saved = me, SEGS
+    me, SEGS = Person(me.place, me.tz, me.since), []
+    try:
+        d = first
+        while d <= last:
+            ordinary_day(d, state)
+            d += dt.timedelta(days=1)
+    finally:
+        me, SEGS = saved
+
+
 HOLIDAYS = [(dt.date(2024, 2, 2), vietnam), (dt.date(2024, 8, 9), peru), (dt.date(2025, 1, 31), south_africa),
             (dt.date(2025, 7, 4), japan), (dt.date(2026, 1, 23), colombia), (dt.date(2026, 6, 19), tanzania)]
 TRAIN_CITIES = ['Utrecht', 'Haarlem', 'Rotterdam', 'Den Haag', 'Leiden']
 DAYS_OFF = {(12, 25), (12, 26), (1, 1), (4, 27), (5, 5)}
+
+
+def ordinary_day(day, state):
+    wd = day.weekday()
+    if wd >= 5 and day >= state['next_train']:
+        train_day(day, R.choice(TRAIN_CITIES))
+        state['next_train'] = day + dt.timedelta(days=R.randint(21, 42))
+    elif wd >= 5 or (day.month, day.day) in DAYS_OFF or (day.month == 12 and day.day > 26) or (day.month == 8 and R.random() < 0.3):
+        weekend_day(day)
+    elif wd == 4 or (wd == 2 and R.random() < 0.5) or R.random() < 0.05:
+        home_day(day)
+    else:
+        office_day(day)
 
 
 def main():
@@ -897,7 +995,7 @@ def main():
     hol = dict(HOLIDAYS)
     road = {r[0]: r for r in ROADTRIPS}
     day = START
-    next_train = START + dt.timedelta(days=R.randint(10, 25))
+    state = {'next_train': START + dt.timedelta(days=R.randint(10, 25))}
     while day <= END:
         if day in hol:
             day = hol[day](day) + dt.timedelta(days=1)
@@ -906,16 +1004,13 @@ def main():
             _, name, out, base, nights, outings = road[day]
             day = road_trip(day, name, out, base, nights, outings) + dt.timedelta(days=1)
             continue
-        wd = day.weekday()
-        if wd >= 5 and day >= next_train:
-            train_day(day, R.choice(TRAIN_CITIES))
-            next_train = day + dt.timedelta(days=R.randint(21, 42))
-        elif wd >= 5 or (day.month, day.day) in DAYS_OFF or (day.month == 12 and day.day > 26) or (day.month == 8 and R.random() < 0.3):
-            weekend_day(day)
-        elif wd == 4 or (wd == 2 and R.random() < 0.5) or R.random() < 0.05:
-            home_day(day)
-        else:
-            office_day(day)
+        if day == SOFIA_DAY:
+            skip_days(day, day + dt.timedelta(days=SOFIA_DAYS), state)
+            day = own_rng(sofia, day) + dt.timedelta(days=1)
+            continue
+        if day in HALFBIKE_AMS:
+            own_rng(halfbike_ams, day)
+        ordinary_day(day, state)
         day += dt.timedelta(days=1)
     me.stay(local_to_utc(END, 23, 30, 'CET'))
     SEGS.sort(key=lambda s: (s['startTime'][:0], parse(s['startTime']), 0 if 'visit' in s or 'activity' in s else 1))

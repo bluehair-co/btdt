@@ -1048,6 +1048,7 @@ div.hit-row:hover { background: none; }
           <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>, the map library <small>BSD 2-Clause</small></li>
           <li><a href="https://d3js.org" target="_blank" rel="noopener">D3</a>, for the globe and Equal Earth views <small>ISC License</small></li>
           <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
+          <li>Demo Halfbike routes from <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> on <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> data <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
           <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
           <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
@@ -5458,16 +5459,16 @@ var DEMO = null;
 $('demoBtn').addEventListener('click', function () {
   setStatus('');
   busy('Opening the demo…');
-  // The demo's Timeline, and the Strava activities the same made-up person recorded (runs, road
-  // rides and hikes with heart rate, from source/demo/make_activities.py). The demo opens without
-  // them if they don't load.
+  // The demo's Timeline, and the Strava export of the activities the same made-up person recorded
+  // (runs, road rides, Halfbike loops and hikes with heart rate, and the Halfbike as gear, from
+  // source/demo/make_activities.py). The demo opens without them if they don't load.
   function get(url, name) {
     return fetch(url).then(function (res) {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.blob();
     }).then(function (b) { return new File([b], name); });
   }
-  Promise.all([get('demo.json', 'demo.json'), get('demo-activities.gpx.gz', 'demo-activities.gpx.gz').catch(function () { return null; })]).then(function (fs) {
+  Promise.all([get('demo.json', 'demo.json'), get('demo-activities.zip', 'demo-activities.zip').catch(function () { return null; })]).then(function (fs) {
     return runParser(fs.filter(Boolean));
   }).then(function (r) {
     if (!r.results.length) throw new Error('no data');
