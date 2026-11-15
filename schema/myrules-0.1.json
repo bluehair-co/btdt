@@ -271,7 +271,12 @@
             "home",
             "work",
             "school",
-            "station"
+            "family",
+            "sport",
+            "restaurant",
+            "cafe",
+            "supermarket",
+            "transit"
           ]
         },
         "at": {

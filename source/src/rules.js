@@ -467,7 +467,7 @@ function mrPlaceName(q) {
   // A hidden place shows as the town it is in, never by its name or address.
   if (r.hide) { var c = nearestCity(q.lat, q.lng); return c ? (c.d > 8 ? 'Near ' : '') + c.name : ccName(countryAt(q.lat, q.lng)); }
   if (MR_LIFE[r.role] && mrIsPast(r)) return r.name || 'Former ' + r.role;
-  return r.role === 'home' ? 'Home' : r.name || (r.role ? MR_LIFE[r.role] || r.role.charAt(0).toUpperCase() + r.role.slice(1) : '');
+  return r.role === 'home' ? 'Home' : r.name || mrKindName(r.role);
 }
 
 // Applies the rules again after a change, keeping the filters (gear chips are rebuilt, all on; types
@@ -726,7 +726,7 @@ function mrRenderRules() {
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR_COUNT[r.id] || 0);
   }).join('') + '</div>';
   if (places.length) h += '<div class="sec"><h3>Places</h3>' + places.map(function (r) {
-    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : r.role.charAt(0).toUpperCase() + r.role.slice(1)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
+    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || r.id, sub, r.role === 'home' ? 'home' : r.hide ? 'shield' : 'pin', r.role === 'home' ? '#008300' : '#9aa49d', null);
   }).join('') + '</div>';
   if (cor.length) h += '<div class="sec"><h3>Corrections</h3>' + cor.map(function (c) {
@@ -971,7 +971,12 @@ function mrSaveGear(i) {
 // A spot page (a regular place's pin) has Name this place: a name, what it is (home, work…), the
 // radius that counts as this place (set on its own map with Define radius), and Hide. Saved as a
 // place rule in MyRules.
-var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['sport', 'Sport']];
+var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['sport', 'Sport'],
+  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['transit', 'Public transport stop']];
+// Each kind of place: its name and icon, for pins, the places list and Time by kind of place.
+var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'home'], sport: ['Sport', 'RUNNING'],
+  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], transit: ['Public transport', 'BUS'] };
+function mrKindName(role) { return MR_KIND[role] ? MR_KIND[role][0] : role ? role.charAt(0).toUpperCase() + role.slice(1) : ''; }
 function mrSpotCentre(key) {
   var vs = spotStays(key), la = 0, lo = 0;
   vs.forEach(function (v) { la += D.vll[2 * v]; lo += D.vll[2 * v + 1]; });
@@ -991,7 +996,7 @@ function mrSpotRule(key) {
 }
 function mrSpotHtml(key) {
   var r = mrSpotRule(key);
-  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(r.role) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>') +
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>') +
     '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit name' : 'Name this place') + '</button></div>';
 }
 function mrPlaceDialog(key) {
