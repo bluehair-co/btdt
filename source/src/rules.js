@@ -1,8 +1,9 @@
 // ---------- MyRules ----------
 // A MyRules file (*.myrules.json) holds what only you know: which bike you rode when, where home was.
-// It is applied on top of the location files, and every value it fills in is marked Inferred.
-// The format is in docs/myrules.md; this version applies gear periods, places, and gear set on one trip.
-// Routines and other corrections are kept in the file (and exported again) but not applied yet.
+// It is applied on top of the location files. Values a rule fills in are marked Inferred; values a
+// correction sets on a trip (its type, title, gear, or hiding it) are marked Edited.
+// The format is in docs/myrules.md; this version applies gear periods, places and corrections.
+// Routines and corrections that replace trips are kept in the file (and exported again) but not applied yet.
 // MR is null until a file is loaded or a rule is made in the app. It is saved in this browser's
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
@@ -76,7 +77,8 @@ function mrRefTrips(ref) {
     var t = Date.parse(ref.start);
     if (!isFinite(t)) return out;
     for (k = mrFirstAfter(t - 3 * 60000); k < o.length && D.start[o[k]] <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
-    if (out.length > 1 && ref.mode) out = out.filter(function (j) { return MODES[D.mode[j]] === ref.mode; });
+    // The type the trip had in the files, not the one a correction gave it.
+    if (out.length > 1 && ref.mode) out = out.filter(function (j) { return MODES[(D.base || D).mode[j]] === ref.mode; });
     return out.length === 1 ? out : [];
   }
   if (ref.span && ref.span.length === 2) {
@@ -115,7 +117,8 @@ function mrNear(lat, lng, ref) {
 // without gear (a wrong guess is worse than none).
 function mrApplyGear(byName, addGear) {
   var n = D.day.length, i, k;
-  D.mrGear = []; D.mrAmb = []; MR_COUNT = {}; MR_AMB = 0;
+  D.mrGear = []; D.mrAmb = []; MR_AMB = 0;
+  mrActive('gear').forEach(function (r) { MR_COUNT[r.id] = 0; });
   if (!MR || !MR.on) return;
   var periods = mrActive('gear').filter(function (r) { return MODE_IDX[r.mode] != null; }).map(function (r) {
     var m = r.match || {};
@@ -133,18 +136,21 @@ function mrApplyGear(byName, addGear) {
     if (m.to && !mrNear(D.to[2 * i], D.to[2 * i + 1], m.to) && !mrNear(D.from[2 * i], D.from[2 * i + 1], m.to)) return false;
     return true;
   }
-  // Gear set on one trip.
-  mrActive('corrections').forEach(function (c) {
-    if (!c.then || !c.then.gear || !c.trip || c.trip.day || c.trip.span) return;
+  // Gear set by a correction: on a day or span first, then on one trip, each in file order, so the
+  // trip's own and the newest win. Only a correction on one trip replaces recorded gear.
+  mrCorrections().forEach(function (x) {
+    var c = x.c;
+    if (!c.then.gear) return;
     var ref = String(c.then.gear), r = ref.charAt(0) === '@' ? mrById(ref) : null;
     if (ref.charAt(0) === '@' && (!r || r.enabled === false)) return;
-    var ex = mrExcept(c);
-    mrRefTrips(c.trip).forEach(function (i) {
-      if (ex[i]) return;
+    var hit = 0;
+    x.trips.forEach(function (i) {
+      if (!x.one && D.gear[i] && !D.mrGear[i]) return;
       var g = r ? gearOf(r) : addGear(ref, null, MODES[D.mode[i]]);
-      D.gear[i] = g; D.mrGear[i] = { rule: c.id, gear: g };
-      MR_COUNT[c.id] = (MR_COUNT[c.id] || 0) + 1;
+      D.gear[i] = g; D.mrGear[i] = { rule: c.id, gear: g, cor: true };
+      hit++;
     });
+    MR_COUNT[c.id] = Math.max(MR_COUNT[c.id] || 0, hit);
   });
   if (!periods.length) return;
   for (i = 0; i < n; i++) {
@@ -163,8 +169,53 @@ function mrApplyGear(byName, addGear) {
     MR_COUNT[best[0].r.id] = (MR_COUNT[best[0].r.id] || 0) + 1;
   }
 }
-function mrInferred(i) { return !!(D.mrGear && D.mrGear[i]); }
-function mrTag(i) { return D && mrInferred(i) ? '<span class="guess inf">Inferred</span>' : ''; }
+// Inferred: gear a gear period filled in. Edited: anything a correction set.
+function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor); }
+function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor)); }
+function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrInferred(i) ? '<span class="guess inf">Inferred</span>' : ''); }
+
+// Corrections, ready to apply: the switched-on ones that point at trips, those on a day or span
+// first and those on one trip after, each in file order, so applying them in turn lets the trip's
+// own and then the newest win. trips leaves out the correction's except.
+var MR_COR = null;
+function mrCorrections() {
+  if (MR_COR) return MR_COR;
+  var span = [], one = [];
+  mrActive('corrections').forEach(function (c) {
+    if (!c.trip || !c.then || typeof c.then !== 'object') return;
+    var ex = mrExcept(c), x = { c: c, one: !!c.trip.start, trips: mrRefTrips(c.trip).filter(function (i) { return !ex[i]; }) };
+    (x.one ? one : span).push(x);
+  });
+  return (MR_COR = span.concat(one));
+}
+// Types, titles and hiding from corrections, on D's own copy of the files' values (D.base). Called by
+// setData before anything counts types, and again by mrReapply. Gear is set later, in mrApplyGear.
+function mrApplyCorrections() {
+  var b = D.base, n = D.day.length;
+  function copy(a) { return a ? a.slice() : a; }
+  D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype);
+  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n);
+  MR_COUNT = {}; MR_COR = null;
+  if (!MR || !MR.on) return;
+  mrCorrections().forEach(function (x) {
+    var t = x.c.then, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = 0;
+    x.trips.forEach(function (i) {
+      if (mi != null) {
+        D.mode[i] = mi;
+        // A correction isn't a guess. A Strava sport of another type no longer fits the trip.
+        D.est[i] &= ~GUESSED;
+        if (D.sport[i] && SPORTS[D.sport[i]][2] !== t.mode) D.sport[i] = 0;
+        if (D.stype) D.stype[i] = '';
+        D.mrMode[i] = { rule: x.c.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED) };
+        hit = 1;
+      }
+      if (typeof t.name === 'string' && t.name.trim()) { D.mrName[i] = { rule: x.c.id, name: t.name.trim() }; hit = 1; }
+      if (t.hide === true) { D.mrHide[i] = 1; hit = 1; }
+      else if (t.hide === false && D.mrHide[i]) { D.mrHide[i] = 0; hit = 1; }
+    });
+    if (hit) MR_COUNT[x.c.id] = x.trips.length;
+  });
+}
 
 // Places: hidden places leave their stays out of the map's pins and heatmap and the places in
 // Insights (trips to and from them still count); home from MyRules replaces the app's guess.
@@ -208,9 +259,15 @@ function mrPlaceName(q) {
   return r.role === 'home' ? 'Home' : r.name || (r.role ? r.role.charAt(0).toUpperCase() + r.role.slice(1) : '');
 }
 
-// Applies the rules again after a change, keeping the filters (gear chips are rebuilt, all on).
+// Applies the rules again after a change, keeping the filters (gear chips are rebuilt, all on; types
+// and sports trips now have for the first time are turned on).
 function mrReapply() {
   if (!D) { renderImports(); return; }
+  mrApplyCorrections();
+  var ms = modeStats();
+  ms.modes.forEach(function (m) { if (M.modes.indexOf(m) < 0) F.modes.add(m); });
+  ms.sports.forEach(function (sp) { if (M.sports.indexOf(sp) < 0) F.sports.add(sp); });
+  M.modes = ms.modes; M.sports = ms.sports; M.sportN = ms.sportN; M.plain = ms.plain;
   buildGear();
   M.gear = GEAR; M.gearMode = GEAR_MODE;
   D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
@@ -225,7 +282,7 @@ function mrReapply() {
   if (openId === 'mrSheet') mrRenderRules();
 }
 function mrAnyGuess() {
-  for (var i = 0; i < D.day.length; i++) if (D.est[i] & 4 || mrInferred(i)) return true;
+  for (var i = 0; i < D.day.length; i++) if (D.est[i] & GUESSED || mrInferred(i)) return true;
   return false;
 }
 
@@ -377,14 +434,14 @@ function renderMyRules() {
   var el = $('mrCard');
   if (!el) return;
   if (!MR) {
-    el.innerHTML = '<p class="fine">Add what only you know, like which bike you rode when or where home was. BT•DT fills in what your files leave out and marks it <span class="guess inf">Inferred</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear in its trip details to start.</p>';
+    el.innerHTML = '<p class="fine">Add what only you know, like which bike you rode when or where home was. BT•DT fills in what your files leave out and marks it <span class="guess inf">Inferred</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.</p>';
     return;
   }
-  var nGear = 0, n = MR.changes.length;
-  for (var k in MR_COUNT) { var r = mrById(k); if (r && !Array.isArray(r.at)) nGear += MR_COUNT[k]; }
+  var nGear = 0, nEd = 0, n = MR.changes.length;
+  if (D) for (var i = 0; i < D.day.length; i++) { if (mrInferred(i)) nGear++; if (mrEdited(i)) nEd++; }
   el.innerHTML = '<div class="mr-card"><div class="mr-card-head"><span class="mr-ic">' + icon('flag') + '</span><span class="file-txt"><b>' + esc(MR.name) + '</b><small>' + mrCount(MR.doc) + '</small></span>' +
     '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply MyRules"' + (MR.on ? ' checked' : '') + '></div>' +
-    '<p class="fine" style="margin:8px 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p>' +
+    '<p class="fine" style="margin:8px 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + (nEd ? ', ' + tripsText(nEd) + ' edited' : '') + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button type="button" class="btn" id="mrOpen">Open rules</button>' +
     '<button type="button" class="btn mr-export" id="mrExportBtn">' + icon('upload') + 'Export' + (n ? '<i class="mr-dot"></i>' : '') + '</button>' +
     '<span class="fine mr-unsaved">' + (n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
@@ -430,14 +487,23 @@ function mrRenderRules() {
     return mrRuleRow('places', r, r.name || r.id, sub, r.role === 'home' ? 'home' : r.hide ? 'shield' : 'pin', r.role === 'home' ? '#008300' : '#9aa49d', null);
   }).join('') + '</div>';
   if (cor.length) h += '<div class="sec"><h3>Corrections</h3>' + cor.map(function (c) {
-    var t = c.trip || {}, g = c.then && c.then.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null;
+    var t = c.trip || {}, th = c.then || {}, g = th.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null, bits = [];
     var when = t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
-    var sub = g ? 'Gear: ' + esc(gr ? gr.name || gr.id : g) : 'Not applied in this version of BT•DT';
-    return mrRuleRow('corrections', c, when || c.id, sub, g ? 'CYCLING' : 'info', g ? modeColor('CYCLING') : '#9aa49d', g ? MR_COUNT[c.id] || 0 : null);
+    if (th.mode) bits.push('Type: ' + esc(LABEL[th.mode] || th.mode));
+    if (th.name) bits.push('Title: “' + esc(th.name) + '”');
+    if (g) bits.push('Gear: ' + esc(gr ? gr.name || gr.id : g));
+    if (th.hide === true) bits.push('Hidden');
+    if (th.hide === false) bits.push('Shown again');
+    if (th.replace) bits.push('Replace: not applied in this version of BT•DT');
+    var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
+    var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : 'info');
+    var applied = th.mode || th.name || g || th.hide != null;
+    return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : ''),
+      ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied ? MR_COUNT[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec"><h3>Routines</h3><p class="fine" style="margin-bottom:6px">Kept in your file and exported again, but not applied in this version of BT•DT yet.</p>' +
     rout.map(function (r) { return mrRuleRow('routines', r, r.name || r.id, mrWhenText(r.when), r.then && r.then.mode || 'OTHER', '#9aa49d', null); }).join('') + '</div>';
-  if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear in its trip details to make one.</p>';
+  if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
   $('mrBody').innerHTML = h;
 }
 $('mrBody').addEventListener('change', function (ev) {
@@ -449,6 +515,8 @@ $('mrBody').addEventListener('change', function (ev) {
   mrChange((ev.target.checked ? 'Switched on: ' : 'Switched off: ') + (r.name || r.id));
 });
 $('mrBody').addEventListener('click', function (ev) {
+  var o = ev.target.closest('[data-mr-trip]');
+  if (o) { openTrip(+o.dataset.mrTrip); return; }
   var b = ev.target.closest('[data-mr-del]');
   if (!b) return;
   var p = b.dataset.mrDel.split(':'), sec = p[0], id = p.slice(1).join(':'), r = mrById(id);
@@ -464,34 +532,102 @@ $('mrBack').addEventListener('click', function () { openSheet('importsSheet'); }
 $('mrSheetExport').addEventListener('click', mrExport);
 
 // ---------- trip details ----------
-// What MyRules did to a trip, with Not this trip; and Set gear for rides, runs and walks.
+// What MyRules did to a trip, each with Undo (a correction) or Not this trip (a gear period); Edit
+// trip (type, title, hide) for every trip, and Set gear for rides, runs and walks.
 var MR_GEAR_MODES = { CYCLING: 1, RUNNING: 1, WALKING: 1 };
+function mrWhere(i) { return niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]); }
 function mrTripBlock(i) {
   if (!D || isDup(i)) return '';
-  var h = '', g = D.mrGear && D.mrGear[i], amb = D.mrAmb && D.mrAmb[i];
-  if (g) {
-    var r = mrById(g.rule), isCor = r && r.trip;
-    h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + '<div class="fine">' + (isCor ? 'Set for this trip' : 'From the rule <i>' + esc(r ? r.name || r.id : g.rule) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) + '</div></div>';
+  var h = '', g = D.mrGear && D.mrGear[i], amb = D.mrAmb && D.mrAmb[i], md = D.mrMode && D.mrMode[i], nm = D.mrName && D.mrName[i];
+  function src(id, field) {
+    var r = mrById(id), one = r && r.trip && r.trip.start;
+    return '<div class="fine">' + (one ? 'Set for this trip' : r && r.trip ? 'From the correction for ' + esc(r.trip.day || (r.trip.span || []).join(' – ')) : 'From the rule <i>' + esc(r ? r.name || r.id : id) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) +
+      (field ? ' · <button type="button" class="link-btn" data-mr-act="undo" data-f="' + field + '" data-r="' + esc(id) + '" data-t="' + i + '">Undo</button>' : '') + '</div>';
   }
+  if (D.mrHide && D.mrHide[i]) {
+    var hc = mrCorrections().filter(function (x) { return x.c.then.hide === true && x.trips.indexOf(i) >= 0; }).pop();
+    h += '<div class="mr-chg"><b>Hidden</b> from the map, lists and totals' + (hc ? src(hc.c.id, 'hide') : '') + '</div>';
+  }
+  if (md) h += '<div class="mr-chg"><b>Type:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' <span class="fine">(was ' + esc((LABEL[md.was] || md.was).toLowerCase()) + (md.guessed ? ', guessed' : '') + ')</span>' + src(md.rule, 'mode') + '</div>';
+  if (nm) h += '<div class="mr-chg"><b>Title:</b> ' + esc(nm.name) + (recName(i) ? ' <span class="fine">(was “' + esc(recName(i)) + '”)</span>' : '') + src(nm.rule, 'name') + '</div>';
+  if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
-  var btns = '';
-  if (g) btns += '<button type="button" class="btn" data-mr-act="not" data-t="' + i + '">Not this trip</button>';
+  var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
+  if (g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-t="' + i + '">Not this trip</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
-  if (!h && !btns) return '';
-  return '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
+  return '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
 }
+// Drops one action from a correction, and the correction once it has none left.
+function mrDropAction(c, field) {
+  delete c.then[field];
+  if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+}
+var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden' };
 $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
-  var i = +b.dataset.t;
-  if (b.dataset.mrAct === 'not') {
+  var i = +b.dataset.t, act = b.dataset.mrAct;
+  if (act === 'not') {
     var g = D.mrGear[i], r = g && mrById(g.rule);
     if (!r) return;
-    if (r.trip) { MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== r; }); mrChange('Removed the gear set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i])); }
-    else { (r.except || (r.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.mode[i]] }); mrChange('Not this trip: ' + (r.name || r.id) + ' on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i])); }
+    (r.except || (r.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
+    mrChange('Not this trip: ' + (r.name || r.id) + ' on ' + mrWhere(i));
     openTrip(i);
-  } else if (b.dataset.mrAct === 'gear') mrGearDialog(i);
+  } else if (act === 'undo') {
+    var c = mrById(b.dataset.r), f = b.dataset.f;
+    if (!c || !c.then) return;
+    if (c.trip && c.trip.start) mrDropAction(c, f);
+    // A correction on a day or span: this trip is left out of it.
+    else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
+    mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
+    openTrip(i);
+  } else if (act === 'gear') mrGearDialog(i);
+  else if (act === 'edit') mrEditDialog(i);
 });
+// The correction for this one trip that Edit trip changes: the last one pointing at it by its start.
+function mrTripCorrection(i) {
+  return mrCorrections().filter(function (x) { return x.one && x.trips.length === 1 && x.trips[0] === i; }).map(function (x) { return x.c; }).pop() ||
+    mrList('corrections').filter(function (c) { return c.trip && c.trip.start && c.enabled !== false && mrRefTrips(c.trip)[0] === i; }).pop() || null;
+}
+// Edit trip: its type, its title, and hiding it. Saved as a correction on this trip's start, so it
+// survives loading the files again.
+function mrEditDialog(i) {
+  var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]], hidden = !!D.mrHide[i];
+  var modes = MODES.filter(function (m) { return m !== 'UNKNOWN' || cur === 'UNKNOWN'; });
+  mrAsk({
+    title: 'Edit trip',
+    text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + ' · ' + dist(D.km[i]),
+    extra: '<div class="mr-form"><label class="field"><span>Type</span><select id="mrEType">' + modes.map(function (m) {
+      return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
+    }).join('') + '</select></label>' +
+      '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
+      '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
+    buttons: [['Save', 'primary', function () { mrSaveEdit(i); }], ['Cancel', 'quiet', null]],
+    note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.'
+  });
+}
+function mrSaveEdit(i) {
+  var type = $('mrEType').value, name = $('mrEName').value.trim(), hide = $('mrEHide').checked;
+  var was = MODES[D.base.mode[i]], rec = recName(i);
+  mrEnsure();
+  var c = mrTripCorrection(i), isNew = !c, what = [];
+  if (isNew) c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} };
+  var t = c.then || (c.then = {});
+  var oldMode = t.mode || was, oldName = t.name || rec, oldHide = !!t.hide;
+  // A type the files already had and wasn't guessed needs no correction; a guessed one does, to keep it.
+  if (type !== was || D.base.est[i] & GUESSED) t.mode = type; else delete t.mode;
+  if (name && name !== rec) t.name = name; else delete t.name;
+  if (hide) t.hide = true; else delete t.hide;
+  if (type !== oldMode) what.push('type ' + (LABEL[type] || type).toLowerCase());
+  if ((name || rec) !== oldName) what.push(name && name !== rec ? 'title “' + name + '”' : 'title reset');
+  if (hide !== oldHide) what.push(hide ? 'hidden' : 'shown again');
+  if (!what.length && !(isNew && Object.keys(t).length)) return;
+  if (isNew) { if (!Object.keys(t).length) return; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
+  else if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
+  if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
+  else openTrip(i);
+}
 
 // Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
 // (a gear period), with the dates from the first and last trip on that gear and a live count.
@@ -544,7 +680,9 @@ function mrSaveGear(i) {
   var existing = mrList('gear').filter(function (r) { return (r.name === name || r.strava_name === name) && r.mode === mode; })[0];
   var recorded = sel !== 'new' && !existing && !GEAR[+sel].rule;
   if (one) {
-    (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: mode }, then: { gear: existing ? '@' + existing.id : name } });
+    var c = mrTripCorrection(i), gv = existing ? '@' + existing.id : name;
+    if (c) c.then.gear = gv;
+    else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
     mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]));
   } else {
     var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = parseFloat($('mrMax').value);

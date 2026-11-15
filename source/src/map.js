@@ -902,8 +902,14 @@ var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straigh
   [JUMPS, 'bad GPS points left out']];
 // What MyRules filled in, in Raw data and the exports.
 function mrRaw(i) {
-  var g = D.mrGear && D.mrGear[i];
-  return g ? { gear: GEAR[g.gear].name, rule: g.rule } : null;
+  var g = D.mrGear && D.mrGear[i], m = D.mrMode && D.mrMode[i], n = D.mrName && D.mrName[i], o = [];
+  if (m) o.push({ field: 'mode', value: MODES[D.mode[i]], was: m.was, rule: m.rule });
+  if (n) o.push({ field: 'name', value: n.name, was: recName(i) || null, rule: n.rule });
+  if (g) o.push({ field: 'gear', value: GEAR[g.gear].name, rule: g.rule, inferred: !g.cor });
+  return o.length ? o : null;
+}
+function mrFlags(i) {
+  return (mrInferred(i) ? ['gear from MyRules'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
 }
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
@@ -914,7 +920,7 @@ function rawTrip(i) {
     sport: D.sport && D.sport[i] ? SPORTS[D.sport[i]][0] : null, stravaType: D.stype && D.stype[i] || null,
     start: iso(D.start[i]), end: iso(D.end[i]), utcOffsetMin: D.off[i] === NO_OFF ? null : D.off[i], localDay: isoDay(D.day[i]),
     km: +D.km[i].toFixed(3), fileKm: D.orig[i] > 0 ? +D.orig[i].toFixed(3) : null,
-    flags: EST_FLAGS.filter(function (f) { return e & f[0]; }).map(function (f) { return f[1]; }).concat(mrRaw(i) ? ['gear from MyRules'] : []),
+    flags: EST_FLAGS.filter(function (f) { return e & f[0]; }).map(function (f) { return f[1]; }).concat(mrFlags(i)),
     gear: D.gear[i] ? GEAR[D.gear[i]].name : null, myRules: mrRaw(i),
     from: ll(D.from, i), to: ll(D.to, i)
   };
