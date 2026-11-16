@@ -1124,6 +1124,7 @@ function mrPlaceDialog(key) {
     title: r ? 'Edit this place' : 'Name this place',
     text: 'Stays within the radius take this name, in every list and on the map.',
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrPName" value="' + esc(nm) + '" placeholder="e.g. Climbing gym"></label>' +
+      '<div class="g-name"><button type="button" class="btn quiet" id="mrPOsm">' + icon('search') + 'Get the name from OpenStreetMap</button><div id="mrPGOut" class="g-out" aria-live="polite"></div></div>' +
       '<label class="field"><span>What it is</span><select id="mrPRole">' + MR_ROLES.map(function (x) { return '<option value="' + x[0] + '"' + (x[0] === role ? ' selected' : '') + '>' + x[1] + '</option>'; }).join('') + '</select></label>' +
       '<div id="mrPLife"' + (MR_LIFE[role] ? '' : ' hidden') + '><label class="mr-opt"><input type="radio" name="mrPNow" value="now"' + (past ? '' : ' checked') + '><span><b>Current</b><small class="fine">Its pin gets the sunrise colour.</small></span></label>' +
       '<label class="mr-opt"><input type="radio" name="mrPNow" value="past"' + (past ? ' checked' : '') + '><span><b>Past</b><span class="mr-dates">Until <input type="date" id="mrPTo" value="' + esc(until) + '" aria-label="Until"></span></span></label></div>' +
@@ -1145,11 +1146,59 @@ function mrPlaceDialog(key) {
       }
       $('mrPRole').addEventListener('change', function () { $('mrPLife').hidden = !MR_LIFE[this.value]; });
       $('mrPTo').addEventListener('input', function () { document.querySelector('input[name="mrPNow"][value="past"]').checked = true; });
+      $('mrPOsm').addEventListener('click', function () { osmNameFill(c, +$('mrPRad').value); });
       $('mrPRadBtn').addEventListener('click', function () {
         mrRadiusMap(c, +$('mrPRad').value, $('mrPName').value.trim() || 'This place', function (m) { $('mrPRad').value = m; upd(); });
       });
       upd();
     }
+  });
+}
+// Get the name from OpenStreetMap: on request only, the place's centre goes to OpenStreetMap's
+// Nominatim (the name of what's right there) and Overpass (the named places within the radius, up
+// to 300 m). The first name fills the Name field and the others nearby are chips to pick instead,
+// nearest first. Nothing is saved until Save. No key needed; one tap is two requests, well inside
+// both services' usage policies.
+var OSM_KINDS = 'amenity|shop|leisure|tourism|office|craft|sport|healthcare|railway|public_transport|aeroway|historic|building|club';
+function osmLookup(c, rad) {
+  var lang = (navigator.language || 'en').split('-')[0], R = Math.round(Math.max(30, Math.min(rad || 100, 300)));
+  var here = fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&namedetails=1&accept-language=' + encodeURIComponent(lang) + '&lat=' + c[0] + '&lon=' + c[1])
+    .then(function (r) { if (!r.ok) throw new Error('OpenStreetMap answered ' + r.status); return r.json(); });
+  var q = '[out:json][timeout:10];nwr(around:' + R + ',' + c[0] + ',' + c[1] + ')[name][~"^(' + OSM_KINDS + ')$"~"."];out tags center 40;';
+  var near = fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' } })
+    .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+  return Promise.all([here.catch(function (e) { return { err: e }; }), near]).then(function (a) {
+    var out = [], seen = {}, h = a[0], els = a[1] && a[1].elements || [];
+    if (h.err && !els.length) throw h.err;
+    function add(t) { t = t && String(t).trim(); if (t && !seen[t.toLowerCase()]) { seen[t.toLowerCase()] = 1; out.push(t); } }
+    if (h && !h.err) add(h.namedetails && h.namedetails['name:' + lang] || h.name);
+    els.map(function (e) {
+      var p = e.center || e, t = e.tags || {};
+      return { t: t['name:' + lang] || t.name, d: isFinite(p.lat) ? km(c, [p.lat, p.lon]) : 1 };
+    }).sort(function (x, y) { return x.d - y.d; }).forEach(function (x) { add(x.t); });
+    return out.slice(0, 8);
+  });
+}
+function osmNameFill(c, rad) {
+  var out = $('mrPGOut'), btn = $('mrPOsm');
+  btn.disabled = true;
+  out.innerHTML = '<p class="fine">Looking it up on OpenStreetMap…</p>';
+  osmLookup(c, rad).then(function (names) {
+    btn.disabled = false;
+    if (!names.length) { out.innerHTML = '<p class="fine">OpenStreetMap has no named place here.</p>'; return; }
+    $('mrPName').value = names[0];
+    out.innerHTML = (names.length > 1 ? '<p class="fine">Or one of the other places nearby:</p><div class="chips">' +
+      names.map(function (t, i) { return '<button type="button" class="chip" data-gname="' + esc(t) + '" aria-pressed="' + (i ? 'false' : 'true') + '">' + esc(t) + '</button>'; }).join('') + '</div>' : '') +
+      '<p class="g-attr">Names © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors</p>';
+    out.querySelectorAll('[data-gname]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        $('mrPName').value = b.dataset.gname;
+        out.querySelectorAll('[data-gname]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+      });
+    });
+  }).catch(function (e) {
+    btn.disabled = false;
+    out.innerHTML = '<p class="fine">Couldn\'t get a name from OpenStreetMap: ' + esc(e && e.message || 'no connection') + '. Try again in a moment.</p>';
   });
 }
 function mrStaysWithin(c, m) {

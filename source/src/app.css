@@ -360,6 +360,12 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-opt:has(input:checked) { border-color: var(--accent); }
 .mr-opt input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
 .mr-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.g-name { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: -4px; }
+.g-out:empty { display: none; }
+.g-out .fine { margin: 0 0 6px; }
+.g-out .chip { font-size: 12px; padding: 5px 10px; }
+.g-attr { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.g-attr a { color: inherit; }
 .mr-dates { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; }
 
 /* Map tooltip and hover (mouse only) */
