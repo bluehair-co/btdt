@@ -375,7 +375,6 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art.eight { max-width: none; }
 .far-art.ring { max-width: 164px; }
 .far-art.map { max-width: 184px; }
-.far-art .fr { fill: color-mix(in srgb, var(--muted) 14%, var(--panel)); stroke: color-mix(in srgb, var(--muted) 30%, transparent); stroke-width: 1.5px; stroke-linejoin: round; }
 .far-art .tour { fill: none; stroke: var(--m-bike); stroke-width: 6px; stroke-linecap: round; stroke-linejoin: round; }
 .far-art .stage { fill: var(--panel); stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 2px; }
 .far-art .stage.on { fill: #fff; stroke: var(--m-bike); }
@@ -385,9 +384,6 @@ details.help b { color: var(--fg); font-weight: 500; }
 .far-art :is(.sea, .space, .mars, .gold, .you, .polo) { fill: none; stroke-width: 6px; stroke-linecap: round; }
 .far-art .sea { stroke: var(--m-road); }
 .far-art .polo { stroke: var(--m-transit); }
-.far-art .polo-end { fill: var(--panel); stroke: color-mix(in srgb, var(--muted) 65%, transparent); stroke-width: 4px; }
-.far-art .polo-l { font-size: 13px; font-weight: 600; fill: var(--fg); }
-.far-art .polo-s { font-size: 12px; fill: var(--muted); }
 .far-art .space { stroke: var(--m-bike); }
 .far-art .mars { stroke: var(--m-air); }
 /* Musk's magnifier over the Earth's edge: a rim and handle in the text colour, a tinted lens, and a glare on the glass. */

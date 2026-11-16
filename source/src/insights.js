@@ -120,6 +120,9 @@ function muskArt(share) {
 // Marco Polo: Venice to Kublai Khan's China and back over land, so only trips on the ground count (road,
 // public transport, on foot and cycling). Odd legs head east along a winding Silk Road, even legs come home.
 var POLO_KM = 12000, LAND = { road: 1, transit: 1, foot: 1, bike: 1 };
+// The Silk Road as drawn in Figma, from Venice (0, 0) to Kublai Khan's court (910, 34.5), in px.
+var POLO_ROAD = [[0, 0], [54.5, 34.5], [126.5, 14], [217.5, 42], [295, 0], [374.5, 34.5], [417.5, 83.5], [519, 113], [583.5, 59.5],
+  [654, 59.5], [712.5, 83.5], [764.5, 26.5], [830, 26.5], [878, 34.5], [910, 34.5]];
 function renderPolo(g) {
   var km = 0, j;
   for (j = 0; j < sel.length; j++) if (LAND[groupOf(MODES[D.mode[sel[j]]]).key]) km += D.km[sel[j]];
@@ -132,44 +135,28 @@ function renderPolo(g) {
     value = fmt(legs / 2, legs < 20 ? 2 : 1); sub = '× Venice to China and back';
     note = back ? (trips ? there + ', then out again and on the way home: ' : 'Made it to China! On the way home to Venice, with ') + left + ' to go' : there + '. Heading east again, with ' + left + ' to China';
   }
-  // The road: a gentle wave between Venice and China, as points, drawn to the card's width.
-  var w = farWidth(), k = farScale(w), W = w / k, x0 = 56, x1 = W - 56, cy = 62, A = 14, n = 2.5, pts = [], len = [0], i;
-  for (i = 0; i <= 120; i++) { var t = i / 120; pts.push([x0 + (x1 - x0) * t, cy + A * Math.sin(t * n * 2 * Math.PI)]); if (i) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1])); }
-  var road = { pts: pts, len: len }, f = back ? 1 - part : part, at = loopAt(f, road), done = back ? [[at.x, at.y]].concat(pts.slice(Math.ceil(f * 120))) : at.pts;
+  // The road from the Figma drawing: Italy on the left, China on the right, and the Silk Road between, drawn
+  // from Venice to Kublai Khan's court with its middle stretched or squeezed to the card's width.
+  // On a narrow card the maps shrink (around Venice and the court, so the road still starts and ends there).
+  var w = farWidth(), k = farScale(w), W = Math.max(420, w / k), ms = Math.max(.7, Math.min(1, W / 760)), x0 = 87, x1 = W - 50 * ms, sx = (x1 - x0) / 910, i;
+  var pts = POLO_ROAD.map(function (p) { return [x0 + p[0] * sx, 37.5 + p[1]]; }), len = [0];
+  for (i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  var road = { pts: pts, len: len }, f = back ? 1 - part : part, at = loopAt(f, road), done = back ? [[at.x, at.y]].concat(pts.slice(at.pts.length - 1)) : at.pts;
   var ride = rider(at.x, at.y, 'var(--m-transit)', '', 'camel', 24, 0);
   if (back) ride = '<g transform="translate(' + (2 * at.x).toFixed(1) + ',0) scale(-1,1)">' + ride + '</g>';
-  function end(x, name, sub, anchor) {
-    return '<circle cx="' + x + '" cy="' + cy + '" r="7" class="polo-end"/><text class="polo-l" x="' + x + '" y="' + (cy + 40) + '" text-anchor="' + anchor + '">' + name + '</text>' +
-      '<text class="polo-s" x="' + x + '" y="' + (cy + 55) + '" text-anchor="' + anchor + '">' + sub + '</text>';
-  }
-  $('polo').innerHTML = '<svg class="far-art eight" viewBox="0 0 ' + W.toFixed(1) + ' 128" style="height:' + (128 * k).toFixed(1) + 'px" role="img" aria-label="' + farPct(part) + '% of the way ' + (back ? 'home to Venice' : 'to China') + '">' +
-    '<path class="trk" d="' + polyD(pts) + '"/>' + end(x0, 'Venice', '1271', 'start') + end(x1, 'Kublai Khan\'s court', '1275', 'end') +
-    (part > 0 ? '<path class="polo" d="' + polyD(done) + '"/>' : '') + ride + '</svg>' +
+  $('polo').innerHTML = '<svg class="far-art eight" viewBox="0 0 ' + W.toFixed(1) + ' 164" style="height:' + (164 * k).toFixed(1) + 'px" role="img" aria-label="' + farPct(part) + '% of the way ' + (back ? 'home to Venice' : 'to China') + '">' +
+    '<use href="#art-italy" x="' + (x0 * (1 - ms)).toFixed(1) + '" y="' + (37.5 * (1 - ms)).toFixed(1) + '" width="' + (138 * ms).toFixed(1) + '" height="' + (164 * ms).toFixed(1) + '"/>' +
+    '<use href="#art-china" x="' + (x1 - 143 * ms).toFixed(1) + '" y="' + (72 * (1 - ms)).toFixed(1) + '" width="' + (193 * ms).toFixed(1) + '" height="' + (164 * ms).toFixed(1) + '"/>' +
+    '<path class="trk" d="' + polyD(pts) + '"/>' + (part > 0 ? '<path class="polo" d="' + polyD(done) + '"/>' : '') + ride + '</svg>' +
     '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
 }
 // Merckx: the Tour de France on a little map of France, about 3,400 km in 21 stages from Brittany, through the
 // Pyrenees and the Alps, to Paris. Only cycling counts. Each Tour starts again from Brest.
 var TOUR_KM = 3400;
-// Places as [longitude, latitude], drawn as x = (lon + 5.4) × 13, y = (51.4 − lat) × 19 (squeezed for 46.5° N).
-function frXY(p) { return [(p[0] + 5.4) * 13, (51.4 - p[1]) * 19]; }
-var FRANCE = [[2.5, 51.1], [4.2, 50.1], [5.8, 49.5], [8.2, 49], [7.6, 47.6], [6.1, 46.3], [7, 45.9], [6.7, 45.1], [7, 44.2], [7.5, 43.8],
-  [6.2, 43.1], [4.8, 43.4], [3.1, 43.1], [3.2, 42.4], [1.7, 42.5], [-.5, 42.8], [-1.8, 43.4], [-1.3, 44.6], [-1.2, 46.2], [-2.2, 47.2],
-  [-4.5, 47.8], [-4.8, 48.4], [-3.5, 48.8], [-1.6, 48.6], [-1.9, 49.7], [-1.2, 49.4], [.2, 49.5], [1.5, 50.1], [1.6, 50.9]].map(frXY);
-var TOUR = [[-4.3, 48.3], [-2.8, 47.7], [-1.5, 47.2], [-.6, 44.8], [-.4, 43.3], [.1, 42.9], [1.4, 43.6], [3.9, 43.6], [5.3, 44.2],
-  [6.1, 45.1], [6.1, 45.9], [5, 47.3], [4, 48.6], [2.35, 48.86]].map(frXY);
-// A smooth curve through the points (Catmull-Rom), as many points close together; closed joins the end to the start.
-function smoothPts(P, closed, per) {
-  var out = [], n = P.length, m = closed ? n : n - 1, i, k;
-  function at(j) { return closed ? P[(j + n) % n] : P[Math.max(0, Math.min(n - 1, j))]; }
-  for (i = 0; i < m; i++) {
-    var a = at(i - 1), b = at(i), c = at(i + 1), d = at(i + 2);
-    for (k = i ? 1 : 0; k <= per; k++) {
-      var t = k / per, t2 = t * t, t3 = t2 * t;
-      out.push([0, 1].map(function (q) { return .5 * (2 * b[q] + (c[q] - a[q]) * t + (2 * a[q] - 5 * b[q] + 4 * c[q] - d[q]) * t2 + (3 * b[q] - a[q] - 3 * c[q] + d[q]) * t3); }));
-    }
-  }
-  return out;
-}
+// The Tour as drawn in Figma over the map of France (#art-france, 166 × 164 px): from the north, west to
+// Brittany, down the Atlantic to the Pyrenees, across to the Alps, and up to Paris.
+var TOUR = [[74.5, 0], [50.5, 21], [25, 27], [0, 35.5], [19.5, 50.5], [34, 72], [34, 94], [29.5, 119], [50.5, 128.5], [58, 111.5],
+  [83, 103.5], [102.5, 119], [124, 111.5], [102.5, 67.5], [117.5, 47], [117.5, 27], [90.5, 17], [74.5, 35.5]].map(function (p) { return [p[0] + 24, p[1] + 22.5]; });
 function renderMerckx(g) {
   var km = 0, j;
   for (j = 0; j < sel.length; j++) if (groupOf(MODES[D.mode[sel[j]]]).key === 'bike') km += D.km[sel[j]];
@@ -182,16 +169,15 @@ function renderMerckx(g) {
     value = fmt(tours, tours < 10 ? 2 : 1); sub = '× the Tour de France';
     note = (done >= 5 ? 'As many as Merckx\'s five wins' + (done > 5 ? ', and more' : '') + '. ' : (done === 1 ? 'One Tour' : fmt(done) + ' Tours') + ' done. ') + 'On stage ' + stage + ' of the next, ' + left + ' from Paris';
   }
-  var road = (function (pts) { var len = [0]; for (var k = 1; k < pts.length; k++) len.push(len[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1])); return { pts: pts, len: len }; })(smoothPts(TOUR, false, 12));
+  var road = (function (pts) { var len = [0]; for (var k = 1; k < pts.length; k++) len.push(len[k - 1] + Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1])); return { pts: pts, len: len }; })(TOUR);
   var at = loopAt(part, road), ks = farScale(farWidth()), dots = '', s;
   // A dot where each stage ends; the ones ridden on this Tour are filled.
-  for (s = 1; s < 21; s++) { var p = loopAt(s / 21, road); dots += '<circle class="stage' + (km && s / 21 <= part ? ' on' : '') + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3.5"/>'; }
-  var paris = TOUR[TOUR.length - 1], brest = TOUR[0];
-  $('merckx').innerHTML = '<svg class="far-art map" viewBox="0 0 184 176" style="width:' + (184 * ks).toFixed(1) + 'px" role="img" aria-label="' + (km ? 'On stage ' + stage + ' of 21' : 'No stages ridden') + '">' +
-    '<path class="fr" d="' + polyD(smoothPts(FRANCE, true, 6)) + 'Z"/><path class="trk" d="' + polyD(road.pts) + '"/>' +
+  for (s = 1; s < 21; s++) { var p = loopAt(s / 21, road); dots += '<circle class="stage' + (km && s / 21 <= part ? ' on' : '') + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="3"/>'; }
+  var paris = TOUR[TOUR.length - 1];
+  $('merckx').innerHTML = '<svg class="far-art map" viewBox="0 0 166 164" style="width:' + (166 * ks).toFixed(1) + 'px" role="img" aria-label="' + (km ? 'On stage ' + stage + ' of 21' : 'No stages ridden') + '">' +
+    '<use href="#art-france" x="0" y="0" width="166" height="164"/><path class="trk" d="' + polyD(road.pts) + '"/>' +
     (km && part > 0 ? '<path class="tour" d="' + polyD(at.pts) + '"/>' : '') + dots +
-    '<circle class="polo-end" cx="' + brest[0].toFixed(1) + '" cy="' + brest[1].toFixed(1) + '" r="5"/>' +
-    '<circle class="tour-end" cx="' + paris[0].toFixed(1) + '" cy="' + paris[1].toFixed(1) + '" r="7"/><text class="polo-l" x="' + (paris[0] - 12).toFixed(1) + '" y="' + (paris[1] + 4).toFixed(1) + '" text-anchor="end">Paris</text>' +
+    '<circle class="tour-end" cx="' + paris[0].toFixed(1) + '" cy="' + paris[1].toFixed(1) + '" r="6"><title>Paris</title></circle>' +
     rider(at.x, at.y, 'var(--m-bike)', '', 'CYCLING', 24, 0) + '</svg>' +
     '<div class="far-stat">' + stat('', value, sub, note) + '</div>';
 }
