@@ -628,20 +628,25 @@ function spotHint(s) {
 function renderPlaces() {
   var useStays = selV.length > 0, list, j, p;
   needPlaces(); findHome();
+  // Time or Visits: rank the spots by total time there or by how many times you stayed.
+  var byN = PREFS.placesM === 'n';
+  $('placesSeg').hidden = !useStays;
+  setPressed('#placesSeg button', function (b) { return b.dataset.m === (byN ? 'n' : 'h'); });
   $('placesTitle').textContent = useStays ? 'Where you spent time' : 'Where you went';
-  $('placesNote').textContent = useStays ? 'The places you stayed, by total time there: each spot on its own, as on the map\'s pins. Ones without a name say where in the town they are; name them from their page. Tap one for its visits and a Google Maps link.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
+  $('placesNote').textContent = useStays ? 'The places you stayed, by ' + (byN ? 'number of visits (separate stays there)' : 'total time there') + ': each spot on its own, as on the map\'s pins. Ones without a name say where in the town they are; name them from their page. Tap one for its visits and a Google Maps link.' : 'Places your trips ended, by number of trips. Tap one to see it on the map.';
   if (useStays) {
     var vs = [];
     for (j = 0; j < selV.length; j++) if (D.pv[selV[j]] >= 0) vs.push(selV[j]);
     list = spotsOf(vs);
+    if (byN) list.sort(function (a, b) { return b.n - a.n || b.h - a.h; });
     if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
       var kind = r && MR_KIND[r.role];
-      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
+      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
       return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
         '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
-        '<span class="r num">' + hoursLabel(s.h).replace(/ \d+ min$/, '') + '</span></button>';
+        '<span class="r num">' + (byN ? fmt(s.n) + '<small>visit' + (s.n > 1 ? 's' : '') + '</small>' : hoursLabel(s.h).replace(/ \d+ min$/, '')) + '</span></button>';
     }).join('');
     return;
   }
@@ -659,6 +664,7 @@ function renderPlaces() {
       '<span class="r num">' + fmt(o.n) + '<small>trips</small></span></button>';
   }).join('');
 }
+$('placesSeg').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-m]'); if (b) { PREFS.placesM = b.dataset.m; savePrefs(); renderPlaces(); } });
 // Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
 // stayed in the filters. Shown once at least MIN_KINDS places have a kind.
 var MIN_KINDS = 5;
