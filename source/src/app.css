@@ -209,9 +209,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 :root[data-theme="dark"] .scrub .when .sky .ic { fill: #e8a23a; }
 :root[data-theme="dark"] .scrub .when .sky.night .ic { fill: #a99bff; }
 .leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
-/* Dark mode during a day's playback: the map has light tiles, so the paths and the position
-   marker take the light theme's transport colours (the same values as at the top). */
+/* During a day's playback the paths and the position marker take the transport colours of
+   the tiles under them: by day the light theme's (the same values as at the top)... */
 #map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; }
+/* At night (when the map shows the dark tiles), the dark theme's colours. */
+#map.sun-dark { --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; }
+/* Map panes inside a wrapper that can take a mask (see wrapPane in map.js). */
+.pane-wrap { position: absolute; pointer-events: none; }
 
 /* ---------- sheets ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }

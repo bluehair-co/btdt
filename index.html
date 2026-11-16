@@ -253,9 +253,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 :root[data-theme="dark"] .scrub .when .sky .ic { fill: #e8a23a; }
 :root[data-theme="dark"] .scrub .when .sky.night .ic { fill: #a99bff; }
 .leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
-/* Dark mode during a day's playback: the map has light tiles, so the paths and the position
-   marker take the light theme's transport colours (the same values as at the top). */
+/* During a day's playback the paths and the position marker take the transport colours of
+   the tiles under them: by day the light theme's (the same values as at the top)... */
 #map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; }
+/* At night (when the map shows the dark tiles), the dark theme's colours. */
+#map.sun-dark { --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; }
+/* Map panes inside a wrapper that can take a mask (see wrapPane in map.js). */
+.pane-wrap { position: absolute; pointer-events: none; }
 
 /* ---------- sheets ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }
@@ -5658,9 +5662,30 @@ function greatCircle(a, b) {
 // tiles, so its night and day shading reads the same in dark mode. With fade, the new tiles
 // fade in over the old ones.
 function tilesDark(m) { return isDark() && !(m === map && sunMap()); }
+// A pane inside a wrapper the size of the map, so the wrapper can take a CSS mask: the
+// night side of a day's playback shows the dark tiles through one, and hides the light
+// tiles' labels through another. placeWrap keeps the wrapper over the map as it moves.
+function wrapPane(m, name, z) {
+  var w = L.DomUtil.create('div', 'pane-wrap', m.getPane('mapPane'));
+  w.style.zIndex = z;
+  var p = m.createPane(name, w);
+  p.style.pointerEvents = 'none';
+  placeWrap(m, w);
+  return p;
+}
+function placeWrap(m, w) {
+  var o = m.containerPointToLayerPoint([0, 0]), sz = m.getSize();
+  w.style.left = o.x + 'px'; w.style.top = o.y + 'px'; w.style.width = sz.x + 'px'; w.style.height = sz.y + 'px';
+  w.firstChild.style.left = -o.x + 'px'; w.firstChild.style.top = -o.y + 'px';
+}
+function setMask(w, url) {
+  ['maskImage', 'webkitMaskImage'].forEach(function (k) { w.style[k] = url ? 'url(' + url + ')' : ''; });
+  ['maskSize', 'webkitMaskSize'].forEach(function (k) { w.style[k] = '100% 100%'; });
+  ['maskRepeat', 'webkitMaskRepeat'].forEach(function (k) { w.style[k] = 'no-repeat'; });
+}
 function addTiles(m, fade) {
   var dark = tilesDark(m), svc = dark ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base', old = m._tl;
-  if (!m.getPane('labels')) { m.createPane('labels'); m.getPane('labels').style.zIndex = 450; m.getPane('labels').style.pointerEvents = 'none'; }
+  if (!m.getPane('labels')) wrapPane(m, 'labels', 450);
   var op = fade && old ? 0 : 1;
   m._tlDark = dark;
   m._tl = [
@@ -6788,7 +6813,6 @@ function updateTopbar() {
   $('speedBtn').textContent = speedText();
   sunMarks();
   if (map && map._tl && map._tlDark !== tilesDark(map)) addTiles(map, true);
-  if (syncSunMap()) recolorPaths();
   scrubLabel();
   paintSky(true);
 }
@@ -7195,11 +7219,15 @@ function posAt(t) {
 // A day's playback draws the paths stronger, so they hold up over the night shading, and
 // in dark mode in the light theme's colours, to match the light tiles under them.
 function lineOp() { return sunMap() ? 0.85 : LINE_OP; }
+// While it is night where you are, the paths take the dark theme's colours (made for the
+// dark tiles under them then), else the light theme's. Returns whether anything changed.
+function sunNight() { var t = scrubTime(); return sunMap() && scrubV < 1000 && sunAlt(sunAt(t), posAt(t)) < -4; }
 function syncSunMap() {
-  var el = $('map'), on = isDark() && sunMap(), op = lineOp(), was = el.classList.contains('sun-light');
-  el.classList.toggle('sun-light', on);
-  var changed = was !== on || syncSunMap.op !== op;
-  syncSunMap.op = op;
+  var el = $('map'), want = !sunMap() ? '' : sunNight() ? 'sun-dark' : 'sun-light', op = lineOp();
+  el.classList.toggle('sun-light', want === 'sun-light');
+  el.classList.toggle('sun-dark', want === 'sun-dark');
+  var changed = syncSunMap.cls !== want || syncSunMap.op !== op;
+  syncSunMap.cls = want; syncSunMap.op = op;
   return changed;
 }
 function recolorPaths() {
@@ -7211,8 +7239,8 @@ function recolorPaths() {
     if (h.line) h.line.setStyle({ color: h.color, opacity: h.k < visibleB && h.k !== prevCur ? lineOp() : 0 });
   });
   if (many) buildGroups(visibleB);
-  posMarker._mode = null;
-  scrubTo(scrubV);
+  if (curLine && P_cur) curLine.setStyle({ color: groupColor(groupOf(modeOf(P_cur.i))) });
+  if (carryLine && carry) carryLine.setStyle({ color: groupColor(groupOf(modeOf(carry.i))) });
 }
 function sunDay() { return !!(D && sel.length && F.dm === 'one' && F.unit === 'day' && PREFS.scrub); }
 function sunMap() { return sunDay() && PREFS.proj === 'merc'; }
@@ -7247,10 +7275,28 @@ function sunMarks() {
   });
   el.innerHTML = h;
 }
-// The colour laid over the map for a sun height: clear by day, a warm glow as the sun
-// gets low, rose and dusky blue in twilight, a slate blue at night: light enough that the
-// paths over it stay easy to see.
-var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 168, 70, .10]], [-1, [200, 112, 110, .14]], [-6, [62, 64, 118, .22]], [-12, [26, 34, 70, .30]], [-90, [20, 28, 58, .34]]];
+// Night is drawn with the dark tiles (see paintSky); over the tiles goes only a glow along
+// the edge, for a sun height: golden as the sun gets low, rose and violet in twilight.
+var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 170, 80, .14]], [-1, [240, 130, 90, .20]], [-4, [170, 100, 150, .12]], [-8, [60, 60, 110, 0]], [-90, [0, 0, 0, 0]]];
+// How far into the night a sun height is, from 0 (the sun up) to 1 (dark).
+function nightness(alt) { return Math.max(0, Math.min(1, (-alt - 0.5) / 7)); }
+// The dark tiles and their labels for the night side, added while a day plays.
+var night = { tl: null };
+function nightTiles(on) {
+  if (on && !night.tl) {
+    if (!map.getPane('nightBase')) { wrapPane(map, 'nightBase', 210); wrapPane(map, 'nightLabels', 451); }
+    var u = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_';
+    night.tl = [
+      L.tileLayer(u + 'Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'nightBase' }),
+      L.tileLayer(u + 'Reference/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'nightLabels' })
+    ];
+    night.tl.forEach(function (l) { l.addTo(map); });
+  } else if (!on && night.tl) {
+    night.tl.forEach(function (l) { map.removeLayer(l); });
+    night.tl = null;
+    setMask(map.getPane('labels').parentNode, null);
+  }
+}
 function skyTint(alt) {
   if (alt >= SKY[0][0]) return SKY[0][1];
   for (var k = 1; k < SKY.length; k++) if (alt >= SKY[k][0]) {
@@ -7259,33 +7305,56 @@ function skyTint(alt) {
   }
   return SKY[SKY.length - 1][1];
 }
-// Paints the night side onto a canvas over the tiles: worked out on a coarse grid (on the
-// Mercator map latitude only changes down the screen and longitude across), then scaled
-// up smoothly.
-var sky = { cv: null, sm: null, key: null };
+// Paints the night side: a mask that shows the dark tiles where the sun is down (and hides
+// the light tiles' labels there), and the glow along the edge on a canvas over the tiles.
+// Both are worked out on a coarse grid (on the Mercator map latitude only changes down the
+// screen and longitude across), then scaled up smoothly.
+var sky = { cv: null, sm: null, mk: null, mi: null, key: null };
 function paintSky(force) {
   if (!map) return;
-  var on = sunMap() && scrubV < 1000 && sel.length;
+  if (syncSunMap()) recolorPaths();
+  var on = !!(sunMap() && scrubV < 1000 && sel.length);
+  nightTiles(on);
   if (!on) { if (sky.cv) sky.cv.style.display = 'none'; sky.key = null; return; }
-  var t = scrubTime(), sz = map.getSize(), key = Math.round(t / 6e4) + '|' + sz.x + 'x' + sz.y;
+  var t = scrubTime(), sz = map.getSize(), c0 = map.containerPointToLayerPoint([0, 0]), key = Math.round(t / 6e4) + '|' + sz.x + 'x' + sz.y + '|' + c0.x + ',' + c0.y + '|' + map.getZoom();
   if (!force && key === sky.key) return;
   sky.key = key;
-  if (!sky.cv) { sky.cv = document.createElement('canvas'); map.getPane('sky').appendChild(sky.cv); sky.sm = document.createElement('canvas'); }
+  if (!sky.cv) {
+    sky.cv = document.createElement('canvas'); map.getPane('sky').appendChild(sky.cv);
+    sky.sm = document.createElement('canvas'); sky.mk = document.createElement('canvas'); sky.mi = document.createElement('canvas');
+  }
   var cv = sky.cv, cell = 8, w = Math.ceil(sz.x / cell) + 1, hgt = Math.ceil(sz.y / cell) + 1;
   cv.style.display = '';
   if (cv.width !== sz.x || cv.height !== sz.y) { cv.width = sz.x; cv.height = sz.y; }
-  L.DomUtil.setPosition(cv, map.containerPointToLayerPoint([0, 0]));
+  L.DomUtil.setPosition(cv, c0);
   var sm = sky.sm; sm.width = w; sm.height = hgt;
+  var mw = Math.ceil(sz.x / cell), mh = Math.ceil(sz.y / cell);
+  sky.mk.width = sky.mi.width = mw; sky.mk.height = sky.mi.height = mh;
+  var gk = sky.mk.getContext('2d'), gi = sky.mi.getContext('2d'), mk = gk.createImageData(mw, mh), mi = gi.createImageData(mw, mh);
   var g = sm.getContext('2d'), img = g.createImageData(w, hgt), px = img.data, s = sunAt(t), x, y;
-  var cosH = [];
-  for (x = 0; x < w; x++) cosH.push(Math.cos(s.h0 + map.containerPointToLatLng([x * cell, 0]).lng * SUN_R));
+  var cosH = [], cosM = [];
+  for (x = 0; x < w; x++) {
+    cosH.push(Math.cos(s.h0 + map.containerPointToLatLng([x * cell, 0]).lng * SUN_R));
+    cosM.push(Math.cos(s.h0 + map.containerPointToLatLng([(x + .5) * cell, 0]).lng * SUN_R));
+  }
   for (y = 0; y < hgt; y++) {
     var lat = map.containerPointToLatLng([0, y * cell]).lat * SUN_R, a = Math.sin(lat) * s.sd, b = Math.cos(lat) * s.cd;
+    var latM = map.containerPointToLatLng([0, (y + .5) * cell]).lat * SUN_R, aM = Math.sin(latM) * s.sd, bM = Math.cos(latM) * s.cd;
     for (x = 0; x < w; x++) {
-      var c = skyTint(Math.asin(Math.max(-1, Math.min(1, a + b * cosH[x]))) / SUN_R), o = (y * w + x) * 4;
+      var alt = Math.asin(Math.max(-1, Math.min(1, a + b * cosH[x]))) / SUN_R, c = skyTint(alt), o = (y * w + x) * 4;
       px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = Math.round(c[3] * 255);
+      if (x < mw && y < mh) {
+        // The mask is sampled at cell centres, as the browser stretches it over the map.
+        var am = Math.asin(Math.max(-1, Math.min(1, aM + bM * cosM[x]))) / SUN_R;
+        var n = Math.round(nightness(am) * 255), q = (y * mw + x) * 4;
+        mk.data[q + 3] = n; mi.data[q + 3] = 255 - n;
+      }
     }
   }
+  gk.putImageData(mk, 0, 0); gi.putImageData(mi, 0, 0);
+  ['nightBase', 'nightLabels'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(map, wr); setMask(wr, sky.mk.toDataURL()); });
+  var lw = map.getPane('labels').parentNode;
+  placeWrap(map, lw); setMask(lw, sky.mi.toDataURL());
   g.putImageData(img, 0, 0);
   var ctx = cv.getContext('2d');
   ctx.clearRect(0, 0, sz.x, sz.y);
