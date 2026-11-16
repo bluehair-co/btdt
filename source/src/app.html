@@ -331,6 +331,11 @@
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
+        <div class="tl-search" role="search">
+          <span class="tl-search-icon" aria-hidden="true"><span data-icon="search"></span></span>
+          <input type="search" id="tlSearch" placeholder="Search trips by name or place" aria-label="Search the trips in these filters by name or place" autocomplete="off" spellcheck="false" enterkeyhint="search">
+          <button type="button" class="tl-search-clear" id="tlSearchClear" aria-label="Clear search" hidden><span data-icon="close"></span></button>
+        </div>
     </div>
     <div class="tl-map-wrap" id="tlMapWrap" hidden>
       <div id="tlMap"></div>

@@ -1,20 +1,44 @@
 // ---------- timeline ----------
 // A list of every trip in the selection, newest first, grouped by day. Only the rows near
-// the visible part are in the page, so years of trips scroll smoothly.
-var TL = { type: [], ref: [], tops: [], total: 0, sel: null, r0: -1, r1: -1, map: null, layer: null };
+// the visible part are in the page, so years of trips scroll smoothly. The search box above
+// it narrows the list to trips whose title, places or type hold every word typed.
+var TL = { type: [], ref: [], tops: [], total: 0, sel: null, r0: -1, r1: -1, map: null, layer: null, q: '', words: [], hay: null, n: 0 };
 var TL_H = [40, 64, 120];   // day header, trip, end of list
-function buildTimeline() {
-  var type = [], ref = [], tops = [], y = 0, last = null, perDay = {};
+// Lower case without accents, so "cafe" finds "Café" and "zurich" finds "Zürich".
+function tlNorm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
+// What a trip can be found by: its title (Strava, activity file or Edit trip), where it
+// started and ended, and its type or sport.
+function tlHay(i) {
+  var h = TL.hay || (TL.hay = {});
+  if (h[i] === undefined) {
+    var lab = String(tripLabel(i)).replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+    h[i] = tlNorm([tripName(i), tripRoute(i), lab, LABEL[modeOf(i)] || ''].join(' \n '));
+  }
+  return h[i];
+}
+function tlMatch(i) {
+  if (!TL.words.length) return true;
+  var h = tlHay(i);
+  for (var w = 0; w < TL.words.length; w++) if (h.indexOf(TL.words[w]) < 0) return false;
+  return true;
+}
+// keepHay: only the search changed, so the trips' names are still good.
+function buildTimeline(keepHay) {
+  if (keepHay !== true) TL.hay = null;
+  var type = [], ref = [], tops = [], y = 0, last = null, perDay = {}, n = 0, selIn = false;
   for (var j = sel.length - 1; j >= 0; j--) {
-    var i = sel[j], d = D.day[i], pd = perDay[d] || (perDay[d] = { n: 0, km: 0 });
-    pd.n++; pd.km += D.km[i];
+    var i = sel[j];
+    if (!tlMatch(i)) continue;
+    var d = D.day[i], pd = perDay[d] || (perDay[d] = { n: 0, km: 0 });
+    pd.n++; pd.km += D.km[i]; n++;
+    if (i === TL.sel) selIn = true;
     if (d !== last) { type.push(0); ref.push(d); tops.push(y); y += TL_H[0]; last = d; }
     type.push(1); ref.push(i); tops.push(y); y += TL_H[1];
   }
   type.push(2); ref.push(0); tops.push(y); y += TL_H[2];
-  TL.type = type; TL.ref = ref; TL.tops = tops; TL.total = y; TL.perDay = perDay; TL.r0 = TL.r1 = -1;
+  TL.type = type; TL.ref = ref; TL.tops = tops; TL.total = y; TL.perDay = perDay; TL.n = n; TL.r0 = TL.r1 = -1;
   $('tlInner').style.height = y + 'px';
-  if (TL.sel != null && Array.prototype.indexOf.call(sel, TL.sel) < 0) tlClose();
+  if (TL.sel != null && !selIn) tlClose();
   $('tlList').scrollTop = 0;
   tlLayout();
 }
@@ -45,7 +69,11 @@ function tlRender(force) {
         '<span class="t"><b>' + esc(tripName(i) || tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + clock(D.start[i], D.off[i]) + (ms > 0 ? '–' + clock(D.end[i], D.off[i]) : '') + (D.est[i] & 16 ? ' · ' + esc(actApp(i) || 'Activity') : D.est[i] & 4 ? ' · type guessed' : '') + '</small></span>' +
         '<span class="r">' + dist(D.km[i]) + '<small>' + (ms > 0 ? duration(ms) : '') + '</small></span></button></div>';
     } else {
-      out += '<div class="tl-item tl-end" ' + top + '>' + (sel.length ? 'That\'s all ' + tripsText(sel.length) + ' for ' + esc(filterText()) + '.' : 'No trips match your filters.') + '</div>';
+      var q = '<mark>\u201c' + esc(TL.q) + '\u201d</mark>';
+      out += '<div class="tl-item tl-end" ' + top + '>' + (!sel.length ? 'No trips match your filters.' :
+        !TL.words.length ? 'That\'s all ' + tripsText(sel.length) + ' for ' + esc(filterText()) + '.' :
+        TL.n ? tripsText(TL.n) + ' of ' + fmt(sel.length) + (TL.n === 1 ? ' matches ' : ' match ') + q + ' in ' + esc(filterText()) + '.' :
+        'None of the ' + tripsText(sel.length) + ' in ' + esc(filterText()) + ' match ' + q + '.') + '</div>';
     }
   }
   $('tlInner').innerHTML = out;
@@ -62,6 +90,8 @@ $('tlInner').addEventListener('click', function (ev) {
 // The selected trip, on a map above the list.
 function tlSelect(i, scroll) {
   if (dirty.timeline) { dirty.timeline = false; buildTimeline(); }
+  // A trip opened from the map or Insights that the search hides: clear the search to show it.
+  if (TL.words.length && !tlMatch(i)) tlSetSearch('');
   TL.sel = i;
   var wrap = $('tlMapWrap');
   wrap.hidden = false;
@@ -110,3 +140,27 @@ function tlClose() {
 }
 $('tlMapClose').addEventListener('click', tlClose);
 $('tlMapInfo').addEventListener('click', function (ev) { var b = ev.target.closest('[data-details]'); if (b) openTrip(+b.dataset.details); });
+
+// The search box.
+var tlQT = 0;
+function tlSetSearch(v) {
+  var box = $('tlSearch');
+  if (box.value !== v) box.value = v;
+  $('tlSearchClear').hidden = !v;
+  var q = v.trim();
+  if (q === TL.q) return;
+  TL.q = q;
+  TL.words = tlNorm(q).split(/\s+/).filter(Boolean);
+  if (dirty.timeline) { dirty.timeline = false; buildTimeline(); } else buildTimeline(true);
+}
+$('tlSearch').addEventListener('input', function () {
+  var v = this.value;
+  $('tlSearchClear').hidden = !v;
+  clearTimeout(tlQT);
+  tlQT = setTimeout(function () { tlSetSearch(v); }, 120);
+});
+$('tlSearch').addEventListener('keydown', function (ev) {
+  if (ev.key === 'Escape' && this.value) { ev.stopPropagation(); clearTimeout(tlQT); tlSetSearch(''); }
+  else if (ev.key === 'Enter') { clearTimeout(tlQT); tlSetSearch(this.value); this.blur(); }
+});
+$('tlSearchClear').addEventListener('click', function () { clearTimeout(tlQT); tlSetSearch(''); $('tlSearch').focus(); });

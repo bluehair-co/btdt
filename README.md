@@ -14,7 +14,7 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 
 - **Map.** Every trip drawn along its GPS points and coloured by transport, a heatmap of where you spend your time travelling or staying, countries visited, and your regular places. Play a day, week, month or year back on the time slider; a day's playback marks sunrise and sunset where you were and shades the night side of the map.
 - **Insights.** Trips, distance, time on the move, countries and places for any period; how you travel by distance, time or trips; your weekly rhythm; distance and CO₂ over time.
-- **Timeline.** Every trip, day by day, with where it started and ended, the transport, the distance and the time. Open a trip for its details and raw data.
+- **Timeline.** Every trip, day by day, with where it started and ended, the transport, the distance and the time. Search the trips in your filters by name or place, and open one for its details and raw data.
 - **Filters and export.** Narrow by dates, time of day, transport and country, then download what matches as JSON or CSV.
 - **Cleaner data than Google's.** Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.
 - **Dawarich too.** Load an export from [Dawarich](https://dawarich.app), the self-hosted location history app: trips and stays are worked out from its GPS points.
