@@ -188,6 +188,27 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .scrub .when { font-family: var(--font-mono); font-size: 12px; color: var(--fg); white-space: nowrap; min-width: 92px; text-align: right; }
 .scrub .speed { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; height: 30px; cursor: pointer; color: var(--muted); }
 .scrub input[type="range"] { margin: 0; height: 32px; }
+/* Day playback: sunrise and sunset on the time slider. The marks sit behind the slider, so
+   only their ends show above and below its track, with the time underneath. */
+.scrub > .play { grid-area: 1 / 1; }
+.scrub > input[type="range"] { grid-area: 1 / 2; position: relative; z-index: 1; }
+.scrub > .when { grid-area: 1 / 3; }
+.scrub > .speed { grid-area: 1 / 4; }
+.scrub.has-sun { padding-bottom: 13px; }
+.sun-marks { grid-area: 1 / 2; align-self: stretch; position: relative; margin: 0 8px; pointer-events: none; --sun-rise: #d98a1c; --sun-set: #6a55b0; }
+.sun-marks .tick { position: absolute; top: 50%; width: 2px; height: 14px; margin: -7px 0 0 -1px; border-radius: 1px; background: var(--sun-rise); }
+.sun-marks .tick.set { background: var(--sun-set); }
+.sun-marks .lab { position: absolute; top: calc(50% + 9px); transform: translateX(-50%); display: flex; align-items: center; gap: 2px; font: 500 10.5px/1 var(--font-mono); color: var(--muted); white-space: nowrap; }
+.sun-marks .lab .ic { width: 13px; height: 13px; flex: none; fill: var(--sun-rise); }
+.sun-marks .lab.set .ic { fill: var(--sun-set); }
+.scrub .when .sky { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
+.scrub .when .sky .ic { width: 14px; height: 14px; fill: var(--sun-rise, #d98a1c); }
+.scrub .when .sky.night .ic { fill: #6a55b0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sun-marks { --sun-rise: #e8a23a; --sun-set: #a99bff; } :root:not([data-theme="light"]) .scrub .when .sky .ic { fill: #e8a23a; } :root:not([data-theme="light"]) .scrub .when .sky.night .ic { fill: #a99bff; } }
+:root[data-theme="dark"] .sun-marks { --sun-rise: #e8a23a; --sun-set: #a99bff; }
+:root[data-theme="dark"] .scrub .when .sky .ic { fill: #e8a23a; }
+:root[data-theme="dark"] .scrub .when .sky.night .ic { fill: #a99bff; }
+.leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
 
 /* ---------- sheets ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }

@@ -56,15 +56,28 @@ function greatCircle(a, b) {
   return pts;
 }
 
-function addTiles(m) {
-  var svc = isDark() ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base';
-  if (m._tl) m._tl.forEach(function (l) { m.removeLayer(l); });
+// The map's tiles follow the theme, except that a day's playback always uses the light
+// tiles, so its night and day shading reads the same in dark mode. With fade, the new tiles
+// fade in over the old ones.
+function tilesDark(m) { return isDark() && !(m === map && sunMap()); }
+function addTiles(m, fade) {
+  var dark = tilesDark(m), svc = dark ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base', old = m._tl;
   if (!m.getPane('labels')) { m.createPane('labels'); m.getPane('labels').style.zIndex = 450; m.getPane('labels').style.pointerEvents = 'none'; }
+  var op = fade && old ? 0 : 1;
+  m._tlDark = dark;
   m._tl = [
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri' }),
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc.replace('_Base', '_Reference') + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'labels' })
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri', opacity: op }),
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc.replace('_Base', '_Reference') + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'labels', opacity: op })
   ];
   m._tl.forEach(function (l) { l.addTo(m); });
+  if (!old) return;
+  if (!op) {
+    var now = m._tl;
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      now.forEach(function (l) { var c = l.getContainer(); if (c) c.style.transition = 'opacity .6s'; l.setOpacity(1); });
+    }); });
+    setTimeout(function () { old.forEach(function (l) { m.removeLayer(l); }); }, 700);
+  } else old.forEach(function (l) { m.removeLayer(l); });
 }
 function initMap() {
   if (map) return true;
@@ -74,6 +87,8 @@ function initMap() {
   addTiles(map);
   map.createPane('cc'); map.getPane('cc').style.zIndex = 320;
   map.createPane('heat'); map.getPane('heat').style.zIndex = 380; map.getPane('heat').style.pointerEvents = 'none';
+  map.createPane('sky'); map.getPane('sky').style.zIndex = 350; map.getPane('sky').style.pointerEvents = 'none';
+  map.on('move zoomend resize viewreset', function () { paintSky(true); });
   renderer = L.canvas({ padding: 0.4, tolerance: 0 });
   pathLayer = L.layerGroup();
   ccLayer = L.layerGroup();
@@ -1149,8 +1164,11 @@ function updateTopbar() {
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
   if (n) {
     if (one) {
-      var o = D.off[sel[0]], offMs = o !== NO_OFF ? o * 60000 : -new Date(F.one * 864e5).getTimezoneOffset() * 60000;
-      T0 = periodStart(F.one, F.unit) * 864e5 - offMs; T1 = (periodEnd(F.one, F.unit) + 1) * 864e5 - offMs;
+      // From midnight where the period starts to midnight where it ends: a day that flies
+      // west across time zones runs longer than 24 hours, so the landing is in it.
+      var offMs = function (o, d) { return o !== NO_OFF ? o * 60000 : -new Date(d * 864e5).getTimezoneOffset() * 60000; };
+      var p0 = periodStart(F.one, F.unit), p1 = periodEnd(F.one, F.unit) + 1;
+      T0 = p0 * 864e5 - offMs(D.off[sel[0]], p0); T1 = Math.max(T0 + 1, p1 * 864e5 - offMs(D.off[sel[n - 1]], p1));
     } else {
       T0 = D.start[sel[0]]; T1 = T0;
       for (var i = 0; i < n; i++) if (D.end[sel[i]] > T1) T1 = D.end[sel[i]];
@@ -1158,7 +1176,10 @@ function updateTopbar() {
     }
   }
   $('speedBtn').textContent = speedText();
+  sunMarks();
+  if (map && map._tl && map._tlDark !== tilesDark(map)) addTiles(map, true);
   scrubLabel();
+  paintSky(true);
 }
 // The period navigator at the top of the Map, Insights and Timeline. They share one period
 // (the filters' days), so stepping on any tab moves them all.
@@ -1272,7 +1293,11 @@ function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
   if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; return; }
   var t = scrubTime(), i = sel[Math.max(0, upper(t) - 1)];
-  $('scrubWhen').textContent = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
+  var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
+  if (sunDay()) {
+    var up = sunAlt(sunAt(t), posAt(t)) > SUN_UP;
+    $('scrubWhen').innerHTML = '<span class="sky' + (up ? '' : ' night') + '" title="' + (up ? 'Daytime' : 'Night') + '">' + icon(up ? 'sun' : 'night') + '</span>' + txt;
+  } else $('scrubWhen').textContent = txt;
 }
 // How many trips in sel start at or before t.
 function upper(t) {
@@ -1323,6 +1348,7 @@ function scrubTo(v) {
   if (map && PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.proj !== 'merc' && P && P.proj) paintProj(playing);
   scrubLabel();
+  paintSky();
 }
 var P_pos = null, P_cur = null, prevCur = null;
 // During playback the map follows the trip under way: when a trip starts, the map glides
@@ -1489,6 +1515,117 @@ $('speedBtn').addEventListener('click', function () {
   savePrefs();
   this.textContent = speedText();
 });
+
+// ---------- sunrise and sunset in day playback ----------
+// While a day plays, the time slider marks sunrise and sunset where you were, and the map
+// shades the part of the world where the sun was down, with a soft twilight edge. The
+// sun's position uses the formulas of SunCalc (Vladimir Agafonkin, BSD 2-Clause).
+var SUN_R = Math.PI / 180, SUN_UP = -0.833;
+// The sun at time ms: its declination, right ascension and the sidereal time at Greenwich.
+function sunAt(ms) {
+  var d = ms / 864e5 - 10957.5, M = SUN_R * (357.5291 + 0.98560028 * d);
+  var C = SUN_R * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  var Lg = M + C + SUN_R * 102.9372 + Math.PI, e = SUN_R * 23.4397;
+  var dec = Math.asin(Math.sin(e) * Math.sin(Lg)), ra = Math.atan2(Math.sin(Lg) * Math.cos(e), Math.cos(Lg));
+  return { sd: Math.sin(dec), cd: Math.cos(dec), h0: SUN_R * (280.16 + 360.9856235 * d) - ra };
+}
+// The sun's height above the horizon, in degrees, seen from p ([lat, lng]).
+function sunAlt(s, p) {
+  var f = p[0] * SUN_R;
+  return Math.asin(Math.sin(f) * s.sd + Math.cos(f) * s.cd * Math.cos(s.h0 + p[1] * SUN_R)) / SUN_R;
+}
+// Where you were at time t: along the trip under way, or where the last one ended.
+function posAt(t) {
+  var b = upper(t);
+  if (!b) return [D.from[2 * sel[0]], D.from[2 * sel[0] + 1]];
+  var i = sel[b - 1];
+  if (t < D.end[i]) {
+    var tr = trail(i), s = (t - D.start[i]) / 1000, p = tr.pts, ts = tr.ts;
+    for (var j = 1; j < p.length; j++) if (s <= ts[j]) {
+      var f = ts[j] > ts[j - 1] ? Math.max(0, (s - ts[j - 1]) / (ts[j] - ts[j - 1])) : 1;
+      return [p[j - 1][0] + (p[j][0] - p[j - 1][0]) * f, p[j - 1][1] + (p[j][1] - p[j - 1][1]) * f];
+    }
+    if (p.length) return p[p.length - 1];
+  }
+  return [D.to[2 * i], D.to[2 * i + 1]];
+}
+function sunDay() { return !!(D && sel.length && F.dm === 'one' && F.unit === 'day' && PREFS.scrub); }
+function sunMap() { return sunDay() && PREFS.proj === 'merc'; }
+// Sunrises and sunsets between T0 and T1 where you were: checked every 5 minutes, then
+// narrowed down to the minute.
+var sunEv = { key: null, list: [] };
+function sunEvents() {
+  var key = T0 + '|' + T1 + '|' + applyCount + '|' + sel.length;
+  if (sunEv.key === key) return sunEv.list;
+  var out = [], step = 3e5, h = function (t) { return sunAlt(sunAt(t), posAt(t)) - SUN_UP; };
+  var a = h(T0);
+  for (var t = T0 + step; t < T1 + step; t += step) {
+    var t1 = Math.min(t, T1), b = h(t1);
+    if (isFinite(a) && isFinite(b) && (a < 0) !== (b < 0)) {
+      var lo = t1 - step, hi = t1;
+      while (hi - lo > 3e4) { var mid = (lo + hi) / 2; if ((h(mid) < 0) === (a < 0)) lo = mid; else hi = mid; }
+      out.push({ t: hi, rise: b > a });
+    }
+    a = b;
+  }
+  sunEv = { key: key, list: out };
+  return out;
+}
+function sunMarks() {
+  var el = $('sunMarks'), sc = el.parentNode, on = sunDay() && T1 > T0;
+  el.hidden = !on; sc.classList.toggle('has-sun', on);
+  if (!on) { el.innerHTML = ''; return; }
+  var h = '';
+  sunEvents().forEach(function (e) {
+    var x = ((e.t - T0) / (T1 - T0) * 100).toFixed(2) + '%', i = sel[Math.max(0, upper(e.t) - 1)], k = e.rise ? 'rise' : 'set';
+    h += '<div class="tick ' + k + '" style="left:' + x + '"></div><div class="lab ' + k + '" style="left:' + x + '" title="Sun' + k + '">' + icon('sun' + k) + clock(e.t, D.off[i]) + '</div>';
+  });
+  el.innerHTML = h;
+}
+// The colour laid over the map for a sun height: clear by day, a warm glow as the sun
+// gets low, rose and violet in twilight, deep blue at night.
+var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 168, 70, .10]], [-1, [196, 104, 120, .16]], [-6, [70, 56, 140, .30]], [-12, [22, 30, 96, .42]], [-90, [16, 22, 80, .48]]];
+function skyTint(alt) {
+  if (alt >= SKY[0][0]) return SKY[0][1];
+  for (var k = 1; k < SKY.length; k++) if (alt >= SKY[k][0]) {
+    var a = SKY[k - 1], b = SKY[k], f = (a[0] - alt) / (a[0] - b[0]);
+    return [0, 1, 2, 3].map(function (n) { return a[1][n] + (b[1][n] - a[1][n]) * f; });
+  }
+  return SKY[SKY.length - 1][1];
+}
+// Paints the night side onto a canvas over the tiles: worked out on a coarse grid (on the
+// Mercator map latitude only changes down the screen and longitude across), then scaled
+// up smoothly.
+var sky = { cv: null, sm: null, key: null };
+function paintSky(force) {
+  if (!map) return;
+  var on = sunMap() && scrubV < 1000 && sel.length;
+  if (!on) { if (sky.cv) sky.cv.style.display = 'none'; sky.key = null; return; }
+  var t = scrubTime(), sz = map.getSize(), key = Math.round(t / 6e4) + '|' + sz.x + 'x' + sz.y;
+  if (!force && key === sky.key) return;
+  sky.key = key;
+  if (!sky.cv) { sky.cv = document.createElement('canvas'); map.getPane('sky').appendChild(sky.cv); sky.sm = document.createElement('canvas'); }
+  var cv = sky.cv, cell = 8, w = Math.ceil(sz.x / cell) + 1, hgt = Math.ceil(sz.y / cell) + 1;
+  cv.style.display = '';
+  if (cv.width !== sz.x || cv.height !== sz.y) { cv.width = sz.x; cv.height = sz.y; }
+  L.DomUtil.setPosition(cv, map.containerPointToLayerPoint([0, 0]));
+  var sm = sky.sm; sm.width = w; sm.height = hgt;
+  var g = sm.getContext('2d'), img = g.createImageData(w, hgt), px = img.data, s = sunAt(t), x, y;
+  var cosH = [];
+  for (x = 0; x < w; x++) cosH.push(Math.cos(s.h0 + map.containerPointToLatLng([x * cell, 0]).lng * SUN_R));
+  for (y = 0; y < hgt; y++) {
+    var lat = map.containerPointToLatLng([0, y * cell]).lat * SUN_R, a = Math.sin(lat) * s.sd, b = Math.cos(lat) * s.cd;
+    for (x = 0; x < w; x++) {
+      var c = skyTint(Math.asin(Math.max(-1, Math.min(1, a + b * cosH[x]))) / SUN_R), o = (y * w + x) * 4;
+      px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = Math.round(c[3] * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, sz.x, sz.y);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(sm, 0, 0, w, hgt, 0, 0, w * cell, hgt * cell);
+}
 
 // ---------- legend ----------
 function legend() {
