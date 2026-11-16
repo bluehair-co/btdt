@@ -232,6 +232,27 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .scrub .when { font-family: var(--font-mono); font-size: 12px; color: var(--fg); white-space: nowrap; min-width: 92px; text-align: right; }
 .scrub .speed { font-family: var(--font-mono); font-size: 12px; border: 1px solid var(--line); background: var(--panel); border-radius: 8px; height: 30px; cursor: pointer; color: var(--muted); }
 .scrub input[type="range"] { margin: 0; height: 32px; }
+/* Day playback: sunrise and sunset on the time slider. The marks sit behind the slider, so
+   only their ends show above and below its track, with the time underneath. */
+.scrub > .play { grid-area: 1 / 1; }
+.scrub > input[type="range"] { grid-area: 1 / 2; position: relative; z-index: 1; }
+.scrub > .when { grid-area: 1 / 3; }
+.scrub > .speed { grid-area: 1 / 4; }
+.scrub.has-sun { padding-bottom: 13px; }
+.sun-marks { grid-area: 1 / 2; align-self: stretch; position: relative; margin: 0 8px; pointer-events: none; --sun-rise: #d98a1c; --sun-set: #6a55b0; }
+.sun-marks .tick { position: absolute; top: 50%; width: 2px; height: 14px; margin: -7px 0 0 -1px; border-radius: 1px; background: var(--sun-rise); }
+.sun-marks .tick.set { background: var(--sun-set); }
+.sun-marks .lab { position: absolute; top: calc(50% + 9px); transform: translateX(-50%); display: flex; align-items: center; gap: 2px; font: 500 10.5px/1 var(--font-mono); color: var(--muted); white-space: nowrap; }
+.sun-marks .lab .ic { width: 13px; height: 13px; flex: none; fill: var(--sun-rise); }
+.sun-marks .lab.set .ic { fill: var(--sun-set); }
+.scrub .when .sky { display: inline-flex; vertical-align: -2px; margin-right: 4px; }
+.scrub .when .sky .ic { width: 14px; height: 14px; fill: var(--sun-rise, #d98a1c); }
+.scrub .when .sky.night .ic { fill: #6a55b0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sun-marks { --sun-rise: #e8a23a; --sun-set: #a99bff; } :root:not([data-theme="light"]) .scrub .when .sky .ic { fill: #e8a23a; } :root:not([data-theme="light"]) .scrub .when .sky.night .ic { fill: #a99bff; } }
+:root[data-theme="dark"] .sun-marks { --sun-rise: #e8a23a; --sun-set: #a99bff; }
+:root[data-theme="dark"] .scrub .when .sky .ic { fill: #e8a23a; }
+:root[data-theme="dark"] .scrub .when .sky.night .ic { fill: #a99bff; }
+.leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
 
 /* ---------- sheets ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }
@@ -1050,6 +1071,7 @@ div.hit-row:hover { background: none; }
           <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
           <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
           <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
+          <li>Sunrise and sunset worked out with the formulas of <a href="https://github.com/mourner/suncalc" target="_blank" rel="noopener">SunCalc</a> <small>BSD 2-Clause</small></li>
           <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
           <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
           <li>Icons from Google's <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Material Icons</a> <small>Apache License 2.0</small></li>
@@ -1163,6 +1185,7 @@ div.hit-row:hover { background: none; }
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         <div class="scrub">
           <button type="button" class="play" id="playBtn" aria-label="Play"><span data-icon="play"></span></button>
+          <div class="sun-marks" id="sunMarks" aria-hidden="true" hidden></div>
           <input type="range" id="scrub" min="0" max="1000" step="1" value="1000" aria-label="Time">
           <span class="when" id="scrubWhen"></span>
           <button type="button" class="speed" id="speedBtn" aria-label="Playback speed">1×</button>
@@ -3846,6 +3869,11 @@ var ICONS = {
   flag: 'M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6z',
   zoomOut: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zM7 9h5v1H7z',
   zoomIn: 'M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14zm2.5-4h-2v2H9v-2H7V9h2V7h1v2h2v1z',
+  // Sunrise and sunset (the sun on the horizon with an arrow up or down), the sun and the night, for day playback.
+  sunrise: 'M2 17h20v2H2zm6-1a4 4 0 0 1 8 0zm3-6V6.8L9.4 8.4 8 7l4-4 4 4-1.4 1.4L13 6.8V10z',
+  sunset: 'M2 17h20v2H2zm6-1a4 4 0 0 1 8 0zm3-13v3.2L9.4 4.6 8 6l4 4 4-4-1.4-1.4L13 6.2V3z',
+  sun: 'M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z',
+  night: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
   UNKNOWN: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z'
 };
 ICONS.VEHICLE = ICONS.CAR;
@@ -5605,15 +5633,28 @@ function greatCircle(a, b) {
   return pts;
 }
 
-function addTiles(m) {
-  var svc = isDark() ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base';
-  if (m._tl) m._tl.forEach(function (l) { m.removeLayer(l); });
+// The map's tiles follow the theme, except that a day's playback always uses the light
+// tiles, so its night and day shading reads the same in dark mode. With fade, the new tiles
+// fade in over the old ones.
+function tilesDark(m) { return isDark() && !(m === map && sunMap()); }
+function addTiles(m, fade) {
+  var dark = tilesDark(m), svc = dark ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base', old = m._tl;
   if (!m.getPane('labels')) { m.createPane('labels'); m.getPane('labels').style.zIndex = 450; m.getPane('labels').style.pointerEvents = 'none'; }
+  var op = fade && old ? 0 : 1;
+  m._tlDark = dark;
   m._tl = [
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri' }),
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc.replace('_Base', '_Reference') + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'labels' })
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri', opacity: op }),
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc.replace('_Base', '_Reference') + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'labels', opacity: op })
   ];
   m._tl.forEach(function (l) { l.addTo(m); });
+  if (!old) return;
+  if (!op) {
+    var now = m._tl;
+    requestAnimationFrame(function () { requestAnimationFrame(function () {
+      now.forEach(function (l) { var c = l.getContainer(); if (c) c.style.transition = 'opacity .6s'; l.setOpacity(1); });
+    }); });
+    setTimeout(function () { old.forEach(function (l) { m.removeLayer(l); }); }, 700);
+  } else old.forEach(function (l) { m.removeLayer(l); });
 }
 function initMap() {
   if (map) return true;
@@ -5623,6 +5664,8 @@ function initMap() {
   addTiles(map);
   map.createPane('cc'); map.getPane('cc').style.zIndex = 320;
   map.createPane('heat'); map.getPane('heat').style.zIndex = 380; map.getPane('heat').style.pointerEvents = 'none';
+  map.createPane('sky'); map.getPane('sky').style.zIndex = 350; map.getPane('sky').style.pointerEvents = 'none';
+  map.on('move zoomend resize viewreset', function () { paintSky(true); });
   renderer = L.canvas({ padding: 0.4, tolerance: 0 });
   pathLayer = L.layerGroup();
   ccLayer = L.layerGroup();
@@ -6698,8 +6741,11 @@ function updateTopbar() {
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
   if (n) {
     if (one) {
-      var o = D.off[sel[0]], offMs = o !== NO_OFF ? o * 60000 : -new Date(F.one * 864e5).getTimezoneOffset() * 60000;
-      T0 = periodStart(F.one, F.unit) * 864e5 - offMs; T1 = (periodEnd(F.one, F.unit) + 1) * 864e5 - offMs;
+      // From midnight where the period starts to midnight where it ends: a day that flies
+      // west across time zones runs longer than 24 hours, so the landing is in it.
+      var offMs = function (o, d) { return o !== NO_OFF ? o * 60000 : -new Date(d * 864e5).getTimezoneOffset() * 60000; };
+      var p0 = periodStart(F.one, F.unit), p1 = periodEnd(F.one, F.unit) + 1;
+      T0 = p0 * 864e5 - offMs(D.off[sel[0]], p0); T1 = Math.max(T0 + 1, p1 * 864e5 - offMs(D.off[sel[n - 1]], p1));
     } else {
       T0 = D.start[sel[0]]; T1 = T0;
       for (var i = 0; i < n; i++) if (D.end[sel[i]] > T1) T1 = D.end[sel[i]];
@@ -6707,7 +6753,10 @@ function updateTopbar() {
     }
   }
   $('speedBtn').textContent = speedText();
+  sunMarks();
+  if (map && map._tl && map._tlDark !== tilesDark(map)) addTiles(map, true);
   scrubLabel();
+  paintSky(true);
 }
 // The period navigator at the top of the Map, Insights and Timeline. They share one period
 // (the filters' days), so stepping on any tab moves them all.
@@ -6821,7 +6870,11 @@ function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
   if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; return; }
   var t = scrubTime(), i = sel[Math.max(0, upper(t) - 1)];
-  $('scrubWhen').textContent = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
+  var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
+  if (sunDay()) {
+    var up = sunAlt(sunAt(t), posAt(t)) > SUN_UP;
+    $('scrubWhen').innerHTML = '<span class="sky' + (up ? '' : ' night') + '" title="' + (up ? 'Daytime' : 'Night') + '">' + icon(up ? 'sun' : 'night') + '</span>' + txt;
+  } else $('scrubWhen').textContent = txt;
 }
 // How many trips in sel start at or before t.
 function upper(t) {
@@ -6872,6 +6925,7 @@ function scrubTo(v) {
   if (map && PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.proj !== 'merc' && P && P.proj) paintProj(playing);
   scrubLabel();
+  paintSky();
 }
 var P_pos = null, P_cur = null, prevCur = null;
 // During playback the map follows the trip under way: when a trip starts, the map glides
@@ -7038,6 +7092,117 @@ $('speedBtn').addEventListener('click', function () {
   savePrefs();
   this.textContent = speedText();
 });
+
+// ---------- sunrise and sunset in day playback ----------
+// While a day plays, the time slider marks sunrise and sunset where you were, and the map
+// shades the part of the world where the sun was down, with a soft twilight edge. The
+// sun's position uses the formulas of SunCalc (Vladimir Agafonkin, BSD 2-Clause).
+var SUN_R = Math.PI / 180, SUN_UP = -0.833;
+// The sun at time ms: its declination, right ascension and the sidereal time at Greenwich.
+function sunAt(ms) {
+  var d = ms / 864e5 - 10957.5, M = SUN_R * (357.5291 + 0.98560028 * d);
+  var C = SUN_R * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  var Lg = M + C + SUN_R * 102.9372 + Math.PI, e = SUN_R * 23.4397;
+  var dec = Math.asin(Math.sin(e) * Math.sin(Lg)), ra = Math.atan2(Math.sin(Lg) * Math.cos(e), Math.cos(Lg));
+  return { sd: Math.sin(dec), cd: Math.cos(dec), h0: SUN_R * (280.16 + 360.9856235 * d) - ra };
+}
+// The sun's height above the horizon, in degrees, seen from p ([lat, lng]).
+function sunAlt(s, p) {
+  var f = p[0] * SUN_R;
+  return Math.asin(Math.sin(f) * s.sd + Math.cos(f) * s.cd * Math.cos(s.h0 + p[1] * SUN_R)) / SUN_R;
+}
+// Where you were at time t: along the trip under way, or where the last one ended.
+function posAt(t) {
+  var b = upper(t);
+  if (!b) return [D.from[2 * sel[0]], D.from[2 * sel[0] + 1]];
+  var i = sel[b - 1];
+  if (t < D.end[i]) {
+    var tr = trail(i), s = (t - D.start[i]) / 1000, p = tr.pts, ts = tr.ts;
+    for (var j = 1; j < p.length; j++) if (s <= ts[j]) {
+      var f = ts[j] > ts[j - 1] ? Math.max(0, (s - ts[j - 1]) / (ts[j] - ts[j - 1])) : 1;
+      return [p[j - 1][0] + (p[j][0] - p[j - 1][0]) * f, p[j - 1][1] + (p[j][1] - p[j - 1][1]) * f];
+    }
+    if (p.length) return p[p.length - 1];
+  }
+  return [D.to[2 * i], D.to[2 * i + 1]];
+}
+function sunDay() { return !!(D && sel.length && F.dm === 'one' && F.unit === 'day' && PREFS.scrub); }
+function sunMap() { return sunDay() && PREFS.proj === 'merc'; }
+// Sunrises and sunsets between T0 and T1 where you were: checked every 5 minutes, then
+// narrowed down to the minute.
+var sunEv = { key: null, list: [] };
+function sunEvents() {
+  var key = T0 + '|' + T1 + '|' + applyCount + '|' + sel.length;
+  if (sunEv.key === key) return sunEv.list;
+  var out = [], step = 3e5, h = function (t) { return sunAlt(sunAt(t), posAt(t)) - SUN_UP; };
+  var a = h(T0);
+  for (var t = T0 + step; t < T1 + step; t += step) {
+    var t1 = Math.min(t, T1), b = h(t1);
+    if (isFinite(a) && isFinite(b) && (a < 0) !== (b < 0)) {
+      var lo = t1 - step, hi = t1;
+      while (hi - lo > 3e4) { var mid = (lo + hi) / 2; if ((h(mid) < 0) === (a < 0)) lo = mid; else hi = mid; }
+      out.push({ t: hi, rise: b > a });
+    }
+    a = b;
+  }
+  sunEv = { key: key, list: out };
+  return out;
+}
+function sunMarks() {
+  var el = $('sunMarks'), sc = el.parentNode, on = sunDay() && T1 > T0;
+  el.hidden = !on; sc.classList.toggle('has-sun', on);
+  if (!on) { el.innerHTML = ''; return; }
+  var h = '';
+  sunEvents().forEach(function (e) {
+    var x = ((e.t - T0) / (T1 - T0) * 100).toFixed(2) + '%', i = sel[Math.max(0, upper(e.t) - 1)], k = e.rise ? 'rise' : 'set';
+    h += '<div class="tick ' + k + '" style="left:' + x + '"></div><div class="lab ' + k + '" style="left:' + x + '" title="Sun' + k + '">' + icon('sun' + k) + clock(e.t, D.off[i]) + '</div>';
+  });
+  el.innerHTML = h;
+}
+// The colour laid over the map for a sun height: clear by day, a warm glow as the sun
+// gets low, rose and violet in twilight, deep blue at night.
+var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 168, 70, .10]], [-1, [196, 104, 120, .16]], [-6, [70, 56, 140, .30]], [-12, [22, 30, 96, .42]], [-90, [16, 22, 80, .48]]];
+function skyTint(alt) {
+  if (alt >= SKY[0][0]) return SKY[0][1];
+  for (var k = 1; k < SKY.length; k++) if (alt >= SKY[k][0]) {
+    var a = SKY[k - 1], b = SKY[k], f = (a[0] - alt) / (a[0] - b[0]);
+    return [0, 1, 2, 3].map(function (n) { return a[1][n] + (b[1][n] - a[1][n]) * f; });
+  }
+  return SKY[SKY.length - 1][1];
+}
+// Paints the night side onto a canvas over the tiles: worked out on a coarse grid (on the
+// Mercator map latitude only changes down the screen and longitude across), then scaled
+// up smoothly.
+var sky = { cv: null, sm: null, key: null };
+function paintSky(force) {
+  if (!map) return;
+  var on = sunMap() && scrubV < 1000 && sel.length;
+  if (!on) { if (sky.cv) sky.cv.style.display = 'none'; sky.key = null; return; }
+  var t = scrubTime(), sz = map.getSize(), key = Math.round(t / 6e4) + '|' + sz.x + 'x' + sz.y;
+  if (!force && key === sky.key) return;
+  sky.key = key;
+  if (!sky.cv) { sky.cv = document.createElement('canvas'); map.getPane('sky').appendChild(sky.cv); sky.sm = document.createElement('canvas'); }
+  var cv = sky.cv, cell = 8, w = Math.ceil(sz.x / cell) + 1, hgt = Math.ceil(sz.y / cell) + 1;
+  cv.style.display = '';
+  if (cv.width !== sz.x || cv.height !== sz.y) { cv.width = sz.x; cv.height = sz.y; }
+  L.DomUtil.setPosition(cv, map.containerPointToLayerPoint([0, 0]));
+  var sm = sky.sm; sm.width = w; sm.height = hgt;
+  var g = sm.getContext('2d'), img = g.createImageData(w, hgt), px = img.data, s = sunAt(t), x, y;
+  var cosH = [];
+  for (x = 0; x < w; x++) cosH.push(Math.cos(s.h0 + map.containerPointToLatLng([x * cell, 0]).lng * SUN_R));
+  for (y = 0; y < hgt; y++) {
+    var lat = map.containerPointToLatLng([0, y * cell]).lat * SUN_R, a = Math.sin(lat) * s.sd, b = Math.cos(lat) * s.cd;
+    for (x = 0; x < w; x++) {
+      var c = skyTint(Math.asin(Math.max(-1, Math.min(1, a + b * cosH[x]))) / SUN_R), o = (y * w + x) * 4;
+      px[o] = c[0]; px[o + 1] = c[1]; px[o + 2] = c[2]; px[o + 3] = Math.round(c[3] * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  var ctx = cv.getContext('2d');
+  ctx.clearRect(0, 0, sz.x, sz.y);
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(sm, 0, 0, w, hgt, 0, 0, w * cell, hgt * cell);
+}
 
 // ---------- legend ----------
 function legend() {
