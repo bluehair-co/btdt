@@ -1211,6 +1211,7 @@ function updateTopbar() {
   $('speedBtn').textContent = speedText();
   sunMarks();
   if (map && map._tl && map._tlDark !== tilesDark(map)) addTiles(map, true);
+  if (syncSunMap()) recolorPaths();
   scrubLabel();
   paintSky(true);
 }
