@@ -167,7 +167,7 @@ function tripIcon(i) {
 var PREFS_KEY = 'btdt.prefs';
 var PREFS = {
   unit: 'km', theme: 'system', proj: 'merc', paths: true, speedPaths: false, squares: false, heat: false, cc: false, pins: false, placeScope: 'all', spotMerge: {},
-  heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', timeM: 'km', timeU: 'year', speed: 1,
+  heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', placesM: 'h', timeM: 'km', timeU: 'year', speed: 1,
   // The time slider starts hidden on phones.
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
 };
