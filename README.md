@@ -12,7 +12,7 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 
 ## What you get
 
-- **Map.** Every trip drawn along its GPS points and coloured by transport, a heatmap of where you spend your time travelling or staying, countries visited, and your regular places. Play a day, week, month or year back on the time slider; a day's playback marks sunrise and sunset where you were and shades the night side of the map.
+- **Map.** Every trip drawn along its GPS points and coloured by transport, a heatmap of where you spend your time travelling or staying, countries visited, and your regular places. Play a day, week, month or year back on the time slider; a day's playback marks sunrise and sunset where you were and shades the night side of the map, and a trip still under way at midnight carries it on into the next day.
 - **Insights.** Trips, distance, time on the move, countries and places for any period; how you travel by distance, time or trips; your weekly rhythm; distance and CO₂ over time.
 - **Timeline.** Every trip, day by day, with where it started and ended, the transport, the distance and the time. Search the trips in your filters by name or place, and open one for its details and raw data.
 - **Filters and export.** Narrow by dates, time of day, transport and country, then download what matches as JSON or CSV.

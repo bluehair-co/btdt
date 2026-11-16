@@ -121,7 +121,8 @@ function renderMapTab() {
     updateTopbar();
     legend();
     var key = F.dm + '|' + (F.dm === 'one' ? periodStart(F.one, F.unit) + F.unit : '') + '|' + F.from + '|' + F.to;
-    if (key !== fitKey) { fitKey = key; fitAll(); }
+    // Playback rolling on into the next day keeps following the trip rather than fitting the day.
+    if (key !== fitKey) { fitKey = key; if (!carry) fitAll(); }
   }
   if (map) {
     layerToggles();
@@ -132,7 +133,8 @@ function renderMapTab() {
 }
 function groupColor(g) { return cssVar(g.v); }
 function buildPaths() {
-  pathLayer.clearLayers(); hlLayer.clearLayers(); hits = []; lines = []; groupLines = []; hovered = []; curLine = null;
+  pathLayer.clearLayers(); hlLayer.clearLayers(); hits = []; lines = []; groupLines = []; hovered = []; curLine = null; carryLine = null;
+  carry = rollNext; rollNext = null;
   many = sel.length > 6000;
   mapBounds = [];
   var colors = {};
@@ -1169,6 +1171,13 @@ function updateTopbar() {
       var offMs = function (o, d) { return o !== NO_OFF ? o * 60000 : -new Date(d * 864e5).getTimezoneOffset() * 60000; };
       var p0 = periodStart(F.one, F.unit), p1 = periodEnd(F.one, F.unit) + 1;
       T0 = p0 * 864e5 - offMs(D.off[sel[0]], p0); T1 = Math.max(T0 + 1, p1 * 864e5 - offMs(D.off[sel[n - 1]], p1));
+      if (F.unit === 'day') {
+        // A trip still under way at midnight: playback rolls on into the next day (rollOn), or
+        // when that day has no trips to play, this day runs on until the trip ends.
+        if (M.navDays.indexOf(F.one + 1) < 0) for (var j = 0; j < n; j++) if (D.end[sel[j]] > T1) T1 = D.end[sel[j]];
+        // A day playback rolled into starts where the day before left off.
+        if (carry) T0 = Math.min(T0, carry.t);
+      }
     } else {
       T0 = D.start[sel[0]]; T1 = T0;
       for (var i = 0; i < n; i++) if (D.end[sel[i]] > T1) T1 = D.end[sel[i]];
@@ -1292,13 +1301,17 @@ function scrubTime() { return T0 + (T1 - T0) * scrubV / 1000; }
 function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
   if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; return; }
-  var t = scrubTime(), i = sel[Math.max(0, upper(t) - 1)];
+  var t = scrubTime(), i = atTrip(t);
   var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
   if (sunDay()) {
     var up = sunAlt(sunAt(t), posAt(t)) > SUN_UP;
     $('scrubWhen').innerHTML = '<span class="sky' + (up ? '' : ' night') + '" title="' + (up ? 'Daytime' : 'Night') + '">' + icon(up ? 'sun' : 'night') + '</span>' + txt;
   } else $('scrubWhen').textContent = txt;
 }
+// The trip under way at t, or the last one before it. Before this day's first trip, the
+// trip carried over from the day before while it is still under way.
+function carrying(t) { return !!carry && t < D.end[carry.i] && !upper(t); }
+function atTrip(t) { var b = upper(t); return b ? sel[b - 1] : carrying(t) ? carry.i : sel[0]; }
 // How many trips in sel start at or before t.
 function upper(t) {
   var lo = 0, hi = sel.length;
@@ -1321,9 +1334,9 @@ function scrubTo(v) {
   // Where you were: along the trip under way, or where the last one ended.
   var pos = null, cur = null;
   if (scrubV < 1000 && sel.length) {
-    if (!b) pos = [D.from[2 * sel[0]], D.from[2 * sel[0] + 1]];
+    if (!b && !carrying(t)) pos = [D.from[2 * sel[0]], D.from[2 * sel[0] + 1]];
     else {
-      var i = sel[b - 1];
+      var i = atTrip(t);
       if (t < D.end[i]) { var a = along(i, t); if (a) { pos = a.ll; cur = { i: i, pts: a.upto }; } }
       else pos = [D.to[2 * i], D.to[2 * i + 1]];
     }
@@ -1337,6 +1350,12 @@ function scrubTo(v) {
       curLine = L.polyline(cur.pts, { renderer: renderer, color: cssVar(groupOf(modeOf(cur.i)).v), weight: LINE_W + 2, opacity: 1, interactive: false });
       pathLayer.addLayer(curLine);
     }
+    // The trip carried over from the day before stays drawn once it has ended.
+    var cdone = !!carry && scrubV < 1000 && t >= D.end[carry.i];
+    if (cdone && !carryLine) {
+      carryLine = L.polyline(tripPath(carry.i), { renderer: renderer, color: cssVar(groupOf(modeOf(carry.i)).v), weight: LINE_W, opacity: LINE_OP, lineCap: 'round', lineJoin: 'round', interactive: false });
+      pathLayer.addLayer(carryLine);
+    } else if (!cdone && carryLine) { pathLayer.removeLayer(carryLine); carryLine = null; }
     if (P_pos) {
       var pm = posMode(), pk = pm && pm + '|' + posIc();
       if (pk !== posMarker._mode) { posMarker.setIcon(posIcon(pm, posIc())); posMarker._mode = pk; }
@@ -1351,6 +1370,10 @@ function scrubTo(v) {
   paintSky();
 }
 var P_pos = null, P_cur = null, prevCur = null;
+// A trip still under way at midnight when a day's playback ends rolls playback on into the
+// next day: carry is that trip ({ i, t: the time the day before ended }) while the next day
+// plays, and rollNext hands it over as the next day is drawn.
+var carry = null, rollNext = null, carryLine = null;
 // During playback the map follows the trip under way: when a trip starts, the map glides
 // (zooming out and back in as needed) so that trip's whole route is on screen, clear of
 // the top bar, the legend and the dock. Playback holds still while the map glides and
@@ -1466,6 +1489,7 @@ function stopPlay() {
 // range plays in 2 minutes at 1×.
 function playWarp() {
   var iv = [], k, n = sel.length;
+  if (carry && Math.min(T1, D.end[carry.i]) > T0) iv.push([Math.max(T0, D.start[carry.i]), Math.min(T1, D.end[carry.i])]);
   for (k = 0; k < n; k++) {
     var s0 = Math.max(T0, D.start[sel[k]]), e0 = Math.min(T1, D.end[sel[k]]);
     if (e0 <= s0) continue;
@@ -1498,10 +1522,28 @@ function play() {
     if (!playing) return;
     u += (now - last) / 120000 * W.len * PREFS.speed * (map && PREFS.proj === 'merc' ? playRate(now) : 1);
     last = now;
-    if (u >= W.len) { scrubTo(1000); stopPlay(); return; }
+    if (u >= W.len) { if (!rollOn()) { scrubTo(1000); stopPlay(); } return; }
     scrubTo((warpMap(W.virt, W.real, u) - T0) / (T1 - T0) * 1000);
     playRaf = requestAnimationFrame(frame);
   })(last);
+}
+// At the end of a day's playback, a trip still under way at midnight carries playback on
+// into the next day, which then plays on from that moment.
+function rollOn() {
+  if (!(F.dm === 'one' && F.unit === 'day' && tab === 'map' && map) || M.navDays.indexOf(F.one + 1) < 0) return false;
+  var i = -1;
+  for (var k = 0; k < sel.length; k++) if (D.end[sel[k]] > T1) i = sel[k];
+  if (i < 0) return false;
+  var t = T1;
+  rollNext = { i: i, t: t };
+  stopPlay();
+  showDay(F.one + 1, 'day');
+  rollNext = null;
+  if (!carry || !sel.length) return false;
+  scrubTo((t - T0) / (T1 - T0) * 1000);
+  play();
+  playFit.i = i;
+  return true;
 }
 $('scrubToggle').addEventListener('click', function () {
   PREFS.scrub = !PREFS.scrub; savePrefs();
@@ -1536,9 +1578,8 @@ function sunAlt(s, p) {
 }
 // Where you were at time t: along the trip under way, or where the last one ended.
 function posAt(t) {
-  var b = upper(t);
-  if (!b) return [D.from[2 * sel[0]], D.from[2 * sel[0] + 1]];
-  var i = sel[b - 1];
+  if (!upper(t) && !carrying(t)) return [D.from[2 * sel[0]], D.from[2 * sel[0] + 1]];
+  var i = atTrip(t);
   if (t < D.end[i]) {
     var tr = trail(i), s = (t - D.start[i]) / 1000, p = tr.pts, ts = tr.ts;
     for (var j = 1; j < p.length; j++) if (s <= ts[j]) {
@@ -1555,7 +1596,7 @@ function sunMap() { return sunDay() && PREFS.proj === 'merc'; }
 // narrowed down to the minute.
 var sunEv = { key: null, list: [] };
 function sunEvents() {
-  var key = T0 + '|' + T1 + '|' + applyCount + '|' + sel.length;
+  var key = T0 + '|' + T1 + '|' + applyCount + '|' + sel.length + '|' + (carry ? carry.i : '');
   if (sunEv.key === key) return sunEv.list;
   var out = [], step = 3e5, h = function (t) { return sunAlt(sunAt(t), posAt(t)) - SUN_UP; };
   var a = h(T0);
@@ -1577,7 +1618,7 @@ function sunMarks() {
   if (!on) { el.innerHTML = ''; return; }
   var h = '';
   sunEvents().forEach(function (e) {
-    var x = ((e.t - T0) / (T1 - T0) * 100).toFixed(2) + '%', i = sel[Math.max(0, upper(e.t) - 1)], k = e.rise ? 'rise' : 'set';
+    var x = ((e.t - T0) / (T1 - T0) * 100).toFixed(2) + '%', i = atTrip(e.t), k = e.rise ? 'rise' : 'set';
     h += '<div class="tick ' + k + '" style="left:' + x + '"></div><div class="lab ' + k + '" style="left:' + x + '" title="Sun' + k + '">' + icon('sun' + k) + clock(e.t, D.off[i]) + '</div>';
   });
   el.innerHTML = h;
