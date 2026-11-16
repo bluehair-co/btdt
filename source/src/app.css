@@ -209,6 +209,9 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 :root[data-theme="dark"] .scrub .when .sky .ic { fill: #e8a23a; }
 :root[data-theme="dark"] .scrub .when .sky.night .ic { fill: #a99bff; }
 .leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
+/* Dark mode during a day's playback: the map has light tiles, so the paths and the position
+   marker take the light theme's transport colours (the same values as at the top). */
+#map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; }
 
 /* ---------- sheets ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }

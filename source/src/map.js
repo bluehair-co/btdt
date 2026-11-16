@@ -131,12 +131,15 @@ function renderMapTab() {
   if (PREFS.proj !== 'merc') drawProj();
   return ok;
 }
-function groupColor(g) { return cssVar(g.v); }
+// Transport colours as the map shows them: read from the map, which takes the light theme's
+// colours while a day's playback puts light tiles under dark mode.
+function groupColor(g) { return getComputedStyle($('map')).getPropertyValue(g.v).trim() || cssVar(g.v); }
 function buildPaths() {
   pathLayer.clearLayers(); hlLayer.clearLayers(); hits = []; lines = []; groupLines = []; hovered = []; curLine = null; carryLine = null;
   carry = rollNext; rollNext = null;
   many = sel.length > 6000;
   mapBounds = [];
+  syncSunMap();
   var colors = {};
   GROUPS.forEach(function (g) { colors[g.key] = groupColor(g); });
   for (var k = 0; k < sel.length; k++) {
@@ -151,7 +154,7 @@ function buildPaths() {
     var h = { i: i, k: k, parts: [pts], bb: bb, w: LINE_W, color: colors[groupOf(m).key] };
     hits.push(h);
     if (!many) {
-      h.line = L.polyline(pts, { renderer: renderer, color: h.color, weight: LINE_W, opacity: LINE_OP, lineCap: 'round', lineJoin: 'round', interactive: false });
+      h.line = L.polyline(pts, { renderer: renderer, color: h.color, weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
       pathLayer.addLayer(h.line);
       lines[k] = h.line;
     }
@@ -170,7 +173,7 @@ function buildGroups(limit) {
   var by = {};
   hits.forEach(function (h) { if (h.k < limit) (by[h.color] || (by[h.color] = [])).push(h.parts[0]); });
   Object.keys(by).forEach(function (c) {
-    var l = L.polyline(by[c], { renderer: renderer, color: c, weight: LINE_W - 0.5, opacity: LINE_OP, lineCap: 'round', lineJoin: 'round', interactive: false });
+    var l = L.polyline(by[c], { renderer: renderer, color: c, weight: LINE_W - 0.5, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
     pathLayer.addLayer(l); groupLines.push(l);
   });
 }
@@ -624,7 +627,7 @@ function onMapTap(pt, ev) {
 }
 function setHovered(list) {
   if (many) list = [];
-  hovered.forEach(function (h) { if (list.indexOf(h) < 0 && h.line) h.line.setStyle({ opacity: LINE_OP, weight: h.w }); });
+  hovered.forEach(function (h) { if (list.indexOf(h) < 0 && h.line) h.line.setStyle({ opacity: lineOp(), weight: h.w }); });
   list.forEach(function (h) { if (hovered.indexOf(h) < 0 && h.line) { h.line.setStyle({ opacity: 1, weight: h.w + 2 }); h.line.bringToFront(); } });
   hovered = list;
   if (map) map.getContainer().style.cursor = list.length ? 'pointer' : '';
@@ -1187,6 +1190,7 @@ function updateTopbar() {
   $('speedBtn').textContent = speedText();
   sunMarks();
   if (map && map._tl && map._tlDark !== tilesDark(map)) addTiles(map, true);
+  if (syncSunMap()) recolorPaths();
   scrubLabel();
   paintSky(true);
 }
@@ -1326,9 +1330,9 @@ function scrubTo(v) {
   visibleB = b;
   if (map) {
     if (!many) {
-      for (var k = Math.min(old, b); k < Math.max(old, b); k++) if (lines[k]) lines[k].setStyle({ opacity: k < b ? LINE_OP : 0 });
+      for (var k = Math.min(old, b); k < Math.max(old, b); k++) if (lines[k]) lines[k].setStyle({ opacity: k < b ? lineOp() : 0 });
       // The trip under way is drawn separately, up to where you are.
-      if (prevCur != null && lines[prevCur] && prevCur < b) lines[prevCur].setStyle({ opacity: LINE_OP });
+      if (prevCur != null && lines[prevCur] && prevCur < b) lines[prevCur].setStyle({ opacity: lineOp() });
     } else if (old !== b) { clearTimeout(groupTimer); groupTimer = setTimeout(function () { buildGroups(visibleB); }, playing ? 0 : 60); }
   }
   // Where you were: along the trip under way, or where the last one ended.
@@ -1347,13 +1351,13 @@ function scrubTo(v) {
   if (map) {
     if (curLine) { pathLayer.removeLayer(curLine); curLine = null; }
     if (cur && cur.pts.length > 1) {
-      curLine = L.polyline(cur.pts, { renderer: renderer, color: cssVar(groupOf(modeOf(cur.i)).v), weight: LINE_W + 2, opacity: 1, interactive: false });
+      curLine = L.polyline(cur.pts, { renderer: renderer, color: groupColor(groupOf(modeOf(cur.i))), weight: LINE_W + 2, opacity: 1, interactive: false });
       pathLayer.addLayer(curLine);
     }
     // The trip carried over from the day before stays drawn once it has ended.
     var cdone = !!carry && scrubV < 1000 && t >= D.end[carry.i];
     if (cdone && !carryLine) {
-      carryLine = L.polyline(tripPath(carry.i), { renderer: renderer, color: cssVar(groupOf(modeOf(carry.i)).v), weight: LINE_W, opacity: LINE_OP, lineCap: 'round', lineJoin: 'round', interactive: false });
+      carryLine = L.polyline(tripPath(carry.i), { renderer: renderer, color: groupColor(groupOf(modeOf(carry.i))), weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
       pathLayer.addLayer(carryLine);
     } else if (!cdone && carryLine) { pathLayer.removeLayer(carryLine); carryLine = null; }
     if (P_pos) {
@@ -1590,6 +1594,28 @@ function posAt(t) {
   }
   return [D.to[2 * i], D.to[2 * i + 1]];
 }
+// A day's playback draws the paths stronger, so they hold up over the night shading, and
+// in dark mode in the light theme's colours, to match the light tiles under them.
+function lineOp() { return sunMap() ? 0.85 : LINE_OP; }
+function syncSunMap() {
+  var el = $('map'), on = isDark() && sunMap(), op = lineOp(), was = el.classList.contains('sun-light');
+  el.classList.toggle('sun-light', on);
+  var changed = was !== on || syncSunMap.op !== op;
+  syncSunMap.op = op;
+  return changed;
+}
+function recolorPaths() {
+  if (!map) return;
+  var colors = {};
+  GROUPS.forEach(function (g) { colors[g.key] = groupColor(g); });
+  hits.forEach(function (h) {
+    h.color = colors[groupOf(modeOf(h.i)).key];
+    if (h.line) h.line.setStyle({ color: h.color, opacity: h.k < visibleB && h.k !== prevCur ? lineOp() : 0 });
+  });
+  if (many) buildGroups(visibleB);
+  posMarker._mode = null;
+  scrubTo(scrubV);
+}
 function sunDay() { return !!(D && sel.length && F.dm === 'one' && F.unit === 'day' && PREFS.scrub); }
 function sunMap() { return sunDay() && PREFS.proj === 'merc'; }
 // Sunrises and sunsets between T0 and T1 where you were: checked every 5 minutes, then
@@ -1624,8 +1650,9 @@ function sunMarks() {
   el.innerHTML = h;
 }
 // The colour laid over the map for a sun height: clear by day, a warm glow as the sun
-// gets low, rose and violet in twilight, deep blue at night.
-var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 168, 70, .10]], [-1, [196, 104, 120, .16]], [-6, [70, 56, 140, .30]], [-12, [22, 30, 96, .42]], [-90, [16, 22, 80, .48]]];
+// gets low, rose and dusky blue in twilight, a slate blue at night: light enough that the
+// paths over it stay easy to see.
+var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 168, 70, .10]], [-1, [200, 112, 110, .14]], [-6, [62, 64, 118, .22]], [-12, [26, 34, 70, .30]], [-90, [20, 28, 58, .34]]];
 function skyTint(alt) {
   if (alt >= SKY[0][0]) return SKY[0][1];
   for (var k = 1; k < SKY.length; k++) if (alt >= SKY[k][0]) {
