@@ -100,12 +100,14 @@ function Collector() {
 }
 // Trips Timeline couldn't classify get a mode guessed from their average speed,
 // marked with the GUESSED bit in est.
-var GUESSED = 4;
+var GUESSED = 4, GUESS_BIKE_KMH = 20;
 function guessMode(dist, hours) {
   if (!(hours > 0)) return null;
   var v = dist / hours;
   if (v < 7) return 'WALKING';
-  if (v < 25) return 'CYCLING';
+  // 20, not 25: a drive through town averages 15 to 25 km/h, and a ride over 20 mostly has your own
+  // rides between the same places to settle it (see TripIndex).
+  if (v < GUESS_BIKE_KMH) return 'CYCLING';
   // Up to 300 km/h a car is likelier than a plane, though no car goes that fast: such a trip is a GPS
   // jump, which cleanJumps looks at (it would leave a flight alone).
   if (v < 300) return 'CAR';
@@ -136,8 +138,10 @@ Collector.prototype.add = function (mode, st, et, dist, est, a, b, pts, ptsT) {
   if (mode === 'UNKNOWN' && et) {
     // Untyped trips often carry a broken distance (e.g. 148 km for a 16 km hop).
     // When it's far longer than the straight line between the ends, use the straight line.
-    var line = km(a, b);
-    if (line > 0 && dist > 3 * line + 5 && !this.gps) { dist = line; est = 2; }
+    // A ride or walk that comes back to where it started has a short straight line, so the trail between
+    // the ends counts too when there is one.
+    var line = km(a, b), path = pts && pts.length ? pathKm([a].concat(pts, [b]).filter(Boolean)) : 0, far = Math.max(line, path);
+    if (far > 0 && dist > 3 * far + 5 && !this.gps) { dist = far; est = path > line ? 1 : 2; }
     var g = guessMode(dist, (et.ms - st.ms) / 36e5);
     // Too fast for the ground but under 250 km apart is a GPS jump, not a flight: leave it out.
     if (g === 'FLYING' && !(line >= 250)) g = null;
@@ -688,9 +692,9 @@ function profileMode(g, run, avg) {
   return g;
 }
 // How sure a type from the average speed is: low near the edges between walking, cycling and
-// driving (7 and 25 km/h), higher away from them.
+// driving (7 and GUESS_BIKE_KMH), higher away from them.
 function speedConf(avg) {
-  var d = Math.min(Math.abs(Math.log(avg / 7)), Math.abs(Math.log(avg / 25)));
+  var d = Math.min(Math.abs(Math.log(avg / 7)), Math.abs(Math.log(avg / GUESS_BIKE_KMH)));
   return Math.round(30 + Math.min(40, 40 * d / Math.log(1.6)));
 }
 // How a guessed type was found (R.gby), and how sure it is (R.gconf, 0 to 100). Trips under
