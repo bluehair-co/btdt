@@ -1569,7 +1569,8 @@ div.hit-row:hover { background: none; }
   <div class="sheet-body">
     <div class="sec">
       <h3>Units</h3>
-      <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
+      <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="auto" aria-pressed="true">Automatic</button><button type="button" data-u="km" aria-pressed="false">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
+      <p class="fine" id="unitNote"></p>
     </div>
     <div class="sec">
       <h3>Date and time</h3>
@@ -4065,7 +4066,7 @@ function parseIsoDay(s) { if (!s) return null; var t = Date.parse(s + 'T00:00:00
 // PREFS.timeF is 'auto', '24' (14:05) or '12' (2:05 PM). Auto follows this device's language
 // and region (the order of day, month and year, and its 12- or 24-hour clock).
 var LOCALE_FMT = (function () {
-  var o = { order: 'dmy', h12: false };
+  var o = { order: 'dmy', h12: false, unit: 'km' };
   try {
     var lang = (navigator.languages && navigator.languages[0]) || navigator.language || 'en-GB';
     var seq = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short', day: 'numeric' }).formatToParts(new Date(Date.UTC(2026, 10, 17, 12)))
@@ -4073,9 +4074,18 @@ var LOCALE_FMT = (function () {
     o.order = seq === 'mdy' ? 'mdy' : seq === 'ymd' ? 'ymd' : 'dmy';
     var hc = new Intl.DateTimeFormat(lang, { hour: 'numeric' }).resolvedOptions();
     o.h12 = hc.hourCycle ? /h1[12]/.test(hc.hourCycle) : !!hc.hour12;
+    // Miles in the US, the UK, Liberia and Myanmar; kilometres everywhere else.
+    var region = '';
+    try { region = new Intl.Locale(lang).maximize().region || ''; } catch (e2) { region = (/[-_]([A-Za-z]{2})\b/.exec(lang) || [])[1] || ''; }
+    o.unit = /^(US|GB|LR|MM)$/i.test(region) ? 'mi' : 'km';
   } catch (e) { /* old browser: day first, 24-hour */ }
   return o;
 })();
+// PREFS.unitF is 'auto', 'km' or 'mi'; PREFS.unit is the unit in use. Before units followed the
+// device, km was the default, so a saved km means not chosen and becomes Automatic; a saved mi stays.
+if (!/^(auto|km|mi)$/.test(PREFS.unitF)) PREFS.unitF = PREFS.unit === 'mi' ? 'mi' : 'auto';
+function resolveUnit() { PREFS.unit = PREFS.unitF === 'auto' ? LOCALE_FMT.unit : PREFS.unitF; }
+resolveUnit();
 function dateOrder() { return /^(dmy|mdy|ymd)$/.test(PREFS.dateF) ? PREFS.dateF : LOCALE_FMT.order; }
 function use12h() { return PREFS.timeF === '12' || PREFS.timeF !== '24' && LOCALE_FMT.h12; }
 // A clock time from hours and minutes: 14:05 or 2:05 PM.
@@ -11480,9 +11490,10 @@ function mrSaveRoutine(i, mode, x, A, B) {
 
 // ---------- settings ----------
 function renderSettings() {
-  setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
+  setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unitF; });
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   renderDateTimeSettings();
+  $('unitNote').textContent = 'Automatic uses ' + (LOCALE_FMT.unit === 'mi' ? 'miles' : 'kilometres') + ', from this device\'s region.';
   buildFactors();
   renderHrSettings();
   renderImports();
@@ -11553,7 +11564,7 @@ function describeHome(h) {
 $('unitSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-u]');
   if (!b) return;
-  PREFS.unit = b.dataset.u; savePrefs(); renderSettings();
+  PREFS.unitF = b.dataset.u; resolveUnit(); savePrefs(); renderSettings();
   if (D) apply();
 });
 // Date and time format: Automatic follows the device's language and region; each choice shows an example.
