@@ -431,6 +431,14 @@ function tripsText(n) { return fmt(n) + ' trip' + (n === 1 ? '' : 's'); }
 function chipHtml(f, v, label, n) {
   return '<button type="button" class="chip" data-f="' + f + '" data-v="' + v + '" aria-pressed="false">' + label + (n != null ? '<span class="n">' + fmt(n) + '</span>' : '') + '</button>';
 }
+// The hour filter's choices, in the chosen clock format (kept selected when the format changes).
+function fillHourOpts() {
+  var h0 = '', h1 = '', i;
+  for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + fmtHour(i) + '</option>';
+  for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + fmtHour(i) + (i === 24 ? ' (midnight)' : '') + '</option>';
+  $('h0').innerHTML = h0; $('h1').innerHTML = h1;
+  if (F) { $('h0').value = F.h0; $('h1').value = F.h1; }
+}
 function buildFilterUI() {
   var mc = {}, i;
   for (i = 0; i < D.day.length; i++) { if (isDup(i)) continue; var m = MODES[D.mode[i]]; mc[m] = (mc[m] || 0) + 1; }
@@ -475,10 +483,7 @@ function buildFilterUI() {
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
   $('srcActs').textContent = actsLabel(D.stravaStats);
-  var h0 = '', h1 = '';
-  for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
-  for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
-  $('h0').innerHTML = h0; $('h1').innerHTML = h1;
+  fillHourOpts();
   var lo = isoDay(M.minD), hi = isoDay(M.maxD);
   ['oneDay', 'from', 'to'].forEach(function (id) { $(id).min = lo; $(id).max = hi; });
 }

@@ -2,6 +2,7 @@
 function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
+  renderDateTimeSettings();
   buildFactors();
   renderHrSettings();
   renderImports();
@@ -75,6 +76,36 @@ $('unitSeg').addEventListener('click', function (ev) {
   PREFS.unit = b.dataset.u; savePrefs(); renderSettings();
   if (D) apply();
 });
+// Date and time format: Automatic follows the device's language and region; each choice shows an example.
+var DT_SAMPLE = Math.floor(Date.UTC(2026, 10, 17) / 864e5);
+function dtOpts(key, opts, sample) {
+  var keep = PREFS[key], out = opts.map(function (o) {
+    PREFS[key] = o[0];
+    return '<option value="' + o[0] + '">' + o[1] + ' (' + sample() + ')</option>';
+  }).join('');
+  PREFS[key] = keep;
+  return out;
+}
+function renderDateTimeSettings() {
+  var dSample = function () { return niceDate(DT_SAMPLE); }, tSample = function () { return fmtHM(14, 5); };
+  $('dateFmt').innerHTML = dtOpts('dateF', [['auto', 'Automatic'], ['dmy', 'Day month year'], ['mdy', 'Month day, year'], ['ymd', 'Year-month-day']], dSample);
+  $('timeFmt').innerHTML = dtOpts('timeF', [['auto', 'Automatic'], ['24', '24-hour'], ['12', '12-hour']], tSample);
+  $('dateFmt').value = PREFS.dateF; $('timeFmt').value = PREFS.timeF;
+  var lang = (navigator.languages && navigator.languages[0]) || navigator.language;
+  $('dtNote').textContent = 'Automatic follows this device' + (lang ? ' (' + lang + ')' : '') + '. Used for every date and time in BT•DT; dates you type in filters follow your browser.';
+}
+function dateTimeChanged() {
+  savePrefs(); renderSettings();
+  if (!D) return;
+  fillHourOpts();
+  dirty.map = dirty.insights = dirty.timeline = true;
+  apply();
+  if (hlTrip != null) highlight(hlTrip);
+  if (TL.sel != null) tlSelect(TL.sel);
+  scrubLabel();
+}
+$('dateFmt').addEventListener('change', function () { PREFS.dateF = this.value; dateTimeChanged(); });
+$('timeFmt').addEventListener('change', function () { PREFS.timeF = this.value; dateTimeChanged(); });
 $('themeSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-t]');
   if (!b) return;

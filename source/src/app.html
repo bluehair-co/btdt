@@ -547,6 +547,12 @@
       <h3>Units</h3>
       <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
     </div>
+    <div class="sec">
+      <h3>Date and time</h3>
+      <div class="field"><label for="dateFmt">Dates</label><select id="dateFmt"></select></div>
+      <div class="field"><label for="timeFmt">Times</label><select id="timeFmt"></select></div>
+      <p class="fine" id="dtNote"></p>
+    </div>
     <div class="sec" id="hrSec" hidden>
       <h3>Heart rate</h3>
       <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>

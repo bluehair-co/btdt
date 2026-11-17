@@ -1180,7 +1180,7 @@ $('tripBack').addEventListener('click', function () { if (listBack) openList(lis
 // ---------- top bar: day navigator or time slider ----------
 var scrubV = 1000, T0 = 0, T1 = 0, playing = false, playRaf = 0, SPEEDS = [1, 2, 4, 8, 16, 32, 0.25, 0.5];
 function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.speed) + '×'; }
-function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
+function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
 function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
   // The playback button (bottom left) shows or hides the time slider in the playback bar above the dock.
@@ -1327,7 +1327,7 @@ function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
   if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; return; }
   var t = scrubTime(), i = atTrip(t);
-  var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
+  var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clockDate(t, D.off[i]);
   if (sunDay()) {
     var up = sunAlt(sunAt(t), posAt(t)) > SUN_UP;
     $('scrubWhen').innerHTML = '<span class="sky' + (up ? '' : ' night') + '" title="' + (up ? 'Daytime' : 'Night') + '">' + icon(up ? 'sun' : 'night') + '</span>' + txt;

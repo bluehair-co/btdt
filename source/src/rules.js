@@ -702,7 +702,7 @@ function mrWhenText(w) {
   var f = mrDayNum(w.from), t = mrDayNum(w.to), s;
   s = f != null && t != null ? niceDate(f) + ' – ' + niceDate(t) : f != null ? 'Since ' + niceDate(f) : t != null ? 'Until ' + niceDate(t) : 'Always';
   if (Array.isArray(w.days) && w.days.length && w.days.length < 7) s += ' · ' + w.days.map(function (d) { var k = MR_DOW.indexOf(String(d).slice(0, 3)); return k >= 0 ? DOW[k] : d; }).join(', ');
-  if (Array.isArray(w.time)) s += ' · ' + w.time.join('–');
+  if (Array.isArray(w.time)) s += ' · ' + w.time.map(function (x) { var m = mrMin(x); return m == null ? x : fmtMin(m); }).join('–');
   return s;
 }
 function mrRuleRow(sec, r, title, sub, ic, color, count) {
@@ -1291,6 +1291,8 @@ $('tripBody').addEventListener('click', function (ev) {
 // 500 m, on the same kind of day, starting within 2 hours of it), BT•DT offers to make a routine of
 // it: the type for all of them, both ways when you made the trip back too, and optionally their line.
 var MR_RAIL = { TRAIN: 1, TRAM: 1, SUBWAY: 1, FERRY: 1, BUS: 1, CABLE: 1 };
+// Minutes after midnight in the chosen clock format, for text (mrHm is for time inputs).
+function fmtMin(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return fmtHM(Math.floor(m / 60), m % 60); }
 function mrHm(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60); }
 function mrLike(i) {
   var a = { at: [D.from[2 * i], D.from[2 * i + 1]], rad: 0.5 }, b = { at: [D.to[2 * i], D.to[2 * i + 1]], rad: 0.5 };
@@ -1316,7 +1318,7 @@ function mrOfferRoutine(i, mode) {
   x.there.concat(x.back).forEach(function (j) { var m = LABEL[MODES[D.mode[j]]] || MODES[D.mode[j]]; modes[m] = (modes[m] || 0) + 1; });
   mrAsk({
     title: 'Same on other days?',
-    text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + mrHm(m0) +
+    text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + fmtMin(m0) +
       (x.back.length ? ', and ' + fmt(x.back.length) + ' back' : '') + '. Your files have them as ' + Object.keys(modes).map(function (m) { return esc(m.toLowerCase()) + ' (' + fmt(modes[m]) + ')'; }).join(', ') + '.',
     extra: '<div class="mr-form">' + mrGhostHtml() +
       '<span class="mr-dates">From <input type="date" id="mrRFrom" value="' + isoDay(d0) + '" aria-label="From"> to <input type="date" id="mrRTo" value="' + isoDay(d1) + '" aria-label="To (empty: until now)"></span>' +
