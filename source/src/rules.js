@@ -94,7 +94,26 @@ function mrRefTrips(ref) {
 function mrExcept(r) {
   var s = {};
   (Array.isArray(r.except) ? r.except : []).forEach(function (ref) { mrRefTrips(ref).forEach(function (i) { s[i] = 1; }); });
+  // unless: conditions written by Turn off for these trips. A trip matching any of them is left alone.
+  var U = mrUnless(r);
+  if (U.length) for (var i = 0; i < D.day.length; i++) if (!s[i] && U.some(function (u) { return mrUnlessOk(u, i); })) s[i] = 1;
   return s;
+}
+// A rule's unless list, ready to test trips against: each entry is a when (dates, days, time), plus
+// countries (ISO codes; a trip counts when it starts or ends in one, as in Filters), months (1–12)
+// and years. A trip matches an entry when it fits every part the entry has.
+function mrUnless(r) {
+  return (Array.isArray(r.unless) ? r.unless : []).filter(function (u) { return u && typeof u === 'object'; }).map(function (u) {
+    function set(a, f) { if (!Array.isArray(a) || !a.length) return null; var o = {}; a.forEach(function (v) { o[f(v)] = 1; }); return o; }
+    return { w: mrWhen(u), cc: set(u.countries, function (c) { return String(c).toUpperCase(); }), mo: set(u.months, Number), yr: set(u.years, Number) };
+  });
+}
+function mrUnlessOk(u, i) {
+  if (!mrWhenOk(u.w, i)) return false;
+  if (u.mo && !u.mo[D.month[i] + 1]) return false;
+  if (u.yr && !u.yr[D.year[i]]) return false;
+  if (u.cc && !u.cc[String(D.ccList[D.cs[i]] || '').toUpperCase()] && !u.cc[String(D.ccList[D.ce[i]] || '').toUpperCase()]) return false;
+  return true;
 }
 // The place rules with a position, and the one a point is in (the nearest, if several).
 function mrPlaceAt(lat, lng) {
@@ -708,10 +727,16 @@ function mrWhenText(w) {
 function mrRuleRow(sec, r, title, sub, ic, color, count) {
   var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
   return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt mr-edit" role="button" tabindex="0" data-mr-edit="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Edit ' + esc(title) + '"><b>' + esc(title) + icon('right', 'mr-chev') + '</b><small>' + sub +
-    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + '</small></span>' +
+    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + mrUnlessTags(r) + '</small></span>' +
     (count != null ? '<span class="num fine">' + fmt(count) + '</span>' : '') +
     '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
     '<button type="button" class="icon-btn" data-mr-del="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Delete ' + esc(title) + '">' + icon('close') + '</button></div>';
+}
+// A rule's unless conditions, each with Undo.
+function mrUnlessTags(r) {
+  return (Array.isArray(r.unless) ? r.unless : []).map(function (u, k) {
+    return u && typeof u === 'object' ? '<span class="mr-unless"><span class="guess inf">Not on ' + esc(mrUnlessText(u)) + '</span><button type="button" class="link-btn" data-mr-unless="' + esc(r.id) + '" data-k="' + k + '">Undo</button></span>' : '';
+  }).join('');
 }
 function mrRenderRules() {
   var h = '';
@@ -773,6 +798,15 @@ $('mrBody').addEventListener('keydown', function (ev) {
   if (ed) { ev.preventDefault(); mrEditRule(ed.dataset.mrEdit); }
 });
 $('mrBody').addEventListener('click', function (ev) {
+  var un = ev.target.closest('[data-mr-unless]');
+  if (un) {
+    var ur = mrById(un.dataset.mrUnless), uk = +un.dataset.k, u = ur && ur.unless && ur.unless[uk];
+    if (!u) return;
+    ur.unless.splice(uk, 1);
+    if (!ur.unless.length) delete ur.unless;
+    mrChange((ur.name || ur.id) + ' on again for ' + mrUnlessText(u));
+    return;
+  }
   var o = ev.target.closest('[data-mr-trip]');
   if (o) { openTrip(+o.dataset.mrTrip); return; }
   var ed = ev.target.closest('[data-mr-edit]');
@@ -1507,3 +1541,145 @@ function mrSaveRoutine(i, mode, x, A, B) {
   toast(r.name + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.');
 }
 
+
+// ---------- rules in these trips ----------
+// The last line of Filters says how many gear periods and routines changed the trips the filters
+// show; Show rules lists them, each with Turn off for these trips. That writes the filters as an
+// unless condition on the rule (dates, years, months, days of the week, time of day, countries), so
+// trips like these, loaded now or later, are left alone; or, with Just these trips, the trips
+// themselves into its except. Transport, gear, source and guessed filters aren't part of it: a rule
+// only touches its own type anyway, and the gear filter is often how the rule's trips were found.
+var MR_VER = '0.2', MR_SCHEMA = 'https://bluehair-co.github.io/btdt/schema/myrules-0.2.json';
+// The gear periods and routines that changed a trip shown now, most trips first, each with its trips.
+function mrHere() {
+  var by = {}, j, i;
+  if (!MR || !MR.on || !D || !D.mrGear) return [];
+  function add(id, i) { var r = mrById(id); if (!r) return; var x = by[id] || (by[id] = { r: r, trips: [], seen: {} }); if (!x.seen[i]) { x.seen[i] = 1; x.trips.push(i); } }
+  var gearIds = {}; mrList('gear').forEach(function (r) { gearIds[r.id] = 1; });
+  for (j = 0; j < sel.length; j++) {
+    i = sel[j];
+    var g = D.mrGear[i], rt = D.mrRoute && D.mrRoute[i];
+    if (g && !g.cor && gearIds[g.rule]) add(g.rule, i);
+    if (rt) add(rt.rule, i);
+  }
+  return Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.trips.length - a.trips.length; });
+}
+// The filters as an unless condition, with its parts in words; cond is null when no filter that can
+// be written into a rule is on.
+function mrFilterCond() {
+  var c = {}, words = [], a, b;
+  if (F.dm === 'one' || F.dm === 'range' || F.dm === 'week') {
+    a = F.dm === 'one' ? (F.unit === 'day' ? F.one : periodStart(F.one, F.unit)) : F.from;
+    b = F.dm === 'one' ? (F.unit === 'day' ? F.one : periodEnd(F.one, F.unit)) : F.to;
+    c.from = isoDay(a); c.to = isoDay(b);
+    words.push(a === b ? niceDate(a) : fmtRange(a, b));
+  }
+  if (F.years.size !== M.years.length) { c.years = M.years.filter(function (y) { return F.years.has(y); }); words = words.concat(c.years.map(String)); }
+  if (F.months.size !== 12) {
+    c.months = []; for (var m = 0; m < 12; m++) if (F.months.has(m)) c.months.push(m + 1);
+    words = words.concat(c.months.map(function (m) { return MONTHS[m - 1]; }));
+  }
+  if (F.dows.size !== 7) {
+    var ds = DOW_ORDER.filter(function (d) { return F.dows.has(d); });
+    c.days = ds.map(function (d) { return MR_DOW[d]; });
+    words = words.concat(ds.map(function (d) { return DOW[d]; }));
+  }
+  if (F.h0 !== 0 || F.h1 !== 24) {
+    c.time = [pad2(F.h0) + ':00', pad2((F.h1 + 23) % 24) + ':59'];
+    words.push(fmtHour(F.h0) + '–' + fmtHour(F.h1 % 24));
+  }
+  if (F.countries.size !== M.countries.length) {
+    var cs = M.countries.filter(function (k) { return F.countries.has(k); });
+    c.countries = cs.map(function (k) { return D.ccList[k]; }).filter(Boolean);
+    words = words.concat(cs.map(function (k) { return ccName(D.ccList[k]); }));
+  }
+  return { cond: Object.keys(c).length ? c : null, words: words };
+}
+// An unless condition in words: "Sat, Sun · 18:00–00:00 · Spain".
+function mrUnlessText(u) {
+  var bits = [], f = mrDayNum(u.from), t = mrDayNum(u.to);
+  if (f != null || t != null) bits.push(f != null && t != null ? (f === t ? niceDate(f) : fmtRange(f, t)) : f != null ? 'Since ' + niceDate(f) : 'Until ' + niceDate(t));
+  if (Array.isArray(u.years) && u.years.length) bits.push(u.years.join(', '));
+  if (Array.isArray(u.months) && u.months.length) bits.push(u.months.map(function (m) { return MONTHS[m - 1] || m; }).join(', '));
+  var dk = Array.isArray(u.days) ? u.days.map(function (d) { return String(d).slice(0, 3); }).sort().join() : '';
+  if (dk === 'fri,mon,thu,tue,wed') bits.push('weekdays');
+  else if (dk === 'sat,sun') bits.push('weekends');
+  else if (Array.isArray(u.days) && u.days.length) bits.push(u.days.map(function (d) { var k = MR_DOW.indexOf(String(d).slice(0, 3)); return k >= 0 ? DOW[k] : d; }).join(', '));
+  if (Array.isArray(u.time) && u.time.length === 2) { var a = mrMin(u.time[0]), b = mrMin(u.time[1]); bits.push(a == null || b == null ? u.time.join('–') : fmtMin(a) + '–' + fmtMin(b + 1)); }
+  if (Array.isArray(u.countries) && u.countries.length) bits.push(u.countries.map(function (c) { return ccName(String(c).toUpperCase()); }).join(', '));
+  return bits.join(' · ') || 'Always';
+}
+function mrRuleLook(r) {
+  if (mrList('gear').indexOf(r) >= 0) {
+    return { ic: r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode, color: modeColor(r.mode || 'CYCLING'), kind: 'Gear period', gear: true };
+  }
+  var t = r.then || {};
+  return { ic: t.mode || 'OTHER', color: t.mode ? modeColor(t.mode) : '#9aa49d', kind: 'Routine', gear: false };
+}
+// The last line of Filters, drawn again each time the filters are applied.
+function mrHereLine() {
+  var L = mrHere(), all = {}, sec = $('mrHereSec');
+  L.forEach(function (x) { x.trips.forEach(function (i) { all[i] = 1; }); });
+  var n = Object.keys(all).length;
+  sec.hidden = !L.length;
+  if (L.length) $('mrHereTxt').innerHTML = '<b>' + L.length + ' rule' + (L.length === 1 ? '' : 's') + '</b> changed ' + fmt(n) + ' of the trips shown.';
+  if (openId === 'mrHereSheet') mrRenderHere(L);
+}
+function mrRenderHere(L) {
+  L = L || mrHere();
+  var shown = {};
+  for (var j = 0; j < sel.length; j++) { var m = MODES[D.mode[sel[j]]]; shown[m] = (shown[m] || 0) + 1; }
+  $('mrHereLead').textContent = filterText() + ' · ' + tripsText(sel.length) + '. ' + (L.length ? 'The rules below changed some of them. Turning one off here keeps it for every other trip.' : 'No gear period or routine changed any of them.');
+  $('mrHereList').innerHTML = L.map(function (x) {
+    var r = x.r, lk = mrRuleLook(r), n = x.trips.length;
+    var what = lk.gear ? 'Gear on <b class="num">' + fmt(n) + '</b> of the ' + fmt(shown[r.mode] || n) + ' ' + esc((LABEL[r.mode] || r.mode || '').toLowerCase()) + ' trips shown' : 'Matched <b class="num">' + fmt(n) + '</b> of the trips shown';
+    return '<div class="mr-rule mr-here"><span class="mode-badge sm" style="background:' + lk.color + '">' + icon(lk.ic) + '</span>' +
+      '<span class="file-txt"><b>' + esc(r.name || r.id) + '</b><small>' + lk.kind + ' · ' + mrWhenText(r.when) + '<br>' + what + '</small></span>' +
+      '<button type="button" class="btn" data-mr-off="' + esc(r.id) + '">Turn off for these trips</button></div>';
+  }).join('');
+}
+function mrOpenHere() { mrRenderHere(); openSheet('mrHereSheet'); }
+$('mrHereBtn').addEventListener('click', mrOpenHere);
+$('mrHereBack').addEventListener('click', function () { openSheet('filtersSheet'); });
+$('mrHereAll').addEventListener('click', function () { mrRenderRules(); openSheet('mrSheet'); });
+$('mrHereList').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-mr-off]');
+  if (b) mrTurnOffHere(b.dataset.mrOff);
+});
+// Turn off for these trips: the filters as a condition on the rule (the default, when any filter
+// can be written down), or just the trips shown, one by one, in its except.
+function mrTurnOffHere(id) {
+  var x = mrHere().filter(function (y) { return y.r.id === id; })[0];
+  if (!x) return;
+  var r = x.r, n = x.trips.length, fc = mrFilterCond(), lk = mrRuleLook(r), name = r.name || r.id;
+  var noun = lk.gear && r.mode === 'CYCLING' ? 'rides' : 'trips', what = n === 1 ? noun.replace(/s$/, '') : noun;
+  var chips = fc.words.map(function (w) { return '<span class="chip" aria-pressed="true" style="pointer-events:none">' + esc(w) + '</span>'; }).join(' ');
+  var extra = '<div class="mr-form">' + (fc.cond ? '<p class="fine mr-here-f">Your filters: ' + chips + '</p>' +
+    '<label class="mr-opt"><input type="radio" name="mrOffHow" value="cond" checked><span><b>' + (noun === 'rides' ? 'Rides' : 'Trips') + ' like these: ' + esc(mrUnlessText(fc.cond)) + '</b><small class="fine">Saved on the rule as “not on ' + esc(mrUnlessText(fc.cond)) + '”. ' + (noun === 'rides' ? 'Rides' : 'Trips') + ' loaded later follow it too.</small></span></label>' : '') +
+    '<label class="mr-opt"><input type="radio" name="mrOffHow" value="trips"' + (fc.cond ? '' : ' checked') + '><span><b>Just ' + (n === 1 ? 'this ' : 'these ') + fmt(n) + ' ' + what + '</b><small class="fine">Saved as the rule\'s exceptions, one per ' + what.replace(/s$/, '') + '. Nothing else changes.</small></span></label></div>';
+  mrAsk({
+    title: 'Turn off ' + name + ' for these trips?',
+    text: lk.gear ? 'It gave gear to <b>' + fmt(n) + '</b> ' + what + ' in what the filters show now. They\'ll have no gear, unless another rule fits them.'
+      : 'It matched <b>' + fmt(n) + '</b> ' + what + ' in what the filters show now. They\'ll be as your files have them, unless another rule fits them.',
+    extra: extra,
+    note: (fc.cond ? 'Transport and gear filters aren\'t part of it: the rule only touches ' + esc((LABEL[lk.gear ? r.mode : (r.then || {}).mode] || 'its own type').toLowerCase()) + ' anyway. ' : 'No date, day, time or country filter is on, so only the trips themselves can be saved. ') + 'Undo it from the rule in MyRules.',
+    buttons: [['Turn off for ' + fmt(n) + ' ' + what, 'primary', function () {
+      var how = (document.querySelector('input[name=mrOffHow]:checked') || {}).value;
+      if (how === 'cond' && fc.cond) {
+        (r.unless || (r.unless = [])).push(fc.cond);
+        mrUseV2();
+        mrChange(name + ' turned off for ' + mrUnlessText(fc.cond));
+      } else {
+        var ex = r.except || (r.except = []), have = mrExcept(r);
+        x.trips.forEach(function (i) { if (!have[i]) ex.push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }); });
+        mrChange(name + ' turned off for ' + fmt(n) + ' ' + what);
+      }
+      toast(name + ' is off for ' + fmt(n) + ' ' + what + '.');
+    }], ['Cancel', 'quiet', null]]
+  });
+}
+// A file with an unless is version 0.2 (0.2 only adds unless to 0.1).
+function mrUseV2() {
+  var v = String(MR.doc.myrules || '0.1').split('.');
+  if (v[0] === '0' && +v[1] < 2) { MR.doc.myrules = MR_VER; if (!MR.doc.$schema || /myrules-0\.1\.json$/.test(MR.doc.$schema)) MR.doc.$schema = MR_SCHEMA; }
+}

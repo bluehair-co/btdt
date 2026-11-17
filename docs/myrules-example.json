@@ -1,6 +1,6 @@
 {
-  "$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.1.json",
-  "myrules": "0.1",
+  "$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.2.json",
+  "myrules": "0.2",
   "about": { "name": "Example rules", "updated": "2026-11-14T21:40:00Z", "generator": "hand-written" },
 
   "places": [
@@ -18,7 +18,8 @@
 
   "gear": [
     { "id": "strida-evo", "name": "Strida EVO", "kind": "strida", "mode": "CYCLING",
-      "when": { "from": "2021-03-01", "to": "2023-08-31" }, "match": { "max_km": 25 } },
+      "when": { "from": "2021-03-01", "to": "2023-08-31" }, "match": { "max_km": 25 },
+      "unless": [{ "days": ["sat", "sun"] }, { "countries": ["VN", "JP"] }] },
     { "id": "gazelle", "name": "Gazelle Tour Populair", "kind": "bike", "mode": "CYCLING",
       "when": { "from": "2018-06-01" }, "strava_name": "Gazelle",
       "note": "The everyday bike. Rides over 25 km in the Strida years were on this one." },
