@@ -175,7 +175,7 @@ function setData(R) {
     modes: ms.modes,
     countries: D.ccList.map(function (_, k) { return k; }).filter(function (k) { return D.ccCount[k] > 0; })
       .sort(function (a, b) { return D.ccCount[b] - D.ccCount[a]; }),
-    minD: minD, maxD: maxD, anyGuess: anyGuess, navDays: [],
+    minD: minD, maxD: maxD, anyGuess: anyGuess, nCheck: mrCheckCount(), navDays: [],
     // Strava sports present, by mode, in the order SPORTS lists them.
     sports: ms.sports, sportN: ms.sportN,
     // Modes with trips that have no sport (from Timeline, or a Strava type BT•DT doesn't know).
@@ -384,7 +384,8 @@ function apply() {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
     // Guessed types and gear MyRules filled in go together.
-    if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || mrInferred(i))) continue;
+    if (F.guess === 'check') { if (!mrCheck(i)) continue; }
+    else if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || mrInferred(i))) continue;
     // Trips a MyRules correction hides.
     if (D.mrHide[i]) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
@@ -481,7 +482,8 @@ function buildFilterUI() {
     return chipHtml('countries', k, (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)));
   }).join('');
   $('ccSearch').hidden = M.countries.length < 12;
-  $('guessWrap').hidden = !M.anyGuess;
+  $('guessWrap').hidden = !M.anyGuess && !M.nCheck;
+  mrCheckUI();
   $('srcWrap').hidden = !D.stravaStats;
   $('srcActs').textContent = actsLabel(D.stravaStats);
   fillHourOpts();
@@ -525,6 +527,7 @@ function syncFilterUI() {
     b.setAttribute('aria-pressed', f === 'group' ? groupState(v) : f === 'modes' ? modeState(v) : F[f].has(+v) ? 'true' : 'false');
   });
   setPressed('#guessSeg button', function (b) { return b.dataset.g === F.guess; });
+  mrCheckUI();
   setPressed('#srcSeg button', function (b) { return b.dataset.src === F.src; });
   $('oneField').hidden = F.dm !== 'one';
   setPressed('#dayMode button', function (b) { return b.dataset.dm === 'nav' ? F.dm === 'one' && F.unit !== 'day' : b.dataset.dm === 'one' ? F.dm === 'one' && F.unit === 'day' : b.dataset.dm === F.dm; });
@@ -568,6 +571,10 @@ $('filtersSheet').addEventListener('click', function (ev) {
     if (F.dm === 'one') F.unit = 'day';
     if (F.dm === 'one' && M.navDays.length && M.navDays.indexOf(F.one) < 0) F.one = M.navDays[M.navDays.length - 1];
     if (F.dm === 'week') { var wk = lastWeek(); F.from = wk[0]; F.to = wk[1]; }
+  } else if (b.dataset.g === 'check') {
+    // The trips to check, from all your data: the period opens up to all time.
+    if (F.guess === 'check') F.guess = 'all';
+    else { F.guess = 'check'; F.dm = 'all'; allCalendar(); }
   } else if (b.dataset.g) F.guess = b.dataset.g;
   else if (b.dataset.src) F.src = b.dataset.src;
   else if (b.id === 'dowWeekdays') F.dows = new Set([1, 2, 3, 4, 5]);
@@ -943,7 +950,8 @@ function merge(base, parts) {
 function gather(all, out, src) {
   var n = out.length, npts = 0;
   var R = { start: new Float64Array(n), end: new Float64Array(n), day: new Int32Array(n), mode: new Uint8Array(n),
-    km: new Float32Array(n), est: new Uint8Array(n), off: new Int16Array(n), orig: new Float32Array(n), from: new Float32Array(2 * n), to: new Float32Array(2 * n), srcs: new Uint8Array(n), sport: new Uint8Array(n), stype: [], smeta: [] };
+    km: new Float32Array(n), est: new Uint8Array(n), off: new Int16Array(n), orig: new Float32Array(n), from: new Float32Array(2 * n), to: new Float32Array(2 * n), srcs: new Uint8Array(n), sport: new Uint8Array(n), stype: [], smeta: [],
+    gby: new Uint8Array(n), gconf: new Uint8Array(n) };
   out.forEach(function (x) { var p = all[x[0]]; npts += p.pathOff[x[1] + 1] - p.pathOff[x[1]]; });
   R.pathPts = new Float32Array(2 * npts); R.pathT = new Float32Array(npts); R.pathOff = new Uint32Array(n + 1);
   var w = 0;
@@ -951,6 +959,8 @@ function gather(all, out, src) {
     var p = all[x[0]], i = x[1];
     R.start[j] = p.start[i]; R.end[j] = p.end[i]; R.day[j] = p.day[i]; R.mode[j] = p.mode[i]; R.km[j] = p.km[i]; R.est[j] = p.est[i];
     R.off[j] = p.off ? p.off[i] : NO_OFF; R.orig[j] = p.orig ? p.orig[i] : 0;
+    // How a guessed type was found and how sure it is (see retypeGuessed); worked out again on every load.
+    if (p.gconf) { R.gby[j] = p.gby[i]; R.gconf[j] = p.gconf[i]; }
     R.from[2 * j] = p.from[2 * i]; R.from[2 * j + 1] = p.from[2 * i + 1]; R.to[2 * j] = p.to[2 * i]; R.to[2 * j + 1] = p.to[2 * i + 1];
     R.srcs[j] = src(p, i); R.sport[j] = p.sport ? p.sport[i] : 0; R.stype.push(p.stype && p.stype[i] || ''); R.smeta.push(p.smeta && p.smeta[i] || null);
     for (var q = p.pathOff[i]; q < p.pathOff[i + 1]; q++, w++) { R.pathPts[2 * w] = p.pathPts[2 * q]; R.pathPts[2 * w + 1] = p.pathPts[2 * q + 1]; R.pathT[w] = p.pathT[q]; }

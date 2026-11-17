@@ -239,6 +239,7 @@ One-off fixes for a trip, a day or a span.
 | Action | Meaning |
 |---|---|
 | `mode`, `gear`, `name` | Set the type, gear or title. Corrections are explicit, so they replace recorded values too. `gear` is a gear period's id (`"@strida-evo"`) or a gear's name as your activity files record it (`"Gazelle"`). |
+| `checked` | `true`: you checked the type your files give this trip and it is right. Nothing changes, but the trip leaves the *Check* list and its type counts three times when BT•DT learns from your trips. |
 | `hide` | Leave the matched trips out everywhere (map, totals, export). Undo shows them again. `"hide": false` on a later or narrower correction shows a trip a wider one hid. |
 | `replace` | Replace everything in the span or day with one trip, written like a simulated trip (airports by IATA code or place id). This is a one-line version of the existing `"simulated": true` files. |
 
@@ -247,6 +248,8 @@ A correction on a day or span that sets `gear` only fills trips without recorded
 ### 5.5 How corrections show in the app
 
 Anything a correction sets is marked **Edited** rather than *Inferred*: it is your own fix, not a guess, so the *Guessed and inferred* filter leaves it alone. The trip details list each change ("Type: Train (was cycling)") with **Undo**, which drops that action from a correction on one trip, or adds the trip to the `except` of a correction on a day or span. **Edit trip** in the trip details sets the type, title and *Hide this trip*, and writes them into one correction for that trip (made when needed, updated after, removed once empty); *Set gear → Just this trip* writes into the same one. Hidden trips can be opened again from the correction in the rules sheet.
+
+**Checking types.** Trips whose type may be wrong are marked *Check* (an unsure guess, a type from your files that your other trips between the same places disagree with, or a ride too fast for a bike). Their details ask *Is this the right type?*: keeping a guessed type writes `mode`, keeping a type from your files writes `"checked": true`, and changing it writes the new `mode`, all in the correction for that trip. Your corrections, checks and routines then count when BT•DT guesses the type of trips between the same places (a fix three times as much as a type from your files).
 
 ---
 

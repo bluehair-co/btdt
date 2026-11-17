@@ -861,7 +861,7 @@ function tripRows(i) {
   if (isSim(i)) notes.push('Simulated from a file you loaded, not recorded by Timeline. It replaces any exported trip at the same time.');
   if (e & PATH_TRIP) notes.push('Timeline kept GPS points here but no trip, so BT•DT made this trip from them.');
   if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? (actApp(i) ? esc(actApp(i)) + ' calls' : 'Its file calls') + ' this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : (actApp(i) ? esc(actApp(i)) + ' gives' : 'Its file gives') + ' this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');
-  else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed: from its speed, then from your labelled trips along the same line, and from railway stations at its ends.');
+  else if (e & 4) notes.push('Timeline gave this trip no transport type, or one that didn\'t fit its speed, so the type is guessed ' + guessHow(i) + '.');
   if (e & RECORDS_GPS) notes.push('The line follows the GPS points from Records.json' + ((e & 3) === 1 ? ', and the distance is measured along them' + (D.orig[i] > 0 && Math.abs(D.orig[i] - k) > 0.05 * k ? ' (Timeline said ' + dist(D.orig[i]) + ').' : '.') : '.'));
   else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT•DT measures the distance along the GPS trail instead.');
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT•DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');
@@ -1121,6 +1121,14 @@ function openTrip(i, fromList) {
 }
 // Everything BT•DT keeps about one trip, as JSON, to look into a trip without sharing the whole import.
 // BT•DT keeps what it read from the files, not the files themselves, so this is that.
+// How a guessed type was found (R.gby, see retypeGuessed and mrLearn), for the trip details.
+function guessHow(i) {
+  var l = D.learn && D.learn[i], c = D.conf && D.conf[i];
+  var how = l ? 'from your other trips between these places at this speed, counting the types you fixed or checked yourself (it was ' + esc((LABEL[l.was] || l.was).toLowerCase()) + ' from its speed)'
+    : ['from its average speed', 'from its average speed', 'from its speed along the way (its fastest and slowest stretches, not just the average)',
+      'from your other trips between these places at this speed', 'from your labelled trips along the same line', 'from railway stations at its ends', 'from its speed, too fast for a car'][D.gby ? D.gby[i] : 0] || 'from its speed';
+  return how + (c ? ' (' + c + '% sure)' : '');
+}
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
   [16, 'recorded activity'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
   [JUMPS, 'bad GPS points left out']];
@@ -1212,7 +1220,7 @@ function exportFilters() {
     if (M.sports.length) o.sports = M.sports.filter(function (s) { return F.sports.has(s); }).map(function (s) { return SPORTS[s][0]; });
   }
   if (F.countries.size !== M.countries.length) o.countries = M.countries.filter(function (c) { return F.countries.has(c); }).map(function (c) { return ccName(D.ccList[c]); });
-  if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : 'only these';
+  if (F.guess !== 'all') o.guessedType = F.guess === 'no' ? 'left out' : F.guess === 'check' ? 'only trips to check' : 'only these';
   if (F.src !== 'all') o.source = F.src === 'strava' ? actsLabel(D.stravaStats) : 'Timeline';
   if (F.gear.size !== gearIds().length) o.gear = gearIds().filter(function (g) { return F.gear.has(g); }).map(gearName);
   return o;
