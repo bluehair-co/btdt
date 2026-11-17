@@ -871,6 +871,21 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* Zoom buttons sit on the left edge, centred top to bottom. */
 #map .leaflet-top.leaflet-left { top: 50%; transform: translateY(-50%); }
 #map .leaflet-top.leaflet-left .leaflet-control-zoom { margin: 0 0 0 16px; }
+/* Zoom to all: under the zoom buttons, or a round button above the layers button on touch screens.
+   The dot says some trips in the filters are out of view. */
+#map .leaflet-control-zoom a.zoom-all { position: relative; display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
+#map .leaflet-control-zoom a.zoom-all svg { width: 18px; height: 18px; fill: currentColor; }
+.zoom-all .dot, .fit-all .dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel); }
+.zoom-all .dot[hidden], .fit-all .dot[hidden] { display: none; }
+.fab.fit-all { width: 44px; height: 44px; transform: translate(-4px, -58px); }
+.fab.fit-all svg { width: 20px; height: 20px; }
+.fab.fit-all .dot { top: 0; right: 0; }
+#mapPage .fab.fit-all { display: none; }
+@media (pointer: coarse) { #mapPage .fab.fit-all { display: flex; } }
+/* Beacons: a soft halo around a dot in the trips' colour, on trips too small to see. */
+.beacon i { position: absolute; inset: 0; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle, var(--c) 0 13%, #fff 14% 20%, color-mix(in srgb, var(--c) 40%, transparent) 21% 50%, transparent 72%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); }
 .heat-canvas { position: absolute; left: 0; top: 0; }
 .list-rows .hit-row { padding: 10px 2px; }
 #map, #proj { z-index: 0; }
@@ -1245,6 +1260,7 @@ div.hit-row:hover { background: none; }
     <div class="map-legend" id="mapLegend"></div>
     <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
+    <button type="button" class="fab right fit-all" id="fitAllBtn" aria-label="Zoom to all trips" title="Zoom to all trips"><span data-icon="fit"></span><i class="dot" hidden></i></button>
   </section>
 
   <!-- Insights -->
@@ -5836,6 +5852,11 @@ function initMap() {
   speedLayer = L.layerGroup();
   sqLayer = L.layerGroup();
   hlLayer = L.layerGroup().addTo(map);
+  map.createPane('beacon'); map.getPane('beacon').style.zIndex = 450;
+  beaconLayer = L.layerGroup().addTo(map);
+  map.on('zoomend moveend', buildBeacons);
+  map.on('moveend resize', syncAllDot);
+  if (map.zoomControl) addZoomAll(map.zoomControl.getContainer());
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
   posMarker._mode = null;
@@ -5869,6 +5890,7 @@ function renderMapTab() {
     if (PREFS.heat && heatDirty) heatLayer.redraw();
   }
   if (PREFS.proj !== 'merc') drawProj();
+  syncAllDot();
   return ok;
 }
 // Transport colours as the map shows them: read from the map, which takes the light theme's
@@ -5929,6 +5951,7 @@ function layerToggles() {
   else if (PREFS.pins && !pinLayer.getLayers().length) renderPins();
   if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
   if ((PREFS.speedPaths || PREFS.hrPaths) && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._m !== pathsKey() || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
+  buildBeacons();
 }
 
 // ---------- explorer squares ----------
@@ -6310,25 +6333,144 @@ function renderPins() {
 }
 function ccVer() { return selVer() + '|' + ccReach().key; }
 function selVer() { return sel.length + ':' + (sel[0] || 0) + ':' + (sel[sel.length - 1] || 0) + ':' + selV.length; }
-function fitAll() {
+// all: every trip, the far-off ends too (the zoom to all button).
+function fitAll(all) {
   if (PREFS.proj !== 'merc') { if (P) P.fitted = false; return; }
   if (!map) return;
   var b = mapBounds.slice();
   if (!b.length) for (var v = 0; v < selV.length; v++) b.push([D.vll[2 * selV[v]], D.vll[2 * selV[v] + 1]]);
   // Over many trips, leave out the few far-off ends so the map opens on where you usually are.
   // The demo opening on all its data shows every trip, the far-off holidays too.
-  if (b.length > 40 && !(DEMO && F.dm === 'all')) {
+  var trim = b.length > 40 && !all && !(DEMO && F.dm === 'all');
+  if (trim) {
     var la = b.map(function (p) { return p[0]; }).sort(function (x, y) { return x - y; }), lo = b.map(function (p) { return p[1]; }).sort(function (x, y) { return x - y; });
     var q = function (a, f) { return a[Math.floor((a.length - 1) * f)]; };
     b = [[q(la, 0.03), q(lo, 0.03)], [q(la, 0.97), q(lo, 0.97)]];
   }
-  if (b.length) map.fitBounds(L.latLngBounds(b), { padding: wide() ? [100, 60] : [90, 40], maxZoom: 15 });
+  if (!b.length) return null;
+  var o = { padding: wide() ? [100, 60] : [90, 40], maxZoom: 15 }, t = map._getBoundsCenterZoom(L.latLngBounds(b), o);
+  map.fitBounds(L.latLngBounds(b), o);
+  // Where a fit of every trip lands counts as all in view, even on a screen too narrow to show them all.
+  allView = trim ? null : { c: t.center, z: t.zoom };
+  syncAllDot();
 }
 $('fitBtn').addEventListener('click', function () {
   if (PREFS.proj !== 'merc') { if (P) { P.fitted = false; drawProj(); } }
   else fitAll();
   if (!wide()) closeSheets();
 });
+
+// ---------- zoom to all, and beacons on trips too small to see ----------
+// The zoom to all button sits under the zoom buttons (a round button above the layers button on
+// touch screens, which have no zoom buttons) and fits every trip in the filters. A dot on it says
+// some of them are out of view.
+function zoomAll() {
+  if (PREFS.proj !== 'merc') { if (P) { P.fitted = false; drawProj(); } return; }
+  fitAll(true);
+}
+var allView = null;
+function addZoomAll(bar) {
+  var a = L.DomUtil.create('a', 'zoom-all', bar);
+  a.href = '#'; a.setAttribute('role', 'button'); a.title = 'Zoom to all trips'; a.setAttribute('aria-label', 'Zoom to all trips');
+  a.innerHTML = icon('fit') + '<i class="dot" hidden></i>';
+  L.DomEvent.disableClickPropagation(a);
+  L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomAll(); });
+}
+$('fitAllBtn').addEventListener('click', zoomAll);
+// Whether some of the trips in the filters (their stays when there are none) are out of view.
+function outOfView() {
+  if (!map || PREFS.proj !== 'merc' || tab !== 'map') return false;
+  if (allView && allView.z === map.getZoom() && map.latLngToContainerPoint(allView.c).distanceTo(map.getSize().divideBy(2)) < 8) return false;
+  var v = map.getBounds(), s = v.getSouth(), n = v.getNorth(), w = v.getWest(), e = v.getEast();
+  if (e - w >= 360) { w = -1e9; e = 1e9; }
+  function lngIn(x) { return (x >= w && x <= e) || (x + 360 >= w && x + 360 <= e) || (x - 360 >= w && x - 360 <= e); }
+  for (var k = 0; k < hits.length; k++) {
+    var bb = hits[k].bb;
+    if (bb[0] < s || bb[2] > n || !lngIn(bb[1]) || !lngIn(bb[3])) return true;
+  }
+  if (!hits.length) for (var j = 0; j < selV.length; j++) {
+    var la = D.vll[2 * selV[j]], lo = D.vll[2 * selV[j] + 1];
+    if (la < s || la > n || !lngIn(lo)) return true;
+  }
+  return false;
+}
+function syncAllDot() {
+  var out = outOfView();
+  document.querySelectorAll('.zoom-all .dot, #fitAllBtn .dot').forEach(function (d) { d.hidden = !out; });
+  document.querySelectorAll('.zoom-all, #fitAllBtn').forEach(function (b) {
+    b.title = out ? 'Zoom to all trips (some are out of view)' : 'Zoom to all trips';
+    b.setAttribute('aria-label', b.title);
+  });
+}
+// A beacon marks trips too small to see at this zoom with nothing you can see around them, such
+// as a walk on holiday when you filter to walks. Trips are grouped into squares of BEACON_CELL
+// pixels; a group gets a beacon when, together, its trips are under BEACON_SMALL pixels across
+// and no trip big enough to see passes through its square or the squares around it. Tap one to
+// zoom in on its trips. Beacons leave while a playback is under way.
+var beaconLayer = null, BEACON_CELL = 48, BEACON_SMALL = 16;
+function beaconKey() { return [applyCount, map.getZoom(), PREFS.paths, PREFS.speedPaths, PREFS.hrPaths, PREFS.proj, visibleB === sel.length, isDark(), hits.length].join('|'); }
+function buildBeacons() {
+  if (!map || !beaconLayer) return;
+  // Worked out for the view and a screen around it, again once the map moves past that.
+  var key = beaconKey(), pb = map.getPixelBounds(), r = beaconLayer._r;
+  if (beaconLayer._key === key && beaconLayer._d === D && r && r.contains(pb)) return;
+  var sz = map.getSize();
+  r = beaconLayer._r = L.bounds(pb.min.subtract(sz), pb.max.add(sz));
+  beaconLayer._key = key; beaconLayer._d = D;
+  beaconLayer.clearLayers();
+  if (PREFS.proj !== 'merc' || !(PREFS.paths || PREFS.speedPaths || PREFS.hrPaths) || visibleB < sel.length) return;
+  var S = 256 * Math.pow(2, map.getZoom()), C = BEACON_CELL, seen = new Set(), small = new Map();
+  var rx0 = r.min.x, ry0 = r.min.y, rx1 = r.max.x, ry1 = r.max.y;
+  function outside(x0, y0, x1, y1) { return x1 < rx0 || x0 > rx1 || y1 < ry0 || y0 > ry1; }
+  function cell(x, y) { return Math.floor(x / C) * 1e6 + Math.floor(y / C); }
+  hits.forEach(function (h) {
+    var a = wpx([h.bb[2], h.bb[1]], S), b = wpx([h.bb[0], h.bb[3]], S);
+    if (outside(a[0], a[1], b[0], b[1])) return;
+    if (Math.max(b[0] - a[0], b[1] - a[1]) >= BEACON_SMALL) {
+      // A trip you can see: every square it passes through, a third of a square at a time.
+      var pts = h.parts[0], prev = null;
+      for (var q = 0; q < pts.length; q++) {
+        var p = wpx(pts[q], S);
+        if (prev && !outside(Math.min(p[0], prev[0]), Math.min(p[1], prev[1]), Math.max(p[0], prev[0]), Math.max(p[1], prev[1]))) {
+          var n = Math.min(200, Math.ceil(Math.max(Math.abs(p[0] - prev[0]), Math.abs(p[1] - prev[1])) / (C / 3)));
+          for (var t = 1; t < n; t++) seen.add(cell(prev[0] + (p[0] - prev[0]) * t / n, prev[1] + (p[1] - prev[1]) * t / n));
+        }
+        seen.add(cell(p[0], p[1])); prev = p;
+      }
+      return;
+    }
+    var k = cell((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), g = small.get(k);
+    if (!g) small.set(k, g = { x0: a[0], y0: a[1], x1: b[0], y1: b[1], trips: [], colors: {} });
+    g.x0 = Math.min(g.x0, a[0]); g.y0 = Math.min(g.y0, a[1]); g.x1 = Math.max(g.x1, b[0]); g.y1 = Math.max(g.y1, b[1]);
+    g.trips.push(h.i); g.colors[h.color] = (g.colors[h.color] || 0) + 1;
+  });
+  // A square whose small trips together are big enough to see counts as seen too.
+  small.forEach(function (g, k) { if (Math.max(g.x1 - g.x0, g.y1 - g.y0) >= BEACON_SMALL) seen.add(k); });
+  var accent = cssVar('--accent'), placed = [];
+  small.forEach(function (g, k) {
+    var cx = Math.floor(k / 1e6), cy = k - cx * 1e6;
+    for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) if (seen.has((cx + dx) * 1e6 + cy + dy)) return;
+    // Next to another beacon (the trips straddle two squares): one beacon for both.
+    var x = (g.x0 + g.x1) / 2, y = (g.y0 + g.y1) / 2;
+    var p = placed.filter(function (o) { return Math.abs(o.x - x) < BEACON_SMALL && Math.abs(o.y - y) < BEACON_SMALL; })[0];
+    if (p) {
+      p.x0 = Math.min(p.x0, g.x0); p.y0 = Math.min(p.y0, g.y0); p.x1 = Math.max(p.x1, g.x1); p.y1 = Math.max(p.y1, g.y1);
+      p.trips = p.trips.concat(g.trips); for (var c in g.colors) p.colors[c] = (p.colors[c] || 0) + g.colors[c];
+    } else placed.push({ x: x, y: y, x0: g.x0, y0: g.y0, x1: g.x1, y1: g.y1, trips: g.trips.slice(), colors: g.colors });
+  });
+  placed.forEach(function (g) {
+    var x0 = g.x0, y0 = g.y0, x1 = g.x1, y1 = g.y1, trips = g.trips, colors = g.colors;
+    var color = PREFS.paths ? Object.keys(colors).sort(function (p, q) { return colors[q] - colors[p]; })[0] : accent;
+    var nw = wll(x0, y0, S), se = wll(x1, y1, S), n = trips.length;
+    var tip = tripsText(n) + ' here';
+    var m = L.marker(wll((x0 + x1) / 2, (y0 + y1) / 2, S), {
+      pane: 'beacon', keyboard: false, title: tip + '. Tap to zoom in',
+      icon: L.divIcon({ className: 'beacon', iconSize: [36, 36], html: '<i style="--c:' + color + '"></i>' })
+    });
+    m.on('click', function () { map.fitBounds(L.latLngBounds([nw, se]), { padding: wide() ? [100, 60] : [90, 40], maxZoom: 15 }); });
+    beaconLayer.addLayer(m);
+  });
+}
 
 // ---------- tapping and hovering lines ----------
 function segDist(p, a, b) {
@@ -7123,6 +7265,7 @@ function scrubTo(v) {
   if (PREFS.proj !== 'merc' && P && P.proj) paintProj(playing);
   scrubLabel();
   paintSky();
+  if (map && (old === sel.length) !== (b === sel.length)) buildBeacons();
 }
 var P_pos = null, P_cur = null, prevCur = null;
 // A trip still under way at midnight when a day's playback ends rolls playback on into the

@@ -827,6 +827,21 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* Zoom buttons sit on the left edge, centred top to bottom. */
 #map .leaflet-top.leaflet-left { top: 50%; transform: translateY(-50%); }
 #map .leaflet-top.leaflet-left .leaflet-control-zoom { margin: 0 0 0 16px; }
+/* Zoom to all: under the zoom buttons, or a round button above the layers button on touch screens.
+   The dot says some trips in the filters are out of view. */
+#map .leaflet-control-zoom a.zoom-all { position: relative; display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
+#map .leaflet-control-zoom a.zoom-all svg { width: 18px; height: 18px; fill: currentColor; }
+.zoom-all .dot, .fit-all .dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel); }
+.zoom-all .dot[hidden], .fit-all .dot[hidden] { display: none; }
+.fab.fit-all { width: 44px; height: 44px; transform: translate(-4px, -58px); }
+.fab.fit-all svg { width: 20px; height: 20px; }
+.fab.fit-all .dot { top: 0; right: 0; }
+#mapPage .fab.fit-all { display: none; }
+@media (pointer: coarse) { #mapPage .fab.fit-all { display: flex; } }
+/* Beacons: a soft halo around a dot in the trips' colour, on trips too small to see. */
+.beacon i { position: absolute; inset: 0; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle, var(--c) 0 13%, #fff 14% 20%, color-mix(in srgb, var(--c) 40%, transparent) 21% 50%, transparent 72%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); }
 .heat-canvas { position: absolute; left: 0; top: 0; }
 .list-rows .hit-row { padding: 10px 2px; }
 #map, #proj { z-index: 0; }
