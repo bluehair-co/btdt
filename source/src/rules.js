@@ -228,7 +228,8 @@ function mrApplyGear(byName, addGear) {
 // Inferred: gear a gear period filled in. Edited: anything a correction set.
 function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i]); }
 function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor)); }
-function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrInferred(i) ? '<span class="guess inf">Inferred</span>' : ''); }
+function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrInferred(i) ? '<span class="guess inf">Inferred</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
+function mrCheck(i) { return !!(D.chk && D.chk[i] >= 0); }
 
 // Corrections, ready to apply: the switched-on ones that point at trips, those on a day or span
 // first and those on one trip after, each in file order, so applying them in turn lets the trip's
@@ -250,9 +251,9 @@ function mrApplyCorrections() {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
   D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
-  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.snap = []; D.mrLine = {};
+  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
   MR_COUNT = {}; MR_COR = null; MR_NOFIT = {};
-  if (!MR || !MR.on) return;
+  if (!MR || !MR.on) { mrLearn(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
   mrCorrections().forEach(function (x) {
@@ -267,14 +268,87 @@ function mrApplyCorrections() {
         D.mrMode[i] = { rule: x.c.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED) };
         hit = 1;
       }
+      if (t.checked === true && mi == null) { D.mrOk[i] = 1; hit = 1; }
       if (typeof t.name === 'string' && t.name.trim()) { D.mrName[i] = { rule: x.c.id, name: t.name.trim() }; hit = 1; }
       if (t.hide === true) { D.mrHide[i] = 1; hit = 1; }
       else if (t.hide === false && D.mrHide[i]) { D.mrHide[i] = 0; hit = 1; }
     });
     if (hit) MR_COUNT[x.c.id] = x.trips.length;
   });
+  mrLearn();
   // Lines last: a trip a correction moved to another type keeps its routine's line only if it still matches.
   mrApplySnaps();
+}
+
+// ---------- learning from your fixes, and trips to check ----------
+// After MyRules, guessed trips vote again on your other trips between the same two places at a
+// like speed (TripIndex), now with your own fixes in: a type you set or checked counts VOTE_FIX
+// times as much as one from your files, a recorded activity or a routine's twice. A guess that
+// changes is kept in D.learn. D.conf is how sure each guess is, and D.chk the type suggested for
+// trips worth a look (-1 for none):
+// - guesses under CHECK_CONF;
+// - a type from your files that DOUBT_MIN or more of your like trips between the same places
+//   (DOUBT_SHARE of them) disagree with, while hardly any (DOUBT_OWN) share it (a type you use
+//   now and then on that way, like the tram in winter, is left alone), among cycling and motorised types (walks are left out:
+//   Google's short walks and slow rides overlap too much to tell);
+// - a ride from your files averaging over 32 km/h (VOTE_KMH.CYCLING), which a car or train it is.
+// Trips you fixed or checked, recorded activities and flights are never offered.
+var VOTE_FIX = 3, DOUBT_MIN = 5, DOUBT_SHARE = 0.8, DOUBT_OWN = 0.1;
+var DOUBT_GROUPS = { CYCLING: 1, CAR: 1, BUS: 1, TRAM: 1, TRAIN: 1, SUBWAY: 1 };
+function mrLearn() {
+  var n = D.day.length, i, fly = MODE_IDX.FLYING;
+  D.chk = new Int8Array(n).fill(-1); D.chkWhy = []; D.learn = []; D.conf = new Uint8Array(n);
+  function fixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
+  var idx = new TripIndex(D, function (j) {
+    if (isDup(j) || D.mrHide[j] || D.est[j] & GUESSED || D.mode[j] === fly) return 0;
+    if (fixed(j)) return VOTE_FIX;
+    return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
+  });
+  for (i = 0; i < n; i++) {
+    if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || fixed(i)) continue;
+    var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
+    if (D.est[i] & GUESSED) {
+      if (D.est[i] & STRAVA) continue;
+      var conf = D.gconf ? D.gconf[i] : 0;
+      v = idx.decide(i, avg);
+      if (v && VOTE_GROUP[v.mode] !== VOTE_GROUP[m]) { D.learn[i] = { was: m, n: v.trips }; D.mode[i] = MODE_IDX[v.mode]; m = v.mode; conf = v.conf; }
+      else if (v) conf = Math.max(conf, v.conf);
+      D.conf[i] = conf;
+      if (conf && conf < CHECK_CONF) { D.chk[i] = MODE_IDX[mrAltMode(i, m, avg, v || idx.votes(i, avg))]; D.chkWhy[i] = { kind: 'guess' }; }
+      continue;
+    }
+    if (D.est[i] & STRAVA || !DOUBT_GROUPS[VOTE_GROUP[m]]) continue;
+    if (VOTE_GROUP[m] === 'CYCLING' && avg > VOTE_KMH.CYCLING[1]) { D.chk[i] = MODE_IDX[avg > 90 ? 'TRAIN' : 'CAR']; D.chkWhy[i] = { kind: 'speed', avg: avg }; continue; }
+    v = idx.votes(i, avg);
+    var r = v && VOTE_KMH[v.group];
+    if (v && v.group !== VOTE_GROUP[m] && DOUBT_GROUPS[v.group] && v.n >= DOUBT_MIN && v.share >= DOUBT_SHARE && (v.by[VOTE_GROUP[m]] || 0) <= DOUBT_OWN * v.tot && avg >= r[0] && avg <= r[1]) {
+      D.chk[i] = MODE_IDX[v.mode]; D.chkWhy[i] = { kind: 'history', n: v.trips, share: v.share };
+    }
+  }
+}
+// The likeliest other type for a guess worth checking: what your like trips mostly were, else the
+// runner-up among them, else the neighbour by speed.
+function mrAltMode(i, m, avg, v) {
+  var g = VOTE_GROUP[m];
+  if (v && v.group !== g && v.mode) return v.mode;
+  if (v && v.alt && v.alt !== g) return v.alt;
+  if (g === 'WALKING') return 'CYCLING';
+  if (g === 'CYCLING') return avg >= 14 ? 'CAR' : 'WALKING';
+  if (g === 'CAR') return avg < 30 ? 'CYCLING' : 'TRAIN';
+  if (g === 'TRAIN') return 'CAR';
+  return 'CAR';
+}
+// The Check button in the filters: how many trips are worth a look, and showing only those.
+function mrCheckUI() {
+  var b = $('checkBtn'), c = M && M.nCheck || 0;
+  if (!b) return;
+  b.hidden = !c;
+  b.setAttribute('aria-pressed', F && F.guess === 'check' ? 'true' : 'false');
+  b.innerHTML = icon('info') + (F && F.guess === 'check' ? 'Showing the ' : 'Check ') + fmt(c) + ' trip' + (c === 1 ? '' : 's') + ' whose type may be wrong';
+}
+function mrCheckCount() {
+  for (var i = 0, c = 0; D && D.chk && i < D.chk.length; i++) if (D.chk[i] >= 0) c++;
+  return c;
 }
 
 // ---------- routines ----------
@@ -507,6 +581,10 @@ function mrReapply() {
   D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
   mrApplyPlaces();
   M.anyGuess = mrAnyGuess();
+  M.nCheck = mrCheckCount();
+  if (F.guess === 'check' && !M.nCheck) F.guess = 'all';
+  $('guessWrap').hidden = !M.anyGuess && !M.nCheck;
+  mrCheckUI();
   // Gear that is new (or all of it, when all was on) is on; the rest as it was.
   F.gear = new Set(gearIds().filter(function (g) { var k = g >= NO_GEAR ? 'no:' + g : 'g:' + GEAR[g].name; return allG || !had[k] || on[k]; }));
   // Pins carry place names in their titles: drawn again.
@@ -846,6 +924,7 @@ function mrTripBlock(i) {
     var hc = mrCorrections().filter(function (x) { return x.c.then.hide === true && x.trips.indexOf(i) >= 0; }).pop();
     h += '<div class="mr-chg"><b>Hidden</b> from the map, lists and totals' + (hc ? src(hc.c.id, 'hide') : '') + '</div>';
   }
+  if (D.mrOk && D.mrOk[i]) { var okc = mrTripCorrection(i); h += '<div class="mr-chg"><b>Type checked:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' is right' + (okc ? src(okc.id, 'checked') : '') + '</div>'; }
   if (md) h += '<div class="mr-chg"><b>Type:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' <span class="fine">(was ' + esc((LABEL[md.was] || md.was).toLowerCase()) + (md.guessed ? ', guessed' : '') + ')</span>' + src(md.rule, md.inf ? '' : 'mode') + '</div>';
   if (nm) h += '<div class="mr-chg"><b>Title:</b> ' + esc(nm.name) + (recName(i) ? ' <span class="fine">(was “' + esc(recName(i)) + '”)</span>' : '') + src(nm.rule, 'name') + '</div>';
   if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
@@ -864,14 +943,54 @@ function mrTripBlock(i) {
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
   if (rr && rr.then && rr.then.snap && ln && !ln.missing && ln.from !== i && (ln.src === 'trip' || rr.then.snap === 'learn') && mrClean(i)) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(rr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
-  return '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
+  return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
+}
+// Is this the right type? For a trip in the check list: why, and one tap to keep or change its type.
+function mrCheckBlock(i) {
+  if (!mrCheck(i)) return '';
+  var m = MODES[D.mode[i]], alt = MODES[D.chk[i]], w = D.chkWhy[i] || {}, lab = function (x) { return esc((LABEL[x] || x).toLowerCase()); }, why;
+  if (w.kind === 'speed') why = 'Your files say ' + lab(m) + ', but it averaged ' + speed(w.avg) + ', faster than a bike ride.';
+  else if (w.kind === 'history') why = 'Your files say ' + lab(m) + ', but ' + fmt(w.n) + ' of your trips between these places at a like speed were mostly by ' + lab(alt) + '.';
+  else why = 'BT•DT guessed ' + lab(m) + ' but isn\'t sure. It may have been ' + lab(alt) + '.';
+  return '<div class="mr-check"><h4 class="place-h">Is this the right type?</h4><p class="fine">' + why + ' Your answer is saved in MyRules and teaches BT•DT for trips like it.</p>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' +
+    '<button type="button" class="btn primary" data-mr-act="type" data-m="' + m + '" data-t="' + i + '">' + esc(LABEL[m] || m) + ' is right</button>' +
+    '<button type="button" class="btn" data-mr-act="type" data-m="' + alt + '" data-t="' + i + '">It was ' + lab(alt) + '</button>' +
+    '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">Something else</button></div></div>';
+}
+// One tap from the check: sets the type (or, when it is the one your files had, marks it checked)
+// in the correction for this trip.
+function mrQuickType(i, type) {
+  var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]];
+  mrEnsure();
+  var c = mrTripCorrection(i);
+  if (!c) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
+  var t = c.then || (c.then = {});
+  if (type !== was || D.base.est[i] & GUESSED) { t.mode = type; delete t.checked; } else { delete t.mode; t.checked = true; }
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (type === cur ? 'type checked, ' : 'type ') + (LABEL[type] || type).toLowerCase());
+  var next = mrNextCheck(i);
+  toast(type === cur ? 'Kept as ' + (LABEL[type] || type).toLowerCase() + '.' : 'Changed to ' + (LABEL[type] || type).toLowerCase() + '.');
+  if (type !== cur) { openTrip(i); setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
+  else if (next >= 0) openTrip(next); else openTrip(i);
+}
+// The next trip to check after trip i among those the filters show (oldest first), else the first.
+function mrNextCheck(i) {
+  var first = -1, after = false;
+  for (var k = 0; k < sel.length; k++) {
+    var j = sel[k];
+    if (j === i) { after = true; continue; }
+    if (!mrCheck(j)) continue;
+    if (after) return j;
+    if (first < 0) first = j;
+  }
+  return F.guess === 'check' ? first : -1;
 }
 // Drops one action from a correction, and the correction once it has none left.
 function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
-var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden' };
+var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked' };
 $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
@@ -896,7 +1015,8 @@ $('tripBody').addEventListener('click', function (ev) {
     else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
     mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
     openTrip(i);
-  } else if (act === 'gear') mrGearDialog(i);
+  } else if (act === 'type') mrQuickType(i, b.dataset.m);
+  else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
 });
 // The correction for this one trip that Edit trip changes: the last one pointing at it by its start.

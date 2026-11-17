@@ -593,29 +593,145 @@ function steadyFast(run) {
   for (j2 = 0; j2 < v.length; j2++) if (v[j2][0] >= 0.6 * med && v[j2][0] <= 1.6 * med) steady += v[j2][1];
   return steady >= 0.85 * tot;
 }
+// ---------- learning from your own trips ----------
+// Types that count as one way of travelling when trips vote (a taxi is a car, a boat a ferry).
+var VOTE_GROUP = { WALKING: 'WALKING', RUNNING: 'RUNNING', CYCLING: 'CYCLING', CAR: 'CAR', TAXI: 'CAR', VEHICLE: 'CAR', MOTORCYCLE: 'CAR',
+  BUS: 'BUS', TRAM: 'TRAM', TRAIN: 'TRAIN', SUBWAY: 'SUBWAY', FERRY: 'FERRY', BOAT: 'FERRY' };
+// The average speeds (km/h) a trip of each group can have: a vote for a group outside them is left out.
+var VOTE_KMH = { WALKING: [0, 9], RUNNING: [4, 22], CYCLING: [4, 32], CAR: [4, 160], BUS: [4, 100], TRAM: [4, 60], SUBWAY: [6, 100], TRAIN: [12, 350], FERRY: [2, 80] };
+// Two trips are between the same places when both their ends are within END_KM of each other's
+// (either way round), and alike when their average speeds differ by under VOTE_DKMH or VOTE_DREL of it.
+var END_KM = 0.4, VOTE_DKMH = 6, VOTE_DREL = 0.35;
+var END_LAT = 0.004, END_LNG = 0.006;
+function endKey(ya, xa, yb, xb) { return Math.imul(ya, 73856093) ^ Math.imul(xa, 19349663) ^ Math.imul(yb, 83492791) ^ Math.imul(xb, 50331653); }
+function tripAvg(R, i) { var h = (R.end[i] - R.start[i]) / 36e5; return h > 0 ? R.km[i] / h : 0; }
+// The trips of R that may vote, by the cells of their two ends. weight(i) is how much trip i's type
+// counts (0 leaves it out): 1 for a type from your files, more for one you set yourself.
+function TripIndex(R, weight) {
+  this.R = R; this.w = new Float32Array(R.mode.length); this.m = new Map();
+  for (var i = 0; i < R.mode.length; i++) {
+    var w = weight(i), la = R.from[2 * i], lb = R.to[2 * i];
+    if (!(w > 0) || !VOTE_GROUP[MODES[R.mode[i]]] || !isFinite(la) || !isFinite(lb)) continue;
+    var k = endKey(Math.floor(la / END_LAT), Math.floor(R.from[2 * i + 1] / END_LNG), Math.floor(lb / END_LAT), Math.floor(R.to[2 * i + 1] / END_LNG));
+    var L = this.m.get(k);
+    if (L) L.push(i); else this.m.set(k, [i]);
+    this.w[i] = w;
+  }
+}
+// What your other trips between trip i's two places at a like speed were, by group:
+// { mode, group, share, n (their weight), trips (how many), alt } for the group with the most weight, or null when there are none.
+// mode is the type most used within the group, alt the runner-up group.
+TripIndex.prototype.votes = function (i, avg) {
+  var R = this.R, S = this.R, a0 = R.from[2 * i], a1 = R.from[2 * i + 1], b0 = R.to[2 * i], b1 = R.to[2 * i + 1];
+  if (!isFinite(a0) || !isFinite(b0)) return null;
+  if (avg == null) avg = tripAvg(R, i);
+  var tol = Math.max(VOTE_DKMH, VOTE_DREL * avg), by = {}, raw = {}, tot = 0, cnt = 0, seen = new Set(), self = this;
+  var ya = Math.floor(a0 / END_LAT), xa = Math.floor(a1 / END_LNG), yb = Math.floor(b0 / END_LAT), xb = Math.floor(b1 / END_LNG);
+  function look(y0, x0, y1, x1, p, q) {
+    for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) for (var ey = -1; ey <= 1; ey++) for (var ex = -1; ex <= 1; ex++) {
+      var L = self.m.get(endKey(y0 + dy, x0 + dx, y1 + ey, x1 + ex));
+      if (!L) continue;
+      for (var k = 0; k < L.length; k++) {
+        var j = L[k];
+        if (j === i || seen.has(j)) continue;
+        seen.add(j);
+        if (km(p, [S.from[2 * j], S.from[2 * j + 1]]) > END_KM || km(q, [S.to[2 * j], S.to[2 * j + 1]]) > END_KM) continue;
+        if (Math.abs(tripAvg(S, j) - avg) > tol) continue;
+        var m = MODES[S.mode[j]], g = VOTE_GROUP[m], w = self.w[j];
+        by[g] = (by[g] || 0) + w; raw[m] = (raw[m] || 0) + w; tot += w; cnt++;
+      }
+    }
+  }
+  look(ya, xa, yb, xb, [a0, a1], [b0, b1]);
+  look(yb, xb, ya, xa, [b0, b1], [a0, a1]);
+  if (!tot) return null;
+  var best = null, alt = null;
+  Object.keys(by).forEach(function (g) {
+    if (!best || by[g] > by[best]) { alt = best; best = g; } else if (!alt || by[g] > by[alt]) alt = g;
+  });
+  var mode = null;
+  Object.keys(raw).forEach(function (m) { if (VOTE_GROUP[m] === best && (!mode || raw[m] > raw[mode])) mode = m; });
+  return { mode: mode, group: best, share: by[best] / tot, n: tot, trips: cnt, alt: alt, by: by, tot: tot };
+};
+// The type your own trips settle for trip i: at least VOTE_MIN of them (by weight), VOTE_SHARE of
+// that weight on one group, and trip i's speed within that group's range. With its confidence.
+var VOTE_MIN = 3, VOTE_SHARE = 0.6;
+TripIndex.prototype.decide = function (i, avg) {
+  var v = this.votes(i, avg), r = VOTE_KMH[v && v.group];
+  if (avg == null) avg = tripAvg(this.R, i);
+  if (!v || v.n < VOTE_MIN || v.share < VOTE_SHARE || !r || avg < r[0] || avg > r[1]) return null;
+  v.conf = Math.round(40 + 50 * v.share * Math.min(1, v.n / 6));
+  return v;
+};
+
+// Speed legs of a run ([[ms, ll], …]): [km/h, km] for each stretch of at least a minute.
+function runLegs(run) {
+  var v = [], cd = 0, ch = 0;
+  for (var j = 1; j < run.length; j++) {
+    cd += km(run[j - 1][1], run[j][1]); ch += (run[j][0] - run[j - 1][0]) / 36e5;
+    if (ch >= 1 / 60) { if (cd > 0.05) v.push([cd / ch, cd]); cd = 0; ch = 0; }
+  }
+  return v;
+}
+// The speed along the way, for a trip typed from its average (guessMode). A walk or ride with a
+// stretch of PROFILE_FAST_KM, and a quarter of its distance, at over PROFILE_FAST_KMH was in a
+// vehicle that stopped a lot (a drive through town, a tram). A drive averaging under 30 km/h that
+// never went over PROFILE_BIKE_KMH on any stretch of 200 m or more, over at least three of them,
+// is a bike ride (a car in traffic still has a quicker stretch somewhere).
+var PROFILE_FAST_KMH = 40, PROFILE_FAST_KM = 1.5, PROFILE_BIKE_KMH = 26;
+function profileMode(g, run, avg) {
+  var v = runLegs(run), tot = 0, quick = 0, top = 0, long = 0;
+  if (v.length < 3) return g;
+  v.forEach(function (x) { tot += x[1]; if (x[0] > PROFILE_FAST_KMH) quick += x[1]; if (x[1] >= 0.2) { long++; top = Math.max(top, x[0]); } });
+  if ((g === 'WALKING' || g === 'CYCLING') && quick >= PROFILE_FAST_KM && quick >= tot / 4) return 'CAR';
+  if (g === 'CAR' && avg < 30 && long >= 3 && top < PROFILE_BIKE_KMH) return 'CYCLING';
+  return g;
+}
+// How sure a type from the average speed is: low near the edges between walking, cycling and
+// driving (7 and 25 km/h), higher away from them.
+function speedConf(avg) {
+  var d = Math.min(Math.abs(Math.log(avg / 7)), Math.abs(Math.log(avg / 25)));
+  return Math.round(30 + Math.min(40, 40 * d / Math.log(1.6)));
+}
+// How a guessed type was found (R.gby), and how sure it is (R.gconf, 0 to 100). Trips under
+// CHECK_CONF are offered for checking.
+var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 5, BY_FAST = 6, CHECK_CONF = 50;
+
 // Guessed trips (no type from Timeline, or one that didn't fit) get their type from, in order:
 // 1. the speed: from the GPS legs for trips made from GPS points (loose Timeline points, Dawarich;
-//    runMode), else the average
-//    (guessMode). Up to 300 km/h is a car at this point, so the GPS jump cleaning above treats it
+//    runMode), else the average (guessMode), checked against the speed along the way (profileMode).
+//    Up to 300 km/h is a car at this point, so the GPS jump cleaning above treats it
 //    as road traffic and leaves bad fixes out;
 // 2. a car guess averaging over 160 km/h (MAX_KMH.CAR), once cleaned, is a train;
-// 3. a car guess whose line mostly follows labelled trips of one motorised type takes that type
+// 3. your other trips between the same two places at a like speed (TripIndex): the type most of them have;
+// 4. a car guess whose line mostly follows labelled trips of one motorised type takes that type
 //    (your commute by train, typed by Timeline on other days);
-// 4. a car guess between two stays named like railway stations is a train, and so is one with a
+// 5. a car guess between two stays named like railway stations is a train, and so is one with a
 //    station at one end and a train-like speed (steadyFast).
-// Strava activities and guessed flights are left as they are.
+// Strava activities and guessed flights are left as they are. MyRules corrections count in step 3
+// too, on the main thread (mrLearn).
 function retypeGuessed(R) {
-  var n = R.mode.length, i, q, todo = [];
+  var n = R.mode.length, i, q, todo = [], hist = null;
+  R.gby = new Uint8Array(n); R.gconf = new Uint8Array(n);
   for (i = 0; i < n; i++) {
     var e = R.est[i];
     if (!(e & GUESSED) || e & STRAVA || MODES[R.mode[i]] === 'FLYING') continue;
-    var hrs = (R.end[i] - R.start[i]) / 36e5, avg = hrs > 0 ? R.km[i] / hrs : 0, g;
-    var src = R.srcs ? R.srcs[i] : R.src;
-    if ((e & PATH_TRIP || src === SRC.dawarich || src === SRC.gps) && R.pathOff[i + 1] - R.pathOff[i] >= 2) g = runMode(tripRun(R, i));
-    else { g = guessMode(R.km[i], hrs); if (!g || g === 'FLYING') continue; }
-    if (g === 'CAR' && avg > MAX_KMH.CAR) g = 'TRAIN';
-    R.mode[i] = MODE_IDX[g];
-    if (g === 'CAR') todo.push([i, avg]);
+    var hrs = (R.end[i] - R.start[i]) / 36e5, avg = hrs > 0 ? R.km[i] / hrs : 0, g, by = BY_SPEED, conf = speedConf(avg);
+    var src = R.srcs ? R.srcs[i] : R.src, np = R.pathOff[i + 1] - R.pathOff[i];
+    if ((e & PATH_TRIP || src === SRC.dawarich || src === SRC.gps) && np >= 2) g = runMode(tripRun(R, i));
+    else {
+      g = guessMode(R.km[i], hrs);
+      if (!g || g === 'FLYING') continue;
+      if (np >= 4) { var g2 = profileMode(g, tripRun(R, i), avg); if (g2 !== g) { g = g2; by = BY_PROFILE; conf = 60; } }
+    }
+    if (g === 'CAR' && avg > MAX_KMH.CAR) { g = 'TRAIN'; by = BY_FAST; conf = 80; }
+    if (by !== BY_FAST) {
+      if (!hist) hist = new TripIndex(R, function (j) { return R.est[j] & (GUESSED | STRAVA) ? 0 : 1; });
+      var h = hist.decide(i, avg);
+      if (h) { g = h.mode; by = BY_HISTORY; conf = h.conf; }
+    }
+    R.mode[i] = MODE_IDX[g]; R.gby[i] = by; R.gconf[i] = conf;
+    if (g === 'CAR' && by !== BY_HISTORY) todo.push([i, avg]);
   }
   if (!todo.length) return;
   // Cells crossed by labelled motorised trips, as a bit per CORRIDOR_MODES type: only the parts of
@@ -673,10 +789,10 @@ function retypeGuessed(R) {
         if (sh > bs) { second = bs; bs = sh; best = +k; } else if (sh > second) second = sh;
       }
       var m = best >= 0 ? CORRIDOR_MODES[best] : null;
-      if (m && bs >= CORRIDOR_SHARE && bs - second >= CORRIDOR_LEAD && avg <= MAX_KMH[m]) { R.mode[i] = MODE_IDX[m]; return; }
+      if (m && bs >= CORRIDOR_SHARE && bs - second >= CORRIDOR_LEAD && avg <= MAX_KMH[m]) { R.mode[i] = MODE_IDX[m]; R.gby[i] = BY_CORRIDOR; R.gconf[i] = 75; return; }
     }
     var s0 = stationAt(byEnd, R.ve, R.start[i], a), s1 = stationAt(byStart, R.vs, R.end[i], z);
-    if (s0 && s1 || (s0 || s1) && o1 - o0 >= 4 && steadyFast(tripRun(R, i))) R.mode[i] = MODE_IDX.TRAIN;
+    if (s0 && s1 || (s0 || s1) && o1 - o0 >= 4 && steadyFast(tripRun(R, i))) { R.mode[i] = MODE_IDX.TRAIN; R.gby[i] = BY_STATION; R.gconf[i] = s0 && s1 ? 85 : 70; }
   });
 }
 function addActivity(c, type, st, et, meters, a, b, pts, ptsT) {
@@ -2178,4 +2294,4 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };

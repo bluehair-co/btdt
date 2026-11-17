@@ -510,6 +510,10 @@
             "hide": {
               "type": "boolean"
             },
+            "checked": {
+              "type": "boolean",
+              "description": "true: the type the files give this trip was checked and is right"
+            },
             "replace": {
               "type": "object",
               "required": [
