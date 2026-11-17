@@ -1325,7 +1325,8 @@ document.addEventListener('keydown', function (ev) {
 function scrubTime() { return T0 + (T1 - T0) * scrubV / 1000; }
 function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
-  if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; placeWhen(); return; }
+  // With the slider at the end and nothing playing, every trip shows, and the dot needs no time.
+  if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = ''; return; }
   var t = scrubTime(), i = atTrip(t);
   var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clockDate(t, D.off[i]);
   if (sunDay()) {
