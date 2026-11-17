@@ -10499,12 +10499,16 @@ function mrReapply() {
   ms.modes.forEach(function (m) { if (M.modes.indexOf(m) < 0) F.modes.add(m); });
   ms.sports.forEach(function (sp) { if (M.sports.indexOf(sp) < 0) F.sports.add(sp); });
   M.modes = ms.modes; M.sports = ms.sports; M.sportN = ms.sportN; M.plain = ms.plain;
+  // The gear chips are numbered again, so the ones ticked are kept by name (No gear by its type).
+  var allG = F.gear.size === gearIds().length, had = {}, on = {};
+  gearIds().forEach(function (g) { var k = g >= NO_GEAR ? 'no:' + g : 'g:' + GEAR[g].name; had[k] = 1; if (F.gear.has(g)) on[k] = 1; });
   buildGear();
   M.gear = GEAR; M.gearMode = GEAR_MODE;
   D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
   mrApplyPlaces();
   M.anyGuess = mrAnyGuess();
-  F.gear = new Set(gearIds());
+  // Gear that is new (or all of it, when all was on) is on; the rest as it was.
+  F.gear = new Set(gearIds().filter(function (g) { var k = g >= NO_GEAR ? 'no:' + g : 'g:' + GEAR[g].name; return allG || !had[k] || on[k]; }));
   // Pins carry place names in their titles: drawn again.
   if (pinLayer) pinLayer._ver = null;
   buildFilterUI();
