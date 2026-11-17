@@ -1325,14 +1325,24 @@ document.addEventListener('keydown', function (ev) {
 function scrubTime() { return T0 + (T1 - T0) * scrubV / 1000; }
 function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
-  if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; return; }
+  if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; placeWhen(); return; }
   var t = scrubTime(), i = atTrip(t);
   var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clockDate(t, D.off[i]);
   if (sunDay()) {
     var up = sunAlt(sunAt(t), posAt(t)) > SUN_UP;
     $('scrubWhen').innerHTML = '<span class="sky' + (up ? '' : ' night') + '" title="' + (up ? 'Daytime' : 'Night') + '">' + icon(up ? 'sun' : 'night') + '</span>' + txt;
   } else $('scrubWhen').textContent = txt;
+  placeWhen();
 }
+// The time rides above the slider's dot, kept inside the slider's ends. The dot is 16px wide,
+// so its centre runs from 8px in to 8px from the end.
+function placeWhen() {
+  var el = $('scrubWhen'), w = $('scrub').clientWidth, lw = el.offsetWidth;
+  if (!w) return;
+  var x = 8 + (w - 16) * scrubV / 1000;
+  el.style.left = Math.round(Math.max(0, Math.min(w - lw, x - lw / 2))) + 'px';
+}
+if (window.ResizeObserver) new ResizeObserver(placeWhen).observe($('scrub'));
 // The trip under way at t, or the last one before it. Before this day's first trip, the
 // trip carried over from the day before while it is still under way.
 function carrying(t) { return !!carry && t < D.end[carry.i] && !upper(t); }
