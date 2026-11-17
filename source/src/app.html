@@ -197,13 +197,17 @@
           <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
-        <div class="scrub">
-          <button type="button" class="play" id="playBtn" aria-label="Play"><span data-icon="play"></span></button>
-          <div class="sun-marks" id="sunMarks" aria-hidden="true" hidden></div>
-          <input type="range" id="scrub" min="0" max="1000" step="1" value="1000" aria-label="Time">
-          <span class="when" id="scrubWhen"></span>
-          <button type="button" class="speed" id="speedBtn" aria-label="Playback speed">1×</button>
-        </div>
+      </div>
+    </div>
+
+    <!-- Day playback: its own bar at the bottom, centred above the dock, by the playback button that opens it. -->
+    <div class="playbar" id="playBar" hidden>
+      <div class="scrub">
+        <button type="button" class="play" id="playBtn" aria-label="Play"><span data-icon="play"></span></button>
+        <div class="sun-marks" id="sunMarks" aria-hidden="true" hidden></div>
+        <input type="range" id="scrub" min="0" max="1000" step="1" value="1000" aria-label="Time">
+        <span class="when" id="scrubWhen"></span>
+        <button type="button" class="speed" id="speedBtn" aria-label="Playback speed">1×</button>
       </div>
     </div>
 
