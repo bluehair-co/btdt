@@ -240,7 +240,7 @@ function parseIsoDay(s) { if (!s) return null; var t = Date.parse(s + 'T00:00:00
 // PREFS.timeF is 'auto', '24' (14:05) or '12' (2:05 PM). Auto follows this device's language
 // and region (the order of day, month and year, and its 12- or 24-hour clock).
 var LOCALE_FMT = (function () {
-  var o = { order: 'dmy', h12: false };
+  var o = { order: 'dmy', h12: false, unit: 'km' };
   try {
     var lang = (navigator.languages && navigator.languages[0]) || navigator.language || 'en-GB';
     var seq = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short', day: 'numeric' }).formatToParts(new Date(Date.UTC(2026, 10, 17, 12)))
@@ -248,9 +248,18 @@ var LOCALE_FMT = (function () {
     o.order = seq === 'mdy' ? 'mdy' : seq === 'ymd' ? 'ymd' : 'dmy';
     var hc = new Intl.DateTimeFormat(lang, { hour: 'numeric' }).resolvedOptions();
     o.h12 = hc.hourCycle ? /h1[12]/.test(hc.hourCycle) : !!hc.hour12;
+    // Miles in the US, the UK, Liberia and Myanmar; kilometres everywhere else.
+    var region = '';
+    try { region = new Intl.Locale(lang).maximize().region || ''; } catch (e2) { region = (/[-_]([A-Za-z]{2})\b/.exec(lang) || [])[1] || ''; }
+    o.unit = /^(US|GB|LR|MM)$/i.test(region) ? 'mi' : 'km';
   } catch (e) { /* old browser: day first, 24-hour */ }
   return o;
 })();
+// PREFS.unitF is 'auto', 'km' or 'mi'; PREFS.unit is the unit in use. Before units followed the
+// device, km was the default, so a saved km means not chosen and becomes Automatic; a saved mi stays.
+if (!/^(auto|km|mi)$/.test(PREFS.unitF)) PREFS.unitF = PREFS.unit === 'mi' ? 'mi' : 'auto';
+function resolveUnit() { PREFS.unit = PREFS.unitF === 'auto' ? LOCALE_FMT.unit : PREFS.unitF; }
+resolveUnit();
 function dateOrder() { return /^(dmy|mdy|ymd)$/.test(PREFS.dateF) ? PREFS.dateF : LOCALE_FMT.order; }
 function use12h() { return PREFS.timeF === '12' || PREFS.timeF !== '24' && LOCALE_FMT.h12; }
 // A clock time from hours and minutes: 14:05 or 2:05 PM.

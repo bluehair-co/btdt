@@ -1,8 +1,9 @@
 // ---------- settings ----------
 function renderSettings() {
-  setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
+  setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unitF; });
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   renderDateTimeSettings();
+  $('unitNote').textContent = 'Automatic uses ' + (LOCALE_FMT.unit === 'mi' ? 'miles' : 'kilometres') + ', from this device\'s region.';
   buildFactors();
   renderHrSettings();
   renderImports();
@@ -73,7 +74,7 @@ function describeHome(h) {
 $('unitSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-u]');
   if (!b) return;
-  PREFS.unit = b.dataset.u; savePrefs(); renderSettings();
+  PREFS.unitF = b.dataset.u; resolveUnit(); savePrefs(); renderSettings();
   if (D) apply();
 });
 // Date and time format: Automatic follows the device's language and region; each choice shows an example.
