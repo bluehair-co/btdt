@@ -167,6 +167,7 @@ function tripIcon(i) {
 var PREFS_KEY = 'btdt.prefs';
 var PREFS = {
   unit: 'km', theme: 'system', proj: 'merc', paths: true, speedPaths: false, squares: false, heat: false, cc: false, pins: false, placeScope: 'all', spotMerge: {},
+  dateF: 'auto', timeF: 'auto',
   heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', placesM: 'h', timeM: 'km', timeU: 'year', speed: 1,
   // The time slider starts hidden on phones.
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
@@ -234,7 +235,56 @@ function duration(ms) {
 function dayToDate(d) { return new Date(d * 864e5); }
 function isoDay(d) { return dayToDate(d).toISOString().slice(0, 10); }
 function parseIsoDay(s) { if (!s) return null; var t = Date.parse(s + 'T00:00:00Z'); return isFinite(t) ? Math.floor(t / 864e5) : null; }
-function niceDate(d) { var x = dayToDate(d); return x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
+// ---------- date and time format ----------
+// PREFS.dateF is 'auto', 'dmy' (17 Nov 2026), 'mdy' (Nov 17, 2026) or 'ymd' (2026-11-17);
+// PREFS.timeF is 'auto', '24' (14:05) or '12' (2:05 PM). Auto follows this device's language
+// and region (the order of day, month and year, and its 12- or 24-hour clock).
+var LOCALE_FMT = (function () {
+  var o = { order: 'dmy', h12: false };
+  try {
+    var lang = (navigator.languages && navigator.languages[0]) || navigator.language || 'en-GB';
+    var seq = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short', day: 'numeric' }).formatToParts(new Date(Date.UTC(2026, 10, 17, 12)))
+      .filter(function (p) { return /^(day|month|year)$/.test(p.type); }).map(function (p) { return p.type[0]; }).join('');
+    o.order = seq === 'mdy' ? 'mdy' : seq === 'ymd' ? 'ymd' : 'dmy';
+    var hc = new Intl.DateTimeFormat(lang, { hour: 'numeric' }).resolvedOptions();
+    o.h12 = hc.hourCycle ? /h1[12]/.test(hc.hourCycle) : !!hc.hour12;
+  } catch (e) { /* old browser: day first, 24-hour */ }
+  return o;
+})();
+function dateOrder() { return /^(dmy|mdy|ymd)$/.test(PREFS.dateF) ? PREFS.dateF : LOCALE_FMT.order; }
+function use12h() { return PREFS.timeF === '12' || PREFS.timeF !== '24' && LOCALE_FMT.h12; }
+// A clock time from hours and minutes: 14:05 or 2:05 PM.
+function fmtHM(h, m) {
+  h = ((h % 24) + 24) % 24;
+  return use12h() ? ((h % 12) || 12) + ':' + pad2(m) + '\u202f' + (h < 12 ? 'AM' : 'PM') : pad2(h) + ':' + pad2(m);
+}
+// A whole hour: 14:00 or 2 PM; short is for tight axes (14 or 2p).
+function fmtHour(h, short) {
+  h = ((h % 24) + 24) % 24;
+  if (!use12h()) return short ? String(h) : pad2(h) + ':00';
+  return ((h % 12) || 12) + (short ? (h < 12 ? 'a' : 'p') : '\u202f' + (h < 12 ? 'AM' : 'PM'));
+}
+// Day and month, no year: 17 Nov or Nov 17 (long: November).
+function fmtDM(day, mon, long) {
+  var mn = (long ? MONTHS_LONG : MONTHS)[mon];
+  return dateOrder() === 'dmy' ? day + ' ' + mn : mn + ' ' + day;
+}
+// A full date: 17 Nov 2026, Nov 17, 2026 or 2026-11-17 (long spells the month out).
+function fmtDMY(y, mon, day, long) {
+  var o = dateOrder();
+  if (o === 'ymd') return y + '-' + pad2(mon + 1) + '-' + pad2(day);
+  return o === 'mdy' ? fmtDM(day, mon, long) + ', ' + y : fmtDM(day, mon, long) + ' ' + y;
+}
+// Two days as a range, saying the month and year once where they're shared.
+function fmtRange(a, z) {
+  var A = dayToDate(a), Z = dayToDate(z), o = dateOrder();
+  var ay = A.getUTCFullYear(), am = A.getUTCMonth(), ad = A.getUTCDate(), zy = Z.getUTCFullYear(), zm = Z.getUTCMonth(), zd = Z.getUTCDate();
+  var sameY = ay === zy, sameM = sameY && am === zm;
+  if (o === 'ymd') return fmtDMY(ay, am, ad) + ' – ' + (sameY ? pad2(zm + 1) + '-' + pad2(zd) : fmtDMY(zy, zm, zd));
+  if (o === 'mdy') return fmtDM(ad, am) + (sameY ? '' : ', ' + ay) + ' – ' + (sameM ? zd : fmtDM(zd, zm)) + ', ' + zy;
+  return ad + (sameM ? '' : ' ' + MONTHS[am]) + (sameY ? '' : ' ' + ay) + ' – ' + fmtDMY(zy, zm, zd);
+}
+function niceDate(d) { var x = dayToDate(d); return fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
 // Periods for stepping through the data: the day, Monday-to-Sunday week, month or year holding day d.
 function periodStart(d, u) {
   if (u === 'week') return d - (((d + 3) % 7) + 7) % 7;
@@ -253,20 +303,24 @@ function periodLabel(d, u) {
   if (u === 'year') return '' + a.getUTCFullYear();
   if (u === 'month') return MONTHS_LONG[a.getUTCMonth()] + ' ' + a.getUTCFullYear();
   if (u === 'week') {
-    var sameY = a.getUTCFullYear() === z.getUTCFullYear(), sameM = sameY && a.getUTCMonth() === z.getUTCMonth();
-    return a.getUTCDate() + (sameM ? '' : ' ' + MONTHS[a.getUTCMonth()]) + (sameY ? '' : ' ' + a.getUTCFullYear()) + ' – ' + niceDate(periodEnd(d, u));
+    return fmtRange(periodStart(d, u), periodEnd(d, u));
   }
   return niceDate(d);
 }
-function longDate(d) { var x = dayToDate(d); return DOW_LONG[x.getUTCDay()] + ', ' + x.getUTCDate() + ' ' + MONTHS_LONG[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
+function longDate(d) { var x = dayToDate(d); return DOW_LONG[x.getUTCDay()] + ', ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate(), true); }
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 // Clock time where the trip happened when the file says the UTC offset, else in this browser's time zone.
 function clock(ms, off, withDate) {
   var known = off != null && off !== NO_OFF, d = new Date(known ? ms + off * 60000 : ms);
   var g = function (k) { return d[(known ? 'getUTC' : 'get') + k](); };
-  var t = pad2(g('Hours')) + ':' + pad2(g('Minutes'));
-  if (withDate) t = g('Date') + ' ' + MONTHS[g('Month')] + ' ' + g('FullYear') + ', ' + t;
+  var t = fmtHM(g('Hours'), g('Minutes'));
+  if (withDate) t = fmtDMY(g('FullYear'), g('Month'), g('Date')) + ', ' + t;
   return t;
+}
+// Just the date of that moment, in the same time zone as clock().
+function clockDate(ms, off) {
+  var known = off != null && off !== NO_OFF, d = new Date(known ? ms + off * 60000 : ms);
+  return known ? fmtDMY(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) : fmtDMY(d.getFullYear(), d.getMonth(), d.getDate());
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function ll(a, b) { return isFinite(a) ? a.toFixed(3) + ', ' + b.toFixed(3) : '?'; }
@@ -566,9 +620,8 @@ function localTime(ms, zone, off) {
       .formatToParts(new Date(ms)).forEach(function (p) { parts[p.type] = p.value; });
     var utc = (parts.timeZoneName || '').replace('GMT', 'UTC').replace('-', '−');
     if (utc === 'UTC') utc = 'UTC+0';
-    return { time: parts.hour + ':' + parts.minute, date: +parts.day + ' ' + MONTHS[+parts.month - 1] + ' ' + parts.year,
+    return { time: fmtHM(+parts.hour, +parts.minute), date: fmtDMY(+parts.year, +parts.month - 1, +parts.day),
       label: zone.split('/').pop().replace(/_/g, ' ') + ' time, ' + utc };
   } catch (e) { /* unknown zone: fall through */ }
-  var full = clock(ms, off, true).split(', ');
-  return { time: full[1], date: full[0], label: tzLabel(off) };
+  return { time: clock(ms, off), date: clockDate(ms, off), label: tzLabel(off) };
 }

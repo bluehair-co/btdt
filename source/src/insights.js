@@ -436,7 +436,7 @@ function renderRhythm() {
   for (j = 0; j < sel.length; j++) { var i = sel[j]; c[D.dow[i]][D.hour[i]]++; }
   var level = heatLevels([].concat.apply([], c));
   var h = '<div></div>';
-  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? k : '') + '</div>';
+  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? fmtHour(k, true) : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
     h += '<div class="d">' + DOW[d] + '</div>';
     for (k = 0; k < 24; k++) h += '<div class="c" data-d="' + d + '" data-h="' + k + '" data-n="' + c[d][k] + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
@@ -448,7 +448,7 @@ function rhythmTip(ev) {
   var c = ev.target.closest('.c[data-d]');
   if (!c) { hideTip(); return; }
   var d = +c.dataset.d, h = +c.dataset.h, n = +c.dataset.n;
-  showTip(ev, '<b>' + DOW_LONG[d] + 's, ' + pad2(h) + ':00–' + pad2((h + 1) % 24) + ':00</b><div class="row"><span>Trips started</span><span class="num">' + fmt(n) + '</span></div>');
+  showTip(ev, '<b>' + DOW_LONG[d] + 's, ' + fmtHour(h) + '–' + fmtHour(h + 1) + '</b><div class="row"><span>Trips started</span><span class="num">' + fmt(n) + '</span></div>');
 }
 $('rhythm').addEventListener('mousemove', rhythmTip);
 $('rhythm').addEventListener('mouseleave', hideTip);
@@ -501,7 +501,7 @@ function renderTime() {
 }
 function bucketName(k, unit) {
   if (unit === 'day') return longDate(k);
-  if (unit === 'week') { var a = dayToDate(weekStart(k)), z = dayToDate(weekStart(k) + 6); return 'Week of ' + a.getUTCDate() + ' ' + MONTHS[a.getUTCMonth()] + (a.getUTCFullYear() !== z.getUTCFullYear() ? ' ' + a.getUTCFullYear() : '') + ' – ' + z.getUTCDate() + ' ' + MONTHS[z.getUTCMonth()] + ' ' + z.getUTCFullYear(); }
+  if (unit === 'week') return 'Week of ' + fmtRange(weekStart(k), weekStart(k) + 6);
   if (unit === 'month') return MONTHS_LONG[k % 12] + ' ' + Math.floor(k / 12);
   return String(k);
 }
@@ -537,7 +537,7 @@ function drawTime() {
   keys.forEach(function (k, idx) {
     var cx = X0 + slot * idx + slot / 2, b = T.buckets[k] || {}, text = null, ws, wd;
     if (unit === 'year') { if (idx % every === 0) text = k; }
-    else if (unit === 'day') { if (idx % every === 0) { ws = dayToDate(k); text = ws.getUTCDate() + (ws.getUTCDate() <= every || idx === 0 ? ' ' + MONTHS[ws.getUTCMonth()] : ''); } }
+    else if (unit === 'day') { if (idx % every === 0) { ws = dayToDate(k); text = ws.getUTCDate() <= every || idx === 0 ? fmtDM(ws.getUTCDate(), ws.getUTCMonth()) : String(ws.getUTCDate()); } }
     else if (unit === 'month') { if (k % 12 % (slot >= 30 ? 1 : slot * 3 >= 30 ? 3 : 6) === 0) text = k % 12 === 0 ? Math.floor(k / 12) : MONTHS[k % 12]; }
     else {
       ws = dayToDate(weekStart(k)); wd = dayToDate(weekStart(k) - 7);
@@ -1528,10 +1528,10 @@ function presence(vs) {
 function presenceGrid(c) {
   var k, level = heatLevels([].concat.apply([], c));
   var h = '<div></div>';
-  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? k : '') + '</div>';
+  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? fmtHour(k, true) : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
     h += '<div class="d">' + DOW[d] + '</div>';
-    for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + pad2(k) + ':00: ' + hoursLabel(c[d][k] / 60) + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
+    for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + fmtHour(k) + ': ' + hoursLabel(c[d][k] / 60) + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
   });
   return '<div class="rhythm" role="img" aria-label="Time there by day of the week and hour">' + h + '</div>' +
     '<div class="rhythm-scale">Less' + HEAT_LEVELS.map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More time there</div>';
@@ -1591,7 +1591,7 @@ function placePage(o, keepScroll) {
       ['Typical stay', duration(durs[Math.floor((n - 1) / 2)])], ['Longest stay', duration(durs[n - 1])],
       ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
     ].concat(o.spots ? [['Spots', fmt(spots.length)]] : []).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + pad2(bh) + ':00.</p>' + presenceGrid(presence(vs));
+    '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + fmtHour(bh) + '.</p>' + presenceGrid(presence(vs));
   if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {

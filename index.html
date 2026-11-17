@@ -1556,6 +1556,12 @@ div.hit-row:hover { background: none; }
       <h3>Units</h3>
       <div class="seg" role="group" aria-label="Distance units" id="unitSeg"><button type="button" data-u="km" aria-pressed="true">Kilometres</button><button type="button" data-u="mi" aria-pressed="false">Miles</button></div>
     </div>
+    <div class="sec">
+      <h3>Date and time</h3>
+      <div class="field"><label for="dateFmt">Dates</label><select id="dateFmt"></select></div>
+      <div class="field"><label for="timeFmt">Times</label><select id="timeFmt"></select></div>
+      <p class="fine" id="dtNote"></p>
+    </div>
     <div class="sec" id="hrSec" hidden>
       <h3>Heart rate</h3>
       <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>
@@ -3971,6 +3977,7 @@ function tripIcon(i) {
 var PREFS_KEY = 'btdt.prefs';
 var PREFS = {
   unit: 'km', theme: 'system', proj: 'merc', paths: true, speedPaths: false, squares: false, heat: false, cc: false, pins: false, placeScope: 'all', spotMerge: {},
+  dateF: 'auto', timeF: 'auto',
   heatSrc: 'moves', heatBy: 'time', heatSize: 14, heatGain: 50, splitM: 'km', placesM: 'h', timeM: 'km', timeU: 'year', speed: 1,
   // The time slider starts hidden on phones.
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
@@ -4038,7 +4045,56 @@ function duration(ms) {
 function dayToDate(d) { return new Date(d * 864e5); }
 function isoDay(d) { return dayToDate(d).toISOString().slice(0, 10); }
 function parseIsoDay(s) { if (!s) return null; var t = Date.parse(s + 'T00:00:00Z'); return isFinite(t) ? Math.floor(t / 864e5) : null; }
-function niceDate(d) { var x = dayToDate(d); return x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
+// ---------- date and time format ----------
+// PREFS.dateF is 'auto', 'dmy' (17 Nov 2026), 'mdy' (Nov 17, 2026) or 'ymd' (2026-11-17);
+// PREFS.timeF is 'auto', '24' (14:05) or '12' (2:05 PM). Auto follows this device's language
+// and region (the order of day, month and year, and its 12- or 24-hour clock).
+var LOCALE_FMT = (function () {
+  var o = { order: 'dmy', h12: false };
+  try {
+    var lang = (navigator.languages && navigator.languages[0]) || navigator.language || 'en-GB';
+    var seq = new Intl.DateTimeFormat(lang, { year: 'numeric', month: 'short', day: 'numeric' }).formatToParts(new Date(Date.UTC(2026, 10, 17, 12)))
+      .filter(function (p) { return /^(day|month|year)$/.test(p.type); }).map(function (p) { return p.type[0]; }).join('');
+    o.order = seq === 'mdy' ? 'mdy' : seq === 'ymd' ? 'ymd' : 'dmy';
+    var hc = new Intl.DateTimeFormat(lang, { hour: 'numeric' }).resolvedOptions();
+    o.h12 = hc.hourCycle ? /h1[12]/.test(hc.hourCycle) : !!hc.hour12;
+  } catch (e) { /* old browser: day first, 24-hour */ }
+  return o;
+})();
+function dateOrder() { return /^(dmy|mdy|ymd)$/.test(PREFS.dateF) ? PREFS.dateF : LOCALE_FMT.order; }
+function use12h() { return PREFS.timeF === '12' || PREFS.timeF !== '24' && LOCALE_FMT.h12; }
+// A clock time from hours and minutes: 14:05 or 2:05 PM.
+function fmtHM(h, m) {
+  h = ((h % 24) + 24) % 24;
+  return use12h() ? ((h % 12) || 12) + ':' + pad2(m) + '\u202f' + (h < 12 ? 'AM' : 'PM') : pad2(h) + ':' + pad2(m);
+}
+// A whole hour: 14:00 or 2 PM; short is for tight axes (14 or 2p).
+function fmtHour(h, short) {
+  h = ((h % 24) + 24) % 24;
+  if (!use12h()) return short ? String(h) : pad2(h) + ':00';
+  return ((h % 12) || 12) + (short ? (h < 12 ? 'a' : 'p') : '\u202f' + (h < 12 ? 'AM' : 'PM'));
+}
+// Day and month, no year: 17 Nov or Nov 17 (long: November).
+function fmtDM(day, mon, long) {
+  var mn = (long ? MONTHS_LONG : MONTHS)[mon];
+  return dateOrder() === 'dmy' ? day + ' ' + mn : mn + ' ' + day;
+}
+// A full date: 17 Nov 2026, Nov 17, 2026 or 2026-11-17 (long spells the month out).
+function fmtDMY(y, mon, day, long) {
+  var o = dateOrder();
+  if (o === 'ymd') return y + '-' + pad2(mon + 1) + '-' + pad2(day);
+  return o === 'mdy' ? fmtDM(day, mon, long) + ', ' + y : fmtDM(day, mon, long) + ' ' + y;
+}
+// Two days as a range, saying the month and year once where they're shared.
+function fmtRange(a, z) {
+  var A = dayToDate(a), Z = dayToDate(z), o = dateOrder();
+  var ay = A.getUTCFullYear(), am = A.getUTCMonth(), ad = A.getUTCDate(), zy = Z.getUTCFullYear(), zm = Z.getUTCMonth(), zd = Z.getUTCDate();
+  var sameY = ay === zy, sameM = sameY && am === zm;
+  if (o === 'ymd') return fmtDMY(ay, am, ad) + ' – ' + (sameY ? pad2(zm + 1) + '-' + pad2(zd) : fmtDMY(zy, zm, zd));
+  if (o === 'mdy') return fmtDM(ad, am) + (sameY ? '' : ', ' + ay) + ' – ' + (sameM ? zd : fmtDM(zd, zm)) + ', ' + zy;
+  return ad + (sameM ? '' : ' ' + MONTHS[am]) + (sameY ? '' : ' ' + ay) + ' – ' + fmtDMY(zy, zm, zd);
+}
+function niceDate(d) { var x = dayToDate(d); return fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
 // Periods for stepping through the data: the day, Monday-to-Sunday week, month or year holding day d.
 function periodStart(d, u) {
   if (u === 'week') return d - (((d + 3) % 7) + 7) % 7;
@@ -4057,20 +4113,24 @@ function periodLabel(d, u) {
   if (u === 'year') return '' + a.getUTCFullYear();
   if (u === 'month') return MONTHS_LONG[a.getUTCMonth()] + ' ' + a.getUTCFullYear();
   if (u === 'week') {
-    var sameY = a.getUTCFullYear() === z.getUTCFullYear(), sameM = sameY && a.getUTCMonth() === z.getUTCMonth();
-    return a.getUTCDate() + (sameM ? '' : ' ' + MONTHS[a.getUTCMonth()]) + (sameY ? '' : ' ' + a.getUTCFullYear()) + ' – ' + niceDate(periodEnd(d, u));
+    return fmtRange(periodStart(d, u), periodEnd(d, u));
   }
   return niceDate(d);
 }
-function longDate(d) { var x = dayToDate(d); return DOW_LONG[x.getUTCDay()] + ', ' + x.getUTCDate() + ' ' + MONTHS_LONG[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
+function longDate(d) { var x = dayToDate(d); return DOW_LONG[x.getUTCDay()] + ', ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate(), true); }
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 // Clock time where the trip happened when the file says the UTC offset, else in this browser's time zone.
 function clock(ms, off, withDate) {
   var known = off != null && off !== NO_OFF, d = new Date(known ? ms + off * 60000 : ms);
   var g = function (k) { return d[(known ? 'getUTC' : 'get') + k](); };
-  var t = pad2(g('Hours')) + ':' + pad2(g('Minutes'));
-  if (withDate) t = g('Date') + ' ' + MONTHS[g('Month')] + ' ' + g('FullYear') + ', ' + t;
+  var t = fmtHM(g('Hours'), g('Minutes'));
+  if (withDate) t = fmtDMY(g('FullYear'), g('Month'), g('Date')) + ', ' + t;
   return t;
+}
+// Just the date of that moment, in the same time zone as clock().
+function clockDate(ms, off) {
+  var known = off != null && off !== NO_OFF, d = new Date(known ? ms + off * 60000 : ms);
+  return known ? fmtDMY(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) : fmtDMY(d.getFullYear(), d.getMonth(), d.getDate());
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
 function ll(a, b) { return isFinite(a) ? a.toFixed(3) + ', ' + b.toFixed(3) : '?'; }
@@ -4370,11 +4430,10 @@ function localTime(ms, zone, off) {
       .formatToParts(new Date(ms)).forEach(function (p) { parts[p.type] = p.value; });
     var utc = (parts.timeZoneName || '').replace('GMT', 'UTC').replace('-', '−');
     if (utc === 'UTC') utc = 'UTC+0';
-    return { time: parts.hour + ':' + parts.minute, date: +parts.day + ' ' + MONTHS[+parts.month - 1] + ' ' + parts.year,
+    return { time: fmtHM(+parts.hour, +parts.minute), date: fmtDMY(+parts.year, +parts.month - 1, +parts.day),
       label: zone.split('/').pop().replace(/_/g, ' ') + ' time, ' + utc };
   } catch (e) { /* unknown zone: fall through */ }
-  var full = clock(ms, off, true).split(', ');
-  return { time: full[1], date: full[0], label: tzLabel(off) };
+  return { time: clock(ms, off), date: clockDate(ms, off), label: tzLabel(off) };
 }
 
 // ---------- state ----------
@@ -4810,6 +4869,14 @@ function tripsText(n) { return fmt(n) + ' trip' + (n === 1 ? '' : 's'); }
 function chipHtml(f, v, label, n) {
   return '<button type="button" class="chip" data-f="' + f + '" data-v="' + v + '" aria-pressed="false">' + label + (n != null ? '<span class="n">' + fmt(n) + '</span>' : '') + '</button>';
 }
+// The hour filter's choices, in the chosen clock format (kept selected when the format changes).
+function fillHourOpts() {
+  var h0 = '', h1 = '', i;
+  for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + fmtHour(i) + '</option>';
+  for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + fmtHour(i) + (i === 24 ? ' (midnight)' : '') + '</option>';
+  $('h0').innerHTML = h0; $('h1').innerHTML = h1;
+  if (F) { $('h0').value = F.h0; $('h1').value = F.h1; }
+}
 function buildFilterUI() {
   var mc = {}, i;
   for (i = 0; i < D.day.length; i++) { if (isDup(i)) continue; var m = MODES[D.mode[i]]; mc[m] = (mc[m] || 0) + 1; }
@@ -4854,10 +4921,7 @@ function buildFilterUI() {
   $('guessWrap').hidden = !M.anyGuess;
   $('srcWrap').hidden = !D.stravaStats;
   $('srcActs').textContent = actsLabel(D.stravaStats);
-  var h0 = '', h1 = '';
-  for (i = 0; i < 24; i++) h0 += '<option value="' + i + '">' + pad2(i) + ':00</option>';
-  for (i = 1; i <= 24; i++) h1 += '<option value="' + i + '">' + pad2(i % 24) + ':00' + (i === 24 ? ' (midnight)' : '') + '</option>';
-  $('h0').innerHTML = h0; $('h1').innerHTML = h1;
+  fillHourOpts();
   var lo = isoDay(M.minD), hi = isoDay(M.maxD);
   ['oneDay', 'from', 'to'].forEach(function (id) { $(id).min = lo; $(id).max = hi; });
 }
@@ -6790,7 +6854,7 @@ $('tripBack').addEventListener('click', function () { if (listBack) openList(lis
 // ---------- top bar: day navigator or time slider ----------
 var scrubV = 1000, T0 = 0, T1 = 0, playing = false, playRaf = 0, SPEEDS = [1, 2, 4, 8, 16, 32, 0.25, 0.5];
 function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.speed) + '×'; }
-function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
+function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
 function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
   // The playback button (bottom left) shows or hides the time slider in the top bar.
@@ -6937,7 +7001,7 @@ function scrubLabel() {
   if (!sel.length) { $('scrubWhen').textContent = ''; return; }
   if (scrubV >= 1000 && !playing) { $('scrubWhen').textContent = F.dm === 'one' ? 'Whole ' + F.unit : 'All'; return; }
   var t = scrubTime(), i = atTrip(t);
-  var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clock(t, D.off[i], true).split(',')[0];
+  var txt = F.dm === 'one' && F.unit === 'day' || T1 - T0 <= 2 * 864e5 ? clock(t, D.off[i]) : clockDate(t, D.off[i]);
   if (sunDay()) {
     var up = sunAlt(sunAt(t), posAt(t)) > SUN_UP;
     $('scrubWhen').innerHTML = '<span class="sky' + (up ? '' : ' night') + '" title="' + (up ? 'Daytime' : 'Night') + '">' + icon(up ? 'sun' : 'night') + '</span>' + txt;
@@ -8467,7 +8531,7 @@ function renderRhythm() {
   for (j = 0; j < sel.length; j++) { var i = sel[j]; c[D.dow[i]][D.hour[i]]++; }
   var level = heatLevels([].concat.apply([], c));
   var h = '<div></div>';
-  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? k : '') + '</div>';
+  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? fmtHour(k, true) : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
     h += '<div class="d">' + DOW[d] + '</div>';
     for (k = 0; k < 24; k++) h += '<div class="c" data-d="' + d + '" data-h="' + k + '" data-n="' + c[d][k] + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
@@ -8479,7 +8543,7 @@ function rhythmTip(ev) {
   var c = ev.target.closest('.c[data-d]');
   if (!c) { hideTip(); return; }
   var d = +c.dataset.d, h = +c.dataset.h, n = +c.dataset.n;
-  showTip(ev, '<b>' + DOW_LONG[d] + 's, ' + pad2(h) + ':00–' + pad2((h + 1) % 24) + ':00</b><div class="row"><span>Trips started</span><span class="num">' + fmt(n) + '</span></div>');
+  showTip(ev, '<b>' + DOW_LONG[d] + 's, ' + fmtHour(h) + '–' + fmtHour(h + 1) + '</b><div class="row"><span>Trips started</span><span class="num">' + fmt(n) + '</span></div>');
 }
 $('rhythm').addEventListener('mousemove', rhythmTip);
 $('rhythm').addEventListener('mouseleave', hideTip);
@@ -8532,7 +8596,7 @@ function renderTime() {
 }
 function bucketName(k, unit) {
   if (unit === 'day') return longDate(k);
-  if (unit === 'week') { var a = dayToDate(weekStart(k)), z = dayToDate(weekStart(k) + 6); return 'Week of ' + a.getUTCDate() + ' ' + MONTHS[a.getUTCMonth()] + (a.getUTCFullYear() !== z.getUTCFullYear() ? ' ' + a.getUTCFullYear() : '') + ' – ' + z.getUTCDate() + ' ' + MONTHS[z.getUTCMonth()] + ' ' + z.getUTCFullYear(); }
+  if (unit === 'week') return 'Week of ' + fmtRange(weekStart(k), weekStart(k) + 6);
   if (unit === 'month') return MONTHS_LONG[k % 12] + ' ' + Math.floor(k / 12);
   return String(k);
 }
@@ -8568,7 +8632,7 @@ function drawTime() {
   keys.forEach(function (k, idx) {
     var cx = X0 + slot * idx + slot / 2, b = T.buckets[k] || {}, text = null, ws, wd;
     if (unit === 'year') { if (idx % every === 0) text = k; }
-    else if (unit === 'day') { if (idx % every === 0) { ws = dayToDate(k); text = ws.getUTCDate() + (ws.getUTCDate() <= every || idx === 0 ? ' ' + MONTHS[ws.getUTCMonth()] : ''); } }
+    else if (unit === 'day') { if (idx % every === 0) { ws = dayToDate(k); text = ws.getUTCDate() <= every || idx === 0 ? fmtDM(ws.getUTCDate(), ws.getUTCMonth()) : String(ws.getUTCDate()); } }
     else if (unit === 'month') { if (k % 12 % (slot >= 30 ? 1 : slot * 3 >= 30 ? 3 : 6) === 0) text = k % 12 === 0 ? Math.floor(k / 12) : MONTHS[k % 12]; }
     else {
       ws = dayToDate(weekStart(k)); wd = dayToDate(weekStart(k) - 7);
@@ -9559,10 +9623,10 @@ function presence(vs) {
 function presenceGrid(c) {
   var k, level = heatLevels([].concat.apply([], c));
   var h = '<div></div>';
-  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? k : '') + '</div>';
+  for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? fmtHour(k, true) : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
     h += '<div class="d">' + DOW[d] + '</div>';
-    for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + pad2(k) + ':00: ' + hoursLabel(c[d][k] / 60) + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
+    for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + fmtHour(k) + ': ' + hoursLabel(c[d][k] / 60) + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
   });
   return '<div class="rhythm" role="img" aria-label="Time there by day of the week and hour">' + h + '</div>' +
     '<div class="rhythm-scale">Less' + HEAT_LEVELS.map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More time there</div>';
@@ -9622,7 +9686,7 @@ function placePage(o, keepScroll) {
       ['Typical stay', duration(durs[Math.floor((n - 1) / 2)])], ['Longest stay', duration(durs[n - 1])],
       ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
     ].concat(o.spots ? [['Spots', fmt(spots.length)]] : []).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + pad2(bh) + ':00.</p>' + presenceGrid(presence(vs));
+    '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + fmtHour(bh) + '.</p>' + presenceGrid(presence(vs));
   if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {
@@ -10581,7 +10645,7 @@ function mrWhenText(w) {
   var f = mrDayNum(w.from), t = mrDayNum(w.to), s;
   s = f != null && t != null ? niceDate(f) + ' – ' + niceDate(t) : f != null ? 'Since ' + niceDate(f) : t != null ? 'Until ' + niceDate(t) : 'Always';
   if (Array.isArray(w.days) && w.days.length && w.days.length < 7) s += ' · ' + w.days.map(function (d) { var k = MR_DOW.indexOf(String(d).slice(0, 3)); return k >= 0 ? DOW[k] : d; }).join(', ');
-  if (Array.isArray(w.time)) s += ' · ' + w.time.join('–');
+  if (Array.isArray(w.time)) s += ' · ' + w.time.map(function (x) { var m = mrMin(x); return m == null ? x : fmtMin(m); }).join('–');
   return s;
 }
 function mrRuleRow(sec, r, title, sub, ic, color, count) {
@@ -11170,6 +11234,8 @@ $('tripBody').addEventListener('click', function (ev) {
 // 500 m, on the same kind of day, starting within 2 hours of it), BT•DT offers to make a routine of
 // it: the type for all of them, both ways when you made the trip back too, and optionally their line.
 var MR_RAIL = { TRAIN: 1, TRAM: 1, SUBWAY: 1, FERRY: 1, BUS: 1, CABLE: 1 };
+// Minutes after midnight in the chosen clock format, for text (mrHm is for time inputs).
+function fmtMin(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return fmtHM(Math.floor(m / 60), m % 60); }
 function mrHm(m) { m = ((Math.round(m) % 1440) + 1440) % 1440; return pad2(Math.floor(m / 60)) + ':' + pad2(m % 60); }
 function mrLike(i) {
   var a = { at: [D.from[2 * i], D.from[2 * i + 1]], rad: 0.5 }, b = { at: [D.to[2 * i], D.to[2 * i + 1]], rad: 0.5 };
@@ -11195,7 +11261,7 @@ function mrOfferRoutine(i, mode) {
   x.there.concat(x.back).forEach(function (j) { var m = LABEL[MODES[D.mode[j]]] || MODES[D.mode[j]]; modes[m] = (modes[m] || 0) + 1; });
   mrAsk({
     title: 'Same on other days?',
-    text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + mrHm(m0) +
+    text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + fmtMin(m0) +
       (x.back.length ? ', and ' + fmt(x.back.length) + ' back' : '') + '. Your files have them as ' + Object.keys(modes).map(function (m) { return esc(m.toLowerCase()) + ' (' + fmt(modes[m]) + ')'; }).join(', ') + '.',
     extra: '<div class="mr-form">' + mrGhostHtml() +
       '<span class="mr-dates">From <input type="date" id="mrRFrom" value="' + isoDay(d0) + '" aria-label="From"> to <input type="date" id="mrRTo" value="' + isoDay(d1) + '" aria-label="To (empty: until now)"></span>' +
@@ -11389,6 +11455,7 @@ function mrSaveRoutine(i, mode, x, A, B) {
 function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unit; });
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
+  renderDateTimeSettings();
   buildFactors();
   renderHrSettings();
   renderImports();
@@ -11462,6 +11529,36 @@ $('unitSeg').addEventListener('click', function (ev) {
   PREFS.unit = b.dataset.u; savePrefs(); renderSettings();
   if (D) apply();
 });
+// Date and time format: Automatic follows the device's language and region; each choice shows an example.
+var DT_SAMPLE = Math.floor(Date.UTC(2026, 10, 17) / 864e5);
+function dtOpts(key, opts, sample) {
+  var keep = PREFS[key], out = opts.map(function (o) {
+    PREFS[key] = o[0];
+    return '<option value="' + o[0] + '">' + o[1] + ' (' + sample() + ')</option>';
+  }).join('');
+  PREFS[key] = keep;
+  return out;
+}
+function renderDateTimeSettings() {
+  var dSample = function () { return niceDate(DT_SAMPLE); }, tSample = function () { return fmtHM(14, 5); };
+  $('dateFmt').innerHTML = dtOpts('dateF', [['auto', 'Automatic'], ['dmy', 'Day month year'], ['mdy', 'Month day, year'], ['ymd', 'Year-month-day']], dSample);
+  $('timeFmt').innerHTML = dtOpts('timeF', [['auto', 'Automatic'], ['24', '24-hour'], ['12', '12-hour']], tSample);
+  $('dateFmt').value = PREFS.dateF; $('timeFmt').value = PREFS.timeF;
+  var lang = (navigator.languages && navigator.languages[0]) || navigator.language;
+  $('dtNote').textContent = 'Automatic follows this device' + (lang ? ' (' + lang + ')' : '') + '. Used for every date and time in BT•DT; dates you type in filters follow your browser.';
+}
+function dateTimeChanged() {
+  savePrefs(); renderSettings();
+  if (!D) return;
+  fillHourOpts();
+  dirty.map = dirty.insights = dirty.timeline = true;
+  apply();
+  if (hlTrip != null) highlight(hlTrip);
+  if (TL.sel != null) tlSelect(TL.sel);
+  scrubLabel();
+}
+$('dateFmt').addEventListener('change', function () { PREFS.dateF = this.value; dateTimeChanged(); });
+$('timeFmt').addEventListener('change', function () { PREFS.timeF = this.value; dateTimeChanged(); });
 $('themeSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-t]');
   if (!b) return;
