@@ -1,12 +1,12 @@
-# MyRules files — draft spec v0.1
+# MyRules files — draft spec v0.2
 
-*Version 0.1, 15 Nov 2026. BT•DT applies gear periods, places, routines (`mode`, `gear`, `snap`) and corrections (`mode`, `gear`, `name`, `hide`); §9, slices 1 to 3. `replace` corrections are read, kept and exported again, but not applied yet.*
+*Version 0.2, 17 Nov 2026 (0.1 plus `unless`, §3.1). BT•DT applies gear periods, places, routines (`mode`, `gear`, `snap`) and corrections (`mode`, `gear`, `name`, `hide`); §9, slices 1 to 3. `replace` corrections are read, kept and exported again, but not applied yet.*
 
 A **MyRules file** holds the things only you know about your own history: which bike you owned when, where home and work were, the train you took to work every weekday, the day Timeline got completely wrong. You load it next to your location files. BT•DT applies it on top of what it read from them, and marks everything it changed as **inferred**, so a guess never passes for a recording.
 
 The app stays generic: nothing about any one person is built in. And because the format is open and versioned, other tools could read and write the same file.
 
-The JSON Schema is published with the app at [`schema/myrules-0.1.json`](../schema/myrules-0.1.json), and [`myrules-example.json`](myrules-example.json) is a complete example covering every rule type.
+The JSON Schema is published with the app at [`schema/myrules-0.2.json`](../schema/myrules-0.2.json) (0.1 stays at [`schema/myrules-0.1.json`](../schema/myrules-0.1.json)), and [`myrules-example.json`](myrules-example.json) is a complete example covering every rule type.
 
 ---
 
@@ -35,8 +35,8 @@ The JSON Schema is published with the app at [`schema/myrules-0.1.json`](../sche
 | Name | Anything, but `*.myrules.json` is recommended so the app recognises it in a folder or ZIP. A file with `"myrules"` at the top is also recognised by content. |
 | Encoding | UTF-8 JSON. No YAML (decided, see §10). |
 | Comments | JSON has none, so every rule takes an optional `"note"` string. |
-| Version | `"myrules": "0.1"`. A minor bump (0.2) only adds things. A major bump may change meaning, and the app refuses a major version it doesn't know, with a message. |
-| Schema | `"$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.1.json"` (optional; to be published with the app). |
+| Version | `"myrules": "0.2"`. A minor bump only adds things (0.2 added `unless` to 0.1), so the app reads 0.1 files as they are. A major bump may change meaning, and the app refuses a major version it doesn't know, with a message. |
+| Schema | `"$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.2.json"` (optional; to be published with the app). |
 | Unknown keys | Kept on export, so a file written by a newer app or another tool round-trips. Keys starting with `x-` are for tool-specific extensions. |
 | Unknown rule types | Skipped with a notice ("2 rules of a newer kind were skipped"), never an error. |
 
@@ -44,8 +44,8 @@ The JSON Schema is published with the app at [`schema/myrules-0.1.json`](../sche
 
 ```json
 {
-  "$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.1.json",
-  "myrules": "0.1",
+  "$schema": "https://bluehair-co.github.io/btdt/schema/myrules-0.2.json",
+  "myrules": "0.2",
   "about": { "name": "David's context", "updated": "2026-11-14T21:40:00Z", "generator": "BT•DT 2.4" },
   "places": [ … ],
   "gear": [ … ],
@@ -65,6 +65,7 @@ Every section is optional. Rules live in four typed lists rather than one generi
 | `when` | When | When the rule applies (§3). Leave it out for always. |
 | `enabled` | boolean, default `true` | Switched off in the app: kept in the file but not applied. |
 | `except` | TripRef[] | Trips the rule must leave alone. "Not this trip" in the app adds one here. |
+| `unless` | Unless[] | Conditions the rule leaves alone, like "not on weekends" (§3.1). *Turn off for these trips* in the app adds one here. Since 0.2. |
 | `note` | string | Free text for humans. |
 
 ---
@@ -85,6 +86,29 @@ Every section is optional. Rules live in four typed lists rather than one generi
 - `days` and `time` limit it to days of the week and a local time window. A trip matches when it **starts** inside the window. A window that crosses midnight (`["22:00", "02:00"]`) works.
 - `skip` lists date ranges inside it that don't count (holidays, a broken bike in the shop).
 - All times are the local time where the trip started, the same local time the app already shows.
+
+### 3.1 Leaving trips out: `unless`
+
+A gear period applies across its whole time frame, which often catches trips it shouldn't: the weekend rides on a rented bike, the holiday where the Strida stayed home. `unless` lists conditions the rule leaves alone, written the way the filters are:
+
+```json
+"unless": [
+  { "days": ["sat", "sun"] },
+  { "countries": ["VN", "JP"] },
+  { "time": ["22:00", "23:59"], "months": [7, 8] }
+]
+```
+
+- Each entry takes the parts of a `when` (`from`, `to`, `days`, `time`), plus `months` (1–12), `years` and `countries` (ISO 3166-1 codes; a trip counts when it starts or ends in one, as in Filters).
+- A trip matches an entry when it fits **every** part the entry has, and the rule skips it when it matches **any** entry, like a trip in `except`.
+- Unlike `except`, it follows the data: trips loaded later that match are left alone too.
+
+**In BT•DT.** The last section of Filters, *MyRules*, says how many gear periods and routines changed the trips shown ("2 rules changed 408 of the trips shown"). *Show rules* lists them, each with how many of those trips it changed and **Turn off for these trips**. That offers:
+
+- **Trips like these** (the default): the date, year, month, day of the week, time of day and country filters that are on become one `unless` entry. Transport, gear, source and *Guessed* filters aren't part of it, since a rule only touches its own type, and the gear filter is often how its trips were found. When none of those filters is on, only the next choice is offered.
+- **Just these trips**: each trip shown is added to the rule's `except`, so nothing else changes.
+
+The rules sheet shows each `unless` entry under its rule ("Not on weekends") with *Undo*. A file with an `unless` is saved as version 0.2.
 
 ---
 
@@ -238,7 +262,7 @@ Rules are applied in one pass after the files are read and cleaned (after the ba
    4. gear periods with a `match`,
    5. gear periods without one.
 3. **Ties within a level.** A shorter `when` wins (a two-week period beats a two-year one). If it is still a tie, the rule later in the file wins for corrections (the newest fix), but for gear periods the trip gets nothing and is flagged as ambiguous (§5.2).
-4. **`except` always wins.** A trip listed in a rule's `except` is skipped by that rule, and the next rule down may still apply.
+4. **`except` and `unless` always win.** A trip listed in a rule's `except`, or matching one of its `unless` conditions, is skipped by that rule, and the next rule down may still apply.
 5. **Places apply first**, since routines and gear matches refer to them.
 
 Each trip keeps a list of what changed it, so the app can always show "why".
@@ -281,6 +305,8 @@ On the map, every stay within a named place's radius counts as that one place: p
 | Set a trip's type | correction with `start` |
 | *Same every weekday?* after correcting a commute (offered when 5+ similar trips exist) | routine |
 | *Not this trip* on an inferred value | entry in that rule's `except` |
+| *Turn off for these trips* in Filters → *Show rules*, *Trips like these* | the filters as an entry in that rule's `unless` |
+| *Turn off for these trips*, *Just these trips* | an entry per trip in that rule's `except` |
 
 The app never asks someone to type JSON. People who like files can still edit it and load it again.
 

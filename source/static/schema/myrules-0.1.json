@@ -173,7 +173,7 @@
     },
     "tripRef": {
       "type": "object",
-      "oneOf": [
+      "anyOf": [
         {
           "required": [
             "start"
@@ -358,7 +358,7 @@
       }
     },
     "snap": {
-      "oneOf": [
+      "anyOf": [
         {
           "const": "learn"
         },
@@ -411,7 +411,7 @@
       ],
       "properties": {
         "from": {
-          "oneOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/ref"
             },
@@ -421,7 +421,7 @@
           ]
         },
         "to": {
-          "oneOf": [
+          "anyOf": [
             {
               "$ref": "#/$defs/ref"
             },
@@ -449,7 +449,7 @@
               "$ref": "#/$defs/mode"
             },
             "gear": {
-              "oneOf": [
+              "anyOf": [
                 {
                   "$ref": "#/$defs/ref"
                 },
@@ -488,7 +488,7 @@
               "$ref": "#/$defs/mode"
             },
             "gear": {
-              "oneOf": [
+              "anyOf": [
                 {
                   "$ref": "#/$defs/ref"
                 },

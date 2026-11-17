@@ -435,6 +435,10 @@
         <button type="button" class="btn" id="exportCsv">Table (CSV)</button>
       </div>
     </div>
+    <div class="sec" id="mrHereSec" hidden>
+      <h3>MyRules</h3>
+      <div class="mr-here-line"><p class="fine" id="mrHereTxt"></p><button type="button" class="btn" id="mrHereBtn" aria-controls="mrHereSheet">Show rules</button></div>
+    </div>
   </div>
 </aside>
 
@@ -516,6 +520,14 @@
 </aside>
 
 <!-- MyRules: the rules from your .myrules.json and the ones made in the app, opened from Imported data -->
+<aside class="sheet" id="mrHereSheet" aria-label="Rules in these trips" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrHereBack" aria-label="Back to filters"><span data-icon="left"></span></button><h2>Rules in these trips</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body">
+    <p class="fine" id="mrHereLead"></p>
+    <div class="sec" id="mrHereList"></div>
+    <button type="button" class="link-btn" id="mrHereAll">All MyRules</button>
+  </div>
+</aside>
 <aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
   <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
