@@ -173,7 +173,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .dock button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; width: 78px; height: 48px; border: 0; border-radius: 16px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 500; cursor: pointer; }
 .dock button svg { width: 22px; height: 22px; }
 .dock button[aria-current="page"] { color: var(--chip-on-fg); background: var(--chip-on-bg); }
-.no-data .dock, .no-data .fab, .no-data .topbar { display: none !important; }
+.no-data .dock, .no-data .fab, .no-data .topbar, .no-data .playbar { display: none !important; }
 
 /* ---------- map page ---------- */
 #mapPage { background: var(--grid); }
@@ -226,7 +226,17 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .range-label { text-align: center; padding: 6px 8px 2px; }
 .range-label b { font-size: 14px; font-weight: 600; }
 .range-label small { display: block; font-size: 12px; color: var(--muted); }
-.scrub { display: grid; grid-template-columns: 40px 1fr auto 44px; align-items: center; gap: 6px; padding: 2px 2px 0; border-top: 1px solid var(--grid); margin-top: 6px; }
+.scrub { display: grid; grid-template-columns: 40px 1fr auto 44px; align-items: center; gap: 6px; }
+/* Day playback has its own bar at the bottom, centred just above the dock, by the playback button
+   that opens it. The sunrise and sunset times fit under the slider within the play button's height,
+   so the bar keeps the same space above and below. --pb-h is its height, which lifts the legend (and on a phone the map buttons) above it. */
+.playbar { position: absolute; z-index: 22; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 12px + var(--safe-b)); width: min(560px, calc(100% - 24px)); padding: 6px 8px; border-radius: 22px; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow); transition: left .2s ease; }
+body:has(#playBar:not([hidden])) { --pb-h: 54px; }
+body:has(#playBar:not([hidden])) .map-legend { bottom: calc(var(--dock-h) + var(--dock-gap) + 22px + var(--pb-h) + var(--safe-b)); }
+@media (max-width: 959px) {
+  body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--pb-h) + var(--safe-b)); }
+  body:has(#playBar:not([hidden])) .map-legend { bottom: calc(var(--dock-h) + var(--dock-gap) + 36px + var(--pb-h) + var(--safe-b)); }
+}
 .scrub .play { width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-fg); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .scrub .play svg { width: 18px; height: 18px; }
 .scrub .when { font-family: var(--font-mono); font-size: 12px; color: var(--fg); white-space: nowrap; min-width: 92px; text-align: right; }
@@ -238,7 +248,6 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .scrub > input[type="range"] { grid-area: 1 / 2; position: relative; z-index: 1; }
 .scrub > .when { grid-area: 1 / 3; }
 .scrub > .speed { grid-area: 1 / 4; }
-.scrub.has-sun { padding-bottom: 13px; }
 .sun-marks { grid-area: 1 / 2; align-self: stretch; position: relative; margin: 0 8px; pointer-events: none; --sun-rise: #d98a1c; --sun-set: #6a55b0; }
 .sun-marks .tick { position: absolute; top: 50%; width: 2px; height: 14px; margin: -7px 0 0 -1px; border-radius: 1px; background: var(--sun-rise); }
 .sun-marks .tick.set { background: var(--sun-set); }
@@ -329,7 +338,7 @@ details.help b { color: var(--fg); font-weight: 500; }
    buttons, the legend and the trip details step aside until it closes. */
 @media (max-width: 959px) {
   body.chart-open #map, body.chart-open #proj { bottom: var(--chart-h); }
-  body.chart-open .dock, body.chart-open .topbar, body.chart-open #mapPage .fab, body.chart-open .map-legend, body.chart-open #scrim { display: none !important; }
+  body.chart-open .dock, body.chart-open .topbar, body.chart-open .playbar, body.chart-open #mapPage .fab, body.chart-open .map-legend, body.chart-open #scrim { display: none !important; }
   body.chart-open #tripSheet { transform: translateY(105%); visibility: hidden; }
   .chart-panel { border-radius: 18px 18px 0 0; }
   .cp-head { padding-left: 16px; }
@@ -804,15 +813,15 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
      the top bar moves over into the space left of it. */
   .sheet.right { left: auto; right: 16px; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 360px; max-height: none; transform: translateX(12px); }
   .sheet.right.open { transform: none; }
-  body:has(#layersSheet.open) .topbar { left: calc((100% - 376px) / 2); }
+  body:has(#layersSheet.open) :is(.topbar, .playbar) { left: calc((100% - 376px) / 2); }
   /* Filters is the same full-height panel on the left, where its button sits in the top bar;
      the top bar moves over into the space right of it, narrowing when it has to. */
   /* Imported data opens in the same place, from the top of the filters. */
   :is(#filtersSheet, #importsSheet) { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
   :is(#filtersSheet, #importsSheet).open { transform: none; }
-  body:has(:is(#filtersSheet, #importsSheet).open) .topbar { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
+  body:has(:is(#filtersSheet, #importsSheet).open) :is(.topbar, .playbar) { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
   /* Settings is a right-hand panel like Views and layers, opened from the right of the top bar. */
-  body:has(#settingsSheet.open) .topbar { left: calc((100% - 376px) / 2); }
+  body:has(#settingsSheet.open) :is(.topbar, .playbar) { left: calc((100% - 376px) / 2); }
   /* The zoom buttons on the left move out from under the filters panel. */
   #map .leaflet-top.leaflet-left, .proj-zoom { transition: left .2s ease; }
   body:has(:is(#filtersSheet, #importsSheet).open) #map .leaflet-top.leaflet-left { left: 436px; }
@@ -1210,13 +1219,17 @@ div.hit-row:hover { background: none; }
           <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
-        <div class="scrub">
-          <button type="button" class="play" id="playBtn" aria-label="Play"><span data-icon="play"></span></button>
-          <div class="sun-marks" id="sunMarks" aria-hidden="true" hidden></div>
-          <input type="range" id="scrub" min="0" max="1000" step="1" value="1000" aria-label="Time">
-          <span class="when" id="scrubWhen"></span>
-          <button type="button" class="speed" id="speedBtn" aria-label="Playback speed">1×</button>
-        </div>
+      </div>
+    </div>
+
+    <!-- Day playback: its own bar at the bottom, centred above the dock, by the playback button that opens it. -->
+    <div class="playbar" id="playBar" hidden>
+      <div class="scrub">
+        <button type="button" class="play" id="playBtn" aria-label="Play"><span data-icon="play"></span></button>
+        <div class="sun-marks" id="sunMarks" aria-hidden="true" hidden></div>
+        <input type="range" id="scrub" min="0" max="1000" step="1" value="1000" aria-label="Time">
+        <span class="when" id="scrubWhen"></span>
+        <button type="button" class="speed" id="speedBtn" aria-label="Playback speed">1×</button>
       </div>
     </div>
 
@@ -6793,8 +6806,8 @@ function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.s
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
 function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
-  // The playback button (bottom left) shows or hides the time slider in the top bar.
-  document.querySelector('#timeBar .scrub').hidden = !n || !PREFS.scrub;
+  // The playback button (bottom left) shows or hides the time slider in the playback bar above the dock.
+  $('playBar').hidden = !n || !PREFS.scrub;
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
@@ -7011,14 +7024,15 @@ var P_pos = null, P_cur = null, prevCur = null;
 var carry = null, rollNext = null, carryLine = null;
 // During playback the map follows the trip under way: when a trip starts, the map glides
 // (zooming out and back in as needed) so that trip's whole route is on screen, clear of
-// the top bar, the legend and the dock. Playback holds still while the map glides and
+// the top bar, the legend, the playback bar and the dock. Playback holds still while the map glides and
 // until its tiles have loaded, then eases back up to speed, so the dot never outruns the
 // map. The tiles for the next trips' views are fetched ahead of time. Between trips the
 // map only pans to keep the dot in view.
 var playFit = { i: null, flying: 0, landed: 0, resume: 0, pan: 0 }, tilesAhead = {}, tileImgs = [];
 function playPad() {
   var m = $('map').getBoundingClientRect(), tb = $('topbar').getBoundingClientRect(), dk = document.querySelector('.dock'), lg = $('mapLegend');
-  var floor = lg && !lg.hidden && lg.offsetHeight ? lg.getBoundingClientRect().top : dk ? dk.getBoundingClientRect().top : m.bottom;
+  // The floor is the highest of the legend, the playback bar and the dock.
+  var floor = [lg, $('playBar'), dk].reduce(function (f, el) { return el && !el.hidden && el.offsetHeight ? Math.min(f, el.getBoundingClientRect().top) : f; }, m.bottom);
   var side = wide() ? 60 : 28;
   return { tl: L.point(side, Math.max(24, tb.bottom - m.top + 20)), br: L.point(side + 40, Math.max(24, m.bottom - floor + 20)) };
 }

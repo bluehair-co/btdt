@@ -1183,8 +1183,8 @@ function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.s
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + x.getUTCDate() + ' ' + MONTHS[x.getUTCMonth()] + ' ' + x.getUTCFullYear(); }
 function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
-  // The playback button (bottom left) shows or hides the time slider in the top bar.
-  document.querySelector('#timeBar .scrub').hidden = !n || !PREFS.scrub;
+  // The playback button (bottom left) shows or hides the time slider in the playback bar above the dock.
+  $('playBar').hidden = !n || !PREFS.scrub;
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
@@ -1401,14 +1401,15 @@ var P_pos = null, P_cur = null, prevCur = null;
 var carry = null, rollNext = null, carryLine = null;
 // During playback the map follows the trip under way: when a trip starts, the map glides
 // (zooming out and back in as needed) so that trip's whole route is on screen, clear of
-// the top bar, the legend and the dock. Playback holds still while the map glides and
+// the top bar, the legend, the playback bar and the dock. Playback holds still while the map glides and
 // until its tiles have loaded, then eases back up to speed, so the dot never outruns the
 // map. The tiles for the next trips' views are fetched ahead of time. Between trips the
 // map only pans to keep the dot in view.
 var playFit = { i: null, flying: 0, landed: 0, resume: 0, pan: 0 }, tilesAhead = {}, tileImgs = [];
 function playPad() {
   var m = $('map').getBoundingClientRect(), tb = $('topbar').getBoundingClientRect(), dk = document.querySelector('.dock'), lg = $('mapLegend');
-  var floor = lg && !lg.hidden && lg.offsetHeight ? lg.getBoundingClientRect().top : dk ? dk.getBoundingClientRect().top : m.bottom;
+  // The floor is the highest of the legend, the playback bar and the dock.
+  var floor = [lg, $('playBar'), dk].reduce(function (f, el) { return el && !el.hidden && el.offsetHeight ? Math.min(f, el.getBoundingClientRect().top) : f; }, m.bottom);
   var side = wide() ? 60 : 28;
   return { tl: L.point(side, Math.max(24, tb.bottom - m.top + 20)), br: L.point(side + 40, Math.max(24, m.bottom - floor + 20)) };
 }
