@@ -11006,7 +11006,8 @@ function mrRouteLine(x, trips) {
   } else {
     // Learned: the trip the rule names, else the cleanest one.
     var pick = typeof sn === 'object' && sn.trip ? mrRefTrips(sn.trip)[0] : null, best = 0;
-    if (pick == null) trips.forEach(function (i) { var c = mrClean(i); if (c > best) { best = c; pick = i; } });
+    // Else the recommended one, as Edit routine shows it: the best trip of the way most trips take.
+    if (pick == null) { var W = mrWays(trips); pick = W.length ? W[0].i : null; }
     if (pick == null) return null;
     pts = mrTripPts(pick);
     if (D.mrRoute[pick] && D.mrRoute[pick].dir < 0) pts.reverse();
@@ -11394,7 +11395,7 @@ function mrRenderRules() {
     if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing, generic or guessed'));
     if (t.gear) { var gr = String(t.gear).charAt(0) === '@' ? mrById(t.gear) : null; bits.push('Gear: ' + esc(gr ? gr.name || gr.id : t.gear)); }
     var left = D && MR_LEFT[r.id] || { type: 0, gear: 0, line: 0 };
-    if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + (left.line ? ' · ' + fmt(left.line) + ' went another way' : '') : left.line ? 'Line: no trip clean enough to learn it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip clean enough to learn it from yet');
+    if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + (left.line ? ' · ' + fmt(left.line) + ' went another way' : '') : left.line ? 'Line: no trip with 5 or more GPS points to take it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip with 5 or more GPS points to take it from yet');
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
@@ -11482,7 +11483,7 @@ function mrTripBlock(i) {
     if (ms.why === 'type') why = 'Your files say ' + esc((LABEL[MODES[D.base.mode[i]]] || MODES[D.base.mode[i]]).toLowerCase()) + ', and the routine only sets ' + esc((LABEL[mm] || mm).toLowerCase()) + ' where the type is missing, generic or guessed. Turn on Always in the routine to take trips like this one.';
     else if (ms.why === 'gear') why = 'It was recorded with ' + esc(mrRecGear(i)) + ', and the routine sets ' + esc(mrGearName(mr.then.gear)) + '. Recorded gear is never replaced by a routine.';
     else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
-    else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail clean enough to learn it from (10 or more points, no gap over 2 minutes). Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
+    else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail of 5 or more points to take it from. Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
     else why = 'This trip went another way: over a third of its GPS points are more than 1 km from the routine\'s line.';
     h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">It matches by place and time, but everything a routine sets (type, gear, line) applies together or not at all. ' + why + '</div></div>';
   }
@@ -11491,7 +11492,9 @@ function mrTripBlock(i) {
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
-  if (rr && rr.then && rr.then.snap && ln && !ln.missing && ln.from !== i && (ln.src === 'trip' || rr.then.snap === 'learn') && mrClean(i)) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(rr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
+  // A trip of your own as the line: one in the routine, or one left out for want of a line or for going another way.
+  var lr = rr || ms && (ms.why === 'noline' || ms.why === 'fit') && mr, lln = lr && D.mrLine[lr.id];
+  if (lr && lr.then && lr.then.snap && mrLearned(lr.then.snap) && !(lln && lln.from === i) && D.pathOff[i + 1] - D.pathOff[i] >= 5) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(lr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
 }
@@ -12141,7 +12144,7 @@ function mrGhostStart(draft) {
     pk.hidden = !mrLearned(sn);
     if (!pk.hidden) {
       var nw = W ? W.length : 0, ways = W && W[k] ? W[k].all.length : 0, rec = from != null && from === MR_GHOST.cands[0];
-      $('mrPickTxt').innerHTML = from == null ? 'No trip clean enough to learn the line from' :
+      $('mrPickTxt').innerHTML = from == null ? 'No trip with 5 or more GPS points to take the line from' :
         (nw > 1 && k >= 0 ? '<b>Way ' + fmt(k + 1) + ' of ' + fmt(nw) + '</b> · ' + fmt(ways) + ' trip' + (ways === 1 ? '' : 's') + (k === 0 ? ' · recommended' : '') : rec ? '<b>Recommended line</b>' : '<b>Your chosen line</b>') +
         '<small class="fine">' + (nw === 1 && k === 0 ? 'Your ' + fmt(ways) + ' trips here all take this way. ' : k < 0 ? 'Its trip isn\'t in this period. ' : '') + 'From the trip on ' + esc(mrWhere(from)) + '</small>';
       $('mrPickPrev').disabled = $('mrPickNext').disabled = nw < 2 && k >= 0;
