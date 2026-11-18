@@ -1633,6 +1633,8 @@ function scrubTo(v) {
       var pm = posMode(), pk = pm && pm + '|' + posIc();
       if (pk !== posMarker._mode) { posMarker.setIcon(posIcon(pm, posIc())); posMarker._mode = pk; }
       posMarker.setLatLng(P_pos); if (!map.hasLayer(posMarker)) posMarker.addTo(map);
+      var pe = posMarker.getElement(), pill = pe && pe.querySelector('.pos-speed'), ps = posSpeed();
+      if (pill) { pill.hidden = ps == null; if (ps != null) pill.textContent = speed(ps); }
     }
     else if (map.hasLayer(posMarker)) map.removeLayer(posMarker);
     if (playing && P_pos && PREFS.proj === 'merc') followPlay();
@@ -1734,11 +1736,35 @@ function followPlay() {
 // The position marker: while a trip is under way it shows that trip's transport icon in
 // its colour; between trips (standing still) it is a plain grey dot.
 function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
+// The speed (km/h) of the trip under way at the playback time, for the pill under the
+// position marker: from the trip's speed series (as in its chart), or its average speed
+// when it has none (flights, trips of a few points). Null between trips and while the trip
+// stands still (under 1 km/h), so the pill only shows while moving.
+var posSpd = { i: null, t: null, v: null };
+function posSpeed() {
+  if (!P_cur) return null;
+  var i = P_cur.i, c = posSpd;
+  if (c.i !== i) {
+    var sp = tripSpeeds(i);
+    c.i = i; c.t = sp.map(function (q) { return q[0]; }); c.v = sp.map(function (q) { return q[1]; });
+  }
+  var v, s = (scrubTime() - D.start[i]) / 1000, n = c.t.length;
+  if (n < 2) { var h = (D.end[i] - D.start[i]) / 36e5; v = h > 0 ? D.km[i] / h : 0; }
+  else if (s <= c.t[0]) v = c.v[0];
+  else if (s >= c.t[n - 1]) v = c.v[n - 1];
+  else {
+    var lo = 0, hi = n - 1;
+    while (hi - lo > 1) { var mid = (lo + hi) >> 1; if (c.t[mid] <= s) lo = mid; else hi = mid; }
+    var f = c.t[hi] > c.t[lo] ? (s - c.t[lo]) / (c.t[hi] - c.t[lo]) : 1;
+    v = c.v[lo] + (c.v[hi] - c.v[lo]) * f;
+  }
+  return isFinite(v) && v >= 1 ? v : null;
+}
 // A Strava ride on a Halfbike or cargo bike shows that bike.
 function posIc() { return P_cur ? tripIcon(P_cur.i) || 'UNKNOWN' : null; }
 function posIcon(m, ic) {
   if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
-  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(ic || m) + '</div>', iconSize: [30, 30], iconAnchor: [15, 15] });
+  return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(ic || m) + '</div><span class="pos-speed" hidden></span>', iconSize: [30, 30], iconAnchor: [15, 15] });
 }
 // The line-drawn gear icons as images, for the canvas of the other map views.
 var lineIconImg = {};
@@ -2600,6 +2626,18 @@ function paintProj(fast) {
         else {
           ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
           ctx.fill(new Path2D(ICONS[ic] || ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
+        }
+        // The speed pill under the marker, as on the flat map.
+        var ps = posSpeed();
+        if (ps != null) {
+          var txt = speed(ps);
+          ctx.save(); ctx.font = '600 11px ' + cssVar('--font-body'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          var tw = ctx.measureText(txt).width + 12, ty = xy[1] + 27;
+          ctx.fillStyle = cssVar('--panel'); ctx.strokeStyle = cssVar('--line'); ctx.lineWidth = 1;
+          ctx.beginPath();
+          if (ctx.roundRect) ctx.roundRect(xy[0] - tw / 2, ty - 9, tw, 18, 9); else ctx.rect(xy[0] - tw / 2, ty - 9, tw, 18);
+          ctx.fill(); ctx.stroke();
+          ctx.fillStyle = cssVar('--fg'); ctx.fillText(txt, xy[0], ty + 0.5); ctx.restore();
         }
       } else {
         ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();

@@ -404,6 +404,9 @@ details.help b { color: var(--fg); font-weight: 500; }
 .pos-dot.still { width: 16px; height: 16px; background: var(--pos-still); }
 .pos-dot.moving { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; color: #fff; }
 .pos-dot.moving svg.ic { width: 16px; height: 16px; }
+/* The speed pill under the moving marker during playback (hidden between trips and at stops). */
+.pos-speed { position: absolute; top: 34px; left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 1px 7px; border-radius: 999px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: 0 1px 4px rgba(0, 0, 0, .25); font: 600 11px/16px var(--font-body); font-variant-numeric: tabular-nums; pointer-events: none; }
+.pos-speed[hidden] { display: none; }
 
 /* ---------- insights ---------- */
 .cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
