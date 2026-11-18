@@ -10755,8 +10755,8 @@ function mrApplyCorrections() {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
   D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
-  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
-  MR_COUNT = {}; MR_COR = null; MR_NOFIT = {};
+  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
+  MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
   if (!MR || !MR.on) { mrLearn(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
@@ -10779,9 +10779,9 @@ function mrApplyCorrections() {
     });
     if (hit) MR_COUNT[x.c.id] = x.trips.length;
   });
+  // A trip a correction made a flight isn't drawn along a routine's line.
+  D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
   mrLearn();
-  // Lines last: a trip a correction moved to another type keeps its routine's line only if it still matches.
-  mrApplySnaps();
 }
 
 // ---------- learning from your fixes, and trips to check ----------
@@ -10862,7 +10862,7 @@ function mrCheckCount() {
 // Of the routines that match a trip, the one with the shorter when wins, then the later one in the
 // file. then.mode sets the type when the files had none or it was guessed (or always, with force);
 // then.gear fills trips without gear (in mrApplyGear); then.snap draws the trip along a line.
-var MR_NOFIT = {};   // trips a routine's line didn't fit, by routine id
+var MR_LEFT = {};   // trips a routine matched but left out, by routine id: { type, line }
 function mrEnd(ref) {
   if (Array.isArray(ref) && ref.length === 2 && isFinite(ref[0])) return { at: [+ref[0], +ref[1]], rad: 0.5 };
   if (ref && typeof ref === 'object' && Array.isArray(ref.at)) return { at: ref.at, rad: Math.max(0.5, (+ref.radius_m || 0) / 1000) };
@@ -10885,29 +10885,62 @@ function mrRouteDir(x, i) {
   if (x.r.both_ways && mrNearEnd(x.b, i, false) && mrNearEnd(x.a, i, true) && mrWhenOk(x.rw, i)) return -1;
   return 0;
 }
+// A routine takes a trip only when all it sets can apply: its type, its gear and its line. A trip
+// that matches by place and time but can't take one of them stays out (D.mrMiss says why).
+// Its type fits when the files had the same, none, Google's generic "In vehicle" (MR_OPEN) or a guess,
+// or always with force.
+var MR_OPEN = { UNKNOWN: 1, VEHICLE: 1 };
+function mrTypeFits(x, i) {
+  var m = x.then.mode, mi = m != null ? MODE_IDX[m] : null, b = D.base || D;
+  return mi == null || mi === b.mode[i] || !!x.r.force || !!(b.est[i] & GUESSED) || !!MR_OPEN[MODES[b.mode[i]]];
+}
 function mrApplyRoutines() {
-  var L = mrRoutineList(), n = D.day.length, b = D.base;
-  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; });
+  var L = mrRoutineList(), n = D.day.length, b = D.base, cand = {};
+  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; MR_LEFT[x.r.id] = { type: 0, line: 0 }; cand[x.r.id] = []; });
   if (!L.length) return;
   for (var i = 0; i < n; i++) {
     if (isDup(i) || MODES[b.mode[i]] === 'FLYING') continue;
-    var best = null, bd = 0;
+    var best = null, bd = 0, miss = null, md = 0;
     for (var k = 0; k < L.length; k++) {
       var d = mrRouteDir(L[k], i);
-      if (d && (!best || L[k].w.len <= best.w.len)) { best = L[k]; bd = d; }
+      if (!d) continue;
+      if (!mrTypeFits(L[k], i)) { if (!miss || L[k].w.len <= miss.w.len) { miss = L[k]; md = d; } continue; }
+      if (!best || L[k].w.len <= best.w.len) { best = L[k]; bd = d; }
     }
-    if (!best) continue;
-    D.mrRoute[i] = { rule: best.r.id, dir: bd };
-    MR_COUNT[best.r.id]++;
-    var m = best.then.mode, mi = m != null ? MODE_IDX[m] : null;
-    if (mi == null || mi === b.mode[i]) continue;
-    if (!best.r.force && !(b.est[i] & GUESSED) && MODES[b.mode[i]] !== 'UNKNOWN') continue;
-    D.mode[i] = mi;
-    D.est[i] &= ~GUESSED;
-    if (D.sport[i] && SPORTS[D.sport[i]][2] !== m) D.sport[i] = 0;
-    if (D.stype) D.stype[i] = '';
-    D.mrMode[i] = { rule: best.r.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED), inf: true };
+    if (best) { D.mrRoute[i] = { rule: best.r.id, dir: bd }; cand[best.r.id].push(i); }
+    else if (miss) { D.mrMiss[i] = { rule: miss.r.id, dir: md, why: 'type' }; MR_LEFT[miss.r.id].type++; }
   }
+  // Lines: a routine with one draws each of its trips along it; a trip it doesn't fit, or every trip
+  // when there is no line yet, is left out of the routine.
+  L.forEach(function (x) {
+    var trips = cand[x.r.id];
+    if (!x.then.snap || !trips.length) return;
+    var line = mrRouteLine(x, trips), ok = line && line.pts;
+    D.mrLine[x.r.id] = line;
+    cand[x.r.id] = trips.filter(function (i) {
+      var s = ok && i !== line.from ? mrSnapTrip(i, line.pts) : null;
+      if (s) { s.rule = x.r.id; D.snap[i] = s; D.km[i] = s.km; return true; }
+      if (ok && i === line.from) return true;
+      D.mrMiss[i] = { rule: x.r.id, dir: D.mrRoute[i].dir, why: !line ? 'noline' : line.missing ? 'missing' : 'fit' };
+      D.mrRoute[i] = null;
+      MR_LEFT[x.r.id].line++;
+      return false;
+    });
+  });
+  // Types, on the trips each routine kept.
+  L.forEach(function (x) {
+    var m = x.then.mode, mi = m != null ? MODE_IDX[m] : null;
+    MR_COUNT[x.r.id] = cand[x.r.id].length;
+    if (mi == null) return;
+    cand[x.r.id].forEach(function (i) {
+      if (mi === b.mode[i]) return;
+      D.mode[i] = mi;
+      D.est[i] &= ~GUESSED;
+      if (D.sport[i] && SPORTS[D.sport[i]][2] !== m) D.sport[i] = 0;
+      if (D.stype) D.stype[i] = '';
+      D.mrMode[i] = { rule: x.r.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED), inf: true };
+    });
+  });
 }
 
 // ---------- lines (snap) ----------
@@ -10991,25 +11024,6 @@ function mrSnapTrip(i, L) {
   for (q = 1; q < seg.length; q++) { len += km(seg[q - 1], seg[q]); cum.push(len); }
   var dur = Math.max(0, (D.end[i] - D.start[i]) / 1000);
   return { pts: seg, ts: cum.map(function (c) { return len ? dur * c / len : 0; }), km: len };
-}
-function mrApplySnaps() {
-  mrRoutineList().forEach(function (x) {
-    if (!x.then.snap) return;
-    var trips = [];
-    for (var i = 0; i < D.day.length; i++) if (D.mrRoute[i] && D.mrRoute[i].rule === x.r.id && MODES[D.mode[i]] !== 'FLYING') trips.push(i);
-    var line = mrRouteLine(x, trips);
-    D.mrLine[x.r.id] = line;
-    if (!line || !line.pts) return;
-    MR_NOFIT[x.r.id] = 0;
-    trips.forEach(function (i) {
-      if (i === line.from) return;
-      var s = mrSnapTrip(i, line.pts);
-      if (!s) { MR_NOFIT[x.r.id]++; return; }
-      s.rule = x.r.id;
-      D.snap[i] = s;
-      D.km[i] = s.km;
-    });
-  });
 }
 
 // Places: hidden places leave their stays out of the map's pins and heatmap and the places in
@@ -11362,9 +11376,11 @@ function mrRenderRules() {
     function end(ref, e) { var pr = typeof ref === 'string' ? mrById(ref) : null; return pr ? pr.name || pr.role || pr.id : e ? (needPlaces(), placeLabel(mrNearestPlace(e.at))) : '?'; }
     bits.push(esc(end(r.from, a)) + (r.both_ways ? ' ⇄ ' : ' → ') + esc(end(r.to, b)));
     bits.push(mrWhenText(r.when));
-    if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing or guessed'));
+    if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing, generic or guessed'));
     if (t.gear) { var gr = String(t.gear).charAt(0) === '@' ? mrById(t.gear) : null; bits.push('Gear: ' + esc(gr ? gr.name || gr.id : t.gear)); }
-    if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + (MR_NOFIT[r.id] ? ' · ' + fmt(MR_NOFIT[r.id]) + ' didn\'t fit' : '') : 'Line: no trip clean enough to learn it from yet');
+    var left = D && MR_LEFT[r.id] || { type: 0, line: 0 };
+    if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + (left.line ? ' · ' + fmt(left.line) + ' went another way' : '') : left.line ? 'Line: no trip clean enough to learn it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip clean enough to learn it from yet');
+    if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
     return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
@@ -11433,18 +11449,31 @@ function mrTripBlock(i) {
   if (nm) h += '<div class="mr-chg"><b>Title:</b> ' + esc(nm.name) + (recName(i) ? ' <span class="fine">(was “' + esc(recName(i)) + '”)</span>' : '') + src(nm.rule, 'name') + '</div>';
   if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
   var rt = D.mrRoute && D.mrRoute[i], rr = rt && mrById(rt.rule), sn = D.snap && D.snap[i], ln = rr && D.mrLine[rr.id];
+  var ms = !rr && D.mrMiss && D.mrMiss[i], mr = ms && mrById(ms.rule), mln = mr && D.mrLine[mr.id];
+  function way(d) { return ' <span class="fine">· the way ' + (d > 0 ? 'there' : 'back') + '</span>'; }
   if (rr) {
-    h += '<div class="mr-chg"><b>Routine:</b> ' + esc(rr.name || rr.id) + ' <span class="fine">(' + (rt.dir > 0 ? 'there' : 'back') + ')</span>';
-    if (sn) h += '<div class="fine">Drawn along ' + (ln && ln.src === 'trip' ? 'the line of the trip on ' + esc(mrWhere(ln.from)) : esc(ln ? ln.src : 'its line')) + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + ').</div>';
-    else if (ln && ln.from === i) h += '<div class="fine">This trip\'s GPS trail is the line the routine\'s other trips are drawn along.</div>';
-    else if (ln && ln.missing) h += '<div class="fine">Its line, ' + esc(ln.missing) + ', isn\'t loaded: load it with your location files.</div>';
-    else if (rr.then && rr.then.snap && ln) h += '<div class="fine">Not drawn along the routine\'s line: this trip went another way.</div>';
-    h += '</div>';
+    // Everything it set: its type, gear and line all applied, or it wouldn't have this trip.
+    var rm = rr.then && rr.then.mode, bits = [];
+    h += '<div class="mr-chg"><b>Routine:</b> ' + esc(rr.name || rr.id) + way(rt.dir);
+    if (rm && !md) bits.push('Type: ' + esc((LABEL[rm] || rm).toLowerCase()) + (MODES[D.mode[i]] === rm ? ', as in your files.' : ', but a fix on this trip wins.'));
+    if (rm && md && md.rule !== rr.id) bits.push('Type: ' + esc((LABEL[rm] || rm).toLowerCase()) + ' from the routine, but a fix on this trip wins.');
+    if (sn) bits.push('Drawn along ' + (ln && ln.src === 'trip' ? 'the line of the trip on ' + esc(mrWhere(ln.from)) : esc(ln ? ln.src : 'its line')) + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + ').');
+    else if (ln && ln.from === i) bits.push('This trip\'s GPS trail is the line the routine\'s other trips are drawn along.');
+    h += bits.map(function (t) { return '<div class="fine">' + t + '</div>'; }).join('') + '</div>';
+  } else if (mr) {
+    // Matched by place and time, but something the routine sets can't apply, so none of it does.
+    var mm = mr.then && mr.then.mode, why;
+    if (ms.why === 'type') why = 'Your files say ' + esc((LABEL[MODES[D.base.mode[i]]] || MODES[D.base.mode[i]]).toLowerCase()) + ', and the routine only sets ' + esc((LABEL[mm] || mm).toLowerCase()) + ' where the type is missing, generic or guessed. Turn on Always in the routine to take trips like this one.';
+    else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
+    else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail clean enough to learn it from (10 or more points, no gap over 2 minutes). Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
+    else why = 'This trip went another way: over a third of its GPS points are more than 1 km from the routine\'s line.';
+    h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">It matches by place and time, but everything a routine sets (type, gear, line) applies together or not at all. ' + why + '</div></div>';
   }
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
+  if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (rr && rr.then && rr.then.snap && ln && !ln.missing && ln.from !== i && (ln.src === 'trip' || rr.then.snap === 'learn') && mrClean(i)) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(rr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
@@ -11519,7 +11548,8 @@ $('tripBody').addEventListener('click', function (ev) {
     else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
     mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
     openTrip(i);
-  } else if (act === 'type') mrQuickType(i, b.dataset.m);
+  } else if (act === 'rule') mrEditRule('routines:' + b.dataset.r);
+  else if (act === 'type') mrQuickType(i, b.dataset.m);
   else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
 });
@@ -11705,8 +11735,8 @@ function mrRoutineDialog(r) {
       }).join('') + '</select></label>' +
       mrDateRow(r.when) +
       '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
-      '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing or guessed one.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
-      '<label class="toggle-row"><span class="lbl">Draw them along one line<small class="fine" style="display:block">Trips that went another way keep their own.</small></span><input type="checkbox" class="switch" id="mrRSnap"' + (t.snap ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
+      '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
+      '<label class="toggle-row"><span class="lbl">Draw them along one line<small class="fine" style="display:block">Trips that went another way stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRSnap"' + (t.snap ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
     buttons: [['Save', 'primary', function () {
       var d = mrGhostSnap(form(true));
       if (!d) return;
@@ -12003,17 +12033,18 @@ function mrOfferRoutine(i, mode) {
 // recommended one, it stays "learn", so it follows your data).
 var MR_GHOST = null;
 function mrRoutineTrips(r) {
-  var out = { trips: [], change: 0, dir: {} };
+  var out = { trips: [], change: 0, dir: {}, left: 0 };
   var a = mrEnd(r.from), b = mrEnd(r.to);
   if (!D || !a || !b) return out;
-  var w = mrWhen(r.when), x = { r: r, a: a, b: b, w: w, rw: r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w, ex: mrExcept(r) };
+  var w = mrWhen(r.when), x = { r: r, a: a, b: b, w: w, rw: r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w, ex: mrExcept(r), then: r.then && typeof r.then === 'object' ? r.then : {} };
   var m = r.then && r.then.mode, mi = m != null ? MODE_IDX[m] : null, base = D.base || D;
   for (var i = 0; i < D.day.length; i++) {
     if (isDup(i) || MODES[base.mode[i]] === 'FLYING') continue;
     var dr = mrRouteDir(x, i);
     if (!dr) continue;
+    if (!mrTypeFits(x, i)) { out.left++; continue; }
     out.trips.push(i); out.dir[i] = dr;
-    if (mi != null && mi !== base.mode[i] && (r.force || base.est[i] & GUESSED || MODES[base.mode[i]] === 'UNKNOWN')) out.change++;
+    if (mi != null && mi !== base.mode[i]) out.change++;
   }
   return out;
 }
@@ -12099,8 +12130,9 @@ function mrGhostStart(draft) {
       $('mrPickPrev').disabled = $('mrPickNext').disabled = nw < 2 && k >= 0;
       $('mrPickRec').hidden = rec || from == null || !MR_GHOST.cands.length;
     }
-    $('mrGhostTxt').innerHTML = res.trips.length ? '<b class="num">' + fmt(res.trips.length) + '</b> ' + (res.trips.length === 1 ? 'trip' : 'trips') + ' covered, shown as ghosts' +
-      (r.then && r.then.mode ? ' · ' + fmt(res.change) + ' would become ' + esc((LABEL[r.then.mode] || r.then.mode).toLowerCase()) : '') : 'No trips covered with these settings.';
+    $('mrGhostTxt').innerHTML = (res.trips.length ? '<b class="num">' + fmt(res.trips.length) + '</b> ' + (res.trips.length === 1 ? 'trip' : 'trips') + ' covered, shown as ghosts' +
+      (r.then && r.then.mode ? ' · ' + fmt(res.change) + ' would become ' + esc((LABEL[r.then.mode] || r.then.mode).toLowerCase()) : '') : 'No trips covered with these settings.') +
+      (res.left ? ' · ' + fmt(res.left) + ' left out: your files give them another type' : '');
     if (!MR_GHOST.map) return;
     MR_GHOST.layer.clearLayers();
     var bounds = L.latLngBounds([]);
