@@ -376,6 +376,18 @@
           "properties": {
             "polyline": {
               "type": "string"
+            },
+            "osm": {
+              "type": "object",
+              "description": "Where the line came from: an OpenStreetMap route relation",
+              "properties": {
+                "relation": {
+                  "type": "integer"
+                },
+                "name": {
+                  "type": "string"
+                }
+              }
             }
           }
         },
@@ -467,7 +479,21 @@
             },
             "snap": {
               "$ref": "#/$defs/snap"
+            },
+            "match": {
+              "type": "number",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 67,
+              "description": "With snap: the share of a trip's GPS points within 500 m of the line, in percent, for the trip to be one of the routine's"
             }
+          }
+        },
+        "include": {
+          "type": "array",
+          "description": "Trips added to the routine by hand: they take its line whatever their match",
+          "items": {
+            "$ref": "#/$defs/tripRef"
           }
         }
       }
