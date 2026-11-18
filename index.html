@@ -5877,6 +5877,109 @@ var visibleB = 0;   // trips sel[0 .. visibleB-1] are drawn; the time slider low
 var HIT_PX = coarse ? 12 : 7, LINE_W = 2.5, LINE_OP = 0.55;
 var PATH_NOTE = 'Lines follow the GPS trail Timeline recorded for each trip. Trips without a trail are drawn straight from start to end, and flights follow the shortest path over the globe. Tap a line for the trip.';
 
+// One-finger zoom on touch screens, as in Google Maps: tap, then tap again and keep the
+// finger down, and drag down to zoom in or up to zoom out, around the spot tapped. A plain
+// double tap still zooms in one step. On every Leaflet map (map, Timeline, MyRules maps).
+if (window.L && L.Map) {
+  L.Map.mergeOptions({ tapDragZoom: true });
+  L.Map.TapDragZoom = L.Handler.extend({
+    addHooks: function () {
+      this._last = null; this._g = null;
+      L.DomEvent.on(this._map._container, 'pointerdown', this._down, this);
+      this._map._container.addEventListener('pointerup', this._tap = L.bind(this._tapUp, this), true);
+    },
+    // A first tap: a short touch that didn't move.
+    _tapUp: function (e) {
+      var l = this._last, now = Date.now();
+      if (!l || l.id !== e.pointerId || now - l.t > 300 || Math.abs(e.clientX - l.x) > 15 || Math.abs(e.clientY - l.y) > 15) { this._last = null; return; }
+      l.up = true; l.t = now;
+    },
+    removeHooks: function () {
+      L.DomEvent.off(this._map._container, 'pointerdown', this._down, this);
+      this._map._container.removeEventListener('pointerup', this._tap, true);
+      this._finish(false);
+    },
+    _down: function (e) {
+      if (e.pointerType !== 'touch') return;
+      var g = this._g, now = Date.now(), p = { x: e.clientX, y: e.clientY };
+      if (g) { this._finish(true); return; }   // a second finger: let the pinch have it
+      var l = this._last;
+      this._last = { t: now, x: p.x, y: p.y, id: e.pointerId, up: false };
+      if (!e.isPrimary || !l || !l.up || now - l.t > 300 || Math.abs(p.x - l.x) > 40 || Math.abs(p.y - l.y) > 40) return;
+      if (this._map.options.touchZoom === false) return;
+      this._last = null;
+      var map = this._map, r = map._container.getBoundingClientRect();
+      this._g = g = { id: e.pointerId, y0: p.y, at: L.point(p.x - r.left, p.y - r.top), z0: map.getZoom(), z: map.getZoom(), on: false, moved: false };
+      g.ll = map.containerPointToLatLng(g.at);
+      window.addEventListener('pointermove', this._mv = L.bind(this._move, this), true);
+      window.addEventListener('touchmove', this._mv, { capture: true, passive: false });
+      window.addEventListener('pointerup', this._u = L.bind(this._up, this), true);
+      window.addEventListener('pointercancel', this._u, true);
+    },
+    // While the finger is down, Leaflet's own drag never sees it move, so the map doesn't pan.
+    _move: function (e) {
+      var g = this._g;
+      if (!g) return;
+      if (e.type === 'touchmove') {
+        if (e.touches.length > 1) { this._finish(true); return; }
+        e.stopPropagation(); if (e.cancelable) e.preventDefault(); return;
+      }
+      if (e.pointerId !== g.id) return;
+      e.stopPropagation();
+      var dy = e.clientY - g.y0, map = this._map;
+      if (!g.on) {
+        if (Math.abs(dy) < 8) return;
+        g.on = true; g.moved = true; g.y0 = e.clientY; dy = 0;
+        map._stop(); map._moveStart(true, false);
+      }
+      g.z = Math.max(map.getMinZoom(), Math.min(map.getMaxZoom(), g.z0 + dy / 90));
+      L.Util.cancelAnimFrame(this._raf);
+      this._raf = L.Util.requestAnimFrame(function () {
+        if (this._g === g) map._move(this._centerFor(g.z), g.z, { pinch: true, round: false });
+      }, this, true);
+    },
+    _centerFor: function (z) {
+      var map = this._map, g = this._g, half = map.getSize().divideBy(2);
+      return map.unproject(map.project(g.ll, z).subtract(g.at.subtract(half)), z);
+    },
+    _up: function (e) {
+      var g = this._g;
+      if (!g || e.pointerId !== g.id) return;
+      if (g.on) e.stopPropagation();
+      this._finish(true);
+    },
+    _finish: function (land) {
+      var g = this._g, map = this._map;
+      if (this._mv) {
+        window.removeEventListener('pointermove', this._mv, true);
+        window.removeEventListener('touchmove', this._mv, { capture: true, passive: false });
+        window.removeEventListener('pointerup', this._u, true);
+        window.removeEventListener('pointercancel', this._u, true);
+        this._mv = this._u = null;
+      }
+      this._g = null;
+      if (!g) return;
+      L.Util.cancelAnimFrame(this._raf);
+      if (!g.on) return;   // no drag: the double tap zooms in as usual
+      // The drag zoomed: the double tap's own zoom in (and its clicks) are skipped.
+      this._mute();
+      if (!land) return;
+      var z = map._limitZoom(g.z);
+      this._g = g;
+      var c = this._centerFor(z);
+      this._g = null;
+      if (map.options.zoomAnimation) map._animateZoom(c, z, true, map.options.zoomSnap);
+      else map._resetView(c, z);
+    },
+    _mute: function () {
+      var stop = function (e) { e.stopPropagation(); e.preventDefault(); };
+      ['dblclick', 'click'].forEach(function (t) { window.addEventListener(t, stop, true); });
+      setTimeout(function () { ['dblclick', 'click'].forEach(function (t) { window.removeEventListener(t, stop, true); }); }, 400);
+    }
+  });
+  L.Map.addInitHook('addHandler', 'tapDragZoom', L.Map.TapDragZoom);
+}
+
 function tripPath(i) {
   var a = [D.from[2 * i], D.from[2 * i + 1]], b = [D.to[2 * i], D.to[2 * i + 1]];
   if (modeOf(i) === 'FLYING' && isFinite(a[0]) && isFinite(b[0])) return greatCircle(a, b);
