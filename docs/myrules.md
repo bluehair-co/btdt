@@ -219,7 +219,7 @@ A routine matches trips that start within 500 m of `from` and end within 500 m o
 **In BT•DT.**
 
 - `from` and `to` are a place (`"@office"`) or a position (`[52.364, 4.866]`), matched within 500 m (or the place's radius, if larger).
-- Of the routines that match a trip, the one with the shorter `when` wins, then the later one in the file.
+- Of the routines that match a trip (ends, times, type and gear), the one whose line it follows most closely wins (a routine without a line counts as 0%), then the one with the shorter `when`, then the later one in the file. A routine whose line it doesn't follow closely enough can't take it, so the next one gets a chance; with none left, the trip stays out and its details name the closest one.
 - `mode` follows the table above. A routine's `gear` fills trips without gear, before gear periods.
 - **The learned line** is the one *Edit routine* recommends: trips are grouped into the ways they take (within 150 m of each other for most of their length), and the line is the best trip of the way most trips take, by GPS points per km with no gap over 2 minutes (a recorded activity or a Records.json line counts double), else by most points. Trips with under 5 points aren't used.
 - **Picking another line:** the arrows in *Edit routine*, or *Use this trip's line* in a trip's details (also on a trip left out for want of a line), write `"snap": { "trip": TripRef }`. Any trip with 5 or more points can be the line.

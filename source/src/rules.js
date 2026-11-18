@@ -424,40 +424,55 @@ function mrTypeFits(x, i) {
   return mi == null || mi === b.mode[i] || !!x.r.force || !!(b.est[i] & GUESSED) || !!MR_OPEN[MODES[b.mode[i]]];
 }
 function mrApplyRoutines() {
-  var L = mrRoutineList(), n = D.day.length, b = D.base, cand = {};
-  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; MR_LEFT[x.r.id] = { type: 0, gear: 0, line: 0 }; cand[x.r.id] = []; });
+  var L = mrRoutineList(), n = D.day.length, b = D.base, cand = {}, fits = [], i, k;
+  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; MR_LEFT[x.r.id] = { type: 0, gear: 0, line: 0 }; cand[x.r.id] = []; x.dir = {}; });
   if (!L.length) return;
-  for (var i = 0; i < n; i++) {
+  // Every routine a trip fits by its ends, times, type and gear; a trip that fits none but matches
+  // one by place and time is left out for its type or gear.
+  for (i = 0; i < n; i++) {
     if (isDup(i) || MODES[b.mode[i]] === 'FLYING') continue;
-    var best = null, bd = 0, miss = null, md = 0, mw = '';
-    for (var k = 0; k < L.length; k++) {
+    var miss = null, md = 0, mw = '';
+    for (k = 0; k < L.length; k++) {
       var d = mrRouteDir(L[k], i);
       if (!d) continue;
       var uf = mrUnfit(L[k], i);
       if (uf) { if (!miss || L[k].w.len <= miss.w.len) { miss = L[k]; md = d; mw = uf; } continue; }
-      if (!best || L[k].w.len <= best.w.len) { best = L[k]; bd = d; }
+      (fits[i] || (fits[i] = [])).push(L[k]); L[k].dir[i] = d; cand[L[k].r.id].push(i);
     }
-    if (best) { D.mrRoute[i] = { rule: best.r.id, dir: bd }; cand[best.r.id].push(i); }
-    else if (miss) { D.mrMiss[i] = { rule: miss.r.id, dir: md, why: mw }; MR_LEFT[miss.r.id][mw]++; }
+    if (!fits[i] && miss) { D.mrMiss[i] = { rule: miss.r.id, dir: md, why: mw }; MR_LEFT[miss.r.id][mw]++; }
   }
-  // Lines: a routine with one draws each of its trips along it; a trip it doesn't fit, or every trip
-  // when there is no line yet, is left out of the routine.
+  // Each routine's line, from all the trips that fit it.
   L.forEach(function (x) {
-    var trips = cand[x.r.id];
-    if (!x.then.snap || !trips.length) return;
-    var line = mrRouteLine(x, trips), ok = line && line.pts;
-    D.mrLine[x.r.id] = line;
-    var min = mrMatchMin(x.then);
-    cand[x.r.id] = trips.filter(function (i) {
-      if (ok && i === line.from) return true;
-      var sc = ok ? mrLineScore(i, line.pts) : 0, s = ok ? mrSnapTrip(i, line.pts) : null;
-      if (s && (sc >= min || x.inc[i])) { s.rule = x.r.id; s.score = sc; s.added = sc < min; D.snap[i] = s; D.km[i] = s.km; return true; }
-      D.mrMiss[i] = { rule: x.r.id, dir: D.mrRoute[i].dir, why: !line ? 'noline' : line.missing ? 'missing' : 'fit', score: sc, min: min, can: !!s };
-      D.mrRoute[i] = null;
-      MR_LEFT[x.r.id].line++;
-      return false;
-    });
+    if (!x.then.snap || !cand[x.r.id].length) return;
+    D.mrLine[x.r.id] = mrRouteLine(x, cand[x.r.id]);
   });
+  // Each trip goes to the routine whose line it follows most closely (one without a line counts as
+  // 0%); then the shorter period, then the later one in the file. A routine whose line it doesn't
+  // follow closely enough can't take it. With none left, it stays out, under the closest one.
+  for (i = 0; i < n; i++) {
+    if (!fits[i]) continue;
+    var best = null, bs = null, bsc = -1, near = null;
+    for (k = 0; k < fits[i].length; k++) {
+      var x = fits[i][k], line = x.then.snap ? D.mrLine[x.r.id] : null, ok = line && line.pts, sc = 0, sn = null, take;
+      if (!x.then.snap) take = true;
+      else if (ok && i === line.from) { take = true; sc = 100; }
+      else {
+        sc = ok ? mrLineScore(i, line.pts) : 0; sn = ok ? mrSnapTrip(i, line.pts) : null;
+        take = !!(sn && (sc >= mrMatchMin(x.then) || x.inc[i]));
+        if (!take && (!near || sc > near.score || sc === near.score && x.w.len <= near.x.w.len))
+          near = { x: x, score: sc, why: !line ? 'noline' : line.missing ? 'missing' : 'fit', can: !!sn };
+      }
+      if (take && (!best || sc > bsc || sc === bsc && x.w.len <= best.w.len)) { best = x; bsc = sc; bs = sn; }
+    }
+    if (best) {
+      D.mrRoute[i] = { rule: best.r.id, dir: best.dir[i] };
+      if (bs) { bs.rule = best.r.id; bs.score = bsc; bs.added = bsc < mrMatchMin(best.then); D.snap[i] = bs; D.km[i] = bs.km; }
+    } else if (near) {
+      D.mrMiss[i] = { rule: near.x.r.id, dir: near.x.dir[i], why: near.why, score: near.score, min: mrMatchMin(near.x.then), can: near.can };
+      MR_LEFT[near.x.r.id].line++;
+    }
+  }
+  L.forEach(function (x) { cand[x.r.id] = cand[x.r.id].filter(function (j) { return D.mrRoute[j] && D.mrRoute[j].rule === x.r.id; }); });
   // Types, on the trips each routine kept.
   L.forEach(function (x) {
     var m = x.then.mode, mi = m != null ? MODE_IDX[m] : null;
@@ -526,7 +541,7 @@ function mrRouteLine(x, trips) {
     if (pick == null) { var W = mrWays(trips); pick = W.length ? W[0].i : null; }
     if (pick == null) return null;
     pts = mrTripPts(pick);
-    if (D.mrRoute[pick] && D.mrRoute[pick].dir < 0) pts.reverse();
+    if ((x.dir && x.dir[pick] || D.mrRoute[pick] && D.mrRoute[pick].dir) < 0) pts.reverse();
     src = 'trip'; from = pick;
   }
   return pts && pts.length >= 2 ? { pts: pts, src: src, from: from } : null;
