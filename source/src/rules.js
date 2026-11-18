@@ -358,7 +358,7 @@ function mrCheckCount() {
 // Of the routines that match a trip, the one with the shorter when wins, then the later one in the
 // file. then.mode sets the type when the files had none or it was guessed (or always, with force);
 // then.gear fills trips without gear (in mrApplyGear); then.snap draws the trip along a line.
-var MR_LEFT = {};   // trips a routine matched but left out, by routine id: { type, line }
+var MR_LEFT = {};   // trips a routine matched but left out, by routine id: { type, gear, line }
 function mrEnd(ref) {
   if (Array.isArray(ref) && ref.length === 2 && isFinite(ref[0])) return { at: [+ref[0], +ref[1]], rad: 0.5 };
   if (ref && typeof ref === 'object' && Array.isArray(ref.at)) return { at: ref.at, rad: Math.max(0.5, (+ref.radius_m || 0) / 1000) };
@@ -386,25 +386,40 @@ function mrRouteDir(x, i) {
 // Its type fits when the files had the same, none, Google's generic "In vehicle" (MR_OPEN) or a guess,
 // or always with force.
 var MR_OPEN = { UNKNOWN: 1, VEHICLE: 1 };
+// Its gear fits a trip without recorded gear, or one recorded with that same gear.
+function mrGearName(g) {
+  g = String(g);
+  if (g.charAt(0) !== '@') return g;
+  var r = mrById(g);
+  return r && r.enabled !== false ? r.strava_name || r.name || r.id : null;
+}
+function mrRecGear(i) { var s = D.est[i] & STRAVA ? stravaInfo(i) : null; return s && s.gear || ''; }
+function mrGearFits(x, i) {
+  var want = x.then.gear ? mrGearName(x.then.gear) : null, had = want && mrRecGear(i);
+  return !had || had.trim().toLowerCase() === want.trim().toLowerCase();
+}
+// Why a routine that matches a trip by place and time can't take it ('' when it can, lines aside).
+function mrUnfit(x, i) { return !mrTypeFits(x, i) ? 'type' : !mrGearFits(x, i) ? 'gear' : ''; }
 function mrTypeFits(x, i) {
   var m = x.then.mode, mi = m != null ? MODE_IDX[m] : null, b = D.base || D;
   return mi == null || mi === b.mode[i] || !!x.r.force || !!(b.est[i] & GUESSED) || !!MR_OPEN[MODES[b.mode[i]]];
 }
 function mrApplyRoutines() {
   var L = mrRoutineList(), n = D.day.length, b = D.base, cand = {};
-  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; MR_LEFT[x.r.id] = { type: 0, line: 0 }; cand[x.r.id] = []; });
+  L.forEach(function (x) { MR_COUNT[x.r.id] = 0; MR_LEFT[x.r.id] = { type: 0, gear: 0, line: 0 }; cand[x.r.id] = []; });
   if (!L.length) return;
   for (var i = 0; i < n; i++) {
     if (isDup(i) || MODES[b.mode[i]] === 'FLYING') continue;
-    var best = null, bd = 0, miss = null, md = 0;
+    var best = null, bd = 0, miss = null, md = 0, mw = '';
     for (var k = 0; k < L.length; k++) {
       var d = mrRouteDir(L[k], i);
       if (!d) continue;
-      if (!mrTypeFits(L[k], i)) { if (!miss || L[k].w.len <= miss.w.len) { miss = L[k]; md = d; } continue; }
+      var uf = mrUnfit(L[k], i);
+      if (uf) { if (!miss || L[k].w.len <= miss.w.len) { miss = L[k]; md = d; mw = uf; } continue; }
       if (!best || L[k].w.len <= best.w.len) { best = L[k]; bd = d; }
     }
     if (best) { D.mrRoute[i] = { rule: best.r.id, dir: bd }; cand[best.r.id].push(i); }
-    else if (miss) { D.mrMiss[i] = { rule: miss.r.id, dir: md, why: 'type' }; MR_LEFT[miss.r.id].type++; }
+    else if (miss) { D.mrMiss[i] = { rule: miss.r.id, dir: md, why: mw }; MR_LEFT[miss.r.id][mw]++; }
   }
   // Lines: a routine with one draws each of its trips along it; a trip it doesn't fit, or every trip
   // when there is no line yet, is left out of the routine.
@@ -874,9 +889,10 @@ function mrRenderRules() {
     bits.push(mrWhenText(r.when));
     if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing, generic or guessed'));
     if (t.gear) { var gr = String(t.gear).charAt(0) === '@' ? mrById(t.gear) : null; bits.push('Gear: ' + esc(gr ? gr.name || gr.id : t.gear)); }
-    var left = D && MR_LEFT[r.id] || { type: 0, line: 0 };
+    var left = D && MR_LEFT[r.id] || { type: 0, gear: 0, line: 0 };
     if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + (left.line ? ' · ' + fmt(left.line) + ' went another way' : '') : left.line ? 'Line: no trip clean enough to learn it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip clean enough to learn it from yet');
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
+    if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
     return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
@@ -960,6 +976,7 @@ function mrTripBlock(i) {
     // Matched by place and time, but something the routine sets can't apply, so none of it does.
     var mm = mr.then && mr.then.mode, why;
     if (ms.why === 'type') why = 'Your files say ' + esc((LABEL[MODES[D.base.mode[i]]] || MODES[D.base.mode[i]]).toLowerCase()) + ', and the routine only sets ' + esc((LABEL[mm] || mm).toLowerCase()) + ' where the type is missing, generic or guessed. Turn on Always in the routine to take trips like this one.';
+    else if (ms.why === 'gear') why = 'It was recorded with ' + esc(mrRecGear(i)) + ', and the routine sets ' + esc(mrGearName(mr.then.gear)) + '. Recorded gear is never replaced by a routine.';
     else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
     else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail clean enough to learn it from (10 or more points, no gap over 2 minutes). Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
     else why = 'This trip went another way: over a third of its GPS points are more than 1 km from the routine\'s line.';
@@ -1538,7 +1555,7 @@ function mrRoutineTrips(r) {
     if (isDup(i) || MODES[base.mode[i]] === 'FLYING') continue;
     var dr = mrRouteDir(x, i);
     if (!dr) continue;
-    if (!mrTypeFits(x, i)) { out.left++; continue; }
+    if (mrUnfit(x, i)) { out.left++; continue; }
     out.trips.push(i); out.dir[i] = dr;
     if (mi != null && mi !== base.mode[i]) out.change++;
   }
@@ -1628,7 +1645,7 @@ function mrGhostStart(draft) {
     }
     $('mrGhostTxt').innerHTML = (res.trips.length ? '<b class="num">' + fmt(res.trips.length) + '</b> ' + (res.trips.length === 1 ? 'trip' : 'trips') + ' covered, shown as ghosts' +
       (r.then && r.then.mode ? ' · ' + fmt(res.change) + ' would become ' + esc((LABEL[r.then.mode] || r.then.mode).toLowerCase()) : '') : 'No trips covered with these settings.') +
-      (res.left ? ' · ' + fmt(res.left) + ' left out: your files give them another type' : '');
+      (res.left ? ' · ' + fmt(res.left) + ' left out: your files give them another type or gear' : '');
     if (!MR_GHOST.map) return;
     MR_GHOST.layer.clearLayers();
     var bounds = L.latLngBounds([]);

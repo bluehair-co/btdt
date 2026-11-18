@@ -194,14 +194,14 @@ When two gear periods overlap (you owned two bikes), the one with the narrower `
 
 A routine matches trips that start within 500 m of `from` and end within 500 m of `to` (places' own radius if larger), inside `when`. With `both_ways`, the reverse trip matches too, inside `return_when` (which defaults to `when`).
 
-**All or nothing.** A routine takes a trip only when everything in its `then` can apply to it: its type, its gear and its line. A trip that matches by place and time but can't take one of them stays out of the routine altogether, keeps its own type and GPS points, and its details say why (*Not in routine*). That happens when the files gave it another type and the routine has no `force`, when the routine has a `snap` line and the trip went another way, and for every trip while the line can't be had (a `"learn"` line with no trip clean enough yet, or a GeoJSON file that isn't loaded).
+**All or nothing.** A routine takes a trip only when everything in its `then` can apply to it: its type, its gear and its line. A trip that matches by place and time but can't take one of them stays out of the routine altogether, keeps its own type and GPS points, and its details say why (*Not in routine*). That happens when the files gave it another type and the routine has no `force`, when it was recorded with other gear than the routine's `gear` (recorded gear is never replaced), when the routine has a `snap` line and the trip went another way, and for every trip while the line can't be had (a `"learn"` line with no trip clean enough yet, or a GeoJSON file that isn't loaded).
 
 `then` says what to do with a match:
 
 | Action | Meaning |
 |---|---|
 | `mode` | Set the transport type. Applies where the type is missing, generic (Google's *In vehicle*, which doesn't say car, bus or train) or was guessed from speed, or where the files already say the same. A trip the files give another type stays out of the routine, unless `"force": true` is set on the routine. |
-| `gear` | Give it a gear (`"@strida-evo"`): for a bike commute. |
+| `gear` | Give it a gear (`"@strida-evo"`): for a bike commute. A trip recorded with other gear (Strava, an activity file) stays out of the routine. |
 | `snap` | Redraw the trip along a known line instead of its GPS points (below). |
 
 **Where the line for `snap` comes from.** The app runs offline with no routing server, so it can't look up train tracks the way the simulated-trips generator does with BRouter. The line comes from one of these:
