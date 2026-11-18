@@ -194,11 +194,13 @@ When two gear periods overlap (you owned two bikes), the one with the narrower `
 
 A routine matches trips that start within 500 m of `from` and end within 500 m of `to` (places' own radius if larger), inside `when`. With `both_ways`, the reverse trip matches too, inside `return_when` (which defaults to `when`).
 
+**All or nothing.** A routine takes a trip only when everything in its `then` can apply to it: its type, its gear and its line. A trip that matches by place and time but can't take one of them stays out of the routine altogether, keeps its own type and GPS points, and its details say why (*Not in routine*). That happens when the files gave it another type and the routine has no `force`, when the routine has a `snap` line and the trip went another way, and for every trip while the line can't be had (a `"learn"` line with no trip clean enough yet, or a GeoJSON file that isn't loaded).
+
 `then` says what to do with a match:
 
 | Action | Meaning |
 |---|---|
-| `mode` | Set the transport type. Applied only when the type is missing or was guessed from speed, unless `"force": true` is set on the routine. |
+| `mode` | Set the transport type. Applies where the type is missing, generic (Google's *In vehicle*, which doesn't say car, bus or train) or was guessed from speed, or where the files already say the same. A trip the files give another type stays out of the routine, unless `"force": true` is set on the routine. |
 | `gear` | Give it a gear (`"@strida-evo"`): for a bike commute. |
 | `snap` | Redraw the trip along a known line instead of its GPS points (below). |
 
@@ -208,7 +210,7 @@ A routine matches trips that start within 500 m of `from` and end within 500 m o
 - An encoded polyline in the file: `"snap": { "polyline": "…" }` (Google's polyline encoding, 5 decimals). Tools that can route, like our generator, can write this.
 - A GeoJSON file loaded at the same time: `"snap": { "geojson": "utrecht-line.geojson" }`.
 
-**What snapping does.** It cuts the line between the points nearest the trip's start and end, and spreads the trip's own start and end times along it in proportion to distance. The distance becomes the line's length. The original GPS points are kept and drawn dashed in the trip details, and **Raw data** still shows them. A trip whose own points stray more than 1 km from the line for over a third of its length is not snapped, because it was probably a different route that day (a diversion, a bus replacement) and is listed in the rule's details as "didn't fit".
+**What snapping does.** It cuts the line between the points nearest the trip's start and end, and spreads the trip's own start and end times along it in proportion to distance. The distance becomes the line's length. The original GPS points are kept and drawn dashed in the trip details, and **Raw data** still shows them. A trip whose own points stray more than 1 km from the line for over a third of its length is not snapped, because it was probably a different route that day (a diversion, a bus replacement). It stays out of the routine (so it keeps its own type too) and the rule's details count it as "went another way".
 
 **In BT•DT.**
 
@@ -218,7 +220,7 @@ A routine matches trips that start within 500 m of `from` and end within 500 m o
 - **The learned line** comes from the matching trip with the most GPS points per km and no gap over 2 minutes. A recorded activity or a Records.json line counts double.
 - **Picking another line:** *Use this trip's line* in a trip's details writes `"snap": { "trip": TripRef }`.
 - **GeoJSON lines:** a `.geojson` named by a routine's `snap.geojson` is read as that line (its LineString, or the longest part of a MultiLineString) when loaded with the rules or after them. It is kept with your rules in the browser.
-- **How it shows:** snapped trips and types a routine set are marked *Inferred*. The rules sheet says where each line came from and how many trips didn't fit.
+- **How it shows:** snapped trips and types a routine set are marked *Inferred*. The rules sheet says where each line came from, how many trips went another way and how many were left out for their type. A trip the routine matched but left out says why in its details, with *Edit routine*.
 - **Seeing what it covers:** while you make a routine (*Same on other days?*) or edit one (tap it in the rules sheet), a small map shows the trips it would cover as ghost lines, with how many there are and how many would change type. It updates as you change the dates, times and options, before you save. With *Draw them along one line*, the line in use is drawn solid on top of the ghosts. For a learned line, the arrows under the map go through the different ways its trips take (trips within 150 m of each other for most of their length are one way), the way most trips take first, each drawn from its cleanest trip. The one you stop on is saved as `snap: { "trip": … }`; *Back to the recommended line* returns to `"learn"`, which is worked out again from your data.
 - **Making a routine in the app:** after you change a trip's type with *Edit trip*, the app offers *Same on other days?* if you made 5 or more trips like it. Like it means the same ends within 500 m, on the same kind of day, starting within 2 hours of it. It fills in:
   - the dates and a time window;
@@ -257,7 +259,7 @@ Anything a correction sets is marked **Edited** rather than *Inferred*: it is yo
 
 Rules are applied in one pass after the files are read and cleaned (after the bad-GPS-jump, stale-end and places-moved fixes), so they work on the cleanest data the app has.
 
-1. **Recorded beats inferred.** A value the data recorded (Strava gear, a type Timeline gave and that fits the speed) is kept. Gear periods and routines only fill in what is missing or was guessed. Only corrections overrule recorded values, with one exception: a routine with `"force": true` may replace a recorded transport type. Nothing but a correction replaces recorded gear.
+1. **Recorded beats inferred.** A value the data recorded (Strava gear, a type Timeline gave and that fits the speed) is kept. Gear periods and routines only fill in what is missing, generic (*In vehicle*) or was guessed; a routine leaves out a trip whose recorded type it would have to overrule. Only corrections overrule recorded values, with one exception: a routine with `"force": true` may replace a recorded transport type. Nothing but a correction replaces recorded gear.
 2. **Specific beats general.** For each field of each trip, the most specific rule that matches decides:
    1. corrections naming one trip (`start`),
    2. corrections naming a span or a day,
