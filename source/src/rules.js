@@ -1020,6 +1020,8 @@ function mrTripBlock(i) {
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
+  // Find similar trips: a new routine with this trip as its line, matched by route, not by time.
+  if (!rr && !mr && MODES[D.mode[i]] !== 'FLYING' && D.pathOff[i + 1] - D.pathOff[i] >= 5 && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1) btns += '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>';
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   // A trip of your own as the line: one in the routine, or one left out for want of a line or for going another way.
@@ -1101,6 +1103,7 @@ $('tripBody').addEventListener('click', function (ev) {
     mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
     openTrip(i);
   } else if (act === 'rule') mrEditRule('routines:' + b.dataset.r);
+  else if (act === 'similar') mrSimilar(i);
   else if (act === 'include') {
     var ir = mrById(b.dataset.r);
     if (!ir) return;
@@ -1304,11 +1307,22 @@ function mrGearRuleDialog(r) {
     }], ['Cancel', 'quiet', null]]
   });
 }
-function mrRoutineDialog(r) {
+// A routine from one trip: its two ends, any day and time, both ways, its type, and its own trail as
+// the line, so the trips that follow that line closely enough (the match slider) are its trips.
+function mrSimilar(i) {
+  needPlaces();
+  var m = MODES[D.mode[i]], A = placeLabel(D.pa[i]), B = placeLabel(D.pb[i]), lab = LABEL[m] || m;
+  var r = { id: mrNewId(lab + ' ' + A + ' ' + B), name: lab + ' ' + A + ' – ' + B, from: mrEndRef({ at: [D.from[2 * i], D.from[2 * i + 1]] }), to: mrEndRef({ at: [D.to[2 * i], D.to[2 * i + 1]] }),
+    both_ways: true, then: { mode: m, snap: { trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] } } } };
+  if (m === 'UNKNOWN') delete r.then.mode;
+  mrRoutineDialog(r, true);
+}
+// isNew: a routine not saved yet (Find similar trips), added to MyRules on Save.
+function mrRoutineDialog(r, isNew) {
   var t = r.then || {}, rt = r.return_when && Array.isArray(r.return_when.time) ? r.return_when.time : [];
   mrAsk({
-    title: 'Edit routine',
-    text: 'Trips between its two ends in this period get what you set here.',
+    title: isNew ? 'Trips like this one' : 'Edit routine',
+    text: isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.',
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
       '<label class="field"><span>Type</span><select id="mrRMode"><option value="">Leave the type as it is</option>' + MODES.filter(function (m) { return m !== 'UNKNOWN'; }).map(function (m) {
         return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
@@ -1318,12 +1332,13 @@ function mrRoutineDialog(r) {
       '<div class="field" id="mrWBackRow"' + (r.both_ways ? '' : ' hidden') + '><span>Back between</span><span class="mr-dates"><input type="time" id="mrWB0" value="' + esc(rt[0] || '') + '" aria-label="Earliest return"> and <input type="time" id="mrWB1" value="' + esc(rt[1] || '') + '" aria-label="Latest return"><small class="fine">Empty: the same times as there.</small></span></div>' +
       '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
       '<label class="toggle-row"><span class="lbl">Draw them along one line<small class="fine" style="display:block">Trips that don\'t follow it closely enough stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRSnap"' + (t.snap ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
-    buttons: [['Save', 'primary', function () {
+    buttons: [[isNew ? 'Save as routine' : 'Save', 'primary', function () {
       var d = mrGhostSnap(form(true));
       if (!d) return;
       Object.keys(r).forEach(function (k) { delete r[k]; });
       Object.assign(r, d);
-      mrChange('Routine changed: ' + (r.name || r.id));
+      if (isNew) { mrEnsure(); (MR.doc.routines || (MR.doc.routines = [])).push(r); mrChange('New routine: ' + (r.name || r.id)); toast((r.name || 'Routine') + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.'); }
+      else mrChange('Routine changed: ' + (r.name || r.id));
     }], ['Cancel', 'quiet', null]],
     after: function () {
       $('mrRBoth').addEventListener('change', function () { $('mrWBackRow').hidden = !this.checked; });
