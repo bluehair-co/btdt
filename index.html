@@ -7614,10 +7614,11 @@ function posMode() { return P_cur ? modeOf(P_cur.i) || 'UNKNOWN' : null; }
 // The speed (km/h) of the trip under way at the playback time, for the pill under the
 // position marker: from the trip's speed series (as in its chart), or its average speed
 // when it has none (flights, trips of a few points). Null between trips and while the trip
-// stands still (under 1 km/h), so the pill only shows while moving.
+// stands still (under 1 km/h), so the pill only shows while moving. Only in a day's
+// playback (a single day chosen), not a week's, month's or year's.
 var posSpd = { i: null, t: null, v: null };
 function posSpeed() {
-  if (!P_cur) return null;
+  if (!P_cur || !sunDay()) return null;
   var i = P_cur.i, c = posSpd;
   if (c.i !== i) {
     var sp = tripSpeeds(i);
