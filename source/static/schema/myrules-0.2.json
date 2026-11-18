@@ -459,6 +459,13 @@
           "type": "boolean",
           "default": false
         },
+        "radius_m": {
+          "type": "number",
+          "minimum": 50,
+          "maximum": 5000,
+          "default": 500,
+          "description": "How far from from and to a trip may start and end (a place's own radius when larger)"
+        },
         "then": {
           "type": "object",
           "minProperties": 1,

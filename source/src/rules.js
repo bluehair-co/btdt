@@ -359,15 +359,18 @@ function mrCheckCount() {
 // file. then.mode sets the type when the files had none or it was guessed (or always, with force);
 // then.gear fills trips without gear (in mrApplyGear); then.snap draws the trip along a line.
 var MR_LEFT = {};   // trips a routine matched but left out, by routine id: { type, gear, line }
-function mrEnd(ref) {
-  if (Array.isArray(ref) && ref.length === 2 && isFinite(ref[0])) return { at: [+ref[0], +ref[1]], rad: 0.5 };
-  if (ref && typeof ref === 'object' && Array.isArray(ref.at)) return { at: ref.at, rad: Math.max(0.5, (+ref.radius_m || 0) / 1000) };
+// rm: the routine's own radius_m for its ends, else 500 m (a place: its radius when larger).
+var MR_END_M = 500;
+function mrEnd(ref, rm) {
+  var base = (+rm > 0 ? +rm : MR_END_M) / 1000;
+  if (Array.isArray(ref) && ref.length === 2 && isFinite(ref[0])) return { at: [+ref[0], +ref[1]], rad: base };
+  if (ref && typeof ref === 'object' && Array.isArray(ref.at)) return { at: ref.at, rad: Math.max(base, (+ref.radius_m || 0) / 1000) };
   var r = mrById(ref);
-  return r && Array.isArray(r.at) ? { at: r.at, rad: Math.max(0.5, (+r.radius_m || 0) / 1000) } : null;
+  return r && Array.isArray(r.at) ? { at: r.at, rad: Math.max(base, (+r.radius_m || 0) / 1000) } : null;
 }
 function mrRoutineList() {
   return mrActive('routines').map(function (r, k) {
-    var a = mrEnd(r.from), b = mrEnd(r.to), w = mrWhen(r.when);
+    var a = mrEnd(r.from, r.radius_m), b = mrEnd(r.to, r.radius_m), w = mrWhen(r.when);
     if (!a || !b) return null;
     var rw = r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w;
     return { r: r, k: k, a: a, b: b, w: w, rw: rw, ex: mrExcept(r), inc: mrIncluded(r), then: r.then && typeof r.then === 'object' ? r.then : {} };
@@ -898,7 +901,7 @@ function mrRenderRules() {
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied ? MR_COUNT[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
-    var t = r.then || {}, a = mrEnd(r.from), b = mrEnd(r.to), ln = D && D.mrLine && D.mrLine[r.id], bits = [];
+    var t = r.then || {}, a = mrEnd(r.from, r.radius_m), b = mrEnd(r.to, r.radius_m), ln = D && D.mrLine && D.mrLine[r.id], bits = [];
     function end(ref, e) { var pr = typeof ref === 'string' ? mrById(ref) : null; return pr ? pr.name || pr.role || pr.id : e ? (needPlaces(), placeLabel(mrNearestPlace(e.at))) : '?'; }
     bits.push(esc(end(r.from, a)) + (r.both_ways ? ' ⇄ ' : ' → ') + esc(end(r.to, b)));
     bits.push(mrWhenText(r.when));
@@ -1328,6 +1331,8 @@ function mrRoutineDialog(r, isNew) {
         return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
       }).join('') + '</select></label>' +
       mrDateRow(r.when) + mrDaysRow(r.when) +
+      '<label class="field mr-match"><span>Starts and ends within <b class="num" id="mrREndV">' + dist((+r.radius_m || MR_END_M) / 1000) + '</b> of its two ends</span>' +
+      '<input type="range" id="mrREnd" min="100" max="3000" step="50" value="' + (+r.radius_m || MR_END_M) + '"></label>' +
       '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
       '<div class="field" id="mrWBackRow"' + (r.both_ways ? '' : ' hidden') + '><span>Back between</span><span class="mr-dates"><input type="time" id="mrWB0" value="' + esc(rt[0] || '') + '" aria-label="Earliest return"> and <input type="time" id="mrWB1" value="' + esc(rt[1] || '') + '" aria-label="Latest return"><small class="fine">Empty: the same times as there.</small></span></div>' +
       '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
@@ -1372,6 +1377,9 @@ function mrRoutineDialog(r, isNew) {
       if (Object.keys(rw).length) d.return_when = rw; else delete d.return_when;
     } else { delete d.both_ways; delete d.return_when; }
     if ($('mrRForce').checked) d.force = true; else delete d.force;
+    var em = +$('mrREnd').value;
+    $('mrREndV').textContent = dist(em / 1000);
+    if (em && em !== MR_END_M) d.radius_m = em; else delete d.radius_m;
     if (!$('mrRSnap').checked) delete d.then.snap;
     else if (!d.then.snap) d.then.snap = 'learn';
     return d;
@@ -1646,7 +1654,7 @@ function mrOfferRoutine(i, mode) {
 var MR_GHOST = null;
 function mrRoutineTrips(r) {
   var out = { trips: [], change: 0, dir: {}, left: 0 };
-  var a = mrEnd(r.from), b = mrEnd(r.to);
+  var a = mrEnd(r.from, r.radius_m), b = mrEnd(r.to, r.radius_m);
   if (!D || !a || !b) return out;
   var w = mrWhen(r.when), x = { r: r, a: a, b: b, w: w, rw: r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w, ex: mrExcept(r), then: r.then && typeof r.then === 'object' ? r.then : {} };
   var m = r.then && r.then.mode, mi = m != null ? MODE_IDX[m] : null, base = D.base || D;
@@ -1847,8 +1855,10 @@ function mrGhostStart(draft) {
       L.polyline(line.pts, { color: col, weight: 4.5, opacity: 1, interactive: false }).addTo(MR_GHOST.layer);
       line.pts.forEach(function (p) { bounds.extend(p); });
     }
-    [mrEnd(r.from), mrEnd(r.to)].forEach(function (e) {
+    [mrEnd(r.from, r.radius_m), mrEnd(r.to, r.radius_m)].forEach(function (e) {
       if (!e) return;
+      // How far from it a trip may start or end.
+      L.circle(e.at, { radius: e.rad * 1000, color: '#0f7c8c', weight: 1.5, opacity: .8, fillColor: '#0f7c8c', fillOpacity: .08, dashArray: '4 4', interactive: false }).addTo(MR_GHOST.layer);
       L.circleMarker(e.at, { radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(MR_GHOST.layer);
       bounds.extend(e.at);
     });
