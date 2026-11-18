@@ -2122,6 +2122,76 @@ function cleanStops(R) {
   });
   return R;
 }
+// Timeline sometimes matches a stay to the wrong place (km away) and puts the ends of the trips on
+// either side of it there too, while those trips' own trails say where you really were: the trail
+// before it runs out to the place and the trail after it comes straight back, both faster than the
+// trips could go. cleanTrails keeps such ends (a few seconds off is normal for Timeline's ends) and
+// cleanStops only looks at trips without a line, so this check uses the trails on both sides: two
+// trips in a row with lines, less than 6 hours apart, whose facing ends (and the stays between them)
+// are one stop at least 1 km from the trails' points next to them, those points close together, and
+// reached or left at over STOP_KMH and both legs too fast for their trip. The stop moves to the trail
+// point nearer in time, and the trips' lines and distances follow (see jumpKm).
+function cleanStays(R) {
+  var n = R.start.length, nv = R.vs ? R.vs.length : 0, ord = [], i, j;
+  function ok(k) {
+    var s = R.srcs ? R.srcs[k] : R.src;
+    return R.pathOff[k + 1] - R.pathOff[k] >= 3 && MODES[R.mode[k]] !== 'FLYING' && s !== SRC.strava && s !== SRC.sim && !(R.est[k] & STRAVA);
+  }
+  function pt(q) { return [R.pathPts[2 * q], R.pathPts[2 * q + 1]]; }
+  // Speed between line points p and q over 1 km apart (as in jumpKeep), else 0.
+  function leg(p, q) {
+    var d = km(pt(p), pt(q)), h = Math.abs(R.pathT[q] - R.pathT[p]) / 3600;
+    return d > 1 ? (h > 0 ? d / h : Infinity) : 0;
+  }
+  for (i = 0; i < n; i++) ord.push(i);
+  ord.sort(function (a, b) { return R.start[a] - R.start[b]; });
+  var vord = [];
+  for (j = 0; j < nv; j++) if (isFinite(R.vll[2 * j])) vord.push(j);
+  vord.sort(function (a, b) { return R.vs[a] - R.vs[b]; });
+  var vi = 0;
+  for (var x = 0; x + 1 < ord.length; x++) {
+    var a = ord[x], b = ord[x + 1];
+    if (!ok(a) || !ok(b) || R.start[b] < R.end[a] || R.start[b] - R.end[a] > 6 * 36e5) continue;
+    var stop = [R.to[2 * a], R.to[2 * a + 1]], la = R.pathOff[a + 1] - 1, fb = R.pathOff[b];
+    // The trails' facing ends are the trips' ends, and the trips' ends are one stop.
+    if (!(km(pt(la), stop) < 0.05) || !(km(pt(fb), [R.from[2 * b], R.from[2 * b + 1]]) < 0.05) || !(km(pt(fb), stop) < 1)) continue;
+    // The stays between the two trips, all at the stop.
+    while (vi < vord.length && R.vs[vord[vi]] < R.end[a] - STAY_GAP) vi++;
+    var vs = [], far = false;
+    for (j = vi; j < vord.length && R.vs[vord[j]] <= R.start[b]; j++) {
+      var v = vord[j];
+      if (R.ve[v] > R.start[b] + STAY_GAP) break;
+      if (km([R.vll[2 * v], R.vll[2 * v + 1]], stop) < 1) vs.push(v); else far = true;
+    }
+    if (far || !vs.length) continue;
+    // The trails' points next to the stop, and when they were.
+    var pin = pt(la - 1), pout = pt(fb + 1), tin = R.end[a] - 1000 * (R.pathT[la] - R.pathT[la - 1]), tout = R.start[b] + 1000 * (R.pathT[fb + 1] - R.pathT[fb]);
+    var din = km(pin, stop), dout = km(stop, pout), dd = km(pin, pout);
+    if (din < 1 || dout < 1 || dd > 0.2 * Math.min(din, dout)) continue;
+    var hin = (R.end[a] - tin) / 36e5, hout = (tout - R.start[b]) / 36e5;
+    var vin = hin > 0 ? din / hin : Infinity, vout = hout > 0 ? dout / hout : Infinity;
+    // The trails go on from those points at a believable speed (else they are the stray ones).
+    if (leg(la - 2, la - 1) > jumpCap(MODES[R.mode[a]]) || leg(fb + 1, fb + 2) > jumpCap(MODES[R.mode[b]])) continue;
+    if (!(Math.max(vin, vout) > STOP_KMH) || !(vin > jumpCap(MODES[R.mode[a]])) || !(vout > jumpCap(MODES[R.mode[b]]))) continue;
+    var fix = R.end[a] - tin <= tout - R.start[b] ? pin : pout;
+    vs.forEach(function (v) { R.vll[2 * v] = fix[0]; R.vll[2 * v + 1] = fix[1]; });
+    [[a, la, 'to'], [b, fb, 'from']].forEach(function (e) {
+      var k = e[0], o0 = R.pathOff[k], o1 = R.pathOff[k + 1], old = [], q;
+      for (q = o0; q < o1; q++) old.push(pt(q));
+      R[e[2]][2 * k] = R.pathPts[2 * e[1]] = fix[0];
+      R[e[2]][2 * k + 1] = R.pathPts[2 * e[1] + 1] = fix[1];
+      var now = [];
+      for (q = o0; q < o1; q++) now.push(pt(q));
+      // Timeline's distance that is only the straight line to the wrong place: the trail measures it.
+      var est = R.est[k], clean = pathKm(now), h = (R.end[k] - R.start[k]) / 36e5;
+      if ((est & 3) === 0 && !(est & FIXED) && R.km[k] <= 1.05 * km(old[0], old[old.length - 1]) + 0.05 && clean > 0 && !(h > 0 && clean / h > jumpCap(MODES[R.mode[k]]))) {
+        if (!(R.orig[k] > 0)) R.orig[k] = R.km[k];
+        R.km[k] = clean; R.est[k] = (est & ~3) | 1 | JUMPS;
+      } else jumpKm(R, k, pathKm(old), clean, true, [R.from[2 * k], R.from[2 * k + 1]], [R.to[2 * k], R.to[2 * k + 1]]);
+    });
+  }
+  return R;
+}
 // Timeline's trips often disagree with the stays on either side of them, and the stays are right:
 // - a trip's first or last point is a stale position (home, or where the car was earlier) km away
 //   from the stay it starts from or ends at, while the trail next to it is at the stay;
@@ -2218,11 +2288,12 @@ function cleanEnds(R) {
   R.pathPts = PP; R.pathT = T; R.pathOff = O;
   return R;
 }
-// Leaves bad GPS jumps out of the trips in R (the parsed or saved trips): first inside each trip's
-// line, then at trip ends and stays, then where trips disagree with
+// Leaves bad GPS jumps out of the trips in R (the parsed or saved trips): first stays Timeline put at
+// the wrong place between two trails, then inside each trip's line, then at trip ends and stays, then where trips disagree with
 // the stays next to them. Running it again changes nothing, so it runs on every load and
 // picks up data saved before it existed.
 function cleanJumps(R) {
+  cleanStays(R);
   cleanTrails(R);
   cleanStops(R);
   cleanEnds(R);
