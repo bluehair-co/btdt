@@ -11818,7 +11818,7 @@ function mrGearRuleDialog(r) {
   });
 }
 function mrRoutineDialog(r) {
-  var t = r.then || {};
+  var t = r.then || {}, rt = r.return_when && Array.isArray(r.return_when.time) ? r.return_when.time : [];
   mrAsk({
     title: 'Edit routine',
     text: 'Trips between its two ends in this period get what you set here.',
@@ -11828,6 +11828,7 @@ function mrRoutineDialog(r) {
       }).join('') + '</select></label>' +
       mrDateRow(r.when) + mrDaysRow(r.when) +
       '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
+      '<div class="field" id="mrWBackRow"' + (r.both_ways ? '' : ' hidden') + '><span>Back between</span><span class="mr-dates"><input type="time" id="mrWB0" value="' + esc(rt[0] || '') + '" aria-label="Earliest return"> and <input type="time" id="mrWB1" value="' + esc(rt[1] || '') + '" aria-label="Latest return"><small class="fine">Empty: the same times as there.</small></span></div>' +
       '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
       '<label class="toggle-row"><span class="lbl">Draw them along one line<small class="fine" style="display:block">Trips that don\'t follow it closely enough stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRSnap"' + (t.snap ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
     buttons: [['Save', 'primary', function () {
@@ -11838,6 +11839,7 @@ function mrRoutineDialog(r) {
       mrChange('Routine changed: ' + (r.name || r.id));
     }], ['Cancel', 'quiet', null]],
     after: function () {
+      $('mrRBoth').addEventListener('change', function () { $('mrWBackRow').hidden = !this.checked; });
       $('mrWDays').addEventListener('click', function (ev) {
         var c = ev.target.closest('[data-d]');
         if (!c) return;
@@ -11860,7 +11862,13 @@ function mrRoutineDialog(r) {
     if (name) d.name = name; else delete d.name;
     d.then = Object.assign({}, d.then);
     if (mode) d.then.mode = mode; else delete d.then.mode;
-    if ($('mrRBoth').checked) d.both_ways = true; else delete d.both_ways;
+    if ($('mrRBoth').checked) {
+      d.both_ways = true;
+      // The trips back: their own time window, else the one there.
+      var rw = Object.assign({}, d.return_when), b0 = $('mrWB0').value, b1 = $('mrWB1').value;
+      if (b0 && b1) rw.time = [b0, b1]; else delete rw.time;
+      if (Object.keys(rw).length) d.return_when = rw; else delete d.return_when;
+    } else { delete d.both_ways; delete d.return_when; }
     if ($('mrRForce').checked) d.force = true; else delete d.force;
     if (!$('mrRSnap').checked) delete d.then.snap;
     else if (!d.then.snap) d.then.snap = 'learn';
