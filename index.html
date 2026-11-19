@@ -406,6 +406,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-unless { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
 .mr-rule .icon-btn { width: 32px; height: 32px; color: var(--muted); }
 .mr-rule .icon-btn .ic { width: 18px; height: 18px; }
+.mr-would { font-style: italic; opacity: .7; }
 .mr-warn { border-left: 3px solid var(--accent); padding: 4px 0 4px 10px; margin: 8px 0; }
 .mr-trip { margin-top: 14px; }
 .mr-check { margin-top: 14px; border-left: 3px solid #c98a00; background: #fff8e6; border-radius: 0 8px 8px 0; padding: 8px 10px 10px 12px; }
@@ -423,6 +424,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 }
 .mr-dlg h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; }
 .mr-dlg > p { margin: 0 0 10px; }
+.mr-off-warn { display: block; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
 .mr-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
 .mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .mr-form { display: flex; flex-direction: column; gap: 10px; }
@@ -11101,12 +11103,24 @@ function mrCorrections() {
 }
 // Types, titles and hiding from corrections, on D's own copy of the files' values (D.base). Called by
 // setData before anything counts types, and again by mrReapply. Gear is set later, in mrApplyGear.
-function mrApplyCorrections() {
+// With MyRules switched off: what the routines and corrections would do if they were on (counts,
+// trips left out, lines), for the rules sheet. Worked out by applying them once and starting again.
+var MR_WOULD = null;
+function mrApplyCorrections(dry) {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
-  D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
-  D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
-  MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
+  function reset() {
+    D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
+    D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
+    MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
+  }
+  reset();
+  if (!dry) MR_WOULD = null;
+  if (MR && !MR.on && !dry) {
+    MR.on = true;
+    try { mrApplyCorrections(true); MR_WOULD = { count: MR_COUNT, left: MR_LEFT, line: D.mrLine }; } finally { MR.on = false; }
+    reset();
+  }
   if (!MR || !MR.on) { mrApplyTracks(); mrLearn(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
@@ -11132,6 +11146,7 @@ function mrApplyCorrections() {
   });
   // A trip a correction made a flight isn't drawn along a routine's line.
   D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
+  if (dry) return;
   // Train trips nothing above drew, along the tracks of the packs (when that's on).
   mrApplyTracks();
   mrLearn();
@@ -11778,7 +11793,7 @@ function mrRuleRow(sec, r, title, sub, ic, color, count) {
   var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
   return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt mr-edit" role="button" tabindex="0" data-mr-edit="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Edit ' + esc(title) + '"><b>' + esc(title) + icon('right', 'mr-chev') + '</b><small>' + sub +
     (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + mrUnlessTags(r) + '</small></span>' +
-    (count != null ? '<span class="num fine">' + fmt(count) + '</span>' : '') +
+    (count != null && MR.on ? '<span class="num fine">' + fmt(count) + '</span>' : count != null ? '<span class="num fine mr-would" title="Trips it would change with MyRules on">' + fmt(count) + '</span>' : '') +
     '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
     '<button type="button" class="icon-btn" data-mr-del="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Delete ' + esc(title) + '">' + icon('close') + '</button></div>';
 }
@@ -11791,7 +11806,10 @@ function mrUnlessTags(r) {
 function mrRenderRules() {
   var h = '';
   if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p>'; return; }
-  if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off in Imported data.</p>';
+  // Switched off, no rule changes anything: say so where the rules are, with the switch at hand.
+  // Off: the counts, left-out trips and lines the rules would have.
+  var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
+  if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off, so none of these rules change your trips. Routines and corrections show how many trips they would change. <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
   var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
@@ -11800,7 +11818,7 @@ function mrRenderRules() {
     if (m.min_km != null) bits.push('over ' + dist(m.min_km));
     if (r.strava_name) bits.push('same as “' + esc(r.strava_name) + '”');
     var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
-    return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR_COUNT[r.id] || 0);
+    return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR.on ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
   if (places.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
@@ -11819,21 +11837,22 @@ function mrRenderRules() {
     var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : 'info');
     var applied = th.mode || th.name || g || th.hide != null;
     return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
-      ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied ? MR_COUNT[c.id] || 0 : null);
+      ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
-    var t = r.then || {}, a = mrEnd(r.from, mrEndM(r, 'from')), b = mrEnd(r.to, mrEndM(r, 'to')), ln = D && D.mrLine && D.mrLine[r.id], bits = [];
+    var t = r.then || {}, a = mrEnd(r.from, mrEndM(r, 'from')), b = mrEnd(r.to, mrEndM(r, 'to')), ln = D && W.line && W.line[r.id], bits = [];
     function end(ref, e) { var pr = typeof ref === 'string' ? mrById(ref) : null; return pr ? pr.name || pr.role || pr.id : e ? (needPlaces(), placeLabel(mrNearestPlace(e.at))) : '?'; }
     bits.push(esc(end(r.from, a)) + (r.both_ways ? ' ⇄ ' : ' → ') + esc(end(r.to, b)));
     bits.push(mrWhenText(r.when));
     if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing, generic or guessed'));
     if (t.gear) { var gr = String(t.gear).charAt(0) === '@' ? mrById(t.gear) : null; bits.push('Gear: ' + esc(gr ? gr.name || gr.id : t.gear)); }
-    var left = D && MR_LEFT[r.id] || { type: 0, gear: 0, line: 0 };
+    var left = D && W.left[r.id] || { type: 0, gear: 0, line: 0 };
+    if (!MR.on && D) bits.push('Would take ' + tripsText(W.count[r.id] || 0) + ' with MyRules on');
     if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + ' · trips that follow it for ' + mrMatchMin(t) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : '') : left.line ? 'Line: no trip with 5 or more GPS points to take it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip with 5 or more GPS points to take it from yet');
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
-    return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? MR_COUNT[r.id] || 0 : null);
+    return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
   }).join('') + '</div>';
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
   if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
@@ -11852,6 +11871,7 @@ function mrRenderRules() {
 }
 var MR_TAB = 'routines';
 $('mrBody').addEventListener('click', function (ev) {
+  if (ev.target.closest('#mrSwitchOn')) { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); return; }
   var t = ev.target.closest('[data-mr-tabbtn]');
   if (!t) return;
   MR_TAB = t.dataset.mrTabbtn;
@@ -12278,7 +12298,8 @@ function mrRoutineDialog(r, isNew) {
   mrAsk({
     side: true,
     title: isNew ? 'Trips like this one' : 'Edit routine',
-    text: isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.',
+    text: (isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.') +
+      (MR && !MR.on ? '<b class="mr-off-warn">MyRules are switched off, so this routine won\'t change any trips until you switch them on.</b>' : ''),
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
       '<label class="field"><span>Type</span><select id="mrRMode"><option value="">Leave the type as it is</option>' + MODES.filter(function (m) { return m !== 'UNKNOWN'; }).map(function (m) {
         return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
@@ -12298,8 +12319,10 @@ function mrRoutineDialog(r, isNew) {
       if (!d) return;
       Object.keys(r).forEach(function (k) { delete r[k]; });
       Object.assign(r, d);
-      if (isNew) { mrEnsure(); (MR.doc.routines || (MR.doc.routines = [])).push(r); mrChange('New routine: ' + (r.name || r.id)); toast((r.name || 'Routine') + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.'); }
+      if (isNew) { mrEnsure(); (MR.doc.routines || (MR.doc.routines = [])).push(r); mrChange('New routine: ' + (r.name || r.id)); }
       else mrChange('Routine changed: ' + (r.name || r.id));
+      if (!MR.on) toast((r.name || 'Routine') + ' saved. MyRules are switched off, so it changes no trips yet.');
+      else if (isNew) toast((r.name || 'Routine') + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.');
     }], ['Cancel', 'quiet', null]],
     after: function () {
       $('mrRBoth').addEventListener('change', function () { $('mrWBackRow').hidden = !this.checked; });
