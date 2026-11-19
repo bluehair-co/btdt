@@ -260,7 +260,7 @@ $('tripBody').addEventListener('click', function (ev) {
 
 // ---------- Settings ----------
 function renderSplitSettings() {
-  setPressed('#splitSeg button', function (b) { return b.dataset.s === splitSetting(); });
+  setPressed('#tripSplitSeg button', function (b) { return b.dataset.s === splitSetting(); });
   var s = splitSetting(), note = $('splitNote');
   if (!D) { note.textContent = ''; return; }
   var n = D.splitN || 0, o = 0;
@@ -269,12 +269,15 @@ function renderSplitSettings() {
     (n ? fmt(n) + ' trip' + (n === 1 ? ' is' : 's are') + ' split into legs' : 'No trips are split') + (o ? ', and ' + fmt(o) + ' more look merged (marked Split? in their details).' : '.')) +
     (s === 'auto' ? ' Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds.' : '');
 }
-$('splitSeg').addEventListener('click', function (ev) {
+$('tripSplitSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-s]');
   if (!b || b.dataset.s === splitSetting()) return;
   PREFS.split = b.dataset.s; savePrefs();
-  refreshData();
-  renderSplitSettings();
+  setPressed('#tripSplitSeg button', function (x) { return x === b; });
+  working(b.dataset.s === 'off' ? 'Showing trips as Timeline recorded them…' : 'Splitting trips again…', function () {
+    refreshData();
+    renderSplitSettings();
+  });
 });
 
 // ---------- split by hand ----------

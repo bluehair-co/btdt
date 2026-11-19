@@ -929,7 +929,7 @@ function renderMyRules() {
     '<button type="button" class="btn mr-export" id="mrExportBtn">' + icon('upload') + 'Export' + (n ? '<i class="mr-dot"></i>' : '') + '</button>' +
     '<span class="fine mr-unsaved">' + (n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
     '<p class="fine" style="margin-top:8px">The exported file includes your places, such as home.</p></div>';
-  $('mrOn').addEventListener('change', function () { MR.on = this.checked; mrSave(); mrReapply(); });
+  $('mrOn').addEventListener('change', function () { var on = this.checked; working(on ? 'Applying MyRules…' : 'Switching MyRules off…', function () { MR.on = on; mrSave(); mrReapply(); }); });
   $('mrOpen').addEventListener('click', function () { mrRenderRules(); openSheet('mrSheet'); });
   $('mrExportBtn').addEventListener('click', mrExport);
 }
@@ -1043,7 +1043,7 @@ function mrCorGroup(c) {
 $('mrBody').addEventListener('click', function (ev) {
   var cs = ev.target.closest('[data-cor-sort]');
   if (cs) { PREFS.corSort = cs.dataset.corSort; savePrefs(); mrRenderRules(); return; }
-  if (ev.target.closest('#mrSwitchOn')) { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); return; }
+  if (ev.target.closest('#mrSwitchOn')) { working('Applying MyRules…', function () { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); }); return; }
   var t = ev.target.closest('[data-mr-tabbtn]');
   if (!t) return;
   MR_TAB = t.dataset.mrTabbtn;
@@ -1054,8 +1054,11 @@ $('mrBody').addEventListener('change', function (ev) {
   if (!id) return;
   var r = mrById(id);
   if (!r) return;
-  if (ev.target.checked) delete r.enabled; else r.enabled = false;
-  mrChange((ev.target.checked ? 'Switched on: ' : 'Switched off: ') + (r.name || r.id));
+  var on = ev.target.checked;
+  working(on ? 'Applying the rule…' : 'Switching the rule off…', function () {
+    if (on) delete r.enabled; else r.enabled = false;
+    mrChange((on ? 'Switched on: ' : 'Switched off: ') + (r.name || r.id));
+  });
 });
 $('mrBody').addEventListener('keydown', function (ev) {
   var ed = (ev.key === 'Enter' || ev.key === ' ') && ev.target.matches('[data-mr-edit]') && ev.target;

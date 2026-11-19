@@ -357,7 +357,10 @@ function trackSettings() {
   $('trackNote').textContent = !packCodes().length ? 'Add a country first.' : PREFS.trackSnap ? (D ? tripsText(n) + ' drawn along the railway.' : '') : '';
 }
 $('trackSnap').addEventListener('change', function () {
-  PREFS.trackSnap = this.checked; savePrefs();
-  mrReapply();
-  trackSettings();
+  var on = this.checked;
+  working(on ? 'Snapping train trips to the tracks…' : 'Taking train trips off the tracks…', function () {
+    PREFS.trackSnap = on; savePrefs();
+    mrReapply();
+    trackSettings();
+  });
 });

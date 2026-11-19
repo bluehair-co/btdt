@@ -610,7 +610,7 @@
     <div class="sec" id="splitSec">
       <h3>Trips Timeline merged</h3>
       <p class="fine">Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line.</p>
-      <div class="seg" role="group" aria-label="Split trips Timeline merged" id="splitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
+      <div class="seg" role="group" aria-label="Split trips Timeline merged" id="tripSplitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
       <p class="fine" id="splitNote"></p>
     </div>
     <div class="sec" id="packSec">
@@ -658,3 +658,4 @@
   </div>
 </div>
 <div id="toast" class="toast" hidden></div>
+<div id="working" class="working" hidden><div class="toast working-pill" role="status" aria-live="polite"><span class="working-spin" aria-hidden="true"></span><span id="workingText">Working on it…</span></div></div>

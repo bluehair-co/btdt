@@ -307,8 +307,10 @@ function packLines(mode, a, b) {
 // The trips are split again with the packs there are now, keeping the filters and period.
 function packsChanged() {
   PK = null;
-  refreshData();
-  renderPacks();
+  working('Updating trips with the station packs…', function () {
+    refreshData();
+    renderPacks();
+  });
 }
 // setData again from what was loaded, keeping the filters (new types, sports and gear switched on).
 function refreshData() {
