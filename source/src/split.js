@@ -20,7 +20,9 @@ function splitHas(list, key) { return Array.isArray(list) && list.indexOf(key) >
 // Start times (ms) of trips MyRules corrections point at.
 function splitFixed() {
   var out = [];
-  if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) { var t = c.trip && c.trip.start && Date.parse(c.trip.start); if (isFinite(t)) out.push(t); });
+  if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) {
+    (c.trip && Array.isArray(c.trip.trips) ? c.trip.trips : [c.trip]).forEach(function (r) { var t = r && r.start && Date.parse(r.start); if (isFinite(t)) out.push(t); });
+  });
   return out.sort(function (a, b) { return a - b; });
 }
 function splitCandidate(R, i) {

@@ -753,6 +753,11 @@ function addZoomAll(bar) {
   a.innerHTML = icon('fit') + '<i class="dot" hidden></i>';
   L.DomEvent.disableClickPropagation(a);
   L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomAll(); });
+  var s = L.DomUtil.create('a', 'sel-btn', bar);
+  s.href = '#'; s.setAttribute('role', 'button'); s.title = 'Select trips on the map'; s.setAttribute('aria-label', 'Select trips on the map');
+  s.innerHTML = icon('select');
+  L.DomEvent.disableClickPropagation(s);
+  L.DomEvent.on(s, 'click', function (e) { L.DomEvent.preventDefault(e); if (SEL) selEnd(); else selStart(); });
 }
 $('fitAllBtn').addEventListener('click', zoomAll);
 // Whether some of the trips in the filters (their stays when there are none) are out of view.
@@ -880,6 +885,8 @@ function onMapTap(pt, ev) {
   if (mrSideOpen()) return;
   // Making a map snap: the tap picks one of its ends.
   if (SN && SN.phase === 'pick') { snapTap(map.containerPointToLatLng(pt)); return; }
+  // Selecting trips: the selection handles its own taps.
+  if (SEL) return;
   // Splitting a trip by hand: the tap picks a point of its path.
   if (SPL) { splitHandTap(pt); return; }
   var list = hitsAt(pt);
@@ -1395,10 +1402,12 @@ function runExport(fn) {
 }
 $('exportJson').addEventListener('click', function () { runExport(exportJson); });
 $('exportCsv').addEventListener('click', function () { runExport(exportCsv); });
-function openList(list) {
+var listTitle = null;
+function openList(list, title) {
   setPinOn([]); placeLast = null;
+  if (list !== listBack) listTitle = title || null;
   listBack = list;
-  $('tripSheetTitle').textContent = fmt(list.length) + ' trips here';
+  $('tripSheetTitle').textContent = listTitle || fmt(list.length) + ' trips here';
   $('tripBack').hidden = true;
   $('tripBody').innerHTML = '<div class="list-rows">' + list.slice(0, 300).map(function (i) { return tripRowHtml(i, true); }).join('') + '</div>' +
     (list.length > 300 ? '<p class="fine">Showing the latest 300.</p>' : '');
