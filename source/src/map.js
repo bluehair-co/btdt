@@ -967,7 +967,7 @@ function tripRows(i) {
   var m = modeOf(i), k = D.km[i], ms = D.end[i] - D.start[i], off = D.off[i], e = D.est[i];
   var line = haversine([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]), nGps = D.pathOff[i + 1] - D.pathOff[i];
   var t0 = localTime(D.start[i], zoneAt(D.from[2 * i], D.from[2 * i + 1]), off), t1 = localTime(D.end[i], zoneAt(D.to[2 * i], D.to[2 * i + 1]), off);
-  var src = D.snap && D.snap[i] ? (D.snap[i].snap ? 'along a map snap\'s line' : D.snap[i].track ? 'along the railway of your station packs' : 'along your routine\'s line') : e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
+  var src = D.snap && D.snap[i] ? (D.snap[i].snap ? 'along a map snap\'s line' : D.snap[i].track ? 'along the railway of your station packs' : D.snap[i].road ? 'along the roads of your road pack' : 'along your routine\'s line') : e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
   var rows = [
     ['From', placeOf(i, false)], ['To', placeOf(i, true)],
     ['Start', t0.time + ' <span class="fine">' + t0.label + '</span>'],
@@ -1272,7 +1272,7 @@ function mrRaw(i) {
 }
 function mrFlags(i) {
   return (D.mrGear && D.mrGear[i] && !D.mrGear[i].cor ? ['gear from MyRules'] : []).concat(D.mrMode && D.mrMode[i] && D.mrMode[i].inf ? ['type from a MyRules routine'] : [])
-    .concat(D.snap && D.snap[i] ? [D.snap[i].snap ? 'line from a MyRules map snap' : D.snap[i].track ? 'line along the tracks of a station pack' : 'line from a MyRules routine'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
+    .concat(D.snap && D.snap[i] ? [D.snap[i].snap ? 'line from a MyRules map snap' : D.snap[i].track ? 'line along the tracks of a station pack' : D.snap[i].road ? 'line along the roads of a road pack' : 'line from a MyRules routine'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
 }
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }

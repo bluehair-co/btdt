@@ -22,6 +22,7 @@ function selStart() {
   SEL.draw = L.layerGroup().addTo(map);
   map.dragging.disable(); map.boxZoom.disable(); map.doubleClickZoom.disable();
   map.getContainer().classList.add('sel-on');
+  document.body.classList.add('sel-mode');
   selBars();
   selRender();
 }
@@ -225,8 +226,13 @@ function selSave() {
   var c = { id: mrNewId('bulk-' + type.toLowerCase()), name: name, trip: { trips: refs }, then: { mode: type } };
   (MR.doc.corrections || (MR.doc.corrections = [])).push(c);
   selEnd();
-  mrChange(name);
-  toast(tripsText(n) + ' now ' + (LABEL[type] || type).toLowerCase() + '. Undo it in MyRules, or detach a trip in its details.');
+  // Applying the rules again over the whole Timeline takes a moment: the spinner shows meanwhile
+  // (given a frame to appear first).
+  busy('Changing ' + tripsText(n) + ' to ' + (LABEL[type] || type).toLowerCase() + '…');
+  setTimeout(function () {
+    try { mrChange(name); } finally { busy(''); }
+    toast(tripsText(n) + ' now ' + (LABEL[type] || type).toLowerCase() + '. Undo it in MyRules, or detach a trip in its details.');
+  }, 60);
 }
 function selEnd() {
   if (!SEL) return;
@@ -235,6 +241,7 @@ function selEnd() {
   was.dim.remove(); was.layer.remove(); was.draw.remove();
   map.dragging.enable(); map.boxZoom.enable(); map.doubleClickZoom.enable();
   map.getContainer().classList.remove('sel-on');
+  document.body.classList.remove('sel-mode');
   if ($('selTop')) { $('selTop').hidden = true; $('selBot').hidden = true; }
   if ($('mrDlg').open) $('mrDlg').close();
 }

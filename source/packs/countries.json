@@ -128,7 +128,8 @@
   {
    "cc": "NL",
    "name": "Netherlands",
-   "extract": "europe/netherlands"
+   "extract": "europe/netherlands",
+   "roads": true
   },
   {
    "cc": "NO",
@@ -224,6 +225,14 @@
    "cc": "MA",
    "name": "Morocco",
    "extract": "africa/morocco"
+  }
+ ],
+ "road_regions": [
+  {
+   "code": "CA-ON",
+   "cc": "CA",
+   "name": "Ontario",
+   "extract": "north-america/canada/ontario"
   }
  ]
 }

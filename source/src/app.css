@@ -1094,3 +1094,16 @@ div.hit-row:hover { background: none; }
 
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
 .mr-grp { margin: 14px 0 4px; }
+
+/* Download progress (station and road packs) */
+.dl-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 10px 0 2px; }
+.dl-bar[hidden] { display: none; }
+.dl-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .15s linear; }
+/* Work in the background (snapping car trips to roads) */
+.bg-pill { position: fixed; z-index: 54; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + 116px); display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 13px; }
+.bg-pill[hidden] { display: none; }
+.bg-pill .dl-bar { width: 80px; margin: 0; }
+/* While selecting trips only the selection's own bars show (the map's attribution stays). */
+body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .snap-bar:not(.sel-top), body.sel-mode #roadPill { display: none !important; }
+body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
+body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }

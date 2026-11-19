@@ -149,11 +149,11 @@ def merge_stations(stations):
     return out
 
 
-def build(path, cc, name):
-    r = Reader()
-    r.apply_file(path, locations=True)
+def graph(ways, tol_m):
+    """Nodes and lines from [(kind, [(osm node id, lat, lng), ...]), ...]: each way cut at every node
+    another way uses (so junctions stay joined) and simplified to tol_m. Returns nodes, lines, km."""
     uses = {}
-    for kind, pts in r.ways:
+    for kind, pts in ways:
         for j, (nid, _, _) in enumerate(pts):
             uses[nid] = uses.get(nid, 0) + (2 if j in (0, len(pts) - 1) else 1)
     nodes = []          # (lat, lng)
@@ -168,12 +168,11 @@ def build(path, cc, name):
         nodes.append((lat, lng))
         return index[nid]
 
-    for kind, pts in r.ways:
-        # Cut at every node another line uses, so junctions stay joined.
+    for kind, pts in ways:
         cuts = [0] + [j for j in range(1, len(pts) - 1) if uses.get(pts[j][0], 0) > 1] + [len(pts) - 1]
         for a, b in zip(cuts, cuts[1:]):
             seg = pts[a:b + 1]
-            keep = simplify([(p[1], p[2]) for p in seg], TOLERANCE_M)
+            keep = simplify([(p[1], p[2]) for p in seg], tol_m)
             line = [kind]
             for q, j in enumerate(keep):
                 nid, lat, lng = seg[j]
@@ -185,13 +184,10 @@ def build(path, cc, name):
             for q in range(2, len(line)):
                 total_km += km(nodes[line[q - 1]], nodes[line[q]])
             lines.append(line)
-    stations = merge_stations(r.stations)
-    stations.sort(key=lambda s: (s['lat'], s['lng']))
-    flat_st, pl, pg = [], 0, 0
-    for s in stations:
-        la, lo = e5(s['lat']), e5(s['lng'])
-        flat_st += [la - pl, lo - pg, s['k'], s['name']]
-        pl, pg = la, lo
+    return nodes, lines, total_km
+
+
+def encode(nodes, lines):
     flat_nodes, pl, pg = [], 0, 0
     for lat, lng in nodes:
         la, lo = e5(lat), e5(lng)
@@ -204,12 +200,74 @@ def build(path, cc, name):
             enc.append(v - prev)
             prev = v
         out_lines.append(enc)
+    return flat_nodes, out_lines
+
+
+def build(path, cc, name):
+    r = Reader()
+    r.apply_file(path, locations=True)
+    nodes, lines, total_km = graph(r.ways, TOLERANCE_M)
+    stations = merge_stations(r.stations)
+    stations.sort(key=lambda s: (s['lat'], s['lng']))
+    flat_st, pl, pg = [], 0, 0
+    for s in stations:
+        la, lo = e5(s['lat']), e5(s['lng'])
+        flat_st += [la - pl, lo - pg, s['k'], s['name']]
+        pl, pg = la, lo
+    flat_nodes, out_lines = encode(nodes, lines)
     pack = {
         'v': 1, 'cc': cc, 'name': name, 'built': datetime.date.today().isoformat(),
         'attribution': '© OpenStreetMap contributors', 'license': 'ODbL 1.0',
         'stations': flat_st, 'nodes': flat_nodes, 'lines': out_lines,
     }
     info = {'stations': len(stations), 'km': round(total_km), 'lines': len(lines), 'nodes': len(nodes)}
+    return pack, info
+
+
+# ---------- road packs ----------
+# A country's main roads, for drawing car trips along them (Snap cars to roads in the app), in a
+# file of their own (roads/NL.json.gz) so nobody downloads them without asking. Same graph format
+# as a station pack's lines; kind bits: 1 motorway, 2 trunk, 4 primary (each with its links).
+# Simplified to ROAD_TOLERANCE_M; no names, no one-way, no lanes.
+ROAD_KIND = {'motorway': 1, 'motorway_link': 1, 'trunk': 2, 'trunk_link': 2, 'primary': 4, 'primary_link': 4}
+ROAD_TOLERANCE_M = 15
+
+
+class RoadReader(osmium.SimpleHandler):
+    def __init__(self):
+        super().__init__()
+        self.ways = []
+
+    def way(self, w):
+        kind = ROAD_KIND.get(w.tags.get('highway'))
+        if not kind or w.tags.get('access') in ('no', 'private') or w.tags.get('area') == 'yes':
+            return
+        pts = [(nd.ref, nd.location.lat, nd.location.lon) for nd in w.nodes if nd.location.valid()]
+        if len(pts) >= 2:
+            self.ways.append((kind, pts))
+
+
+def build_roads(path, cc, name, country=None):
+    r = RoadReader()
+    r.apply_file(path, locations=True)
+    nodes, lines, total_km = graph(r.ways, ROAD_TOLERANCE_M)
+    flat_nodes, out_lines = encode(nodes, lines)
+    pack = {
+        'v': 1, 'cc': cc, 'name': name, 'kind': 'roads', 'built': datetime.date.today().isoformat(),
+        'attribution': '© OpenStreetMap contributors', 'license': 'ODbL 1.0',
+        'nodes': flat_nodes, 'lines': out_lines,
+    }
+    if country:
+        pack['country'] = country
+    by = {}
+    for line in lines:
+        by[line[0]] = by.get(line[0], 0) + 1
+    info = {'km': round(total_km), 'lines': len(lines), 'nodes': len(nodes), 'name': name}
+    if nodes:
+        lats, lngs = [n[0] for n in nodes], [n[1] for n in nodes]
+        info['bbox'] = [round(min(lats), 3), round(min(lngs), 3), round(max(lats), 3), round(max(lngs), 3)]
+    if country:
+        info['cc'] = country
     return pack, info
 
 
