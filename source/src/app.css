@@ -379,6 +379,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 }
 .mr-dlg h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; }
 .mr-dlg > p { margin: 0 0 10px; }
+.mr-off-warn { display: block; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
 .mr-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
 .mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .mr-form { display: flex; flex-direction: column; gap: 10px; }

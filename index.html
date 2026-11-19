@@ -423,6 +423,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 }
 .mr-dlg h2 { margin: 0 0 8px; font-family: var(--font-display); font-size: 20px; }
 .mr-dlg > p { margin: 0 0 10px; }
+.mr-off-warn { display: block; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
 .mr-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
 .mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .mr-form { display: flex; flex-direction: column; gap: 10px; }
@@ -11733,7 +11734,7 @@ function mrRuleRow(sec, r, title, sub, ic, color, count) {
   var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
   return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt mr-edit" role="button" tabindex="0" data-mr-edit="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Edit ' + esc(title) + '"><b>' + esc(title) + icon('right', 'mr-chev') + '</b><small>' + sub +
     (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + mrUnlessTags(r) + '</small></span>' +
-    (count != null ? '<span class="num fine">' + fmt(count) + '</span>' : '') +
+    (count != null && MR.on ? '<span class="num fine">' + fmt(count) + '</span>' : '') +
     '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
     '<button type="button" class="icon-btn" data-mr-del="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Delete ' + esc(title) + '">' + icon('close') + '</button></div>';
 }
@@ -11746,7 +11747,8 @@ function mrUnlessTags(r) {
 function mrRenderRules() {
   var h = '';
   if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p>'; return; }
-  if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off in Imported data.</p>';
+  // Switched off, no rule changes anything: say so where the rules are, with the switch at hand.
+  if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off, so none of these rules change your trips. <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
   var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
@@ -11784,7 +11786,7 @@ function mrRenderRules() {
     if (t.mode) bits.push(esc(LABEL[t.mode] || t.mode) + (r.force ? ', always' : ', where the type was missing, generic or guessed'));
     if (t.gear) { var gr = String(t.gear).charAt(0) === '@' ? mrById(t.gear) : null; bits.push('Gear: ' + esc(gr ? gr.name || gr.id : t.gear)); }
     var left = D && MR_LEFT[r.id] || { type: 0, gear: 0, line: 0 };
-    if (t.snap) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + ' · trips that follow it for ' + mrMatchMin(t) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : '') : left.line ? 'Line: no trip with 5 or more GPS points to take it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip with 5 or more GPS points to take it from yet');
+    if (t.snap && MR.on) bits.push(ln && ln.missing ? 'Line: ' + esc(ln.missing) + ' isn\'t loaded, so it takes no trips' : ln ? 'Line: ' + (ln.src === 'trip' ? 'learned from the trip on ' + esc(mrWhere(ln.from)) : esc(ln.src)) + ' · trips that follow it for ' + mrMatchMin(t) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : '') : left.line ? 'Line: no trip with 5 or more GPS points to take it from yet, so it takes none of the ' + fmt(left.line) + ' it matches' : 'Line: no trip with 5 or more GPS points to take it from yet');
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
@@ -11807,6 +11809,7 @@ function mrRenderRules() {
 }
 var MR_TAB = 'routines';
 $('mrBody').addEventListener('click', function (ev) {
+  if (ev.target.closest('#mrSwitchOn')) { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); return; }
   var t = ev.target.closest('[data-mr-tabbtn]');
   if (!t) return;
   MR_TAB = t.dataset.mrTabbtn;
@@ -12211,7 +12214,8 @@ function mrRoutineDialog(r, isNew) {
   mrAsk({
     side: true,
     title: isNew ? 'Trips like this one' : 'Edit routine',
-    text: isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.',
+    text: (isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.') +
+      (MR && !MR.on ? '<b class="mr-off-warn">MyRules are switched off, so this routine won\'t change any trips until you switch them on.</b>' : ''),
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
       '<label class="field"><span>Type</span><select id="mrRMode"><option value="">Leave the type as it is</option>' + MODES.filter(function (m) { return m !== 'UNKNOWN'; }).map(function (m) {
         return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
@@ -12231,8 +12235,10 @@ function mrRoutineDialog(r, isNew) {
       if (!d) return;
       Object.keys(r).forEach(function (k) { delete r[k]; });
       Object.assign(r, d);
-      if (isNew) { mrEnsure(); (MR.doc.routines || (MR.doc.routines = [])).push(r); mrChange('New routine: ' + (r.name || r.id)); toast((r.name || 'Routine') + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.'); }
+      if (isNew) { mrEnsure(); (MR.doc.routines || (MR.doc.routines = [])).push(r); mrChange('New routine: ' + (r.name || r.id)); }
       else mrChange('Routine changed: ' + (r.name || r.id));
+      if (!MR.on) toast((r.name || 'Routine') + ' saved. MyRules are switched off, so it changes no trips yet.');
+      else if (isNew) toast((r.name || 'Routine') + ': ' + tripsText(MR_COUNT[r.id] || 0) + ' match.');
     }], ['Cancel', 'quiet', null]],
     after: function () {
       $('mrRBoth').addEventListener('change', function () { $('mrWBackRow').hidden = !this.checked; });
