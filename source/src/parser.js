@@ -223,9 +223,10 @@ function pathKm(pts) {
 //   A jump under 5 km at an end also needs a minute between the end and the next point, as
 //   Timeline's first and last points are often only seconds apart from the ends.
 // The worst point goes first and the check is repeated, so neighbouring bad points come out one by one.
-// pts are [lat, lng]; t is seconds; cap is km/h; nb is [before, after], each [lat, lng] or null.
+// pts are [lat, lng]; t is seconds; cap is km/h; nb is [before, after], each [lat, lng] or null;
+// spike (km/h, optional) is a lower speed for the out-and-back spikes inside the trail.
 // Returns the indices kept.
-function jumpKeep(pts, t, cap, nb) {
+function jumpKeep(pts, t, cap, nb, spike) {
   var keep = [], i;
   for (i = 0; i < pts.length; i++) keep.push(i);
   if (pts.length < 3 || !(cap > 0)) return keep;
@@ -265,7 +266,7 @@ function jumpKeep(pts, t, cap, nb) {
         if (end) score = km(pts[p], pts[keep[j ? n - 2 : 1]]);
       } else {
         var a = keep[j - 1], b = keep[j + 1];
-        if (Math.max(v(a, p), v(p, b)) > cap) {
+        if (Math.max(v(a, p), v(p, b)) > (spike || cap)) {
           var din = km(pts[a], pts[p]), dout = km(pts[p], pts[b]), dd = km(pts[a], pts[b]);
           if (din + dout > 2 * dd + 1) score = din + dout - dd;
         }
@@ -309,6 +310,18 @@ function tripNeighbours(R) {
   for (i = 0; i < n; i++) out.push([near(E, i, R.start[i], R.start[i] - STAY_GAP, R.start[i]), near(S, i, R.end[i], R.end[i], R.end[i] + STAY_GAP)]);
   return out;
 }
+// A regular train goes up to 200 km/h, so a point the line goes out to and straight back from faster
+// than that is a stray fix, unless the train is a high-speed one: one whose line has at least 3 legs of
+// over 1 km between 200 and 400 km/h (faster ones are jumps themselves).
+var TRAIN_SPIKE_KMH = 200;
+function highSpeed(pts, t) {
+  var n = 0;
+  for (var i = 1; i < pts.length; i++) {
+    var d = km(pts[i - 1], pts[i]), h = (t[i] - t[i - 1]) / 3600;
+    if (d > 1 && h > 0 && d / h > TRAIN_SPIKE_KMH && d / h <= 400 && ++n >= 3) return true;
+  }
+  return false;
+}
 // Leaves bad GPS jumps out of every trip's line in R and fixes the distance they inflated (see jumpKm).
 // Strava, simulated trips and flights are left as they are.
 function cleanTrails(R) {
@@ -319,7 +332,7 @@ function cleanTrails(R) {
     if (o1 - o0 < 3 || mode === 'FLYING' || s === SRC.strava || s === SRC.sim || R.est[i] & STRAVA) continue;
     var pts = [], t = [];
     for (q = o0; q < o1; q++) { pts.push([R.pathPts[2 * q], R.pathPts[2 * q + 1]]); t.push(R.pathT[q]); }
-    var keep = jumpKeep(pts, t, jumpCap(mode), nb[i]);
+    var keep = jumpKeep(pts, t, jumpCap(mode), nb[i], mode === 'TRAIN' && !highSpeed(pts, t) ? TRAIN_SPIKE_KMH : 0);
     if (keep.length === pts.length) continue;
     out[i] = keep; any = true;
     var e = R.est[i], raw = pathKm(pts), clean = pathKm(keep.map(function (k) { return pts[k]; })), first = pts[keep[0]], last = pts[keep[keep.length - 1]];
