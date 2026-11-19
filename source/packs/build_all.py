@@ -18,6 +18,7 @@ import build_pack
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 FILTER = ['w/railway=rail,narrow_gauge,tram,subway,light_rail', 'nwa/railway=station,halt,tram_stop']
+ROAD_FILTER = ['w/highway=motorway,motorway_link,trunk,trunk_link,primary,primary_link']
 
 
 def run(*cmd):
@@ -61,11 +62,22 @@ def main():
         cc = c['cc']
         if want and cc not in want:
             continue
-        pbf, rail = '/tmp/%s.osm.pbf' % cc, '/tmp/%s-rail.osm.pbf' % cc
+        pbf, rail, road = '/tmp/%s.osm.pbf' % cc, '/tmp/%s-rail.osm.pbf' % cc, '/tmp/%s-road.osm.pbf' % cc
         try:
             fetch(c, pbf)
             run('osmium', 'tags-filter', pbf, *FILTER, '-o', rail, '--overwrite')
+            if c.get('roads'):
+                run('osmium', 'tags-filter', pbf, *ROAD_FILTER, '-o', road, '--overwrite')
             os.remove(pbf)
+            # The country's main roads, in a file of their own (only for countries marked "roads").
+            if c.get('roads'):
+                rp, rinfo = build_pack.build_roads(road, cc, c['name'])
+                os.makedirs(os.path.join(out, 'roads'), exist_ok=True)
+                rdest = os.path.join(out, 'roads', cc + '.json.gz')
+                build_pack.write(rp, rdest)
+                rinfo.update({'bytes': os.path.getsize(rdest), 'built': rp['built']})
+                index.setdefault('roads', {})[cc] = rinfo
+                print(cc, 'roads', rinfo, flush=True)
             pack, info = build_pack.build(rail, cc, c['name'])
             dest = os.path.join(out, cc + '.json.gz')
             build_pack.write(pack, dest)
@@ -75,7 +87,7 @@ def main():
         except Exception as e:  # one country failing leaves the others (and its last pack) in place
             print('FAILED', cc, e, flush=True)
             failed.append(cc)
-        for p in (pbf, rail):
+        for p in (pbf, rail, road):
             if os.path.exists(p):
                 os.remove(p)
     index['updated'] = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')

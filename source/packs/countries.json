@@ -128,7 +128,8 @@
   {
    "cc": "NL",
    "name": "Netherlands",
-   "extract": "europe/netherlands"
+   "extract": "europe/netherlands",
+   "roads": true
   },
   {
    "cc": "NO",
