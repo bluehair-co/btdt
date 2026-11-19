@@ -1102,7 +1102,10 @@ div.hit-row:hover { background: none; }
 #snapMode svg { width: 16px; height: 16px; }
 
 /* Selecting trips on the map */
-.sel-on, .sel-on .leaflet-interactive { cursor: crosshair !important; touch-action: none; }
+.sel-on, .sel-on .leaflet-interactive { cursor: crosshair !important; }
+/* While selecting, a finger draws: with panning off, Leaflet leaves the map at pan-x pan-y, and the
+   browser would take the stroke as a scroll and cancel it. */
+#map.sel-on, #map.sel-on * { touch-action: none !important; }
 .sel-top { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; }
 .sel-top .snap-bar-t { flex: 1 1 240px; }
 .sel-top .seg button { min-height: 40px; }
