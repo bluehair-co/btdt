@@ -1080,3 +1080,6 @@ div.hit-row:hover { background: none; }
 #map .leaflet-control-zoom a.sel-btn { display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
 #map .leaflet-control-zoom a.sel-btn svg { width: 18px; height: 18px; fill: currentColor; }
 .sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
+
+.mr-sort button { min-height: 36px; padding: 6px 12px; }
+.mr-grp { margin: 14px 0 4px; }
