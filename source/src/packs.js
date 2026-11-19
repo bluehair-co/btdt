@@ -130,6 +130,7 @@ var PACK_MODE_BITS = { TRAIN: 1 | 8, TRAM: 2 | 8, SUBWAY: 4 | 8 };
 // when at most 60% of it runs through cells of one found before and it is at most 1.6 times as long
 // as the shortest. Each is named after a junction station only it
 // passes ("via Haarlem and Leiden Centraal"): up to two, junctions first. Resolves to [] when no installed pack covers both ends.
+function packNames(ccs) { var n = ccs.map(packName); return n.length > 1 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : n[0] || ''; }
 var PACK_GAP_KM = 0.05, PACK_ALT = { n: 4, tries: 8, penalty: 4, shared: 0.6, longer: 1.6 };
 function packLines(mode, a, b) {
   var bits = PACK_MODE_BITS[mode];
@@ -192,9 +193,18 @@ function packLines(mode, a, b) {
     // The track points near an end: all within 400 m, or 150 m further than the nearest (up to 1 km),
     // each with how far off it is (up to 2 km). A station where lines from two sides end on their own platforms
     // (a terminus like Den Haag Centraal) is reached from either side.
+    // Track points in cells of 0.02° (about 2 km), to find those near an end without going through them all.
+    var ng = g.ng && g.ng[bits];
+    if (!ng) {
+      ng = (g.ng || (g.ng = {}))[bits] = new Map();
+      adj.forEach(function (_, u) { var c = Math.floor(g.N[2 * u] * 50) * 1e5 + Math.floor(g.N[2 * u + 1] * 50); (ng.get(c) || ng.set(c, []).get(c)).push(u); });
+    }
     function ends(p) {
-      var all = [], bd = 2;
-      adj.forEach(function (_, u) { var d = km(p, [g.N[2 * u], g.N[2 * u + 1]]); if (d <= 2) { all.push([u, d]); if (d < bd) bd = d; } });
+      var all = [], bd = 2, y = Math.floor(p[0] * 50), x = Math.floor(p[1] * 50), rx = Math.ceil(1 / Math.max(0.2, Math.cos(p[0] * Math.PI / 180)));
+      for (var dy = -1; dy <= 1; dy++) for (var dx = -rx; dx <= rx; dx++) (ng.get((y + dy) * 1e5 + x + dx) || []).forEach(function (u) {
+        var d = km(p, [g.N[2 * u], g.N[2 * u + 1]]);
+        if (d <= 2) { all.push([u, d]); if (d < bd) bd = d; }
+      });
       var r = Math.min(2, Math.max(0.4, bd + 0.15)), m = new Map();
       all.forEach(function (x) { if (x[1] <= r) m.set(x[0], x[1]); });
       return m.size ? { m: m, d: bd } : null;
@@ -283,7 +293,8 @@ function packLines(mode, a, b) {
         via = two.length ? 'via ' + two.map(function (s) { return s.name; }).join(' and ') : n ? 'other way ' + n : 'shortest';
       }
       var pts = w.nodes.map(function (u) { return [g.N[2 * u], g.N[2 * u + 1]]; });
-      out.push({ id: 'pack:' + g.cc + (n ? ':' + n : ''), name: via ? label + ' ' + via : label + ' (' + (PACKS[g.cc] && PACKS[g.cc].name || g.cc) + ' station pack)', pts: pts, km: w.km, off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: g.cc, n: n });
+      var ccs = [g.cc];
+      out.push({ id: 'pack:' + ccs.join('+') + (n ? ':' + n : ''), name: via ? label + ' ' + via : label + ' (' + packNames(ccs) + ' station pack' + (ccs.length > 1 ? 's' : '') + ')', pts: pts, km: w.km, off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: ccs[0], packs: ccs, n: n });
     });
   });
   // The pack nearest the two ends, its ways shortest first.
@@ -332,6 +343,7 @@ function renderPacks() {
       '<span class="pack-acts">' + (newer ? '<button type="button" class="link-btn" data-pack-act="update" data-cc="' + cc + '">Update</button>' : '') + '<button type="button" class="link-btn" data-pack-act="remove" data-cc="' + cc + '">Remove</button></span></li>';
   }).join('');
   box.hidden = !ccs.length;
+  trackSettings();
   $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet. A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine\'s line along the railway without going online.';
 }
 function packOptions(sel, have) {
