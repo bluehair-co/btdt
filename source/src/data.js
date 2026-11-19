@@ -140,6 +140,8 @@ function setData(R) {
   D = withStrava(RAW);
   // MyRules corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
   if (D === RAW) D = Object.assign({}, RAW);
+  // Trips Timeline merged are split into their legs (split.js), on D only.
+  D = splitTrips(D);
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
@@ -1110,6 +1112,8 @@ function importLocationFiles(list) {
       msg = msg.trim();
       if (r.errors.length) msg += ' Problems: ' + r.errors.join(' · ');
       setStatus(msg, r.errors.length > 0);
+      // Station packs for the countries the trips are in, offered once each.
+      setTimeout(packOffer, 800);
     }, 30);
   });
 }

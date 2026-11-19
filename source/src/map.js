@@ -1210,7 +1210,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + mrTripBlock(i) +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
     (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
     (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
@@ -1231,7 +1231,7 @@ function guessHow(i) {
   var l = D.learn && D.learn[i], c = D.conf && D.conf[i];
   var how = l ? 'from your other trips between these places at this speed, counting the types you fixed or checked yourself (it was ' + esc((LABEL[l.was] || l.was).toLowerCase()) + ' from its speed)'
     : ['from its average speed', 'from its average speed', 'from its speed along the way (its fastest and slowest stretches, not just the average)',
-      'from your other trips between these places at this speed', 'from your labelled trips along the same line', 'from railway stations at its ends', 'from its speed, too fast for a car'][D.gby ? D.gby[i] : 0] || 'from its speed';
+      'from your other trips between these places at this speed', 'from your labelled trips along the same line', 'from railway stations at its ends', 'from its speed, too fast for a car', 'from the railway, tram or metro lines it follows (station pack)'][D.gby ? D.gby[i] : 0] || 'from its speed';
   return how + (c ? ' (' + c + '% sure)' : '');
 }
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
@@ -1265,6 +1265,8 @@ function rawTrip(i) {
     gear: D.gear[i] ? GEAR[D.gear[i]].name : null, myRules: mrRaw(i),
     from: ll(D.from, i), to: ll(D.to, i)
   };
+  // A leg of a trip Timeline merged (split.js): which leg, the trip it came from and the stop after it.
+  if (legOf(i)) { o.flags.push('split from one Timeline trip'); o.split = splitRaw(i); }
   if (e & 16) {
     // The Timeline trips at the same time, including the ones this activity replaced.
     var sm = D.smeta && D.smeta[i];
