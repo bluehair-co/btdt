@@ -460,11 +460,18 @@
           "default": false
         },
         "radius_m": {
-          "type": "number",
-          "minimum": 50,
-          "maximum": 5000,
-          "default": 500,
-          "description": "How far from from and to a trip may start and end (a place's own radius when larger)"
+          "description": "How far from from and to a trip may start and end (a place's own radius when larger): one number for both ends, or each end its own",
+          "oneOf": [
+            { "type": "number", "minimum": 50, "maximum": 5000, "default": 500 },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "from": { "type": "number", "minimum": 50, "maximum": 5000, "default": 500 },
+                "to": { "type": "number", "minimum": 50, "maximum": 5000, "default": 500 }
+              }
+            }
+          ]
         },
         "then": {
           "type": "object",

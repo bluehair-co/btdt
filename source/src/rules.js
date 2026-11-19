@@ -360,7 +360,9 @@ function mrCheckCount() {
 // then.gear fills trips without gear (in mrApplyGear); then.snap draws the trip along a line.
 var MR_LEFT = {};   // trips a routine matched but left out, by routine id: { type, gear, line }
 // rm: the routine's own radius_m for its ends, else 500 m (a place: its radius when larger).
+// radius_m is one number for both ends, or { from, to } for each its own.
 var MR_END_M = 500;
+function mrEndM(r, end) { var v = r && r.radius_m; return v && typeof v === 'object' ? +v[end] || MR_END_M : +v || MR_END_M; }
 function mrEnd(ref, rm) {
   var base = (+rm > 0 ? +rm : MR_END_M) / 1000;
   if (Array.isArray(ref) && ref.length === 2 && isFinite(ref[0])) return { at: [+ref[0], +ref[1]], rad: base };
@@ -370,7 +372,7 @@ function mrEnd(ref, rm) {
 }
 function mrRoutineList() {
   return mrActive('routines').map(function (r, k) {
-    var a = mrEnd(r.from, r.radius_m), b = mrEnd(r.to, r.radius_m), w = mrWhen(r.when);
+    var a = mrEnd(r.from, mrEndM(r, 'from')), b = mrEnd(r.to, mrEndM(r, 'to')), w = mrWhen(r.when);
     if (!a || !b) return null;
     var rw = r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w;
     return { r: r, k: k, a: a, b: b, w: w, rw: rw, ex: mrExcept(r), inc: mrIncluded(r), then: r.then && typeof r.then === 'object' ? r.then : {} };
@@ -780,8 +782,15 @@ function mrCount(doc) {
 
 // ---------- dialogs ----------
 // One small dialog for the questions MyRules asks: a title, text, a few buttons.
+// side: on a wide screen with the map in view, the dialog opens as a panel on the right instead,
+// non-modal, and its ghosts and line are drawn on the main map.
+var MR_SIDE = false;
 function mrAsk(o) {
   var d = $('mrDlg');
+  var side = !!(o.side && wide() && tab === 'map' && typeof map !== 'undefined' && map);
+  if (d.open && side !== MR_SIDE) d.close();
+  d.classList.toggle('mr-side', side);
+  MR_SIDE = side;
   $('mrDlgTitle').textContent = o.title;
   $('mrDlgText').innerHTML = o.text;
   $('mrDlgExtra').innerHTML = o.extra || '';
@@ -795,9 +804,21 @@ function mrAsk(o) {
     el.addEventListener('click', function () { if (b[3] !== 'stay') d.close(); if (b[2]) b[2](el); });
     bt.appendChild(el);
   });
-  if (!d.open) d.showModal();
+  if (!d.open) { if (side) d.show(); else d.showModal(); }
+  if (side) { d.scrollTop = 0; hideTip(); }
   if (o.after) o.after(d);
 }
+// Closing: the ghosts leave the main map. Another dialog opened at once keeps them to itself.
+$('mrDlg').addEventListener('close', function () {
+  if (this.open) return;
+  this.classList.remove('mr-side');
+  MR_SIDE = false;
+  mrGhostClear(true);
+});
+// A panel isn't modal, so Escape is ours to handle.
+$('mrDlg').addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && MR_SIDE && !ev.defaultPrevented) { ev.preventDefault(); ev.stopPropagation(); this.close(); } });
+// Taps on the main map are for the ghosts while the panel is open.
+function mrSideOpen() { return MR_SIDE && $('mrDlg').open; }
 // Before something that drops the rules here (removing everything, replacing them with another
 // file): when there are changes made in the app that weren't exported, offer to download them first.
 // what is the action ('Remove' or 'Replace'), go does it after the usual confirmation.
@@ -916,7 +937,7 @@ function mrRenderRules() {
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied ? MR_COUNT[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
-    var t = r.then || {}, a = mrEnd(r.from, r.radius_m), b = mrEnd(r.to, r.radius_m), ln = D && D.mrLine && D.mrLine[r.id], bits = [];
+    var t = r.then || {}, a = mrEnd(r.from, mrEndM(r, 'from')), b = mrEnd(r.to, mrEndM(r, 'to')), ln = D && D.mrLine && D.mrLine[r.id], bits = [];
     function end(ref, e) { var pr = typeof ref === 'string' ? mrById(ref) : null; return pr ? pr.name || pr.role || pr.id : e ? (needPlaces(), placeLabel(mrNearestPlace(e.at))) : '?'; }
     bits.push(esc(end(r.from, a)) + (r.both_ways ? ' ⇄ ' : ' → ') + esc(end(r.to, b)));
     bits.push(mrWhenText(r.when));
@@ -1339,6 +1360,7 @@ function mrSimilar(i) {
 function mrRoutineDialog(r, isNew) {
   var t = r.then || {}, rt = r.return_when && Array.isArray(r.return_when.time) ? r.return_when.time : [];
   mrAsk({
+    side: true,
     title: isNew ? 'Trips like this one' : 'Edit routine',
     text: isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.',
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
@@ -1346,8 +1368,11 @@ function mrRoutineDialog(r, isNew) {
         return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
       }).join('') + '</select></label>' +
       mrDateRow(r.when) + mrDaysRow(r.when) +
-      '<label class="field mr-match"><span>Starts and ends within <b class="num" id="mrREndV">' + dist((+r.radius_m || MR_END_M) / 1000) + '</b> of its two ends</span>' +
-      '<input type="range" id="mrREnd" min="100" max="3000" step="50" value="' + (+r.radius_m || MR_END_M) + '"></label>' +
+      ['from', 'to'].map(function (e) {
+        var v = mrEndM(r, e), E = e === 'from' ? 'From' : 'To';
+        return '<label class="field mr-match"><span>' + (e === 'from' ? 'Starts within <b class="num" id="mrREndFromV">' : 'Ends within <b class="num" id="mrREndToV">') + dist(v / 1000) + '</b> of its ' + (e === 'from' ? 'start' : 'end') + '</span>' +
+          '<input type="range" id="mrREnd' + E + '" min="100" max="3000" step="50" value="' + v + '"></label>';
+      }).join('') +
       '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
       '<div class="field" id="mrWBackRow"' + (r.both_ways ? '' : ' hidden') + '><span>Back between</span><span class="mr-dates"><input type="time" id="mrWB0" value="' + esc(rt[0] || '') + '" aria-label="Earliest return"> and <input type="time" id="mrWB1" value="' + esc(rt[1] || '') + '" aria-label="Latest return"><small class="fine">Empty: the same times as there.</small></span></div>' +
       '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
@@ -1392,9 +1417,9 @@ function mrRoutineDialog(r, isNew) {
       if (Object.keys(rw).length) d.return_when = rw; else delete d.return_when;
     } else { delete d.both_ways; delete d.return_when; }
     if ($('mrRForce').checked) d.force = true; else delete d.force;
-    var em = +$('mrREnd').value;
-    $('mrREndV').textContent = dist(em / 1000);
-    if (em && em !== MR_END_M) d.radius_m = em; else delete d.radius_m;
+    var ef = +$('mrREndFrom').value, et = +$('mrREndTo').value;
+    $('mrREndFromV').textContent = dist(ef / 1000); $('mrREndToV').textContent = dist(et / 1000);
+    if (ef !== et) d.radius_m = { from: ef, to: et }; else if (ef !== MR_END_M) d.radius_m = ef; else delete d.radius_m;
     if (!$('mrRSnap').checked) delete d.then.snap;
     else if (!d.then.snap) d.then.snap = 'learn';
     return d;
@@ -1644,6 +1669,7 @@ function mrOfferRoutine(i, mode) {
   var modes = {};
   x.there.concat(x.back).forEach(function (j) { var m = LABEL[MODES[D.mode[j]]] || MODES[D.mode[j]]; modes[m] = (modes[m] || 0) + 1; });
   mrAsk({
+    side: true,
     title: 'Same on other days?',
     text: 'You made <b>' + fmt(x.there.length) + '</b> trips like this from ' + esc(A) + ' to ' + esc(B) + (x.wk ? ' on weekdays' : ' at weekends') + ' around ' + fmtMin(m0) +
       (x.back.length ? ', and ' + fmt(x.back.length) + ' back' : '') + '. Your files have them as ' + Object.keys(modes).map(function (m) { return esc(m.toLowerCase()) + ' (' + fmt(modes[m]) + ')'; }).join(', ') + '.',
@@ -1669,7 +1695,7 @@ function mrOfferRoutine(i, mode) {
 var MR_GHOST = null;
 function mrRoutineTrips(r) {
   var out = { trips: [], change: 0, dir: {}, left: 0 };
-  var a = mrEnd(r.from, r.radius_m), b = mrEnd(r.to, r.radius_m);
+  var a = mrEnd(r.from, mrEndM(r, 'from')), b = mrEnd(r.to, mrEndM(r, 'to'));
   if (!D || !a || !b) return out;
   var w = mrWhen(r.when), x = { r: r, a: a, b: b, w: w, rw: r.return_when ? mrWhen(Object.assign({}, r.when, r.return_when)) : w, ex: mrExcept(r), then: r.then && typeof r.then === 'object' ? r.then : {} };
   var m = r.then && r.then.mode, mi = m != null ? MODE_IDX[m] : null, base = D.base || D;
@@ -1782,13 +1808,33 @@ function mrEncodePolyline(pts) {
   return out;
 }
 // draft() builds the routine from the dialog as it is now.
+// The ghosts off the map: the main map keeps its layers and gets its view back (back: when the
+// panel closes), the small map is removed.
+var MR_GHOST_R = null;
+function mrGhostClear(back) {
+  if (!MR_GHOST || !MR_GHOST.map) return;
+  if (MR_GHOST.main) {
+    MR_GHOST.layer.remove(); MR_GHOST.dim.remove();
+    if (back && MR_GHOST.view) map.setView(MR_GHOST.view.c, MR_GHOST.view.z);
+  } else MR_GHOST.map.remove();
+  MR_GHOST.map = null;
+}
 function mrGhostStart(draft) {
-  var el = $('mrGhostMap');
-  if (MR_GHOST && MR_GHOST.map) MR_GHOST.map.remove();
+  var el = $('mrGhostMap'), view = MR_GHOST && MR_GHOST.main && MR_GHOST.map ? MR_GHOST.view : null;
+  mrGhostClear();
   MR_GHOST = { map: null, first: true, pick: undefined, cands: [] };
   if (!el) return;
   if (!window.L || !D) el.hidden = true;
-  else {
+  else if (MR_SIDE) {
+    // The panel: the main map, dimmed, with the ghosts in a pane of their own above the trips.
+    el.hidden = true;
+    if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
+    if (!MR_GHOST_R) MR_GHOST_R = L.svg({ pane: 'mrg' });
+    MR_GHOST.main = true; MR_GHOST.map = map;
+    MR_GHOST.view = view || { c: map.getCenter(), z: map.getZoom() };
+    MR_GHOST.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: MR_GHOST_R, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .72, interactive: false }).addTo(map);
+    MR_GHOST.layer = L.layerGroup().addTo(map);
+  } else {
     MR_GHOST.map = L.map(el, { zoomControl: false, attributionControl: true, preferCanvas: true });
     MR_GHOST.map.setView([0, 0], 2, { animate: false });
     addTiles(MR_GHOST.map);
@@ -1800,6 +1846,8 @@ function mrGhostStart(draft) {
     var vm = /^var\((--[\w-]+)\)$/.exec(col);
     return vm ? cssVar(vm[1]) || '#7a8580' : col;
   }
+  // On the main map every ghost layer goes in its pane, and a tap on one stays with it.
+  function o(x) { return MR_GHOST.main ? L.Util.extend({ pane: 'mrg', renderer: MR_GHOST_R, bubblingMouseEvents: false }, x) : x; }
   function draw() {
     var r = mrGhostSnap(draft());
     if (!r) return;
@@ -1860,25 +1908,30 @@ function mrGhostStart(draft) {
       pts = pts.filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
       if (pts.length < 2) return;
       var below = lkey && !(sc[i] >= min || sc[i] >= 0 && inc[i]);
-      L.polyline(pts, below ? { color: '#8a8f8c', weight: 2.5, opacity: .45, dashArray: '4 5' } : { color: col, weight: 3, opacity: .22 })
+      L.polyline(pts, o(below ? { color: '#8a8f8c', weight: 2.5, opacity: .45, dashArray: '4 5' } : { color: col, weight: 3, opacity: MR_GHOST.main ? .35 : .22 }))
         .on('click', function () { MR_GHOST.pick = i; MR_GHOST.osm = null; draw(); }).addTo(MR_GHOST.layer);
       bounds.extend(pts[0]); bounds.extend(pts[pts.length - 1]);
     });
     // The line in use, always on top: solid, with a white edge so it stands out of the ghosts.
     if (line && line.pts && line.pts.length > 1) {
-      L.polyline(line.pts, { color: '#fff', weight: 8, opacity: .95, interactive: false }).addTo(MR_GHOST.layer);
-      L.polyline(line.pts, { color: col, weight: 4.5, opacity: 1, interactive: false }).addTo(MR_GHOST.layer);
+      L.polyline(line.pts, o({ color: '#fff', weight: 8, opacity: .95, interactive: false })).addTo(MR_GHOST.layer);
+      L.polyline(line.pts, o({ color: col, weight: 4.5, opacity: 1, interactive: false })).addTo(MR_GHOST.layer);
       line.pts.forEach(function (p) { bounds.extend(p); });
     }
-    [mrEnd(r.from, r.radius_m), mrEnd(r.to, r.radius_m)].forEach(function (e) {
+    [mrEnd(r.from, mrEndM(r, 'from')), mrEnd(r.to, mrEndM(r, 'to'))].forEach(function (e) {
       if (!e) return;
       // How far from it a trip may start or end.
-      L.circle(e.at, { radius: e.rad * 1000, color: '#0f7c8c', weight: 1.5, opacity: .8, fillColor: '#0f7c8c', fillOpacity: .08, dashArray: '4 4', interactive: false }).addTo(MR_GHOST.layer);
-      L.circleMarker(e.at, { radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(MR_GHOST.layer);
+      L.circle(e.at, o({ radius: e.rad * 1000, color: '#0f7c8c', weight: 1.5, opacity: .8, fillColor: '#0f7c8c', fillOpacity: .08, dashArray: '4 4', interactive: false })).addTo(MR_GHOST.layer);
+      L.circleMarker(e.at, o({ radius: 6, color: '#fff', weight: 2, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false })).addTo(MR_GHOST.layer);
       bounds.extend(e.at);
     });
     // Framed once, on the ends and the trips; later changes keep your view.
-    if (MR_GHOST.first && bounds.isValid()) { MR_GHOST.first = false; MR_GHOST.map.invalidateSize(); MR_GHOST.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: false }); }
+    if (MR_GHOST.first && bounds.isValid()) {
+      MR_GHOST.first = false;
+      // On the main map, framed in the part the panel leaves free.
+      if (MR_GHOST.main) MR_GHOST.map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: [$('mrDlg').offsetWidth + 40, 40], maxZoom: 15 });
+      else { MR_GHOST.map.invalidateSize(); MR_GHOST.map.fitBounds(bounds, { padding: [20, 20], maxZoom: 15, animate: false }); }
+    }
   }
   // The arrows: the next or previous way, round and round (or OpenStreetMap line). Recommended: back
   // to the best trip of the way most trips take, worked out again from your data each time ("learn").
@@ -1913,7 +1966,7 @@ function mrGhostStart(draft) {
   var box = $('mrDlgExtra'), tm = null;
   function later() { clearTimeout(tm); tm = setTimeout(draw, 150); }
   box.oninput = later; box.onchange = later;
-  setTimeout(function () { if (MR_GHOST.map) MR_GHOST.map.invalidateSize(); draw(); }, 0);
+  setTimeout(function () { if (MR_GHOST.map && !MR_GHOST.main) MR_GHOST.map.invalidateSize(); draw(); }, 0);
 }
 function mrEndRef(e) { var r = mrPlaceAt(e.at[0], e.at[1]); return r ? '@' + r.id : [+e.at[0].toFixed(5), +e.at[1].toFixed(5)]; }
 // The routine the Same on other days? dialog would make, as it is filled in now.
