@@ -643,7 +643,7 @@ function renderPlaces() {
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
       var kind = r && MR_KIND[r.role], st = !r && spotStop(s);
-      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? stopKind(st) : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
+      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? st.kind : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
       return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
         '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
         '<span class="r num">' + (byN ? fmt(s.n) + '<small>visit' + (s.n > 1 ? 's' : '') + '</small>' : hoursLabel(s.h).replace(/ \d+ min$/, '')) + '</span></button>';
@@ -680,12 +680,12 @@ function renderKinds() {
     var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = mrStayPlace(v), st = !r && D.pv[v] >= 0 && spotStopKey(spotKey(v));
     all += h;
     if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; }
-    // Stops from the station packs count as Transport stops.
-    else if (st) { by.transit = (by.transit || 0) + h; (n.transit || (n.transit = {}))[spotKey(v)] = 1; }
+    // Stops from the station packs count as Transport stops, airports as Airports.
+    else if (st) { by[st.role] = (by[st.role] || 0) + h; (n[st.role] || (n[st.role] = {}))[spotKey(v)] = 1; }
     else other += h;
   }
   var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([other, 1]));
-  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stops your station packs name' : '') + ', in these filters. Give more places a kind from their page on the map.';
+  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stations, stops and airports BT•DT named' : '') + ', in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
     return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
