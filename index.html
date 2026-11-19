@@ -1055,7 +1055,9 @@ div.hit-row:hover { background: none; }
 }
 @media (prefers-reduced-motion: reduce) { .kind-flip .ic { animation: none; opacity: 0; } .kind-flip .ic:first-child { opacity: 1; } }
 /* MyRules: one tab per kind of rule; the tab names the list, so its heading goes. */
-.mr-tabs { margin: 4px 0 12px; }
+.mr-tabs { margin: 4px 0 12px; flex-wrap: wrap; gap: 6px; border: 0; border-radius: 0; overflow: visible; background: none; }
+/* Five kinds of rule don't fit in one row on a narrow panel: the tabs wrap, each a chip of its own. */
+.mr-tabs button, .mr-tabs button + button { flex: 1 1 auto; border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; background: var(--panel); }
 .mr-tabs .n { font-family: var(--font-mono); font-size: 11px; opacity: .75; }
 .mr-tabbed .sec > h3 { display: none; }
 .mr-osm { display: flex; flex-direction: column; gap: 6px; }
