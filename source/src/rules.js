@@ -74,6 +74,12 @@ function mrFirstAfter(ms) {
 function mrRefTrips(ref) {
   var out = [], k, i, o = D.order;
   if (!ref || typeof ref !== 'object') return out;
+  // A bulk edit: the trips it lists, each by its start.
+  if (Array.isArray(ref.trips)) {
+    var seen = {};
+    ref.trips.forEach(function (r) { mrRefTrips(r).forEach(function (j) { if (!seen[j]) { seen[j] = 1; out.push(j); } }); });
+    return out.sort(function (x, y) { return D.start[x] - D.start[y]; });
+  }
   if (ref.start) {
     var t = Date.parse(ref.start);
     if (!isFinite(t)) return out;
@@ -974,7 +980,7 @@ function mrRenderRules() {
   }).join('') + '</div>';
   if (cor.length) h += '<div class="sec" data-mr-tab="corrections"><h3>Corrections</h3>' + cor.map(function (c) {
     var t = c.trip || {}, th = c.then || {}, g = th.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null, bits = [];
-    var when = t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
+    var when = t.trips ? (c.name || 'Bulk edit of ' + tripsText(t.trips.length)) : t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
     if (th.mode) bits.push('Type: ' + esc(LABEL[th.mode] || th.mode));
     if (th.name) bits.push('Title: “' + esc(th.name) + '”');
     if (g) bits.push('Gear: ' + esc(gr ? gr.name || gr.id : g));
@@ -984,7 +990,7 @@ function mrRenderRules() {
     var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
     var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : 'info');
     var applied = th.mode || th.name || g || th.hide != null;
-    return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : ''),
+    return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
@@ -1049,6 +1055,8 @@ $('mrBody').addEventListener('click', function (ev) {
   }
   var o = ev.target.closest('[data-mr-trip]');
   if (o) { openTrip(+o.dataset.mrTrip); return; }
+  var ol = ev.target.closest('[data-mr-trips]');
+  if (ol) { mrBulkList(ol.dataset.mrTrips); return; }
   var ed = ev.target.closest('[data-mr-edit]');
   if (ed) { mrEditRule(ed.dataset.mrEdit); return; }
   var b = ev.target.closest('[data-mr-del]');
@@ -1074,7 +1082,8 @@ function mrTripBlock(i) {
   if (!D || isDup(i)) return '';
   var h = '', g = D.mrGear && D.mrGear[i], amb = D.mrAmb && D.mrAmb[i], md = D.mrMode && D.mrMode[i], nm = D.mrName && D.mrName[i];
   function src(id, field) {
-    var r = mrById(id), one = r && r.trip && r.trip.start;
+    var r = mrById(id), one = r && r.trip && r.trip.start, bulk = r && r.trip && Array.isArray(r.trip.trips);
+    if (bulk) return '<div class="fine">From the bulk edit <i>' + esc(r.name || r.id) + '</i> (' + tripsText(r.trip.trips.length) + ') · <button type="button" class="link-btn" data-mr-act="detach" data-r="' + esc(id) + '" data-t="' + i + '">Detach this trip</button>' + (r.trip.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(id) + '">List its trips</button>' : '') + '</div>';
     return '<div class="fine">' + (one ? 'Set for this trip' : r && r.trip ? 'From the correction for ' + esc(r.trip.day || (r.trip.span || []).join(' – ')) : 'From the rule <i>' + esc(r ? r.name || r.id : id) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) +
       (field ? ' · <button type="button" class="link-btn" data-mr-act="undo" data-f="' + field + '" data-r="' + esc(id) + '" data-t="' + i + '">Undo</button>' : '') + '</div>';
   }
@@ -1170,12 +1179,24 @@ function mrNextCheck(i) {
   return F.guess === 'check' ? first : -1;
 }
 // Drops one action from a correction, and the correction once it has none left.
+function mrBulkList(id) {
+  var r = mrById(id), x = r && mrCorrections().filter(function (y) { return y.c === r; })[0];
+  if (!x || !x.trips.length) { toast('None of its trips are in the data you loaded'); return; }
+  openList(x.trips.slice().reverse(), r.name || 'Bulk edit');
+}
+// Out of a bulk edit: its entry goes; a bulk edit with no trips left goes too.
+function mrDetach(c, i) {
+  c.trip.trips = c.trip.trips.filter(function (r) { return mrRefTrips(r).indexOf(i) < 0; });
+  if (!c.trip.trips.length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+}
 function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
 var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked' };
 $('tripBody').addEventListener('click', function (ev) {
+  var lt = ev.target.closest('[data-mr-trips]');
+  if (lt) { mrBulkList(lt.dataset.mrTrips); return; }
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
   var i = +b.dataset.t, act = b.dataset.mrAct;
@@ -1200,6 +1221,12 @@ $('tripBody').addEventListener('click', function (ev) {
     // A correction on a day or span: this trip is left out of it.
     else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
     mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
+    openTrip(i);
+  } else if (act === 'detach') {
+    var bc = mrById(b.dataset.r);
+    if (!bc || !bc.trip || !Array.isArray(bc.trip.trips)) return;
+    mrDetach(bc, i);
+    mrChange('Detached from ' + (bc.name || bc.id) + ': the trip on ' + mrWhere(i));
     openTrip(i);
   } else if (act === 'rule') mrEditRule('routines:' + b.dataset.r);
   else if (act === 'snaprule') mrEditRule('snaps:' + b.dataset.r);
@@ -1347,7 +1374,8 @@ function mrEditRule(ref) {
   }
   if (sec === 'corrections') {
     var x = mrCorrections().filter(function (y) { return y.c === r; })[0];
-    if (x && x.trips.length) mrEditDialog(x.trips[0]);
+    if (x && x.trips.length && Array.isArray(r.trip.trips)) mrBulkList(r.id);
+    else if (x && x.trips.length) mrEditDialog(x.trips[0]);
     else toast('This trip isn\'t in the data you loaded');
   }
 }

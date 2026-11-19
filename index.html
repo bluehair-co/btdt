@@ -1100,6 +1100,30 @@ div.hit-row:hover { background: none; }
 .leaflet-tooltip.snap-tip { font: 600 12px var(--font-body); padding: 2px 8px; border-radius: 8px; }
 #snapMode button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 #snapMode svg { width: 16px; height: 16px; }
+
+/* Selecting trips on the map */
+.sel-on, .sel-on .leaflet-interactive { cursor: crosshair !important; touch-action: none; }
+.sel-top { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; }
+.sel-top .snap-bar-t { flex: 1 1 240px; }
+.sel-top .seg button { min-height: 40px; }
+.sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.sel-bar[hidden], .sel-top[hidden] { display: none; }
+.sel-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; }
+.sel-sum { flex: 1; min-width: 0; min-height: 44px; text-align: left; border: 0; background: none; color: var(--fg); font: inherit; font-size: 14px; padding: 0 10px; cursor: pointer; }
+.sel-caret { color: var(--accent); font-size: 13px; font-weight: 600; margin-left: 4px; }
+.sel-list { max-height: min(30vh, 320px); overflow-y: auto; border-bottom: 1px solid var(--line); }
+.sel-item { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+.sel-item:first-child { border-top: 0; }
+.sel-item input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.sel-open { flex: 1; min-width: 0; text-align: left; border: 0; background: none; color: var(--fg); font: inherit; padding: 4px 0; cursor: pointer; }
+.sel-open b, .sel-open small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-open small { color: var(--muted); }
+.sel-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; margin: 4px 0 12px; }
+.sel-types button { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.sel-types button[aria-checked="true"] { border: 2px solid var(--accent); background: var(--chip-on-bg); color: var(--chip-on-fg); font-weight: 600; }
+#map .leaflet-control-zoom a.sel-btn { display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
+#map .leaflet-control-zoom a.sel-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
 </style>
 </head>
 <body>
@@ -1603,6 +1627,11 @@ div.hit-row:hover { background: none; }
     <div class="sec">
       <button type="button" class="btn" id="fitBtn"><span data-icon="fit"></span>Zoom to my trips</button>
       <p class="fine" id="mapNote"></p>
+    </div>
+    <div class="sec">
+      <h3>Select trips</h3>
+      <p class="fine">Draw around an area to pick every trip on the map that passes through it, then change their type at once. Filter first to narrow down what can be picked, such as In vehicle only.</p>
+      <button type="button" class="btn" id="selNewBtn"><span data-icon="select"></span>Select trips on the map</button>
     </div>
     <div class="sec">
       <h3>Map snaps</h3>
@@ -4345,6 +4374,7 @@ var NO_OFF = 32767;
 var ICONS = {
   // Material Icons: call_split and undo.
   split: 'M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4h-6zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3L10 4z',
+  select: 'M17 5h-2V3h2v2zm-2 16h2v-2.59L19.59 21 21 19.59 18.41 17H21v-2h-6v6zm4-12h2V7h-2v2zm0 4h2v-2h-2v2zm-8 8h2v-2h-2v2zM7 5h2V3H7v2zM3 17h2v-2H3v2zm2 4v-2H3c0 1.1.9 2 2 2zM19 3v2h2c0-1.1-.9-2-2-2zm-8 2h2V3h-2v2zM3 9h2V7H3v2zm4 12h2v-2H7v2zm-4-8h2v-2H3v2zm0-8h2V3c-1.1 0-2 .9-2 2z',
   undo: 'M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z',
   pin: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   chart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
@@ -6977,6 +7007,11 @@ function addZoomAll(bar) {
   a.innerHTML = icon('fit') + '<i class="dot" hidden></i>';
   L.DomEvent.disableClickPropagation(a);
   L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomAll(); });
+  var s = L.DomUtil.create('a', 'sel-btn', bar);
+  s.href = '#'; s.setAttribute('role', 'button'); s.title = 'Select trips on the map'; s.setAttribute('aria-label', 'Select trips on the map');
+  s.innerHTML = icon('select');
+  L.DomEvent.disableClickPropagation(s);
+  L.DomEvent.on(s, 'click', function (e) { L.DomEvent.preventDefault(e); if (SEL) selEnd(); else selStart(); });
 }
 $('fitAllBtn').addEventListener('click', zoomAll);
 // Whether some of the trips in the filters (their stays when there are none) are out of view.
@@ -7104,6 +7139,8 @@ function onMapTap(pt, ev) {
   if (mrSideOpen()) return;
   // Making a map snap: the tap picks one of its ends.
   if (SN && SN.phase === 'pick') { snapTap(map.containerPointToLatLng(pt)); return; }
+  // Selecting trips: the selection handles its own taps.
+  if (SEL) return;
   // Splitting a trip by hand: the tap picks a point of its path.
   if (SPL) { splitHandTap(pt); return; }
   var list = hitsAt(pt);
@@ -7619,10 +7656,12 @@ function runExport(fn) {
 }
 $('exportJson').addEventListener('click', function () { runExport(exportJson); });
 $('exportCsv').addEventListener('click', function () { runExport(exportCsv); });
-function openList(list) {
+var listTitle = null;
+function openList(list, title) {
   setPinOn([]); placeLast = null;
+  if (list !== listBack) listTitle = title || null;
   listBack = list;
-  $('tripSheetTitle').textContent = fmt(list.length) + ' trips here';
+  $('tripSheetTitle').textContent = listTitle || fmt(list.length) + ' trips here';
   $('tripBack').hidden = true;
   $('tripBody').innerHTML = '<div class="list-rows">' + list.slice(0, 300).map(function (i) { return tripRowHtml(i, true); }).join('') + '</div>' +
     (list.length > 300 ? '<p class="fine">Showing the latest 300.</p>' : '');
@@ -10881,6 +10920,12 @@ function mrFirstAfter(ms) {
 function mrRefTrips(ref) {
   var out = [], k, i, o = D.order;
   if (!ref || typeof ref !== 'object') return out;
+  // A bulk edit: the trips it lists, each by its start.
+  if (Array.isArray(ref.trips)) {
+    var seen = {};
+    ref.trips.forEach(function (r) { mrRefTrips(r).forEach(function (j) { if (!seen[j]) { seen[j] = 1; out.push(j); } }); });
+    return out.sort(function (x, y) { return D.start[x] - D.start[y]; });
+  }
   if (ref.start) {
     var t = Date.parse(ref.start);
     if (!isFinite(t)) return out;
@@ -11781,7 +11826,7 @@ function mrRenderRules() {
   }).join('') + '</div>';
   if (cor.length) h += '<div class="sec" data-mr-tab="corrections"><h3>Corrections</h3>' + cor.map(function (c) {
     var t = c.trip || {}, th = c.then || {}, g = th.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null, bits = [];
-    var when = t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
+    var when = t.trips ? (c.name || 'Bulk edit of ' + tripsText(t.trips.length)) : t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
     if (th.mode) bits.push('Type: ' + esc(LABEL[th.mode] || th.mode));
     if (th.name) bits.push('Title: “' + esc(th.name) + '”');
     if (g) bits.push('Gear: ' + esc(gr ? gr.name || gr.id : g));
@@ -11791,7 +11836,7 @@ function mrRenderRules() {
     var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
     var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : 'info');
     var applied = th.mode || th.name || g || th.hide != null;
-    return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : ''),
+    return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
@@ -11856,6 +11901,8 @@ $('mrBody').addEventListener('click', function (ev) {
   }
   var o = ev.target.closest('[data-mr-trip]');
   if (o) { openTrip(+o.dataset.mrTrip); return; }
+  var ol = ev.target.closest('[data-mr-trips]');
+  if (ol) { mrBulkList(ol.dataset.mrTrips); return; }
   var ed = ev.target.closest('[data-mr-edit]');
   if (ed) { mrEditRule(ed.dataset.mrEdit); return; }
   var b = ev.target.closest('[data-mr-del]');
@@ -11881,7 +11928,8 @@ function mrTripBlock(i) {
   if (!D || isDup(i)) return '';
   var h = '', g = D.mrGear && D.mrGear[i], amb = D.mrAmb && D.mrAmb[i], md = D.mrMode && D.mrMode[i], nm = D.mrName && D.mrName[i];
   function src(id, field) {
-    var r = mrById(id), one = r && r.trip && r.trip.start;
+    var r = mrById(id), one = r && r.trip && r.trip.start, bulk = r && r.trip && Array.isArray(r.trip.trips);
+    if (bulk) return '<div class="fine">From the bulk edit <i>' + esc(r.name || r.id) + '</i> (' + tripsText(r.trip.trips.length) + ') · <button type="button" class="link-btn" data-mr-act="detach" data-r="' + esc(id) + '" data-t="' + i + '">Detach this trip</button>' + (r.trip.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(id) + '">List its trips</button>' : '') + '</div>';
     return '<div class="fine">' + (one ? 'Set for this trip' : r && r.trip ? 'From the correction for ' + esc(r.trip.day || (r.trip.span || []).join(' – ')) : 'From the rule <i>' + esc(r ? r.name || r.id : id) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) +
       (field ? ' · <button type="button" class="link-btn" data-mr-act="undo" data-f="' + field + '" data-r="' + esc(id) + '" data-t="' + i + '">Undo</button>' : '') + '</div>';
   }
@@ -11977,12 +12025,24 @@ function mrNextCheck(i) {
   return F.guess === 'check' ? first : -1;
 }
 // Drops one action from a correction, and the correction once it has none left.
+function mrBulkList(id) {
+  var r = mrById(id), x = r && mrCorrections().filter(function (y) { return y.c === r; })[0];
+  if (!x || !x.trips.length) { toast('None of its trips are in the data you loaded'); return; }
+  openList(x.trips.slice().reverse(), r.name || 'Bulk edit');
+}
+// Out of a bulk edit: its entry goes; a bulk edit with no trips left goes too.
+function mrDetach(c, i) {
+  c.trip.trips = c.trip.trips.filter(function (r) { return mrRefTrips(r).indexOf(i) < 0; });
+  if (!c.trip.trips.length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+}
 function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
 var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked' };
 $('tripBody').addEventListener('click', function (ev) {
+  var lt = ev.target.closest('[data-mr-trips]');
+  if (lt) { mrBulkList(lt.dataset.mrTrips); return; }
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
   var i = +b.dataset.t, act = b.dataset.mrAct;
@@ -12007,6 +12067,12 @@ $('tripBody').addEventListener('click', function (ev) {
     // A correction on a day or span: this trip is left out of it.
     else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
     mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
+    openTrip(i);
+  } else if (act === 'detach') {
+    var bc = mrById(b.dataset.r);
+    if (!bc || !bc.trip || !Array.isArray(bc.trip.trips)) return;
+    mrDetach(bc, i);
+    mrChange('Detached from ' + (bc.name || bc.id) + ': the trip on ' + mrWhere(i));
     openTrip(i);
   } else if (act === 'rule') mrEditRule('routines:' + b.dataset.r);
   else if (act === 'snaprule') mrEditRule('snaps:' + b.dataset.r);
@@ -12154,7 +12220,8 @@ function mrEditRule(ref) {
   }
   if (sec === 'corrections') {
     var x = mrCorrections().filter(function (y) { return y.c === r; })[0];
-    if (x && x.trips.length) mrEditDialog(x.trips[0]);
+    if (x && x.trips.length && Array.isArray(r.trip.trips)) mrBulkList(r.id);
+    else if (x && x.trips.length) mrEditDialog(x.trips[0]);
     else toast('This trip isn\'t in the data you loaded');
   }
 }
@@ -13907,7 +13974,9 @@ function splitHas(list, key) { return Array.isArray(list) && list.indexOf(key) >
 // Start times (ms) of trips MyRules corrections point at.
 function splitFixed() {
   var out = [];
-  if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) { var t = c.trip && c.trip.start && Date.parse(c.trip.start); if (isFinite(t)) out.push(t); });
+  if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) {
+    (c.trip && Array.isArray(c.trip.trips) ? c.trip.trips : [c.trip]).forEach(function (r) { var t = r && r.start && Date.parse(r.start); if (isFinite(t)) out.push(t); });
+  });
   return out.sort(function (a, b) { return a - b; });
 }
 function splitCandidate(R, i) {
@@ -14256,6 +14325,248 @@ $('tripBody').addEventListener('click', function (ev) {
   ev.stopPropagation();
   splitHandStart(+b.dataset.splitHand);
 });
+
+// ---------- selecting trips on the map, to change their type at once ----------
+// Select trips (Views and layers, or the button under the zoom buttons): you draw an area on the map,
+// a free shape (lasso) or a rectangle, and every trip the map shows (so, the filters) that passes
+// through it is picked. Drawing again adds more; a tap on a trip, or its box in the list, drops it or
+// adds it. Change type… saves one correction listing them all (a bulk edit, MyRules "corrections"
+// with trip: { trips: [{ start, mode }, …] }); each trip's details can detach it from that edit.
+var SEL = null, SEL_TAP_PX = 6;
+function selStart() {
+  if (!D) { toast('Load your Timeline file first'); return; }
+  closeSheets(true);
+  if (PREFS.proj !== 'merc') setProj('merc');
+  setTab('map');
+  if (!initMap()) return;
+  if (typeof snapEnd === 'function') snapEnd();
+  if (typeof splitHandEnd === 'function') splitHandEnd();
+  selEnd();
+  if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
+  SEL = { shape: PREFS.selShape === 'rect' ? 'rect' : 'lasso', picked: [], on: new Set(), list: false };
+  SEL.r = L.canvas({ pane: 'mrg', padding: 0.5 });
+  SEL.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: SEL.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
+  SEL.layer = L.layerGroup().addTo(map);
+  SEL.draw = L.layerGroup().addTo(map);
+  map.dragging.disable(); map.boxZoom.disable(); map.doubleClickZoom.disable();
+  map.getContainer().classList.add('sel-on');
+  selBars();
+  selRender();
+}
+function selBars() {
+  var top = $('selTop');
+  if (!top) {
+    top = document.createElement('div');
+    top.id = 'selTop'; top.className = 'snap-bar sel-top'; top.setAttribute('role', 'status');
+    top.innerHTML = '<span class="snap-bar-t">' + icon('select') + '<span><b>Select trips</b><span class="sel-hint"></span></span></span>' +
+      '<div class="seg" role="group" aria-label="Shape"><button type="button" data-shape="lasso">Lasso</button><button type="button" data-shape="rect">Rectangle</button></div>' +
+      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
+    top.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (!b || !SEL) return;
+      if (b.dataset.shape) { SEL.shape = PREFS.selShape = b.dataset.shape; savePrefs(); selRender(); }
+      else if (b.dataset.a === 'cancel') selEnd();
+    });
+    document.body.appendChild(top);
+    var bot = document.createElement('div');
+    bot.id = 'selBot'; bot.className = 'sel-bar';
+    bot.innerHTML = '<div class="sel-list" id="selList" hidden></div><div class="sel-row"><button type="button" class="sel-sum" id="selSum" aria-expanded="false" aria-controls="selList"></button>' +
+      '<button type="button" class="btn quiet" data-a="clear">Clear</button><button type="button" class="btn primary" data-a="type">Change type…</button></div>';
+    bot.addEventListener('click', function (ev) {
+      if (!SEL) return;
+      var b = ev.target.closest('button');
+      if (b && b.id === 'selSum') { SEL.list = !SEL.list; selRender(); return; }
+      if (b && b.dataset.a === 'clear') { SEL.picked = []; SEL.on.clear(); selRender(); return; }
+      if (b && b.dataset.a === 'type') { selTypeDialog(); return; }
+      if (b && b.dataset.i != null) { closeSheets(true); openTrip(+b.dataset.i); }
+    });
+    bot.addEventListener('change', function (ev) {
+      var c = ev.target.closest('input[data-i]');
+      if (!c || !SEL) return;
+      selToggle(+c.dataset.i, c.checked);
+      selRender(true);
+    });
+    document.body.appendChild(bot);
+    var el = map.getContainer();
+    el.addEventListener('pointerdown', selDown, true);
+    el.addEventListener('pointermove', selMove, true);
+    el.addEventListener('pointerup', selUp, true);
+    el.addEventListener('pointercancel', function () { if (SEL) { SEL.pts = null; SEL.draw.clearLayers(); } }, true);
+  }
+  top.hidden = false; $('selBot').hidden = false;
+}
+function selToggle(i, on) {
+  if (on && !SEL.on.has(i)) { SEL.on.add(i); SEL.picked.push(i); }
+  if (!on && SEL.on.has(i)) { SEL.on.delete(i); SEL.picked = SEL.picked.filter(function (j) { return j !== i; }); }
+}
+// The bars, the list and the picked trips over the dimmed map.
+function selRender(keepList) {
+  if (!SEL) return;
+  setPressed('#selTop [data-shape]', function (b) { return b.dataset.shape === SEL.shape; });
+  var n = SEL.picked.length, kmT = 0;
+  SEL.picked.forEach(function (i) { kmT += D.km[i]; });
+  $('selTop').querySelector('.sel-hint').textContent = SEL.shape === 'rect' ? 'Drag a rectangle over the trips. Again to add more, tap one to drop it.' : 'Draw around the trips. Again to add more, tap one to drop it.';
+  $('selSum').innerHTML = n ? '<b>' + tripsText(n) + '</b> · ' + dist(kmT) + ' <span class="sel-caret">' + (SEL.list ? 'Hide list' : 'List') + '</span>' : '<b>No trips yet</b>';
+  $('selSum').setAttribute('aria-expanded', String(SEL.list && n > 0));
+  $('selBot').querySelector('[data-a="clear"]').disabled = !n;
+  $('selBot').querySelector('[data-a="type"]').disabled = !n;
+  var box = $('selList');
+  box.hidden = !(SEL.list && n);
+  if (!box.hidden && !keepList) {
+    var rows = SEL.picked.slice().sort(function (a, b) { return D.start[b] - D.start[a]; }).slice(0, 300);
+    box.innerHTML = rows.map(function (i) {
+      return '<div class="sel-item"><input type="checkbox" checked data-i="' + i + '" aria-label="Keep ' + esc(tripRoute(i)) + ' selected">' +
+        '<button type="button" class="sel-open" data-i="' + i + '"><b>' + esc(tripRoute(i)) + '</b><small>' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) + ' · ' + esc(tripLabel(i)) + '</small></button><span class="num">' + dist(D.km[i]) + '</span></div>';
+    }).join('') + (n > 300 ? '<p class="fine">Showing the latest 300.</p>' : '');
+  }
+  SEL.layer.clearLayers();
+  var parts = [];
+  SEL.picked.forEach(function (i) { var h = selHit(i); if (h) parts.push(h.parts[0]); });
+  if (parts.length) {
+    L.polyline(parts, { pane: 'mrg', renderer: SEL.r, color: '#fff', weight: 7, opacity: .9, interactive: false }).addTo(SEL.layer);
+    L.polyline(parts, { pane: 'mrg', renderer: SEL.r, color: cssVar('--accent') || '#c25228', weight: 3.5, opacity: 1, interactive: false }).addTo(SEL.layer);
+  }
+}
+function selHit(i) {
+  if (SEL.hv !== hits) { SEL.hv = hits; SEL.byI = null; }
+  if (!SEL.byI) { SEL.byI = new Map(); hits.forEach(function (h) { SEL.byI.set(h.i, h); }); }
+  return SEL.byI.get(i);
+}
+// Drawing: one pointer draws (the map doesn't pan meanwhile); a second one (a pinch) stops it.
+// Listened to while capturing: the map's canvas keeps them to itself otherwise.
+function selDown(ev) {
+  if (!SEL || ev.button > 0 || ev.target.closest('.leaflet-control')) return;
+  if (SEL.pts) { SEL.pts = null; SEL.draw.clearLayers(); return; }
+  var r = map.getContainer().getBoundingClientRect();
+  SEL.pts = [L.point(ev.clientX - r.left, ev.clientY - r.top)];
+  SEL.pid = ev.pointerId;
+}
+function selMove(ev) {
+  if (!SEL || !SEL.pts || ev.pointerId !== SEL.pid) return;
+  var r = map.getContainer().getBoundingClientRect(), p = L.point(ev.clientX - r.left, ev.clientY - r.top), last = SEL.pts[SEL.pts.length - 1];
+  if (p.distanceTo(last) < 3) return;
+  SEL.pts.push(p);
+  ev.preventDefault();
+  SEL.draw.clearLayers();
+  var poly = selShape(SEL.pts).map(function (q) { return map.containerPointToLatLng(q); });
+  L.polygon(poly, { pane: 'mrg', renderer: SEL.r, color: cssVar('--accent') || '#c25228', weight: 2, dashArray: '6 5', fillOpacity: .08, interactive: false }).addTo(SEL.draw);
+}
+function selUp(ev) {
+  if (!SEL || !SEL.pts || ev.pointerId !== SEL.pid) return;
+  var pts = SEL.pts, far = 0;
+  SEL.pts = null;
+  SEL.draw.clearLayers();
+  pts.forEach(function (p) { far = Math.max(far, p.distanceTo(pts[0])); });
+  // A tap: the trip under it is dropped (or added).
+  if (far < SEL_TAP_PX) {
+    var list = hitsAt(pts[0]);
+    if (!list.length) return;
+    var i = list[0].i;
+    selToggle(i, !SEL.on.has(i));
+    selRender();
+    return;
+  }
+  var shape = selShape(pts);
+  if (shape.length < 3) return;
+  var got = selInside(shape), add = 0;
+  got.forEach(function (i) { if (!SEL.on.has(i)) { selToggle(i, true); add++; } });
+  selRender();
+  if (!got.length) toast('No trips on the map pass through there');
+  else if (!add) toast('Those trips are already selected');
+}
+function selShape(pts) {
+  if (SEL.shape !== 'rect') return pts;
+  var a = pts[0], b = pts[pts.length - 1];
+  return [L.point(a.x, a.y), L.point(b.x, a.y), L.point(b.x, b.y), L.point(a.x, b.y)];
+}
+// The trips the map shows that pass through the shape (in screen points): a GPS point inside it, or a
+// stretch crossing its edge.
+function selInside(shape) {
+  var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity, out = [];
+  shape.forEach(function (p) { minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); });
+  var sw = map.containerPointToLatLng([minX, maxY]), ne = map.containerPointToLatLng([maxX, minY]);
+  function inPoly(p) {
+    var c = false;
+    for (var a = 0, b = shape.length - 1; a < shape.length; b = a++) {
+      var A = shape[a], B = shape[b];
+      if ((A.y > p.y) !== (B.y > p.y) && p.x < (B.x - A.x) * (p.y - A.y) / (B.y - A.y) + A.x) c = !c;
+    }
+    return c;
+  }
+  function cross(p, q, r, s) {
+    function o(a, b, c) { return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x); }
+    return o(p, q, r) * o(p, q, s) < 0 && o(r, s, p) * o(r, s, q) < 0;
+  }
+  for (var k = 0; k < hits.length; k++) {
+    var h = hits[k], bb = h.bb;
+    if (h.k >= visibleB || isDup(h.i)) continue;
+    if (bb[0] > ne.lat || bb[2] < sw.lat || bb[1] > ne.lng || bb[3] < sw.lng) continue;
+    var pts = h.parts[0], prev = null, hit = false;
+    for (var q = 0; q < pts.length && !hit; q++) {
+      var c = map.latLngToContainerPoint(pts[q]);
+      if (c.x >= minX && c.x <= maxX && c.y >= minY && c.y <= maxY && inPoly(c)) hit = true;
+      else if (prev) for (var e = 0, f = shape.length - 1; e < shape.length && !hit; f = e++) if (cross(prev, c, shape[e], shape[f])) hit = true;
+      prev = c;
+    }
+    if (hit) out.push(h.i);
+  }
+  return out;
+}
+// Change type…: one correction listing every picked trip.
+var SEL_TYPES = ['TRAIN', 'BUS', 'CAR', 'TRAM', 'SUBWAY', 'FERRY', 'CYCLING', 'WALKING', 'RUNNING', 'MOTORCYCLE', 'TAXI', 'FLYING', 'VEHICLE'];
+function selTypeDialog() {
+  if (!SEL || !SEL.picked.length) return;
+  var n = SEL.picked.length, now = {}, kmT = 0;
+  SEL.picked.forEach(function (i) { var m = MODES[D.mode[i]]; now[m] = (now[m] || 0) + 1; kmT += D.km[i]; });
+  var nowTxt = Object.keys(now).sort(function (a, b) { return now[b] - now[a]; }).map(function (m) { return (n > 1 && Object.keys(now).length > 1 ? fmt(now[m]) + ' ' : '') + esc((LABEL[m] || m).toLowerCase()); }).join(', ');
+  var days = SEL.picked.map(function (i) { return D.day[i]; }), d0 = Math.min.apply(null, days), d1 = Math.max.apply(null, days);
+  var types = SEL_TYPES.filter(function (m) { return MODE_IDX[m] != null; });
+  var pick = types.filter(function (m) { return !now[m]; })[0] || types[0];
+  mrAsk({
+    title: 'Change ' + tripsText(n),
+    text: (Object.keys(now).length === 1 ? (n > 1 ? 'All are ' : 'It is ') : 'Now ') + nowTxt + ', ' + dist(kmT) + ' in all, ' + (d0 === d1 ? niceDate(d0) : niceDate(d0) + ' to ' + niceDate(d1)) + '.',
+    extra: '<div class="sel-types" role="radiogroup" aria-label="New type">' + types.map(function (m) {
+      return '<button type="button" role="radio" data-m="' + m + '" aria-checked="' + (m === pick) + '">' + badge(m, true) + '<span>' + esc(LABEL[m] || m) + '</span></button>';
+    }).join('') + '</div><label class="field"><span>Name</span><input type="text" id="selName" placeholder="Bulk edit"></label>',
+    buttons: [['Make ' + tripsText(n) + ' ' + esc(LABEL[pick] || pick), 'primary', function () { selSave(); }], ['Back to map', 'quiet', null]],
+    note: 'Saved in MyRules as one correction listing these trips, marked Edited. Each trip\'s details can detach it.',
+    after: function () {
+      SEL.type = pick;
+      function name() { return 'Bulk edit: ' + tripsText(n) + ' to ' + (LABEL[SEL.type] || SEL.type).toLowerCase(); }
+      $('selName').placeholder = name();
+      $('mrDlgExtra').querySelector('.sel-types').onclick = function (ev) {
+        var b = ev.target.closest('[data-m]');
+        if (!b) return;
+        SEL.type = b.dataset.m;
+        this.querySelectorAll('[data-m]').forEach(function (x) { x.setAttribute('aria-checked', String(x === b)); });
+        $('mrDlgBtns').querySelector('.primary').textContent = 'Make ' + tripsText(n) + ' ' + (LABEL[SEL.type] || SEL.type);
+        $('selName').placeholder = name();
+      };
+    }
+  });
+}
+function selSave() {
+  if (!SEL || !SEL.picked.length || !SEL.type) return;
+  var n = SEL.picked.length, type = SEL.type, name = ($('selName').value || '').trim() || $('selName').placeholder;
+  mrEnsure();
+  var b = D.base || D, refs = SEL.picked.slice().sort(function (x, y) { return D.start[x] - D.start[y]; }).map(function (i) { return { start: mrIsoLocal(i), mode: MODES[b.mode[i]] }; });
+  var c = { id: mrNewId('bulk-' + type.toLowerCase()), name: name, trip: { trips: refs }, then: { mode: type } };
+  (MR.doc.corrections || (MR.doc.corrections = [])).push(c);
+  selEnd();
+  mrChange(name);
+  toast(tripsText(n) + ' now ' + (LABEL[type] || type).toLowerCase() + '. Undo it in MyRules, or detach a trip in its details.');
+}
+function selEnd() {
+  if (!SEL) return;
+  var was = SEL;
+  SEL = null;
+  was.dim.remove(); was.layer.remove(); was.draw.remove();
+  map.dragging.enable(); map.boxZoom.enable(); map.doubleClickZoom.enable();
+  map.getContainer().classList.remove('sel-on');
+  if ($('selTop')) { $('selTop').hidden = true; $('selBot').hidden = true; }
+  if ($('mrDlg').open) $('mrDlg').close();
+}
+$('selNewBtn').addEventListener('click', function () { selStart(); });
 
 // ---------- settings ----------
 function renderSettings() {

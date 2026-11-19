@@ -121,10 +121,12 @@ Corrections and exceptions have to point at one trip in a way that survives a re
 { "start": "2024-03-06T08:12+01:00", "mode": "CAR" }
 { "day": "2024-03-06" }
 { "span": ["2024-03-06T07:00+01:00", "2024-03-06T11:00+01:00"] }
+{ "trips": [{ "start": "2024-03-06T08:12+01:00", "mode": "VEHICLE" }, { "start": "2024-03-07T17:40+01:00", "mode": "VEHICLE" }] }
 ```
 
 - `start` matches the trip that starts within **±3 minutes** of it. That is enough to survive the small shifts from re-exporting Timeline or fixing a stale start, and small enough not to catch the next trip. If two trips fall in the window, `mode` (the type it had when the ref was made) picks one; if it is still ambiguous, the ref matches nothing and the app lists it under "Rules that matched nothing".
 - `day` matches every trip that day; `span` matches every trip starting inside it.
+- `trips` (a bulk edit) matches each trip it lists, each by its `start` and `mode` as above. *Select trips* on the map writes one.
 
 ---
 
@@ -259,6 +261,8 @@ A correction on a day or span that sets `gear` only fills trips without recorded
 ### 5.5 How corrections show in the app
 
 Anything a correction sets is marked **Edited** rather than *Rule applied*: it is your own fix, not a guess, so the *Guessed and inferred* filter leaves it alone. The trip details list each change ("Type: Train (was cycling)") with **Undo**, which drops that action from a correction on one trip, or adds the trip to the `except` of a correction on a day or span. **Edit trip** in the trip details sets the type, title and *Hide this trip*, and writes them into one correction for that trip (made when needed, updated after, removed once empty); *Set gear → Just this trip* writes into the same one. Hidden trips can be opened again from the correction in the rules sheet.
+
+**Bulk edits.** *Select trips* (the button under the zoom buttons, or Views and layers) lets you draw a lasso or a rectangle on the map. Every trip the map shows (so, within the filters) that passes through it is picked; drawing again adds more, and a tap or the list drops one. *Change type…* saves one correction with `trip.trips` listing them all and `then.mode`, named after what it did. Each trip's details say *From the bulk edit …* with **Detach this trip**, which takes it out of the list (the correction goes once the list is empty), and **List its trips**.
 
 **Checking types.** Trips whose type may be wrong are marked *Check* (an unsure guess, a type from your files that your other trips between the same places disagree with, or a ride too fast for a bike). Their details ask *Is this the right type?*: keeping a guessed type writes `mode`, keeping a type from your files writes `"checked": true`, and changing it writes the new `mode`, all in the correction for that trip. Your corrections, checks and routines then count when BT•DT guesses the type of trips between the same places (a fix three times as much as a type from your files).
 

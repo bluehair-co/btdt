@@ -1056,3 +1056,27 @@ div.hit-row:hover { background: none; }
 .leaflet-tooltip.snap-tip { font: 600 12px var(--font-body); padding: 2px 8px; border-radius: 8px; }
 #snapMode button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 #snapMode svg { width: 16px; height: 16px; }
+
+/* Selecting trips on the map */
+.sel-on, .sel-on .leaflet-interactive { cursor: crosshair !important; touch-action: none; }
+.sel-top { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; }
+.sel-top .snap-bar-t { flex: 1 1 240px; }
+.sel-top .seg button { min-height: 40px; }
+.sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.sel-bar[hidden], .sel-top[hidden] { display: none; }
+.sel-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; }
+.sel-sum { flex: 1; min-width: 0; min-height: 44px; text-align: left; border: 0; background: none; color: var(--fg); font: inherit; font-size: 14px; padding: 0 10px; cursor: pointer; }
+.sel-caret { color: var(--accent); font-size: 13px; font-weight: 600; margin-left: 4px; }
+.sel-list { max-height: min(30vh, 320px); overflow-y: auto; border-bottom: 1px solid var(--line); }
+.sel-item { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 13px; }
+.sel-item:first-child { border-top: 0; }
+.sel-item input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
+.sel-open { flex: 1; min-width: 0; text-align: left; border: 0; background: none; color: var(--fg); font: inherit; padding: 4px 0; cursor: pointer; }
+.sel-open b, .sel-open small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sel-open small { color: var(--muted); }
+.sel-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; margin: 4px 0 12px; }
+.sel-types button { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
+.sel-types button[aria-checked="true"] { border: 2px solid var(--accent); background: var(--chip-on-bg); color: var(--chip-on-fg); font-weight: 600; }
+#map .leaflet-control-zoom a.sel-btn { display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
+#map .leaflet-control-zoom a.sel-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
