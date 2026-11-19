@@ -866,6 +866,8 @@ function hitsAt(pt) {
   return out.sort(function (a, b) { return D.start[b.i] - D.start[a.i]; });
 }
 function onMapTap(pt, ev) {
+  // The routine panel is open: the ghosts on the map take the taps, the trips under them don't.
+  if (mrSideOpen()) return;
   var list = hitsAt(pt);
   // On a phone with the chart open, the trip details are out of sight: a tap on an empty spot
   // leaves the chart open, and a tap on several trips closes it to list them.
