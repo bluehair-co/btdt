@@ -1,0 +1,70 @@
+# Builds BT•DT's station packs (railway stations, tram and metro stops and simplified lines, per
+# country, from OpenStreetMap) every three months, and publishes them on the packs branch, which
+# holds only the latest packs (one commit, replaced each time) so the repository doesn't grow.
+# The app downloads a country's pack from raw.githubusercontent.com only when asked to.
+name: Station packs
+
+on:
+  schedule:
+    - cron: '17 3 2 1,4,7,10 *'
+  workflow_dispatch:
+    inputs:
+      countries:
+        description: 'Country codes to build, e.g. "NL BE" (blank: every country in countries.json)'
+        required: false
+        default: ''
+  push:
+    branches: [main, claude/project-thread-321yt6]
+    paths:
+      - 'source/packs/**'
+      - '.github/workflows/station-packs.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: station-packs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install osmium
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q osmium-tool
+          pip install osmium==4.3.2
+      - name: Get the packs published last time
+        run: |
+          if git ls-remote --exit-code --heads origin packs >/dev/null; then
+            git clone -q --depth 1 --branch packs "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" out
+            rm -rf out/.git
+          else
+            mkdir out
+          fi
+      - name: Build
+        env:
+          COUNTRIES: ${{ github.event.inputs.countries || (github.ref != 'refs/heads/main' && 'NL BE' || '') }}
+        run: cd source/packs && python3 build_all.py ../../out
+      - name: Publish on the packs branch
+        run: |
+          cd out
+          cat > README.md <<'MD'
+          # BT•DT station packs
+
+          Railway stations, tram and metro stops, and simplified railway, tram and metro lines for each
+          country, built from OpenStreetMap by `.github/workflows/station-packs.yml` on the main branch.
+          BT•DT downloads a country's pack only when you choose it, and keeps it on your device.
+
+          Data © OpenStreetMap contributors, available under the Open Database License (ODbL 1.0):
+          https://www.openstreetmap.org/copyright. Extracts from Geofabrik (https://download.geofabrik.de).
+          MD
+          git init -q -b packs
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898299+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Station packs, $(date -u +%Y-%m-%d)"
+          git push -q -f "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" packs

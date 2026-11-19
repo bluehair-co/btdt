@@ -1,0 +1,225 @@
+{
+ "about": "Countries BT•DT builds station packs for, from Geofabrik extracts (download.geofabrik.de/<extract>-latest.osm.pbf). Add a country here to offer its pack.",
+ "countries": [
+  {
+   "cc": "AL",
+   "name": "Albania",
+   "extract": "europe/albania"
+  },
+  {
+   "cc": "AT",
+   "name": "Austria",
+   "extract": "europe/austria"
+  },
+  {
+   "cc": "BY",
+   "name": "Belarus",
+   "extract": "europe/belarus"
+  },
+  {
+   "cc": "BE",
+   "name": "Belgium",
+   "extract": "europe/belgium"
+  },
+  {
+   "cc": "BA",
+   "name": "Bosnia and Herzegovina",
+   "extract": "europe/bosnia-herzegovina"
+  },
+  {
+   "cc": "BG",
+   "name": "Bulgaria",
+   "extract": "europe/bulgaria"
+  },
+  {
+   "cc": "HR",
+   "name": "Croatia",
+   "extract": "europe/croatia"
+  },
+  {
+   "cc": "CZ",
+   "name": "Czechia",
+   "extract": "europe/czech-republic"
+  },
+  {
+   "cc": "DK",
+   "name": "Denmark",
+   "extract": "europe/denmark"
+  },
+  {
+   "cc": "EE",
+   "name": "Estonia",
+   "extract": "europe/estonia"
+  },
+  {
+   "cc": "FI",
+   "name": "Finland",
+   "extract": "europe/finland"
+  },
+  {
+   "cc": "FR",
+   "name": "France",
+   "extract": "europe/france"
+  },
+  {
+   "cc": "DE",
+   "name": "Germany",
+   "extract": "europe/germany"
+  },
+  {
+   "cc": "GB",
+   "name": "United Kingdom",
+   "extract": "europe/great-britain"
+  },
+  {
+   "cc": "GR",
+   "name": "Greece",
+   "extract": "europe/greece"
+  },
+  {
+   "cc": "HU",
+   "name": "Hungary",
+   "extract": "europe/hungary"
+  },
+  {
+   "cc": "IE",
+   "name": "Ireland",
+   "extract": "europe/ireland-and-northern-ireland"
+  },
+  {
+   "cc": "IT",
+   "name": "Italy",
+   "extract": "europe/italy"
+  },
+  {
+   "cc": "LV",
+   "name": "Latvia",
+   "extract": "europe/latvia"
+  },
+  {
+   "cc": "LT",
+   "name": "Lithuania",
+   "extract": "europe/lithuania"
+  },
+  {
+   "cc": "LU",
+   "name": "Luxembourg",
+   "extract": "europe/luxembourg"
+  },
+  {
+   "cc": "MK",
+   "name": "North Macedonia",
+   "extract": "europe/macedonia"
+  },
+  {
+   "cc": "MD",
+   "name": "Moldova",
+   "extract": "europe/moldova"
+  },
+  {
+   "cc": "ME",
+   "name": "Montenegro",
+   "extract": "europe/montenegro"
+  },
+  {
+   "cc": "NL",
+   "name": "Netherlands",
+   "extract": "europe/netherlands"
+  },
+  {
+   "cc": "NO",
+   "name": "Norway",
+   "extract": "europe/norway"
+  },
+  {
+   "cc": "PL",
+   "name": "Poland",
+   "extract": "europe/poland"
+  },
+  {
+   "cc": "PT",
+   "name": "Portugal",
+   "extract": "europe/portugal"
+  },
+  {
+   "cc": "RO",
+   "name": "Romania",
+   "extract": "europe/romania"
+  },
+  {
+   "cc": "RS",
+   "name": "Serbia",
+   "extract": "europe/serbia"
+  },
+  {
+   "cc": "SK",
+   "name": "Slovakia",
+   "extract": "europe/slovakia"
+  },
+  {
+   "cc": "SI",
+   "name": "Slovenia",
+   "extract": "europe/slovenia"
+  },
+  {
+   "cc": "ES",
+   "name": "Spain",
+   "extract": "europe/spain"
+  },
+  {
+   "cc": "SE",
+   "name": "Sweden",
+   "extract": "europe/sweden"
+  },
+  {
+   "cc": "CH",
+   "name": "Switzerland",
+   "extract": "europe/switzerland"
+  },
+  {
+   "cc": "TR",
+   "name": "Türkiye",
+   "extract": "europe/turkey"
+  },
+  {
+   "cc": "UA",
+   "name": "Ukraine",
+   "extract": "europe/ukraine"
+  },
+  {
+   "cc": "JP",
+   "name": "Japan",
+   "extract": "asia/japan"
+  },
+  {
+   "cc": "KR",
+   "name": "South Korea",
+   "extract": "asia/south-korea"
+  },
+  {
+   "cc": "TW",
+   "name": "Taiwan",
+   "extract": "asia/taiwan"
+  },
+  {
+   "cc": "CA",
+   "name": "Canada",
+   "extract": "north-america/canada"
+  },
+  {
+   "cc": "AU",
+   "name": "Australia",
+   "extract": "australia-oceania/australia"
+  },
+  {
+   "cc": "NZ",
+   "name": "New Zealand",
+   "extract": "australia-oceania/new-zealand"
+  },
+  {
+   "cc": "MA",
+   "name": "Morocco",
+   "extract": "africa/morocco"
+  }
+ ]
+}
