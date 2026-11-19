@@ -247,7 +247,7 @@ class RoadReader(osmium.SimpleHandler):
             self.ways.append((kind, pts))
 
 
-def build_roads(path, cc, name):
+def build_roads(path, cc, name, country=None):
     r = RoadReader()
     r.apply_file(path, locations=True)
     nodes, lines, total_km = graph(r.ways, ROAD_TOLERANCE_M)
@@ -257,10 +257,17 @@ def build_roads(path, cc, name):
         'attribution': '© OpenStreetMap contributors', 'license': 'ODbL 1.0',
         'nodes': flat_nodes, 'lines': out_lines,
     }
+    if country:
+        pack['country'] = country
     by = {}
     for line in lines:
         by[line[0]] = by.get(line[0], 0) + 1
-    info = {'km': round(total_km), 'lines': len(lines), 'nodes': len(nodes)}
+    info = {'km': round(total_km), 'lines': len(lines), 'nodes': len(nodes), 'name': name}
+    if nodes:
+        lats, lngs = [n[0] for n in nodes], [n[1] for n in nodes]
+        info['bbox'] = [round(min(lats), 3), round(min(lngs), 3), round(max(lats), 3), round(max(lngs), 3)]
+    if country:
+        info['cc'] = country
     return pack, info
 
 

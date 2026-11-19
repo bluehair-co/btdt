@@ -90,6 +90,33 @@ def main():
         for p in (pbf, rail, road):
             if os.path.exists(p):
                 os.remove(p)
+    # Road packs of a region of a country (a province, a state), for countries too big for one:
+    # "road_regions" in countries.json, each { code (CA-ON), cc, name, extract }. Built when its code
+    # or its country is asked for (or everything is).
+    with open(os.path.join(HERE, 'countries.json'), encoding='utf-8') as f:
+        regions = json.load(f).get('road_regions', [])
+    for c in regions:
+        code = c['code']
+        if want and code not in want and c['cc'] not in want:
+            continue
+        pbf, road = '/tmp/%s.osm.pbf' % code, '/tmp/%s-road.osm.pbf' % code
+        try:
+            fetch(c, pbf)
+            run('osmium', 'tags-filter', pbf, *ROAD_FILTER, '-o', road, '--overwrite')
+            os.remove(pbf)
+            rp, rinfo = build_pack.build_roads(road, code, c['name'], c['cc'])
+            os.makedirs(os.path.join(out, 'roads'), exist_ok=True)
+            rdest = os.path.join(out, 'roads', code + '.json.gz')
+            build_pack.write(rp, rdest)
+            rinfo.update({'bytes': os.path.getsize(rdest), 'built': rp['built']})
+            index.setdefault('roads', {})[code] = rinfo
+            print(code, 'roads', rinfo, flush=True)
+        except Exception as e:
+            print('FAILED', code, e, flush=True)
+            failed.append(code)
+        for p in (pbf, road):
+            if os.path.exists(p):
+                os.remove(p)
     index['updated'] = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')
     index['attribution'] = '© OpenStreetMap contributors, ODbL 1.0'
     with open(idx_path, 'w', encoding='utf-8') as f:

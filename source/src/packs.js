@@ -28,11 +28,41 @@ function packList() {
     return r.json();
   }).then(function (j) { PACK_LIST = j && j.packs ? j : { packs: {} }; return PACK_LIST; });
 }
-function packGet(cc) {
-  return fetch(PACK_BASE + cc + '.json.gz', { cache: 'no-cache' }).then(function (r) {
+// A file of the packs branch as an ArrayBuffer, telling onBytes(loaded, total) as it comes in
+// (total from the server, else the size index.json gave, else 0).
+function packFetch(path, size, onBytes) {
+  return fetch(PACK_BASE + path, { cache: 'no-cache' }).then(function (r) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
-    return r.arrayBuffer();
-  }).then(function (buf) {
+    var total = +r.headers.get('content-length') || size || 0;
+    if (!r.body || !r.body.getReader || !onBytes) return r.arrayBuffer();
+    var rd = r.body.getReader(), parts = [], got = 0;
+    onBytes(0, total);
+    function pump() {
+      return rd.read().then(function (x) {
+        if (x.done) {
+          var buf = new Uint8Array(got), o = 0;
+          parts.forEach(function (p) { buf.set(p, o); o += p.length; });
+          return buf.buffer;
+        }
+        parts.push(x.value); got += x.value.length;
+        onBytes(got, Math.max(total, got));
+        return pump();
+      });
+    }
+    return pump();
+  });
+}
+// A download's progress on a bar (an element holding an <i>) and in words.
+function dlShow(bar, msg, text, frac) {
+  if (bar) { bar.hidden = frac == null; if (frac != null) bar.firstElementChild.style.width = Math.round(100 * Math.max(0, Math.min(1, frac))) + '%'; }
+  if (msg) msg.textContent = text;
+}
+function dlText(what, loaded, total) {
+  return 'Downloading ' + what + '… ' + (total ? packSize(loaded) + ' of ' + packSize(total) + ' (' + Math.round(100 * loaded / total) + '%)' : packSize(loaded));
+}
+function packGet(cc, onBytes) {
+  var x = PACK_LIST && PACK_LIST.packs[cc];
+  return packFetch(cc + '.json.gz', x && x.bytes, onBytes).then(function (buf) {
     return gunzip(buf).then(function (raw) {
       var p = JSON.parse(new TextDecoder().decode(raw));
       if (!p || p.v !== 1 || p.cc !== cc) throw new Error('Not a station pack');
@@ -45,14 +75,20 @@ function packRemove(cc) {
   return packStore('readwrite', function (s) { return s.delete(cc); }).then(function () { delete PACKS[cc]; PK = null; });
 }
 // Downloads the packs in ccs one after the other, then splits the trips again with them.
+// note(text, frac): progress over all of them, by their sizes in index.json.
 function packDownload(ccs, note) {
-  var got = [], failed = [];
-  return ccs.reduce(function (p, cc) {
+  var got = [], failed = [], sizes = ccs.map(function (cc) { var x = PACK_LIST && PACK_LIST.packs[cc]; return x && x.bytes || 0; });
+  var all = sizes.reduce(function (a, b) { return a + b; }, 0), before = 0;
+  return ccs.reduce(function (p, cc, k) {
     return p.then(function () {
-      if (note) note('Downloading ' + packName(cc) + '…');
-      return packGet(cc).then(function () { got.push(cc); }, function () { failed.push(cc); });
+      if (note) note('Downloading ' + packName(cc) + '…', all ? before / all : 0);
+      return packGet(cc, note ? function (l, t) {
+        var tot = all || t, done = before + l;
+        note(dlText(packName(cc) + (ccs.length > 1 ? ' (' + (k + 1) + ' of ' + ccs.length + ')' : ''), all ? done : l, all ? Math.max(all, done) : t), tot ? (all ? done / Math.max(all, done) : l / t) : null);
+      } : null).then(function () { got.push(cc); }, function () { failed.push(cc); }).then(function () { before += sizes[k]; });
     });
   }, Promise.resolve()).then(function () {
+    if (note) note('', null);
     if (got.length) packsChanged();
     return { got: got, failed: failed };
   });
@@ -369,7 +405,7 @@ $('packSel').addEventListener('change', function () {
   var cc = this.value, sel = this;
   if (!cc) return;
   sel.disabled = true;
-  packDownload([cc], function (t) { $('packMsg').textContent = t; }).then(function (r) {
+  packDownload([cc], function (t, f) { dlShow($('packBar'), $('packMsg'), t, f); }).then(function (r) {
     sel.disabled = false; sel.hidden = true; sel.value = '';
     $('packMsg').textContent = r.got.length ? packName(cc) + ' is ready.' : packName(cc) + ' couldn\'t be downloaded. Check your connection and try again.';
   });
@@ -379,7 +415,7 @@ $('packList').addEventListener('click', function (ev) {
   if (!b) return;
   var cc = b.dataset.cc;
   if (b.dataset.packAct === 'remove') packRemove(cc).then(function () { $('packMsg').textContent = packName(cc) + ' removed.'; packsChanged(); });
-  else packDownload([cc], function (t) { $('packMsg').textContent = t; }).then(function (r) { $('packMsg').textContent = r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
+  else packDownload([cc], function (t, f) { dlShow($('packBar'), $('packMsg'), t, f); }).then(function (r) { $('packMsg').textContent = r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
 });
 
 // ---------- offered after an import ----------
@@ -422,7 +458,7 @@ $('packOfferYes').addEventListener('click', function () {
   if (!ccs.length) { packOfferClose(); return; }
   var btn = this;
   btn.disabled = true;
-  packDownload(ccs, function (t) { $('packOfferMsg').textContent = t; }).then(function (r) {
+  packDownload(ccs, function (t, f) { dlShow($('packOfferBar'), $('packOfferMsg'), t, f); }).then(function (r) {
     btn.disabled = false;
     packOfferClose();
     toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Settings.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');

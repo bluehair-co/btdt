@@ -226,5 +226,13 @@
    "name": "Morocco",
    "extract": "africa/morocco"
   }
+ ],
+ "road_regions": [
+  {
+   "code": "CA-ON",
+   "cc": "CA",
+   "name": "Ontario",
+   "extract": "north-america/canada/ontario"
+  }
  ]
 }

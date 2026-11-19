@@ -85,6 +85,7 @@
           <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
           <li>Demo Halfbike routes from <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> on <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> data <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Place names and the public transport lines of routines, on request, from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> via <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a> and the <a href="https://overpass-api.de" target="_blank" rel="noopener">Overpass API</a> <small>© OpenStreetMap contributors, ODbL</small></li>
+          <li>Road packs: motorways, trunk and main roads from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, via <a href="https://download.geofabrik.de" target="_blank" rel="noopener">Geofabrik</a> extracts, read with <a href="https://osmcode.org" target="_blank" rel="noopener">Osmium</a> <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Station packs: railway stations, tram and metro stops and lines from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, via <a href="https://download.geofabrik.de" target="_blank" rel="noopener">Geofabrik</a> extracts, read with <a href="https://osmcode.org" target="_blank" rel="noopener">Osmium</a> <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
           <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
@@ -118,6 +119,7 @@
     <div class="about-body">
       <p class="about-lead">A station pack holds a country's railway stations, tram and metro stops and lines, from OpenStreetMap. With it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at and the stations and stops among your regular places, and draw a routine's line along the railway, all offline. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Settings any time.</p>
       <div id="packOfferList" class="pack-offer"></div>
+      <div class="dl-bar" id="packOfferBar" hidden><i></i></div>
       <p class="fine" id="packOfferMsg" aria-live="polite"></p>
       <div class="pack-btns"><button type="button" class="btn" id="packOfferNo">Not now</button><button type="button" class="btn primary" id="packOfferYes">Download</button></div>
     </div>
@@ -619,9 +621,13 @@
       <ul class="file-list pack-list" id="packList" hidden></ul>
       <p class="fine" id="packNote"></p>
       <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
+      <div class="dl-bar" id="packBar" hidden><i></i></div>
       <p class="fine" id="packMsg" aria-live="polite"></p>
       <label class="toggle-row"><span class="lbl" style="display:block">Snap train trips to the tracks<small class="fine" style="display:block">Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="trackSnap"></label>
       <p class="fine" id="trackNote" aria-live="polite"></p>
+      <label class="toggle-row"><span class="lbl" style="display:block">Snap car trips to roads<small class="fine" style="display:block">Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on downloads a road pack of OpenStreetMap roads for where your trips are (the Netherlands and Ontario so far, about 1 MB each), kept on this device; turning it off removes it. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <div class="dl-bar" id="roadBar" hidden><i></i></div>
+      <p class="fine" id="roadNote" aria-live="polite"></p>
     </div>
     <div class="sec">
       <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
