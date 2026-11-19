@@ -485,8 +485,8 @@ function cleanStops(R) {
 // before it runs out to the place and the trail after it comes straight back, both faster than the
 // trips could go. cleanTrails keeps such ends (a few seconds off is normal for Timeline's ends) and
 // cleanStops only looks at trips without a line, so this check uses the trails on both sides: two
-// trips in a row with lines, less than 6 hours apart, whose facing ends (and the stays between them)
-// are one stop at least 1 km from the trails' points next to them, those points close together, and
+// trips in a row with lines, less than 6 hours apart with a stay between them or back to back (the
+// same stray point ending one leg and starting the next), whose facing ends (and the stays) are one stop at least 1 km from the trails' points next to them, those points close together, and
 // reached or left at over STOP_KMH and both legs too fast for their trip. The stop moves to the trail
 // point nearer in time, and the trips' lines and distances follow (see jumpKm).
 function cleanStays(R) {
@@ -521,12 +521,17 @@ function cleanStays(R) {
       if (R.ve[v] > R.start[b] + STAY_GAP) break;
       if (km([R.vll[2 * v], R.vll[2 * v + 1]], stop) < 1) vs.push(v); else far = true;
     }
-    if (far || !vs.length) continue;
+    // Without a stay between them, only trips back to back (one leg after another, often with the same
+    // stray point at the end of one and the start of the next).
+    if (far || !vs.length && R.start[b] - R.end[a] > STAY_GAP) continue;
     // The trails' points next to the stop, and when they were.
     var pin = pt(la - 1), pout = pt(fb + 1), tin = R.end[a] - 1000 * (R.pathT[la] - R.pathT[la - 1]), tout = R.start[b] + 1000 * (R.pathT[fb + 1] - R.pathT[fb]);
     var din = km(pin, stop), dout = km(stop, pout), dd = km(pin, pout);
-    if (din < 1 || dout < 1 || dd > 0.2 * Math.min(din, dout)) continue;
-    var hin = (R.end[a] - tin) / 36e5, hout = (tout - R.start[b]) / 36e5;
+    var hin = (R.end[a] - tin) / 36e5, hout = (tout - R.start[b]) / 36e5, hdd = (tout - tin) / 36e5;
+    // Those points are close together, or a bit further apart but within reach of each other in the
+    // time between them (moving on while the stray point was recorded).
+    var capAB = Math.min(jumpCap(MODES[R.mode[a]]), jumpCap(MODES[R.mode[b]]));
+    if (din < 1 || dout < 1 || dd > 0.2 * Math.min(din, dout) && !(dd <= 0.5 * Math.min(din, dout) && hdd > 0 && dd / hdd <= capAB)) continue;
     var vin = hin > 0 ? din / hin : Infinity, vout = hout > 0 ? dout / hout : Infinity;
     // The trails go on from those points at a believable speed (else they are the stray ones).
     if (leg(la - 2, la - 1) > jumpCap(MODES[R.mode[a]]) || leg(fb + 1, fb + 2) > jumpCap(MODES[R.mode[b]])) continue;
@@ -540,9 +545,10 @@ function cleanStays(R) {
       R[e[2]][2 * k + 1] = R.pathPts[2 * e[1] + 1] = fix[1];
       var now = [];
       for (q = o0; q < o1; q++) now.push(pt(q));
-      // Timeline's distance that is only the straight line to the wrong place: the trail measures it.
-      var est = R.est[k], clean = pathKm(now), h = (R.end[k] - R.start[k]) / 36e5;
-      if ((est & 3) === 0 && !(est & FIXED) && R.km[k] <= 1.05 * km(old[0], old[old.length - 1]) + 0.05 && clean > 0 && !(h > 0 && clean / h > jumpCap(MODES[R.mode[k]]))) {
+      // Timeline's distance that is only the straight line to the wrong place, or a route there (at most
+      // 1.3 times that line) well over the trail without it: the trail measures it.
+      var est = R.est[k], clean = pathKm(now), h = (R.end[k] - R.start[k]) / 36e5, line = km(old[0], old[old.length - 1]);
+      if ((est & 3) === 0 && !(est & FIXED) && (R.km[k] <= 1.05 * line + 0.05 || R.km[k] <= 1.3 * line + 0.05 && R.km[k] > 1.3 * clean) && clean > 0 && !(h > 0 && clean / h > jumpCap(MODES[R.mode[k]]))) {
         if (!(R.orig[k] > 0)) R.orig[k] = R.km[k];
         R.km[k] = clean; R.est[k] = (est & ~3) | 1 | JUMPS;
       } else jumpKm(R, k, pathKm(old), clean, true, [R.from[2 * k], R.from[2 * k + 1]], [R.to[2 * k], R.to[2 * k + 1]]);
