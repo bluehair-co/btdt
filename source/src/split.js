@@ -43,23 +43,42 @@ function splitPackType(pts, avg, near) {
   if (avg >= 12 && metro >= 0.6) return { mode: 'SUBWAY', conf: 70 };
   return null;
 }
+// Split by hand (PREFS.splitAt): { trip key: [times in seconds since 1970 to cut at] }, kept whatever
+// the setting. A cut is made at the GPS point nearest its time, and named after a station within
+// 300 m when the packs have one.
+function splitAtOf(key) { var a = PREFS.splitAt && PREFS.splitAt[key]; return Array.isArray(a) && a.length ? a : null; }
+function splitHandCuts(R, i, at, near, auto) {
+  var run = tripRun(R, i), n = run.length, out = [];
+  if (n < 3) return out;
+  at.forEach(function (sec) {
+    var ms = sec * 1000, a = 1, bd = Infinity;
+    for (var q = 1; q < n - 1; q++) { var d = Math.abs(run[q][0] - ms); if (d < bd) { bd = d; a = q; } }
+    // Not where another cut already is.
+    if (out.some(function (c) { return c.a === a; }) || auto.some(function (c) { return a >= c.a && a <= c.b; })) return;
+    var p = run[a][1], st = near ? near.station(p[0], p[1], 0.3, 15) : null;
+    out.push({ a: a, b: a, kind: 'hand', st: st, sure: true, vin: 0, vout: 0 });
+  });
+  return out;
+}
 function splitTrips(R) {
-  var n = R.start.length, i, set = splitSetting(), keep = PREFS.splitKeep || [], yes = PREFS.splitYes || [];
+  var n = R.start.length, i, set = splitSetting(), keep = PREFS.splitKeep || [], yes = PREFS.splitYes || [], hand = PREFS.splitAt || {};
   R.leg = null; R.offer = null; R.splitN = 0; R.offerN = 0;
-  if (set === 'off' && !yes.length) return R;
+  if (set === 'off' && !yes.length && !Object.keys(hand).length) return R;
   var near = packNear(), fixed = splitFixed(), plans = [], any = false;
   function isFixed(ms) { for (var k = 0; k < fixed.length; k++) if (Math.abs(fixed[k] - ms) <= 3 * 60000) return true; return false; }
   for (i = 0; i < n; i++) {
     plans.push(null);
-    if (!splitCandidate(R, i)) continue;
-    var plan = splitPlan(tripRun(R, i), near);
-    if (!plan.length) continue;
-    var key = splitKey(R.start[i]), use;
+    var key = splitKey(R.start[i]), at = splitAtOf(key), cand = splitCandidate(R, i);
+    if (!cand && !(at && !(R.dup && R.dup[i]) && MODES[R.mode[i]] !== 'FLYING')) continue;
+    var plan = cand && set !== 'off' || cand && splitHas(yes, key) ? splitPlan(tripRun(R, i), near) : [], use;
+    if (!plan.length && !at) continue;
     if (splitHas(yes, key)) use = plan;
     else if (set === 'auto' && !splitHas(keep, key) && !isFixed(R.start[i])) use = plan.filter(function (c) { return c.sure; });
     else use = [];
-    if (set === 'off' && !splitHas(yes, key)) continue;
-    plans[i] = { key: key, all: plan, use: use, kept: splitHas(keep, key) };
+    var hc = at ? splitHandCuts(R, i, at, near, use) : [];
+    if (hc.length) use = use.concat(hc).sort(function (x, y) { return x.a - y.a; });
+    if (set === 'off' && !splitHas(yes, key) && !hc.length) continue;
+    plans[i] = { key: key, all: plan, use: use, kept: splitHas(keep, key), hand: hc.length };
     if (use.length) any = true;
   }
   var offer = [], leg = [], out = { start: [], end: [], day: [], mode: [], km: [], est: [], off: [], orig: [], from: [], to: [], srcs: [], sport: [], stype: [], smeta: [], gby: [], gconf: [], repl: [], dup: [], pts: [], t: [] };
@@ -90,7 +109,7 @@ function splitTrips(R) {
       var o = Object.assign({}, base, { start: L.start, end: L.end, km: L.km, orig: 0, from: L.pts[0], to: L.pts[L.pts.length - 1], pts: [].concat.apply([], L.pts), t: L.t,
         day: base.off === NO_OFF ? base.day : Math.floor((L.start + base.off * 60000) / 864e5), mode: MODE_IDX[L.mode], gby: L.gby, gconf: L.conf, repl: 0, dup: 0,
         est: (base.est & ~(GUESSED | 8)) | (L.guess ? GUESSED : 0) });
-      push(o, { key: P.key, k: k, n: legs.length, first: first, stop: L.stop, was: { mode: MODES[R.mode[i]], km: R.km[i], start: R.start[i], end: R.end[i], guessed: !!(R.est[i] & GUESSED) }, cuts: P.use.length < P.all.length ? P.all.length - P.use.length : 0 }, null);
+      push(o, { key: P.key, k: k, n: legs.length, first: first, stop: L.stop, hand: P.hand, was: { mode: MODES[R.mode[i]], km: R.km[i], start: R.start[i], end: R.end[i], guessed: !!(R.est[i] & GUESSED) }, cuts: Math.max(0, P.all.length - (P.use.length - P.hand)) }, null);
       if (L.retype) retype.push(out.start.length - 1);
     });
   }
@@ -134,7 +153,7 @@ function splitLegs(R, i, cuts, near) {
   cuts.forEach(function (c, x) {
     var L = { a: from, b: c.a, s: startS, pre: x ? legs[x - 1].post : null, cut: c };
     var tEnd = t[c.a], tNext = t[c.b];
-    if (c.st && c.kind !== 'speed') {
+    if (c.st && c.kind !== 'speed' && c.kind !== 'hand') {
       var S = [c.st.lat, c.st.lng], vin = Math.max(c.vin, 4), vout = Math.max(c.vout, 4);
       var arr = Math.min(t[c.a] + km(ll[c.a], S) / vin * 3600, t[c.b]), dep = Math.max(arr, t[c.b] - km(S, ll[c.b]) / vout * 3600);
       if (km(ll[c.a], S) > 0.05) { L.end = [S, arr]; tEnd = arr; }
@@ -185,7 +204,8 @@ function splitTag(i) {
 }
 function splitStopText(s) {
   var mins = Math.round(s.ms / 60000), where = s.name ? 'at ' + esc(s.name) : s.at ? 'in ' + esc(nearestCity(s.at[0], s.at[1]) ? nearestCity(s.at[0], s.at[1]).name : 'the same place') : '';
-  return (s.kind === 'speed' ? 'Changed ' + (where || 'transport') : mins >= 1 ? hoursLabel(mins / 60) + ' stop ' + where : 'Stop ' + where).trim();
+  if (s.kind === 'hand') { var nc = s.at && nearestCity(s.at[0], s.at[1]); return 'Split by you' + (s.name ? ' at ' + esc(s.name) : nc ? ' near ' + esc(nc.name) : ''); }
+  return (s.kind === 'speed' ? 'Changed ' + (where || 'transport') : s.kind === 'speed' ? 'Changed ' + (where || 'transport') : mins >= 1 ? hoursLabel(mins / 60) + ' stop ' + where : 'Stop ' + where).trim();
 }
 // The trip details: its legs and stops, with Keep as one trip; or, for a trip that looks merged, a Split button.
 function splitBlock(i) {
@@ -200,7 +220,7 @@ function splitBlock(i) {
     }
     var w = l.was;
     return '<div class="split-box"><div class="sb-head"><b>' + (l.n === 1 ? 'Split' : l.n + ' legs of one Timeline trip') + '</b></div>' +
-      '<p class="fine">Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '. Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs, each with its own type and line. The distance is shared by the legs, so totals stay the same.</p>' +
+      '<p class="fine">Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '. ' + (l.hand >= l.n - 1 ? 'You split it into legs' : l.hand ? 'Its GPS points show ' + (l.n - 1 - l.hand === 1 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', and you split it further, into legs' : 'Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs') + ', each with its own type and line. The distance is shared by the legs, so totals stay the same.</p>' +
       '<div class="list-rows split-legs">' + rows + '</div>' +
       '<div class="sb-acts"><button type="button" class="btn" data-split-act="keep" data-key="' + l.key + '" data-ms="' + w.start + '">' + icon('undo') + 'Keep as one trip</button></div></div>';
   }
@@ -221,7 +241,7 @@ function splitRaw(i) {
 // Keep as one trip / Split: saved for this trip, then the trips are split again and its details reopen.
 function splitChoose(act, key, ms) {
   var keep = (PREFS.splitKeep || []).filter(function (k) { return k !== key; }), yes = (PREFS.splitYes || []).filter(function (k) { return k !== key; });
-  if (act === 'keep') keep.push(key); else yes.push(key);
+  if (act === 'keep') { keep.push(key); if (PREFS.splitAt) delete PREFS.splitAt[key]; } else yes.push(key);
   PREFS.splitKeep = keep; PREFS.splitYes = yes;
   savePrefs();
   refreshData();
@@ -253,4 +273,99 @@ $('splitSeg').addEventListener('click', function (ev) {
   PREFS.split = b.dataset.s; savePrefs();
   refreshData();
   renderSplitSettings();
+});
+
+// ---------- split by hand ----------
+// Split trip… in the trip details: the trip alone on the map, you tap its path where each leg
+// should end (as often as you like), then Split. Saved in PREFS.splitAt by the time of the GPS point
+// nearest each tap, for the Timeline trip it came from (a leg adds to the cuts of its trip).
+var SPL = null, SPLIT_TAP_PX = 36;
+function splitHandOk(i) { return !!D && !isDup(i) && MODES[D.mode[i]] !== 'FLYING' && D.pathOff[i + 1] - D.pathOff[i] >= 3; }
+function splitHandStart(i) {
+  if (!splitHandOk(i)) return;
+  var l = legOf(i), key = l ? l.key : splitKey(D.start[i]), pts = [], t = [];
+  for (var q = D.pathOff[i]; q < D.pathOff[i + 1]; q++) { pts.push([D.pathPts[2 * q], D.pathPts[2 * q + 1]]); t.push(Math.round((D.start[i] + D.pathT[q] * 1000) / 1000)); }
+  closeSheets(true);
+  if (PREFS.proj !== 'merc') setProj('merc');
+  setTab('map');
+  if (!initMap()) return;
+  if (typeof snapEnd === 'function') snapEnd();
+  splitHandEnd();
+  SPL = { i: i, key: key, ms: l ? l.was.start : D.start[i], pts: pts, t: t, cuts: [], layer: L.layerGroup().addTo(map), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) || '#c25228' };
+  layerToggles();
+  var bar = $('splitBar');
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'splitBar'; bar.className = 'snap-bar'; bar.setAttribute('role', 'status');
+    bar.innerHTML = '<span class="snap-bar-t"></span><button type="button" class="btn quiet" data-a="undo">Undo</button><button type="button" class="btn quiet" data-a="cancel">Cancel</button><button type="button" class="btn primary" data-a="save">Split</button>';
+    bar.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-a]');
+      if (!b || !SPL) return;
+      if (b.dataset.a === 'undo') { SPL.cuts.pop(); splitHandDraw(); }
+      else if (b.dataset.a === 'cancel') { var ii = SPL.i; splitHandEnd(); openTrip(ii); }
+      else splitHandSave();
+    });
+    document.body.appendChild(bar);
+  }
+  bar.hidden = false;
+  splitHandDraw();
+  map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 16 });
+}
+function splitHandDraw() {
+  SPL.layer.clearLayers();
+  L.polyline(SPL.pts, { color: '#fff', weight: 8, opacity: .9, interactive: false }).addTo(SPL.layer);
+  L.polyline(SPL.pts, { color: SPL.col, weight: 4.5, opacity: 1, interactive: false }).addTo(SPL.layer);
+  SPL.pts.forEach(function (p) { L.circleMarker(p, { radius: 2.5, stroke: false, fillColor: SPL.col, fillOpacity: .9, interactive: false }).addTo(SPL.layer); });
+  [0, SPL.pts.length - 1].forEach(function (k) { L.circleMarker(SPL.pts[k], { radius: 6, color: '#fff', weight: 2, fillColor: SPL.col, fillOpacity: 1, interactive: false }).addTo(SPL.layer); });
+  var cuts = SPL.cuts.slice().sort(function (a, b) { return a - b; });
+  cuts.forEach(function (k, x) {
+    L.circleMarker(SPL.pts[k], { radius: 8, color: '#fff', weight: 2.5, fillColor: cssVar('--accent') || '#c25228', fillOpacity: 1, interactive: false })
+      .bindTooltip(clock(SPL.t[k] * 1000, D.off[SPL.i]), { permanent: true, direction: 'top', offset: [0, -9], className: 'snap-tip' }).addTo(SPL.layer);
+  });
+  var n = cuts.length, t = $('splitBar').querySelector('.snap-bar-t');
+  t.innerHTML = icon('split') + '<span><b>' + (n ? 'Split into ' + (n + 1) + ' trips' : 'Split trip') + '</b>' + (n ? 'Tap the path again for another leg' : 'Tap its path where a leg ends') + '</span>';
+  $('splitBar').querySelector('[data-a="undo"]').disabled = !n;
+  $('splitBar').querySelector('[data-a="save"]').disabled = !n;
+}
+// A tap on the map: the GPS point of the trip nearest it, within SPLIT_TAP_PX (not its two ends).
+function splitHandTap(pt) {
+  if (!SPL) return false;
+  var best = -1, bd = SPLIT_TAP_PX;
+  for (var k = 1; k < SPL.pts.length - 1; k++) {
+    var c = map.latLngToContainerPoint(SPL.pts[k]), d = Math.hypot(c.x - pt.x, c.y - pt.y);
+    if (d < bd) { bd = d; best = k; }
+  }
+  if (best < 0) { toast('Tap on the trip\'s path'); return true; }
+  var at = SPL.cuts.indexOf(best);
+  if (at >= 0) SPL.cuts.splice(at, 1); else SPL.cuts.push(best);
+  splitHandDraw();
+  return true;
+}
+function splitHandSave() {
+  if (!SPL || !SPL.cuts.length) return;
+  var all = PREFS.splitAt || (PREFS.splitAt = {}), list = (all[SPL.key] || []).slice(), ms = SPL.ms, n = SPL.cuts.length;
+  SPL.cuts.forEach(function (k) { if (list.indexOf(SPL.t[k]) < 0) list.push(SPL.t[k]); });
+  all[SPL.key] = list.sort(function (a, b) { return a - b; });
+  PREFS.splitKeep = (PREFS.splitKeep || []).filter(function (k) { return k !== SPL.key; });
+  savePrefs();
+  var t0 = SPL.t[SPL.cuts.slice().sort(function (a, b) { return a - b; })[0]] * 1000, from = D.start[SPL.i];
+  splitHandEnd();
+  refreshData();
+  // The first of the new legs.
+  for (var i = 0; i < D.start.length; i++) if (Math.abs(D.start[i] - from) < 1000 && !isDup(i) && D.end[i] <= t0 + 1000) { openTrip(i); break; }
+  toast('Split into ' + (n + 1) + ' trips. Keep as one trip in its details undoes it.');
+}
+function splitHandEnd() {
+  if (!SPL) return;
+  var was = SPL;
+  SPL = null;
+  was.layer.remove();
+  if ($('splitBar')) $('splitBar').hidden = true;
+  if (map) layerToggles();
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-split-hand]');
+  if (!b) return;
+  ev.stopPropagation();
+  splitHandStart(+b.dataset.splitHand);
 });

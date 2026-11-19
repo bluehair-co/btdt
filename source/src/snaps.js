@@ -295,3 +295,69 @@ function snapEnd() {
   if (map) layerToggles();
 }
 $('snapNewBtn').addEventListener('click', function () { snapStart(); });
+
+// ---------- train trips along the tracks ----------
+// With "Snap train trips to the tracks" on (Settings, Station packs), every train trip that no
+// routine, map snap or correction drew is drawn along the railway of the installed packs: from the
+// railway station nearest its start (within TRACK_END_KM) to the one nearest its end, along whichever
+// of packLines' ways its GPS points follow best. A train's ends and points are often off by some way
+// (a late fix after a tunnel, a station a few hundred metres from where the phone woke), so its
+// points count as on a way within TRACK_KM, and it takes the way when TRACK_MIN % of them are.
+// The ways between two stations are worked out once (PK.tw), and which one each trip follows (PK.th). Applied after MyRules, also with no
+// rules file loaded; it changes the line and the distance, never the type.
+var TRACK_END_KM = 3, TRACK_KM = 0.6, TRACK_MIN = 70;
+function trackOn() { return !!PREFS.trackSnap && packCodes().length > 0; }
+function trackScore(i, L) {
+  var own = mrTripPts(i), step = Math.max(1, Math.ceil(own.length / 40)), cnt = 0, on = 0;
+  for (var q = 0; q < own.length; q += step) { cnt++; if (mrToLine(own[q], L).d <= TRACK_KM) on++; }
+  return cnt ? Math.round(100 * on / cnt) : 0;
+}
+function trackWays(sa, sb) {
+  var P = packIndex(), tw = P.tw || (P.tw = new Map()), k = [sa.lat, sa.lng, sb.lat, sb.lng].join(',');
+  if (!tw.has(k)) tw.set(k, packLines('TRAIN', [sa.lat, sa.lng], [sb.lat, sb.lng]));
+  return tw.get(k);
+}
+function mrApplyTracks() {
+  D.mrTrack = [];
+  if (trackOn()) mrTrackTrips();
+  trackSettings();
+}
+function mrTrackTrips() {
+  var n = D.day.length, T = MODE_IDX.TRAIN;
+  for (var i = 0; i < n; i++) {
+    if (D.mode[i] !== T || D.snap[i] || isDup(i) || D.mrHide && D.mrHide[i] || D.pathOff[i + 1] - D.pathOff[i] < 3) continue;
+    var a = [D.from[2 * i], D.from[2 * i + 1]], z = [D.to[2 * i], D.to[2 * i + 1]];
+    if (!isFinite(a[0]) || !isFinite(z[0]) || km(a, z) < 2) continue;
+    var sa = packStation(a[0], a[1], TRACK_END_KM, 1 | 8), sb = sa && packStation(z[0], z[1], TRACK_END_KM, 1 | 8);
+    if (!sb || km([sa.lat, sa.lng], [sb.lat, sb.lng]) < 1) continue;
+    var ways = trackWays(sa, sb), best = null, bsc = -1, hk = D.start[i] + ',' + D.end[i] + ',' + sa.name + ',' + sb.name, P = packIndex(), th = P.th || (P.th = new Map()), hit = th.get(hk);
+    if (hit) { best = ways[hit[0]]; bsc = hit[1]; }
+    else {
+      for (var k = 0; k < ways.length; k++) {
+        var sc = trackScore(i, ways[k].pts);
+        if (sc > bsc || sc === bsc && ways[k].km < best.km) { bsc = sc; best = ways[k]; }
+      }
+      th.set(hk, [ways.indexOf(best), bsc]);
+    }
+    if (!best || bsc < TRACK_MIN) continue;
+    var sn = mrSnapTrip(i, best.pts, TRACK_END_KM);
+    if (!sn) continue;
+    sn.track = true; sn.score = bsc;
+    D.snap[i] = sn; D.km[i] = sn.km;
+    D.mrTrack[i] = { name: best.name.replace(/ \([^)]*station packs?\)$/, ''), from: sa.name, to: sb.name, score: bsc, packs: best.packs };
+  }
+}
+function trackSettings() {
+  var el = $('trackSnap');
+  if (!el) return;
+  el.checked = !!PREFS.trackSnap;
+  el.disabled = !packCodes().length;
+  var n = 0;
+  if (D && D.mrTrack) D.mrTrack.forEach(function (x) { if (x) n++; });
+  $('trackNote').textContent = !packCodes().length ? 'Add a country first.' : PREFS.trackSnap ? (D ? tripsText(n) + ' drawn along the railway.' : '') : '';
+}
+$('trackSnap').addEventListener('change', function () {
+  PREFS.trackSnap = this.checked; savePrefs();
+  mrReapply();
+  trackSettings();
+});

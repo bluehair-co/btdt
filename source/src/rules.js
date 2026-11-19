@@ -1,6 +1,6 @@
 // ---------- MyRules ----------
 // A MyRules file (*.myrules.json) holds what only you know: which bike you rode when, where home was.
-// It is applied on top of the location files. Values a rule fills in are marked Inferred; values a
+// It is applied on top of the location files. Values a rule fills in are marked Rule applied (Map snap for a map snap's line); values a
 // correction sets on a trip (its type, title, gear, or hiding it) are marked Edited.
 // The format is in docs/myrules.md; this version applies gear periods, places, routines (type, gear
 // and lines) and corrections.
@@ -225,10 +225,14 @@ function mrApplyGear(byName, addGear) {
     MR_COUNT[best[0].r.id] = (MR_COUNT[best[0].r.id] || 0) + 1;
   }
 }
-// Inferred: gear a gear period filled in. Edited: anything a correction set.
-function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i]); }
+// Rule applied (inferred): gear a gear period filled in, a type or line a routine or map snap set. Edited: anything a correction set.
+function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track); }
 function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor)); }
-function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrInferred(i) ? '<span class="guess inf">Inferred</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
+// A trip a map snap took says so; anything else a rule filled in is "Rule applied".
+function mrSnapped(i) { return !!(D.mrSnap && D.mrSnap[i] && D.snap && D.snap[i]); }
+function mrTracked(i) { return !!(D.mrTrack && D.mrTrack[i] && D.snap && D.snap[i]); }
+function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track)); }
+function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Rule applied</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
 function mrCheck(i) { return !!(D.chk && D.chk[i] >= 0); }
 
 // Corrections, ready to apply: the switched-on ones that point at trips, those on a day or span
@@ -253,7 +257,7 @@ function mrApplyCorrections() {
   D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
   D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
   MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
-  if (!MR || !MR.on) { mrLearn(); return; }
+  if (!MR || !MR.on) { mrApplyTracks(); mrLearn(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
   mrApplySnaps();
@@ -278,6 +282,8 @@ function mrApplyCorrections() {
   });
   // A trip a correction made a flight isn't drawn along a routine's line.
   D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
+  // Train trips nothing above drew, along the tracks of the packs (when that's on).
+  mrApplyTracks();
   mrLearn();
 }
 
@@ -560,12 +566,12 @@ function mrToLine(p, L) {
   }
   return { d: bd, k: bi };
 }
-function mrSnapTrip(i, L) {
+function mrSnapTrip(i, L, far) {
   var a = [D.from[2 * i], D.from[2 * i + 1]], b = [D.to[2 * i], D.to[2 * i + 1]];
   if (!isFinite(a[0]) || !isFinite(b[0])) return null;
   // Its ends near the line, so there is a stretch of it to take.
   var q, ia = mrToLine(a, L), ib = mrToLine(b, L);
-  if (ia.d > 1 || ib.d > 1 || ia.k === ib.k) return null;
+  if (ia.d > (far || 1) || ib.d > (far || 1) || ia.k === ib.k) return null;
   var seg = ia.k < ib.k ? L.slice(ia.k, ib.k + 1) : L.slice(ib.k, ia.k + 1).reverse();
   var cum = [0], len = 0;
   for (q = 1; q < seg.length; q++) { len += km(seg[q - 1], seg[q]); cum.push(len); }
@@ -892,7 +898,7 @@ function renderMyRules() {
   var el = $('mrCard');
   if (!el) return;
   if (!MR) {
-    el.innerHTML = '<p class="fine">Add what only you know, like which bike you rode when or where home was. BT•DT fills in what your files leave out and marks it <span class="guess inf">Inferred</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.</p>';
+    el.innerHTML = '<p class="fine">Add what only you know, like which bike you rode when or where home was. BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.</p>';
     return;
   }
   var nGear = 0, nEd = 0, n = MR.changes.length;
@@ -1087,6 +1093,8 @@ function mrTripBlock(i) {
   }
   var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
   if (msr && sn) h += '<div class="mr-chg"><b>Map snap:</b> ' + esc(msr.name || msr.id) + way(msn.dir) + '<div class="fine">Drawn ' + esc(msr.line && msr.line.name ? msr.line.name.charAt(0).toLowerCase() + msr.line.name.slice(1) : 'along its line') + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). It follows the line for ' + sn.score + '% of its GPS points.</div></div>';
+  var tk = D.mrTrack && D.mrTrack[i];
+  if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). ' + tk.score + '% of its GPS points are near it. Turn it off in Settings, Station packs.</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
@@ -1095,9 +1103,11 @@ function mrTripBlock(i) {
   if (!rr && !mr && MODES[D.mode[i]] !== 'FLYING' && D.pathOff[i + 1] - D.pathOff[i] >= 5 && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1) btns += '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>';
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
+  if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
   // A trip of your own as the line: one in the routine, or one left out for want of a line or for going another way.
   var lr = rr || ms && (ms.why === 'noline' || ms.why === 'fit') && mr, lln = lr && D.mrLine[lr.id];
   if (lr && lr.then && lr.then.snap && mrLearned(lr.then.snap) && !(lln && lln.from === i) && D.pathOff[i + 1] - D.pathOff[i] >= 5) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(lr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
+  if (splitHandOk(i)) btns += '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
 }
@@ -1174,6 +1184,7 @@ $('tripBody').addEventListener('click', function (ev) {
     mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
     openTrip(i);
   } else if (act === 'rule') mrEditRule('routines:' + b.dataset.r);
+  else if (act === 'snaprule') mrEditRule('snaps:' + b.dataset.r);
   else if (act === 'similar') mrSimilar(i);
   else if (act === 'include') {
     var ir = mrById(b.dataset.r);
@@ -1266,7 +1277,7 @@ function mrGearDialog(i) {
       function count() {
         var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = parseFloat($('mrMax').value), c = 0;
         for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
-        $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Inferred</span>, unless a narrower rule covers them.';
+        $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
       }
       sel.addEventListener('change', prefill);
       ['mrFrom', 'mrTo', 'mrMax'].forEach(function (id) { $(id).addEventListener('input', count); });
@@ -1719,7 +1730,7 @@ function mrOfferRoutine(i, mode) {
       '<label class="mr-opt"><input type="checkbox" id="mrRSnap"' + (MR_RAIL[mode] ? ' checked' : '') + '><span><b>Draw them along one line</b><small class="fine">From one of these trips, or from OpenStreetMap for public transport. Trips that don\'t follow it closely enough keep their own.</small></span></label></div>',
     buttons: [['Make a routine', 'primary', function () { mrSaveRoutine(i, mode, x, A, B); }], ['Not now', 'quiet', null]],
     after: function () { mrGhostStart(function () { return mrOfferDraft(i, mode, x, A, B); }); },
-    note: 'Saved in MyRules. What it fills in is marked Inferred, and you can leave out any trip.'
+    note: 'Saved in MyRules. What it fills in is marked Rule applied, and you can leave out any trip.'
   });
 }
 // ---------- a routine's trips as ghosts ----------
@@ -2009,7 +2020,7 @@ function mrGhostStart(draft) {
       if (!list.length) { $('mrOsmTxt').textContent = 'OpenStreetMap has no ' + lab + ' line passing near both ends.'; return; }
       MR_GHOST.osmList = list; MR_GHOST.osm = list[0]; MR_GHOST.pick = undefined;
       $('mrOsmSel').innerHTML = list.map(function (x, k) { return '<option value="' + k + '">' + esc(x.name) + ' · ' + dist(x.km) + '</option>'; }).join('');
-      if (local.length) $('mrOsmTxt').textContent = (list.length > 1 ? list.length + ' ways along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack: pick one (the arrows step through them too).' : 'Line drawn along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack.') + ' Saved with the routine.';
+      if (local.length) $('mrOsmTxt').textContent = (list.length > 1 ? list.length + ' ways along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packNames(local[0].packs) + ' station pack' + (local[0].packs.length > 1 ? 's' : '') + ': pick one (the arrows step through them too).' : 'Line drawn along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packNames(local[0].packs) + ' station pack' + (local[0].packs.length > 1 ? 's' : '') + '.') + ' Saved with the routine.';
       else $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
       draw();
     }).catch(function () { btn.disabled = false; $('mrOsmTxt').textContent = 'OpenStreetMap couldn\'t be reached. Check your connection and try again.'; });

@@ -426,8 +426,8 @@
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
       <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
-        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in gear <span class="guess inf">Inferred</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
-        <div class="seg" role="group" aria-label="Trips with a guessed type or inferred gear" id="guessSeg">
+        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
+        <div class="seg" role="group" aria-label="Trips with a guessed type or a rule applied" id="guessSeg">
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
         <button type="button" class="btn check-btn" id="checkBtn" data-g="check" aria-pressed="false" hidden></button>
@@ -554,7 +554,7 @@
 <aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
   <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
-    <p class="fine">What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Inferred</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
+    <p class="fine">What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
     <div id="mrBody"></div>
   </div>
 </aside>
@@ -615,6 +615,8 @@
       <p class="fine" id="packNote"></p>
       <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
       <p class="fine" id="packMsg" aria-live="polite"></p>
+      <label class="toggle-row"><span class="lbl" style="display:block">Snap train trips to the tracks<small class="fine" style="display:block">Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="trackSnap"></label>
+      <p class="fine" id="trackNote" aria-live="polite"></p>
     </div>
     <div class="sec">
       <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
