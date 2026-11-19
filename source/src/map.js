@@ -310,6 +310,14 @@ function buildGroups(limit) {
 // What the coloured paths show: speed, or heart rate zones (which move with your maximum heart rate).
 function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
+  // While a routine's ghost trips are on the map, nothing else is, so which ones the routine takes
+  // (solid) and which it leaves (dashed) stand out.
+  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map) {
+    [sqLayer, pathLayer, speedLayer, ccLayer, heatLayer, pinLayer, hlLayer, beaconLayer].forEach(function (l) { if (l && map.hasLayer(l)) map.removeLayer(l); });
+    return;
+  }
+  if (hlLayer && !map.hasLayer(hlLayer)) map.addLayer(hlLayer);
+  if (beaconLayer && !map.hasLayer(beaconLayer)) map.addLayer(beaconLayer);
   [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths || PREFS.hrPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);

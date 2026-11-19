@@ -1840,13 +1840,16 @@ function mrEncodePolyline(pts) {
   return out;
 }
 // draft() builds the routine from the dialog as it is now.
-// The ghosts off the map: the main map keeps its layers and gets its view back (back: when the
+// The ghosts off the map: the main map gets its layers back and its view back (back: when the
 // panel closes), the small map is removed.
 var MR_GHOST_R = null;
 function mrGhostClear(back) {
   if (!MR_GHOST || !MR_GHOST.map) return;
   if (MR_GHOST.main) {
     MR_GHOST.layer.remove(); MR_GHOST.dim.remove();
+    MR_GHOST.map = null;
+    // The other layers back.
+    layerToggles();
     if (back && MR_GHOST.view) map.setView(MR_GHOST.view.c, MR_GHOST.view.z);
   } else MR_GHOST.map.remove();
   MR_GHOST.map = null;
@@ -1866,6 +1869,8 @@ function mrGhostStart(draft) {
     MR_GHOST.view = view || { c: map.getCenter(), z: map.getZoom() };
     MR_GHOST.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: MR_GHOST_R, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .72, interactive: false }).addTo(map);
     MR_GHOST.layer = L.layerGroup().addTo(map);
+    // The other layers off while the ghosts are shown (layerToggles keeps them off).
+    layerToggles();
   } else {
     MR_GHOST.map = L.map(el, { zoomControl: false, attributionControl: true, preferCanvas: true });
     MR_GHOST.map.setView([0, 0], 2, { animate: false });
@@ -1978,28 +1983,28 @@ function mrGhostStart(draft) {
   }
   $('mrPickPrev').onclick = function () { step(-1); };
   $('mrPickNext').onclick = function () { step(1); };
-  delete $('mrOsmBtn').dataset.online;
   $('mrPickRec').onclick = function () { MR_GHOST.pick = null; MR_GHOST.osm = null; draw(); };
   $('mrMatch').oninput = function () { MR_GHOST.match = +this.value; draw(); };
   $('mrOsmSel').onchange = function () { MR_GHOST.osm = MR_GHOST.osmList[+this.value]; draw(); };
   $('mrOsmBtn').onclick = function () {
     var r = draft(), a = r && mrEnd(r.from), b = r && mrEnd(r.to), m = r && r.then && r.then.mode, btn = this;
     if (!a || !b || !MR_OSM_ROUTES[m]) return;
-    // A station pack covering both ends draws the line at once, offline (packLines); a second tap,
-    // or no pack, asks OpenStreetMap online for its route relations.
-    var local = btn.dataset.online ? [] : packLines(m, a.at, b.at);
+    // With a station pack for the country of either end, the line comes only from the packs,
+    // offline, with every distinct way to pick from (packLines); OpenStreetMap is asked online only
+    // where you have no pack, or for buses and ferries, which packs don't have.
+    var lab = (LABEL[m] || m).toLowerCase(), packed = PACK_MODE_BITS[m] && [a.at, b.at].some(function (p) { return !!PACKS[countryAt(p[0], p[1])]; });
+    var local = PACK_MODE_BITS[m] ? packLines(m, a.at, b.at) : [];
+    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within 2 km of both ends. Move an end closer to a station.'; return; }
     btn.disabled = true;
-    if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + (LABEL[m] || m).toLowerCase() + ' lines between the two ends…';
+    if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + lab + ' lines between the two ends…';
     (local.length ? Promise.resolve(local) : mrOsmLines(m, a.at, b.at)).then(function (list) {
       btn.disabled = false;
       if (!MR_GHOST) return;
-      if (!list.length) { $('mrOsmTxt').textContent = 'OpenStreetMap has no ' + (LABEL[m] || m).toLowerCase() + ' line passing near both ends.'; return; }
+      if (!list.length) { $('mrOsmTxt').textContent = 'OpenStreetMap has no ' + lab + ' line passing near both ends.'; return; }
       MR_GHOST.osmList = list; MR_GHOST.osm = list[0]; MR_GHOST.pick = undefined;
       $('mrOsmSel').innerHTML = list.map(function (x, k) { return '<option value="' + k + '">' + esc(x.name) + ' · ' + dist(x.km) + '</option>'; }).join('');
-      if (local.length) {
-        $('mrOsmTxt').textContent = 'Line drawn along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack. Saved with the routine. Tap again to look up the routes online instead.';
-        btn.dataset.online = '1';
-      } else $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
+      if (local.length) $('mrOsmTxt').textContent = (list.length > 1 ? list.length + ' ways along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack: pick one (the arrows step through them too).' : 'Line drawn along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack.') + ' Saved with the routine.';
+      else $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
       draw();
     }).catch(function () { btn.disabled = false; $('mrOsmTxt').textContent = 'OpenStreetMap couldn\'t be reached. Check your connection and try again.'; });
   };
