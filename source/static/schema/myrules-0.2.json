@@ -702,10 +702,27 @@
           "type": "string"
         },
         "radius_m": {
-          "type": "number",
-          "exclusiveMinimum": 0,
+          "description": "How near each end a trip has to start and end, in metres: one number for both, or one per end.",
           "default": 500,
-          "description": "How near each end a trip has to start and end."
+          "anyOf": [
+            {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            {
+              "type": "object",
+              "properties": {
+                "from": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "to": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                }
+              }
+            }
+          ]
         },
         "line": {
           "type": "object",

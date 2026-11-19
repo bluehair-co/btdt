@@ -13470,9 +13470,9 @@ function stopSpots() {
 // they follow the line closely enough, dashed when not, with the accuracy slider. Saved in MyRules
 // under "snaps", both ways, with no period, days or times (that's what routines are for):
 //   { "id", "name", "mode": "TRAIN", "from": [lat, lng], "to": [lat, lng], "from_name", "to_name",
-//     "radius_m": 500, "line": { "polyline": "…", "name": "Along the railway via Haarlem" },
+//     "radius_m": { "from": 300, "to": 800 } (or one number for both), "line": { "polyline": "…", "name": "Along the railway via Haarlem" },
 //     "match": 67, "other_types": true }
-// A snap takes a trip that starts within radius_m of one end and ends within it of the other, that
+// A snap takes a trip that starts within its radius of one end and ends within the other's, that
 // no routine took, follows its line for match % of its GPS points or more, and whose type is the
 // snap's, missing, Vehicle or guessed (or any type with other_types). The trip takes the snap's
 // type and the stretch of its line between its ends, as a routine's line does.
@@ -13485,13 +13485,14 @@ function snapPts(s) {
   return p.length > 1 ? p : null;
 }
 function snapOk(s) { return Array.isArray(s.from) && Array.isArray(s.to) && MODE_IDX[s.mode] != null && !!snapPts(s); }
-function snapRad(s) { var r = +s.radius_m; return (r > 0 ? r : SNAP_RAD) / 1000; }
+// The radius of an end ('from' or 'to') in km: radius_m is one number for both, or { from, to }.
+function snapRad(s, end) { var m = s.radius_m, r = m && typeof m === 'object' ? +m[end] : +m; return (r > 0 ? r : SNAP_RAD) / 1000; }
 // 1: from → to, -1: to → from, 0: neither.
-function snapDir(s, i, rad) {
+function snapDir(s, i, ra, rb) {
   var a = [D.from[2 * i], D.from[2 * i + 1]], b = [D.to[2 * i], D.to[2 * i + 1]];
   if (!isFinite(a[0]) || !isFinite(b[0])) return 0;
-  if (km(a, s.from) <= rad && km(b, s.to) <= rad) return 1;
-  if (km(a, s.to) <= rad && km(b, s.from) <= rad) return -1;
+  if (km(a, s.from) <= ra && km(b, s.to) <= rb) return 1;
+  if (km(a, s.to) <= rb && km(b, s.from) <= ra) return -1;
   return 0;
 }
 // Its type can take the snap's: the same, none, Vehicle or a guess; any with other_types.
@@ -13510,7 +13511,7 @@ function mrApplySnaps() {
     if (!snapCanTake(i)) continue;
     var best = null, bsc = -1, bsn = null, near = null;
     for (var k = 0; k < L.length; k++) {
-      var s = L[k], d = snapDir(s, i, snapRad(s));
+      var s = L[k], d = snapDir(s, i, snapRad(s, 'from'), snapRad(s, 'to'));
       if (!d) continue;
       if (!snapTypeOk(s, i)) { near = near || { s: s, why: 'type' }; continue; }
       var pts = snapPts(s), sc = mrLineScore(i, pts);
@@ -13619,7 +13620,8 @@ function snapPanel() {
     if (k >= 0) SN.way = k; else SN.ways[SN.mode] = [{ name: r.line.name || 'Its line', pts: snapPts(r), km: 0, polyline: r.line.polyline, saved: true }].concat(SN.ways[SN.mode]);
   }
   SN.match = r ? mrMatchMin(r) : MR_MATCH;
-  SN.rad = r ? snapRad(r) * 1000 : SNAP_RAD;
+  SN.ra = r ? snapRad(r, 'from') * 1000 : SNAP_RAD;
+  SN.rb = r ? snapRad(r, 'to') * 1000 : SNAP_RAD;
   SN.other = !!(r && r.other_types);
   var name = r ? r.name || '' : '';
   mrAsk({
@@ -13632,7 +13634,8 @@ function snapPanel() {
         '<p class="fine mr-warn">Your station packs have no railway, tram or metro line between these two. Pick other ends.</p>') +
       '<label class="field"><span>Name</span><input type="text" id="snapName" value="' + esc(name) + '" placeholder="' + esc(snapDefaultName()) + '"></label>' +
       '<div class="mr-ghost-map" id="snapMap"></div>' +
-      '<label class="field mr-match"><span>Trips that start and end within <b class="num" id="snapRadV"></b> of the two</span><input type="range" id="snapRad" min="100" max="2000" step="50" value="' + SN.rad + '"></label>' +
+      '<label class="field mr-match"><span>Within <b class="num" id="snapRaV"></b> of ' + esc(SN.a.name) + '</span><input type="range" id="snapRa" min="100" max="2000" step="50" value="' + SN.ra + '"></label>' +
+      '<label class="field mr-match"><span>Within <b class="num" id="snapRbV"></b> of ' + esc(SN.b.name) + '</span><input type="range" id="snapRb" min="100" max="2000" step="50" value="' + SN.rb + '"></label>' +
       '<label class="field mr-match"><span>Follow the line for at least <b class="num" id="snapMatchV"></b></span><input type="range" id="snapMatch" min="10" max="100" step="5" value="' + SN.match + '"></label>' +
       '<label class="toggle-row"><span class="lbl">Other types too<small class="fine" style="display:block">Also trips your files give another type (a bus, a car), which then become ' + esc((LABEL[SN.mode] || 'this type').toLowerCase()) + '. Without it, only trips of this type, with no type, Vehicle or a guessed one.</small></span><input type="checkbox" class="switch" id="snapOther"' + (SN.other ? ' checked' : '') + '></label>' +
       '<small class="fine" id="snapTxt" aria-live="polite"></small>' +
@@ -13644,7 +13647,8 @@ function snapPanel() {
       var mb = $('snapMode');
       if (mb) mb.onclick = function (ev) { var b = ev.target.closest('[data-m]'); if (!b) return; SN.mode = b.dataset.m; SN.way = 0; setPressed('#snapMode button', function (x) { return x.dataset.m === SN.mode; }); snapFillWays(); snapDraw(true); };
       if ($('snapWay')) $('snapWay').onchange = function () { SN.way = +this.value; snapDraw(true); };
-      $('snapRad').oninput = function () { SN.rad = +this.value; snapDraw(); };
+      $('snapRa').oninput = function () { SN.ra = +this.value; snapDraw(); };
+      $('snapRb').oninput = function () { SN.rb = +this.value; snapDraw(); };
       $('snapMatch').oninput = function () { SN.match = +this.value; snapDraw(); };
       $('snapOther').onchange = function () { SN.other = this.checked; snapDraw(); };
       snapFillWays();
@@ -13688,7 +13692,7 @@ function snapDraft() {
     id: SN.r ? SN.r.id : mrNewId(($('snapName') && $('snapName').value.trim()) || snapDefaultName()),
     name: ($('snapName') && $('snapName').value.trim()) || snapDefaultName(),
     mode: SN.mode, from: [+SN.a.lat.toFixed(5), +SN.a.lng.toFixed(5)], to: [+SN.b.lat.toFixed(5), +SN.b.lng.toFixed(5)],
-    from_name: SN.a.name, to_name: SN.b.name, radius_m: SN.rad,
+    from_name: SN.a.name, to_name: SN.b.name, radius_m: SN.ra === SN.rb ? SN.ra : { from: SN.ra, to: SN.rb },
     line: { polyline: w.polyline, name: w.name.replace(/ \([^)]*station pack\)$/, '') }
   };
   if (SN.match !== MR_MATCH) s.match = SN.match;
@@ -13700,12 +13704,13 @@ function snapDraft() {
 // they would take the line and dashed when not.
 function snapDraw(fit) {
   if (!SN || !SN.layer) return;
-  $('snapRadV').textContent = dist(SN.rad / 1000);
+  $('snapRaV').textContent = dist(SN.ra / 1000);
+  $('snapRbV').textContent = dist(SN.rb / 1000);
   $('snapMatchV').textContent = SN.match + '%';
   SN.layer.clearLayers();
   var s = snapDraft(), col = SN.mode ? cssVar((modeColor(SN.mode).match(/--[\w-]+/) || [''])[0]) || '#1baf7a' : '#1baf7a', bounds = L.latLngBounds([[SN.a.lat, SN.a.lng], [SN.b.lat, SN.b.lng]]);
-  [SN.a, SN.b].forEach(function (e) {
-    L.circle([e.lat, e.lng], snapOpt({ radius: SN.rad, color: col, weight: 1.5, dashArray: '4 4', fillOpacity: .06 })).addTo(SN.layer);
+  [SN.a, SN.b].forEach(function (e, k) {
+    L.circle([e.lat, e.lng], snapOpt({ radius: k ? SN.rb : SN.ra, color: col, weight: 1.5, dashArray: '4 4', fillOpacity: .06 })).addTo(SN.layer);
     L.circleMarker([e.lat, e.lng], snapOpt({ radius: 6, color: '#fff', weight: 2, fillColor: col, fillOpacity: 1 })).addTo(SN.layer);
   });
   var on = 0, off = 0, become = 0, typeOut = 0, other = 0;
@@ -13713,7 +13718,7 @@ function snapDraw(fit) {
     var pts = snapPts(s);
     pts.forEach(function (p) { bounds.extend(p); });
     for (var i = 0; i < D.day.length; i++) {
-      if (!snapCanTake(i) || !snapDir(s, i, SN.rad / 1000)) continue;
+      if (!snapCanTake(i) || !snapDir(s, i, SN.ra / 1000, SN.rb / 1000)) continue;
       if (!snapTypeOk(s, i)) { typeOut++; continue; }
       if (D.mrSnap && D.mrSnap[i] && D.mrSnap[i].rule !== s.id) { other++; continue; }
       var own = mrTripPts(i);
