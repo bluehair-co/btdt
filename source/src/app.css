@@ -756,6 +756,14 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .ld-p { font: 500 13px var(--font-mono); color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .ld-ico.in, .ld-ico.out { animation: none; } .ld-donut.spin .ld-ring { animation-duration: 3s; } }
 .toast { position: fixed; z-index: 70; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow); }
+/* Working on it: a clear veil that takes taps while a slow change runs, and a pill with a spinner. */
+.working { position: fixed; inset: 0; z-index: 1000; cursor: progress; }
+.working[hidden] { display: none; }
+.working .working-pill { z-index: 1001; display: flex; align-items: center; gap: 10px; animation: working-in .2s .15s ease both; }
+.working-spin { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--bg) 35%, transparent); border-top-color: var(--bg); animation: working-spin .8s linear infinite; will-change: transform; }
+@keyframes working-spin { to { transform: rotate(360deg); } }
+@keyframes working-in { from { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .working-spin { animation-duration: 2s; } }
 
 /* ---------- the landing picture behind Insights and Timeline ---------- */
 /* A veil of the page colour keeps text readable: lighter at the top so the sky shows,

@@ -347,6 +347,29 @@ function toast(text) {
   var t = $('toast'); t.textContent = text; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3500);
 }
+// A slow change (a switch that makes every trip be worked out again): the "Working on it" pill and a
+// veil over the page show at once, a frame paints, then the work runs and both go when it's done.
+// The pill fades in only after 150 ms, so quick changes don't flash it; its spinner and fade are
+// transform and opacity animations, which keep running while the work holds the page.
+var WORKING = { n: 0 };
+function working(text, fn) {
+  var el = $('working');
+  WORKING.n++;
+  $('workingText').textContent = text || 'Working on it…';
+  el.hidden = false;
+  var done = false;
+  function go() {
+    if (done) return;
+    done = true;
+    try { fn(); } finally {
+      // Taps made while the work ran land on the veil, not on what is under it.
+      setTimeout(function () { if (!--WORKING.n) el.hidden = true; }, 0);
+    }
+  }
+  requestAnimationFrame(function () { setTimeout(go, 0); });
+  // A page in the background doesn't paint, so the work doesn't wait for a frame there.
+  setTimeout(go, 200);
+}
 // The loading screen: a donut that fills with the reading progress (when the text ends in
 // "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
 // and world landmarks, each in its own colour, which the ring takes on too.
