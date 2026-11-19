@@ -66,9 +66,11 @@
           <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
           <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
           <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, and the fonts. Add the app to your home screen and it opens offline.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station packs you choose. Add the app to your home screen and it opens offline.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
-          <li><b>Public transport lines</b> for a routine are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
+          <li><b>Public transport lines</b> for a routine come from your station packs when you have one for that country. Otherwise they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
+          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) are downloaded from GitHub only when you choose a country, after an import or in Settings. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
+          <li><b>Trips Timeline merged</b>, such as a train ride and the tram after it kept as one trip, are split into their legs where the GPS points show a stop or a change of speed. Each leg shows the trip it came from, and <i>Keep as one trip</i> undoes it.</li>
         </ul>
       </details>
 
@@ -83,6 +85,7 @@
           <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
           <li>Demo Halfbike routes from <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> on <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> data <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Place names and the public transport lines of routines, on request, from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> via <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a> and the <a href="https://overpass-api.de" target="_blank" rel="noopener">Overpass API</a> <small>© OpenStreetMap contributors, ODbL</small></li>
+          <li>Station packs: railway stations, tram and metro stops and lines from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, via <a href="https://download.geofabrik.de" target="_blank" rel="noopener">Geofabrik</a> extracts, read with <a href="https://osmcode.org" target="_blank" rel="noopener">Osmium</a> <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
           <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
           <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
@@ -105,6 +108,18 @@
         <img src="bluehair-logo.png" alt="" width="44" height="44">
         <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
       </a>
+    </div>
+  </dialog>
+  <dialog class="about pack-dlg" id="packDlg" aria-labelledby="packDlgTitle">
+    <div class="about-head">
+      <h2 id="packDlgTitle">Download station packs?</h2>
+      <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
+    </div>
+    <div class="about-body">
+      <p class="about-lead">A station pack holds a country's railway stations, tram and metro stops and lines, from OpenStreetMap. With it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at, and draw a routine's line along the railway, all offline. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Settings any time.</p>
+      <div id="packOfferList" class="pack-offer"></div>
+      <p class="fine" id="packOfferMsg" aria-live="polite"></p>
+      <div class="pack-btns"><button type="button" class="btn" id="packOfferNo">Not now</button><button type="button" class="btn primary" id="packOfferYes">Download</button></div>
     </div>
   </dialog>
   <dialog class="about" id="getFiles" aria-labelledby="getFilesTitle">
@@ -581,6 +596,20 @@
     <div class="sec" id="homeSec">
       <h3>Home</h3>
       <p class="fine" id="homeNote"></p>
+    </div>
+    <div class="sec" id="splitSec">
+      <h3>Trips Timeline merged</h3>
+      <p class="fine">Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line.</p>
+      <div class="seg" role="group" aria-label="Split trips Timeline merged" id="splitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
+      <p class="fine" id="splitNote"></p>
+    </div>
+    <div class="sec" id="packSec">
+      <h3>Station packs</h3>
+      <p class="fine">A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <ul class="file-list pack-list" id="packList" hidden></ul>
+      <p class="fine" id="packNote"></p>
+      <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="upload"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
+      <p class="fine" id="packMsg" aria-live="polite"></p>
     </div>
     <div class="sec">
       <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>

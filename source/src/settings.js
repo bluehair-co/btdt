@@ -7,6 +7,8 @@ function renderSettings() {
   buildFactors();
   renderHrSettings();
   renderImports();
+  renderSplitSettings();
+  renderPacks();
   $('homeSec').hidden = !D || !!DEMO;
   if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
@@ -166,7 +168,7 @@ window.addEventListener('resize', function () {
   resizeT = setTimeout(function () { if (!D) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
 busy('Opening your saved trips…');
-mrLoad().then(loadSaved).then(function (R) {
+mrLoad().then(packsLoad).then(loadSaved).then(function (R) {
   busy('');
   if (R && !D) { setData(R); toast('Showing the trips saved on this device.'); }
 }).catch(function () { busy(''); });

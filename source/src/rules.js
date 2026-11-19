@@ -1946,20 +1946,28 @@ function mrGhostStart(draft) {
   }
   $('mrPickPrev').onclick = function () { step(-1); };
   $('mrPickNext').onclick = function () { step(1); };
+  delete $('mrOsmBtn').dataset.online;
   $('mrPickRec').onclick = function () { MR_GHOST.pick = null; MR_GHOST.osm = null; draw(); };
   $('mrMatch').oninput = function () { MR_GHOST.match = +this.value; draw(); };
   $('mrOsmSel').onchange = function () { MR_GHOST.osm = MR_GHOST.osmList[+this.value]; draw(); };
   $('mrOsmBtn').onclick = function () {
     var r = draft(), a = r && mrEnd(r.from), b = r && mrEnd(r.to), m = r && r.then && r.then.mode, btn = this;
     if (!a || !b || !MR_OSM_ROUTES[m]) return;
-    btn.disabled = true; $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + (LABEL[m] || m).toLowerCase() + ' lines between the two ends…';
-    mrOsmLines(m, a.at, b.at).then(function (list) {
+    // A station pack covering both ends draws the line at once, offline (packLines); a second tap,
+    // or no pack, asks OpenStreetMap online for its route relations.
+    var local = btn.dataset.online ? [] : packLines(m, a.at, b.at);
+    btn.disabled = true;
+    if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + (LABEL[m] || m).toLowerCase() + ' lines between the two ends…';
+    (local.length ? Promise.resolve(local) : mrOsmLines(m, a.at, b.at)).then(function (list) {
       btn.disabled = false;
       if (!MR_GHOST) return;
       if (!list.length) { $('mrOsmTxt').textContent = 'OpenStreetMap has no ' + (LABEL[m] || m).toLowerCase() + ' line passing near both ends.'; return; }
       MR_GHOST.osmList = list; MR_GHOST.osm = list[0]; MR_GHOST.pick = undefined;
       $('mrOsmSel').innerHTML = list.map(function (x, k) { return '<option value="' + k + '">' + esc(x.name) + ' · ' + dist(x.km) + '</option>'; }).join('');
-      $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
+      if (local.length) {
+        $('mrOsmTxt').textContent = 'Line drawn along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack. Saved with the routine. Tap again to look up the routes online instead.';
+        btn.dataset.online = '1';
+      } else $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
       draw();
     }).catch(function () { btn.disabled = false; $('mrOsmTxt').textContent = 'OpenStreetMap couldn\'t be reached. Check your connection and try again.'; });
   };

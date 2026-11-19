@@ -16,6 +16,8 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
 - **Insights.** Trips, distance, time on the move, countries and places for any period; how you travel by distance, time or trips; your weekly rhythm; distance and CO₂ over time.
 - **Timeline.** Every trip, day by day, with where it started and ended, the transport, the distance and the time. Search the trips in your filters by name or place, and open one for its details and raw data.
 - **Filters and export.** Narrow by dates, time of day, transport and country, then download what matches as JSON or CSV.
+- **Trips Google merged, split.** When Timeline keeps a train ride, the wait at the station and the tram after it as one trip, BT•DT splits it into legs, each with its own type and line, and names the station from a station pack. Less clear cases are marked *Split?* with a button, and *Keep as one trip* undoes a split. Settings has Automatic, Only suggest or Off.
+- **Station packs.** Download a country's railway stations and lines from OpenStreetMap once (offered after an import, or in Settings) to name the stops, tell trains from trams, and draw a routine's line along the railway, all offline.
 - **Cleaner data than Google's.** Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.
 - **Smarter transport types.** A trip without a type gets one from its speed along the way and from your own trips between the same places, and learns from every type you fix. Trips whose type may be wrong (an unsure guess, or a Google type your other trips disagree with) are marked *Check*: Filters lists them, and one tap keeps or changes each.
 - **Dawarich too.** Load an export from [Dawarich](https://dawarich.app), the self-hosted location history app: trips and stays are worked out from its GPS points.
@@ -48,7 +50,7 @@ To add Strava, tap *Load location files* (or *Import more files* in Imported dat
 
 ## Privacy
 
-There is no server. Your files are read by JavaScript in your browser and saved only in that browser's storage; clearing the site's data removes them. The only things fetched from the internet are the map tiles (Esri), the map library and the fonts.
+There is no server. Your files are read by JavaScript in your browser and saved only in that browser's storage; clearing the site's data removes them. The only things fetched from the internet are the map tiles (Esri), the map library and the fonts, plus the station packs (from this repository's `packs` branch) for the countries you choose, which tells GitHub only the country.
 
 ## For developers
 
@@ -60,4 +62,4 @@ There is no server. Your files are read by JavaScript in your browser and saved 
 
 BT•DT is by [BlueHair](https://www.bluehair.co) and licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/): anyone may use, copy and change it for non-commercial purposes, as long as they credit the original ("Based on BT•DT by BlueHair, www.bluehair.co"). See `LICENSE`. The BlueHair name and logo are not covered.
 
-Third-party parts keep their own licenses: Leaflet (BSD 2-Clause), Esri map tiles (Esri terms of use), SunCalc's sun position formulas (BSD 2-Clause), Natural Earth borders and OurAirports airports (public domain), GeoNames towns (CC BY 4.0), the IANA time zone database (public domain), UK government conversion factors (Open Government Licence v3.0), and Bricolage Grotesque and IBM Plex fonts (SIL Open Font License).
+Third-party parts keep their own licenses: Leaflet (BSD 2-Clause), Esri map tiles (Esri terms of use), SunCalc's sun position formulas (BSD 2-Clause), OpenStreetMap station packs (© OpenStreetMap contributors, ODbL), Natural Earth borders and OurAirports airports (public domain), GeoNames towns (CC BY 4.0), the IANA time zone database (public domain), UK government conversion factors (Open Government Licence v3.0), and Bricolage Grotesque and IBM Plex fonts (SIL Open Font License).

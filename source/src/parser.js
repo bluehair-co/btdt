@@ -770,7 +770,7 @@ function speedConf(avg) {
 }
 // How a guessed type was found (R.gby), and how sure it is (R.gconf, 0 to 100). Trips under
 // CHECK_CONF are offered for checking.
-var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 5, BY_FAST = 6, CHECK_CONF = 50;
+var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 5, BY_FAST = 6, BY_PACK = 7, CHECK_CONF = 50;
 
 // Guessed trips (no type from Timeline, or one that didn't fit) get their type from, in order:
 // 1. the speed: from the GPS legs for trips made from GPS points (loose Timeline points, Dawarich;
@@ -785,11 +785,14 @@ var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 
 //    station at one end and a train-like speed (steadyFast).
 // Strava activities and guessed flights are left as they are. MyRules corrections count in step 3
 // too, on the main thread (mrLearn).
-function retypeGuessed(R) {
+// only (optional): retype just the trips marked in it, leaving the others' guesses as they are (the
+// legs of a trip split where Timeline merged two, see splitTrips).
+function retypeGuessed(R, only) {
   var n = R.mode.length, i, q, todo = [], hist = null;
-  R.gby = new Uint8Array(n); R.gconf = new Uint8Array(n);
+  if (!only || !R.gby || R.gby.length !== n) { R.gby = new Uint8Array(n); R.gconf = new Uint8Array(n); }
   for (i = 0; i < n; i++) {
     var e = R.est[i];
+    if (only && !only[i]) continue;
     if (!(e & GUESSED) || e & STRAVA || MODES[R.mode[i]] === 'FLYING') continue;
     var hrs = (R.end[i] - R.start[i]) / 36e5, avg = hrs > 0 ? R.km[i] / hrs : 0, g, by = BY_SPEED, conf = speedConf(avg);
     var src = R.srcs ? R.srcs[i] : R.src, np = R.pathOff[i + 1] - R.pathOff[i];
@@ -2349,6 +2352,129 @@ function parseFile(file, onProgress) {
   });
 }
 
+// ---------- trips Timeline merged ----------
+// Timeline sometimes keeps a train ride, the wait at the station and the tram or walk after it as one
+// trip ("In a vehicle"). splitPlan finds where such a trip should be cut, from its own GPS points:
+// - a stop: points that stay within SPLIT_STOP_KM of each other for SPLIT_GAP_MS or more, or a gap of
+//   SPLIT_GAP_MS or more between two points that only moved at walking pace while the trip around it
+//   went much faster (the train arrived, then nothing until the tram);
+// - a change of speed: a stretch at train or road speed (SPLIT_FAST_KMH and up, SPLIT_FAST_KM long)
+//   next to one at walking or tram speed (under SPLIT_SLOW_KMH for SPLIT_SLOW_MS).
+// near (optional) is { station(lat, lng, maxKm, bits), rail(lat, lng, bits) } from the station packs:
+// a stop is placed at, and named after, the station it was at, and a cut at a station is sure.
+// Returns [{ a, b, kind, sure, st, why }]: the leg before ends at point a and the next starts at point b
+// (a === b for a change of speed). A cut is sure when it is at a station, or when the speed changes a
+// lot at a stop (SPLIT_RATIO); the others are only offered.
+var SPLIT_GAP_MS = 5 * 60000, SPLIT_STOP_KM = 0.35, SPLIT_FAST_KMH = 30, SPLIT_FAST_KM = 2, SPLIT_SLOW_KMH = 15, SPLIT_SLOW_MS = 5 * 60000;
+var SPLIT_RATIO = 2.5, SPLIT_SAME = 1.6, SPLIT_LONG_MS = 15 * 60000, SPLIT_LEG_KM = 0.25, SPLIT_LEG_MS = 2 * 60000, SPLIT_MIN_MS = 12 * 60000;
+var ST_TRAIN = 1, ST_TRAM = 2, ST_SUBWAY = 4, ST_LIGHT = 8, ST_ANY = 15;
+function splitPlan(run, near) {
+  var n = run.length, i, j, k;
+  if (n < 4 || run[n - 1][0] - run[0][0] < SPLIT_MIN_MS) return [];
+  var ll = run.map(function (r) { return r[1]; }), t = run.map(function (r) { return r[0]; });
+  var cum = [0];
+  for (i = 1; i < n; i++) cum.push(cum[i - 1] + km(ll[i - 1], ll[i]));
+  if (cum[n - 1] < 2 * SPLIT_LEG_KM) return [];
+  function kmh(a, b) { var h = (t[b] - t[a]) / 36e5; return h > 0 ? (cum[b] - cum[a]) / h : 0; }
+  // The speed while moving over up to 10 minutes before point a (dir -1) or after it (dir 1).
+  function around(a, dir) {
+    var b = a;
+    while (b + dir >= 0 && b + dir < n && Math.abs(t[b + dir] - t[a]) <= 10 * 60000) b += dir;
+    return b === a ? 0 : dir < 0 ? kmh(b, a) : kmh(a, b);
+  }
+  // 1. Stops.
+  var stops = [];
+  for (i = 0; i < n - 1;) {
+    j = i;
+    while (j + 1 < n && km(ll[i], ll[j + 1]) <= SPLIT_STOP_KM) j++;
+    if (j > i && t[j] - t[i] >= SPLIT_GAP_MS) { stops.push({ a: i, b: j, kind: 'stop' }); i = j; continue; }
+    var dt = t[i + 1] - t[i], v = kmh(i, i + 1);
+    if (dt >= SPLIT_GAP_MS && v < SPLIT_SLOW_KMH && v < 0.35 * Math.max(around(i, -1), around(i + 1, 1))) stops.push({ a: i, b: i + 1, kind: 'gap' });
+    i++;
+  }
+  // 2. Changes of speed, between the stops: runs of fast (F), slow (S) and in-between (M) segments,
+  // runs under 3 minutes taken into the longer run next to them.
+  var cuts = [];
+  function speedCuts(p0, p1) {
+    var runs = [];
+    for (k = p0; k < p1; k++) {
+      var v = kmh(k, k + 1), c = v >= SPLIT_FAST_KMH ? 'F' : v < SPLIT_SLOW_KMH ? 'S' : 'M', L = runs[runs.length - 1];
+      if (L && L.c === c) L.b = k + 1; else runs.push({ c: c, a: k, b: k + 1 });
+    }
+    for (;;) {
+      var w = -1, wt = 3 * 60000;
+      runs.forEach(function (r, x) { var d = t[r.b] - t[r.a]; if (runs.length > 1 && d < wt) { w = x; wt = d; } });
+      if (w < 0) break;
+      var r = runs[w], P = runs[w - 1], N = runs[w + 1], into = !P ? N : !N ? P : t[P.b] - t[P.a] >= t[N.b] - t[N.a] ? P : N;
+      if (into === P) P.b = r.b; else N.a = r.a;
+      runs.splice(w, 1);
+      // Neighbours of one kind become one run.
+      for (var q = runs.length - 1; q > 0; q--) if (runs[q].c === runs[q - 1].c) { runs[q - 1].b = runs[q].b; runs.splice(q, 1); }
+    }
+    for (var x = 1; x < runs.length; x++) {
+      var A = runs[x - 1], B = runs[x], F = A.c === 'F' ? A : B, S = A.c === 'S' ? A : B;
+      if (F === S || F.c !== 'F' || S.c !== 'S') continue;
+      if (cum[F.b] - cum[F.a] < SPLIT_FAST_KM || t[S.b] - t[S.a] < SPLIT_SLOW_MS || cum[S.b] - cum[S.a] < SPLIT_LEG_KM) continue;
+      if (kmh(S.a, S.b) >= kmh(F.a, F.b) / SPLIT_RATIO) continue;
+      cuts.push({ a: B.a, b: B.a, kind: 'speed', fast: F, slow: S });
+    }
+  }
+  var p = 0;
+  stops.forEach(function (s) { if (s.a > p) speedCuts(p, s.a); p = s.b; });
+  if (p < n - 1) speedCuts(p, n - 1);
+  cuts = cuts.concat(stops).sort(function (x, y) { return x.a - y.a; });
+  // 3. Legs too short to be a trip of their own lose their cut.
+  var out = [], last = 0;
+  cuts.forEach(function (c, x) {
+    var next = x + 1 < cuts.length ? cuts[x + 1].a : n - 1;
+    if (cum[c.a] - cum[last] < SPLIT_LEG_KM || t[c.a] - t[last] < SPLIT_LEG_MS) return;
+    if (cum[next] - cum[c.b] < SPLIT_LEG_KM || t[next] - t[c.b] < SPLIT_LEG_MS) return;
+    out.push(c); last = c.b;
+  });
+  // 4. Where each cut is, and how sure it is.
+  return out.map(function (c, x) {
+    var a0 = x ? out[x - 1].b : 0, b1 = x + 1 < out.length ? out[x + 1].a : n - 1;
+    var vin = kmh(a0, c.a), vout = kmh(c.b, b1), ratio = Math.max(vin, vout) / Math.max(1, Math.min(vin, vout));
+    var res = { a: c.a, b: c.b, kind: c.kind, sure: false, st: null, vin: vin, vout: vout };
+    if (c.kind === 'speed' && near && near.station) {
+      // The point nearest a station among those around the change of speed (a train slows into it).
+      var best = null;
+      for (k = Math.max(a0 + 1, c.a - 2); k <= Math.min(b1 - 1, c.a + 2); k++) {
+        var s = near.station(ll[k][0], ll[k][1], 0.6, ST_ANY);
+        if (s && (!best || s.d < best.s.d)) best = { k: k, s: s };
+      }
+      if (best) { res.a = res.b = best.k; res.st = best.s; }
+      // Sure when the fast side ran along railway lines (else it may be a drive into a city).
+      var fast = c.fast, on = 0, all = 0;
+      for (k = fast.a; k <= fast.b; k++) { all++; if (near.rail && near.rail(ll[k][0], ll[k][1], ST_TRAIN | ST_LIGHT | ST_SUBWAY)) on++; }
+      res.sure = !!(best && all && on / all >= 0.6);
+    } else if (c.kind !== 'speed') {
+      var st = null;
+      if (near && near.station) {
+        // A stop: the station nearest the stop's points (a gap: near both ends of it, the arrival first).
+        if (c.kind === 'stop') {
+          for (k = c.a; k <= c.b; k++) { var s2 = near.station(ll[k][0], ll[k][1], 0.5, ST_ANY); if (s2 && (!st || s2.d < st.d)) st = s2; }
+        } else {
+          var sa = near.station(ll[c.a][0], ll[c.a][1], 2, ST_ANY), sb = near.station(ll[c.b][0], ll[c.b][1], 2, ST_ANY);
+          [sa, sb].forEach(function (s3) {
+            if (!s3) return;
+            var da = km(ll[c.a], [s3.lat, s3.lng]), db = km(ll[c.b], [s3.lat, s3.lng]);
+            if (Math.min(da, db) <= 1 && Math.max(da, db) <= 2 && (!st || da + db < st.sum)) st = Object.assign({}, s3, { sum: da + db });
+          });
+        }
+      }
+      res.st = st;
+      // At a station with the same speed on both sides (one train, then another) it is only offered.
+      res.sure = ratio >= SPLIT_RATIO || !!st && ratio >= SPLIT_SAME;
+      // The same speed on both sides of a short stop away from any station: a train waiting at a
+      // signal, a walk with a pause. Not worth a cut.
+      if (!st && ratio < SPLIT_SAME && t[c.b] - t[c.a] < SPLIT_LONG_MS) res = null;
+    }
+    if (res) res.ratio = ratio;
+    return res;
+  }).filter(Boolean);
+}
+
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
   self.onmessage = function (e) {
     var files = e.data.files;
@@ -2369,4 +2495,4 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };

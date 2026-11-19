@@ -1018,3 +1018,27 @@ div.hit-row:hover { background: none; }
 .mr-osm select { width: 100%; }
 .mr-match input[type=range] { width: 100%; accent-color: var(--accent); }
 #mrBody .sec[hidden] { display: none; }
+
+/* Trips Timeline merged (split.js) and station packs (packs.js) */
+.split-box { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.split-box.offer { border-style: dashed; }
+.split-box .sb-head { font-size: 14px; margin-bottom: 4px; }
+.split-box > p { margin: 0 0 8px; }
+.split-legs .hit-row { padding: 8px 2px; }
+.split-legs .hit-row.on { background: var(--grid); border-radius: 8px; }
+.split-legs .hit-row .r { text-align: right; font-size: 13px; }
+.split-legs .hit-row .r small { display: block; color: var(--muted); font-size: 12px; }
+.split-stop { display: flex; align-items: center; gap: 6px; padding: 6px 4px 6px 8px; border-bottom: 1px solid var(--grid); }
+.split-stop .ic { width: 16px; height: 16px; fill: var(--muted); flex: none; }
+.split-box .sb-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pack-list li { justify-content: space-between; }
+.pack-list .file-txt { flex: 1; }
+.pack-acts { display: flex; gap: 12px; flex: none; }
+.pack-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pack-add select { max-width: 100%; }
+.pack-offer { margin: 4px 0 6px; }
+.pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
+.pack-offer .lbl { flex-wrap: wrap; gap: 4px 8px; color: #fff; }
+.pack-offer .fine { color: rgba(255, 255, 255, .7); }
+.pack-dlg #packOfferMsg { color: rgba(255, 255, 255, .8); min-height: 1em; }
+.pack-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
