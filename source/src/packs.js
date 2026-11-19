@@ -296,3 +296,47 @@ $('packOfferYes').addEventListener('click', function () {
     toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Settings.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');
   });
 });
+
+// ---------- naming the stops in Regular places ----------
+// A spot you only pass through (stays of 30 minutes or less on average) right at a station in an
+// installed pack is that stop: it is a Transport stop, with the station's name when Takeout gave it
+// none and a train, tram or metro icon, in pins, lists, its page and Time by kind of place. Railway
+// stations count within 200 m of the spot's centre (their point can sit far from the platforms),
+// tram, metro and light rail stops within 80 m. A MyRules rule, Home and Near home always win.
+// Worked out once per spot for the data shown, from all its stays.
+var STOP_TRAIN_KM = 0.2, STOP_TRAM_KM = 0.08, STOP_MAX_MS = 30 * 6e4;
+function spotStopKey(key) {
+  if (!packCodes().length || !D || !D.vs || !D.vs.length) return null;
+  spotKey(0);
+  if (!D.stopBy || D.stopFor !== D.skey) {
+    // Stays, time and centre per spot, over all the data shown.
+    var by = {};
+    for (var v = 0; v < D.vs.length; v++) if (D.pv[v] >= 0) {
+      var k = D.skey[v], o = by[k] || (by[k] = { n: 0, ms: 0, la: 0, lo: 0, out: D.pv[v] === D.home });
+      o.n++; o.ms += D.ve[v] - D.vs[v]; o.la += D.vll[2 * v]; o.lo += D.vll[2 * v + 1];
+    }
+    D.stopBy = by; D.stopFor = D.skey; D.stopOf = {};
+  }
+  if (key in D.stopOf) return D.stopOf[key];
+  var t = D.stopBy[key], st = null;
+  // Not home, nor near it, nor a place you named.
+  if (t && !t.out && key !== homeSpot() && key.slice(0, 3) !== 'mr:' && t.ms / t.n <= STOP_MAX_MS) {
+    var la = t.la / t.n, lo = t.lo / t.n;
+    st = packStation(la, lo, STOP_TRAIN_KM, 1) || packStation(la, lo, STOP_TRAM_KM, 2 | 4 | 8);
+    if (st && !st.name) st = null;
+  }
+  return (D.stopOf[key] = st);
+}
+// The stop a spot is, when no MyRules rule names it.
+function spotStop(s) { return !s || s.home || s.nearHome || mrRuleOf(s) ? null : spotStopKey(s.key); }
+// How many spots are stops, for Time by kind of place.
+function stopSpots() {
+  if (!packCodes().length || !D || !D.vs || !D.vs.length) return 0;
+  spotKey(0); spotStopKey('');
+  var n = 0;
+  for (var k in D.stopBy) if (spotStopKey(k)) n++;
+  return n;
+}
+// The stop's kind, for lists: "Railway station", "Tram stop", "Metro station".
+function stopKind(st) { return st.k & 1 ? 'Railway station' : st.k & 4 ? 'Metro station' : st.k & 8 ? 'Light rail stop' : 'Tram stop'; }
+function stopIcon(st) { return st.k & 1 ? 'TRAIN' : st.k & 4 ? 'SUBWAY' : 'TRAM'; }

@@ -642,8 +642,8 @@ function renderPlaces() {
     if (!list.length) { $('topPlaces').innerHTML = '<p class="empty">No places in this selection.</p>'; return; }
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
-      var kind = r && MR_KIND[r.role];
-      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
+      var kind = r && MR_KIND[r.role], st = !r && spotStop(s);
+      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? stopKind(st) : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
       return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
         '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
         '<span class="r num">' + (byN ? fmt(s.n) + '<small>visit' + (s.n > 1 ? 's' : '') + '</small>' : hoursLabel(s.h).replace(/ \d+ min$/, '')) + '</span></button>';
@@ -672,17 +672,20 @@ var MIN_KINDS = 5;
 // without one), 2 s each: see .kind-flip.
 var KIND_FLIP = ['attractions', 'castle', 'stadium', 'account_balance', 'temple_buddhist', 'earth'];
 function renderKinds() {
-  var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard');
-  el.hidden = rules.length < MIN_KINDS;
+  var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard'), stops = stopSpots();
+  el.hidden = rules.length + stops < MIN_KINDS;
   if (el.hidden) return;
   var by = {}, other = 0, all = 0, n = {};
   for (var j = 0; j < selV.length; j++) {
-    var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = mrStayPlace(v);
+    var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = mrStayPlace(v), st = !r && D.pv[v] >= 0 && spotStopKey(spotKey(v));
     all += h;
-    if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; } else other += h;
+    if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; }
+    // Stops from the station packs count as Transport stops.
+    else if (st) { by.transit = (by.transit || 0) + h; (n.transit || (n.transit = {}))[spotKey(v)] = 1; }
+    else other += h;
   }
   var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([other, 1]));
-  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places), in these filters. Give more places a kind from their page on the map.';
+  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stops your station packs name' : '') + ', in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
     return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
@@ -1504,6 +1507,9 @@ function spotName(s, k) {
   if (mr) return mr;
   if (s.name) return s.name;
   if (s.home) return 'Home';
+  // A stop in your station packs: its name from OpenStreetMap.
+  var st = spotStop(s);
+  if (st) return st.name;
   if (s.nearHome) return 'Near home';
   // Just outside a place you named, it is the town's spot, not the named place's.
   var town = placeLabel(s.p), q = D.places[s.p];
