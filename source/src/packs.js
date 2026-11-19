@@ -297,16 +297,34 @@ $('packOfferYes').addEventListener('click', function () {
   });
 });
 
-// ---------- naming the stops in Regular places ----------
-// A spot you only pass through (stays of 30 minutes or less on average) right at a station in an
-// installed pack is that stop: it is a Transport stop, with the station's name when Takeout gave it
-// none and a train, tram or metro icon, in pins, lists, its page and Time by kind of place. Railway
-// stations count within 200 m of the spot's centre (their point can sit far from the platforms),
-// tram, metro and light rail stops within 80 m. A MyRules rule, Home and Near home always win.
-// Worked out once per spot for the data shown, from all its stays.
-var STOP_TRAIN_KM = 0.2, STOP_TRAM_KM = 0.08, STOP_MAX_MS = 30 * 6e4;
+// ---------- naming the stops and airports in Regular places ----------
+// A spot you pass through can be named from what is there, as if you had given it a name and kind:
+// - An airport (from the airports built into the app, so no pack is needed) when the middle of its
+//   stays is within 2 km of a big airport's point, 1.5 km of a medium one or 1 km of a small one,
+//   and stays there last 6 hours or less on average: an Airport, "Amsterdam Airport (AMS)".
+// - Else, with a station pack, a station when stays last 30 minutes or less on average and it is
+//   within 200 m of a railway station (their point can sit far from the platforms) or 80 m of a
+//   tram, metro or light rail stop: a Transport stop with the station's name.
+// It takes that name when Takeout gave none, its icon (plane, train, tram or metro) in teal on pins,
+// lists and its page, and counts as that kind in Time by kind of place. A MyRules rule, Home and Near
+// home always win. Worked out once per spot for the data shown, from all its stays.
+var STOP_TRAIN_KM = 0.2, STOP_TRAM_KM = 0.08, STOP_MAX_MS = 30 * 6e4, AIRPORT_MAX_MS = 6 * 36e5;
+var AIRPORT_KM = { 0.6: 1, 0.8: 1.5, 1: 2 };
+function airportAt(lat, lng) {
+  if (!AP) buildAirports();
+  var best = null, bd = Infinity, la = Math.floor(lat), lo = Math.floor(lng);
+  for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+    var cell = AP.grid[(la + dy) + ',' + (((lo + dx + 180) % 360 + 360) % 360 - 180)];
+    if (!cell) continue;
+    for (var k = 0; k < cell.length; k++) {
+      var a = cell[k], d = km([lat, lng], [a.lat, a.lng]);
+      if (d <= AIRPORT_KM[a.w] && d < bd) { bd = d; best = a; }
+    }
+  }
+  return best && { name: best.city.replace(/\s*\(.*$/, '').replace(/,.*$/, '') + ' Airport (' + best.code + ')', role: 'airport', ic: 'FLYING', kind: 'Airport', d: bd, airport: true };
+}
 function spotStopKey(key) {
-  if (!packCodes().length || !D || !D.vs || !D.vs.length) return null;
+  if (!D || !D.vs || !D.vs.length) return null;
   spotKey(0);
   if (!D.stopBy || D.stopFor !== D.skey) {
     // Stays, time and centre per spot, over all the data shown.
@@ -320,23 +338,27 @@ function spotStopKey(key) {
   if (key in D.stopOf) return D.stopOf[key];
   var t = D.stopBy[key], st = null;
   // Not home, nor near it, nor a place you named.
-  if (t && !t.out && key !== homeSpot() && key.slice(0, 3) !== 'mr:' && t.ms / t.n <= STOP_MAX_MS) {
-    var la = t.la / t.n, lo = t.lo / t.n;
-    st = packStation(la, lo, STOP_TRAIN_KM, 1) || packStation(la, lo, STOP_TRAM_KM, 2 | 4 | 8);
-    if (st && !st.name) st = null;
+  if (t && !t.out && key !== homeSpot() && key.slice(0, 3) !== 'mr:') {
+    var la = t.la / t.n, lo = t.lo / t.n, avg = t.ms / t.n;
+    if (avg <= AIRPORT_MAX_MS) st = airportAt(la, lo);
+    if (!st && avg <= STOP_MAX_MS && packCodes().length) {
+      st = packStation(la, lo, STOP_TRAIN_KM, 1) || packStation(la, lo, STOP_TRAM_KM, 2 | 4 | 8);
+      if (st && st.name) {
+        st.role = 'transit';
+        st.ic = st.k & 1 ? 'TRAIN' : st.k & 4 ? 'SUBWAY' : 'TRAM';
+        st.kind = st.k & 1 ? 'Railway station' : st.k & 4 ? 'Metro station' : st.k & 8 ? 'Light rail stop' : 'Tram stop';
+      } else st = null;
+    }
   }
   return (D.stopOf[key] = st);
 }
-// The stop a spot is, when no MyRules rule names it.
+// The stop or airport a spot is, when no MyRules rule names it.
 function spotStop(s) { return !s || s.home || s.nearHome || mrRuleOf(s) ? null : spotStopKey(s.key); }
-// How many spots are stops, for Time by kind of place.
+// How many spots are stops or airports, for Time by kind of place.
 function stopSpots() {
-  if (!packCodes().length || !D || !D.vs || !D.vs.length) return 0;
-  spotKey(0); spotStopKey('');
+  if (!D || !D.vs || !D.vs.length) return 0;
+  spotStopKey('');
   var n = 0;
   for (var k in D.stopBy) if (spotStopKey(k)) n++;
   return n;
 }
-// The stop's kind, for lists: "Railway station", "Tram stop", "Metro station".
-function stopKind(st) { return st.k & 1 ? 'Railway station' : st.k & 4 ? 'Metro station' : st.k & 8 ? 'Light rail stop' : 'Tram stop'; }
-function stopIcon(st) { return st.k & 1 ? 'TRAIN' : st.k & 4 ? 'SUBWAY' : 'TRAM'; }

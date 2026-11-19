@@ -6847,7 +6847,7 @@ function buildPins() {
     var named = !s.home && mrActive('places').length && mrPlaceName(s);
     var st = !named && spotStop(s);
     if (st) named = true;
-    var ic = life || (s.home ? 'home' : r && MR_KIND[r.role] ? MR_KIND[r.role][1] : st ? stopIcon(st) : 'pin');
+    var ic = life || (s.home ? 'home' : r && MR_KIND[r.role] ? MR_KIND[r.role][1] : st ? st.ic : 'pin');
     var m = L.marker([s.lat, s.lng], {
       icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (cur ? ' home' : named ? ' named' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(ic) + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
       title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true
@@ -9556,7 +9556,7 @@ function renderPlaces() {
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
       var kind = r && MR_KIND[r.role], st = !r && spotStop(s);
-      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? stopKind(st) : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
+      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? st.kind : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
       return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
         '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
         '<span class="r num">' + (byN ? fmt(s.n) + '<small>visit' + (s.n > 1 ? 's' : '') + '</small>' : hoursLabel(s.h).replace(/ \d+ min$/, '')) + '</span></button>';
@@ -9593,12 +9593,12 @@ function renderKinds() {
     var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = mrStayPlace(v), st = !r && D.pv[v] >= 0 && spotStopKey(spotKey(v));
     all += h;
     if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; }
-    // Stops from the station packs count as Transport stops.
-    else if (st) { by.transit = (by.transit || 0) + h; (n.transit || (n.transit = {}))[spotKey(v)] = 1; }
+    // Stops from the station packs count as Transport stops, airports as Airports.
+    else if (st) { by[st.role] = (by[st.role] || 0) + h; (n[st.role] || (n[st.role] = {}))[spotKey(v)] = 1; }
     else other += h;
   }
   var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([other, 1]));
-  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stops your station packs name' : '') + ', in these filters. Give more places a kind from their page on the map.';
+  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stations, stops and airports BT•DT named' : '') + ', in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
     return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
@@ -12225,10 +12225,10 @@ function mrRoutineDialog(r, isNew) {
 // radius that counts as this place (set on its own map with Define radius), and Hide. Saved as a
 // place rule in MyRules.
 var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['friends', 'Friends'], ['sport', 'Sport'],
-  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['transit', 'Transport stop']];
+  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['transit', 'Transport stop'], ['airport', 'Airport']];
 // Each kind of place: its name and icon, for pins, the places list and Time by kind of place.
 var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'home'], friends: ['Friends', 'friends'], sport: ['Sport', 'basketball'],
-  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], transit: ['Transport stop', 'BUS'] };
+  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], transit: ['Transport stop', 'BUS'], airport: ['Airport', 'FLYING'] };
 function mrKindName(role) { return MR_KIND[role] ? MR_KIND[role][0] : role ? role.charAt(0).toUpperCase() + role.slice(1) : ''; }
 // How a place looks wherever it's shown (pins, lists, its page): the icon of its kind, in the sunrise
 // colour when it's your current home, work or school, teal when you named it, grey otherwise.
@@ -12238,8 +12238,8 @@ function mrLook(r, home) {
 }
 function spotLook(s) {
   var st = spotStop(s);
-  // A stop from the station packs looks like a place you gave the Transport stop kind.
-  return st ? { ic: stopIcon(st), bg: '#0f7c8c' } : mrLook(mrRuleOf(s), s.home);
+  // A stop from the station packs or an airport looks like a place you gave that kind.
+  return st ? { ic: st.ic, bg: '#0f7c8c' } : mrLook(mrRuleOf(s), s.home);
 }
 function lookBadge(L, sm) { return '<span class="mode-badge' + (sm ? ' sm' : '') + '" style="background:' + L.bg + '">' + icon(L.ic) + '</span>'; }
 function mrSpotCentre(key) {
@@ -12261,14 +12261,14 @@ function mrSpotRule(key) {
 }
 function mrSpotHtml(key) {
   var r = mrSpotRule(key), st = !r && spotStop((spotsOf(spotStays(key))[0]) || null);
-  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + esc(stopKind(st)) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop. Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>')) +
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + (st.airport ? 'Within ' + dist(Math.max(st.d, 0.1)) + ' of <b>' + esc(st.name) + '</b> (from OurAirports), so it counts as an airport.' : esc(st.kind) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop.') + ' Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>')) +
     '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit this place' : 'Name this place') + '</button></div>';
 }
 function mrPlaceDialog(key) {
   var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0] || {};
   if (!c) return;
   var st = !r && s.key && spotStop(s);
-  var nm = r ? r.name || '' : s.name || (st ? st.name : ''), role = r ? r.role || '' : s.home ? 'home' : st ? 'transit' : '', rad = r ? +r.radius_m || 100 : 100;
+  var nm = r ? r.name || '' : s.name || (st ? st.name : ''), role = r ? r.role || '' : s.home ? 'home' : st ? st.role : '', rad = r ? +r.radius_m || 100 : 100;
   // Past: until the date the rule has, else the last stay there.
   var past = mrIsPast(r), until = r && r.when && r.when.to || isoDay(s.lv != null ? D.vday[s.lv] : todayDay() - 1);
   mrAsk({
@@ -13240,16 +13240,34 @@ $('packOfferYes').addEventListener('click', function () {
   });
 });
 
-// ---------- naming the stops in Regular places ----------
-// A spot you only pass through (stays of 30 minutes or less on average) right at a station in an
-// installed pack is that stop: it is a Transport stop, with the station's name when Takeout gave it
-// none and a train, tram or metro icon, in pins, lists, its page and Time by kind of place. Railway
-// stations count within 200 m of the spot's centre (their point can sit far from the platforms),
-// tram, metro and light rail stops within 80 m. A MyRules rule, Home and Near home always win.
-// Worked out once per spot for the data shown, from all its stays.
-var STOP_TRAIN_KM = 0.2, STOP_TRAM_KM = 0.08, STOP_MAX_MS = 30 * 6e4;
+// ---------- naming the stops and airports in Regular places ----------
+// A spot you pass through can be named from what is there, as if you had given it a name and kind:
+// - An airport (from the airports built into the app, so no pack is needed) when the middle of its
+//   stays is within 2 km of a big airport's point, 1.5 km of a medium one or 1 km of a small one,
+//   and stays there last 6 hours or less on average: an Airport, "Amsterdam Airport (AMS)".
+// - Else, with a station pack, a station when stays last 30 minutes or less on average and it is
+//   within 200 m of a railway station (their point can sit far from the platforms) or 80 m of a
+//   tram, metro or light rail stop: a Transport stop with the station's name.
+// It takes that name when Takeout gave none, its icon (plane, train, tram or metro) in teal on pins,
+// lists and its page, and counts as that kind in Time by kind of place. A MyRules rule, Home and Near
+// home always win. Worked out once per spot for the data shown, from all its stays.
+var STOP_TRAIN_KM = 0.2, STOP_TRAM_KM = 0.08, STOP_MAX_MS = 30 * 6e4, AIRPORT_MAX_MS = 6 * 36e5;
+var AIRPORT_KM = { 0.6: 1, 0.8: 1.5, 1: 2 };
+function airportAt(lat, lng) {
+  if (!AP) buildAirports();
+  var best = null, bd = Infinity, la = Math.floor(lat), lo = Math.floor(lng);
+  for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) {
+    var cell = AP.grid[(la + dy) + ',' + (((lo + dx + 180) % 360 + 360) % 360 - 180)];
+    if (!cell) continue;
+    for (var k = 0; k < cell.length; k++) {
+      var a = cell[k], d = km([lat, lng], [a.lat, a.lng]);
+      if (d <= AIRPORT_KM[a.w] && d < bd) { bd = d; best = a; }
+    }
+  }
+  return best && { name: best.city.replace(/\s*\(.*$/, '').replace(/,.*$/, '') + ' Airport (' + best.code + ')', role: 'airport', ic: 'FLYING', kind: 'Airport', d: bd, airport: true };
+}
 function spotStopKey(key) {
-  if (!packCodes().length || !D || !D.vs || !D.vs.length) return null;
+  if (!D || !D.vs || !D.vs.length) return null;
   spotKey(0);
   if (!D.stopBy || D.stopFor !== D.skey) {
     // Stays, time and centre per spot, over all the data shown.
@@ -13263,26 +13281,30 @@ function spotStopKey(key) {
   if (key in D.stopOf) return D.stopOf[key];
   var t = D.stopBy[key], st = null;
   // Not home, nor near it, nor a place you named.
-  if (t && !t.out && key !== homeSpot() && key.slice(0, 3) !== 'mr:' && t.ms / t.n <= STOP_MAX_MS) {
-    var la = t.la / t.n, lo = t.lo / t.n;
-    st = packStation(la, lo, STOP_TRAIN_KM, 1) || packStation(la, lo, STOP_TRAM_KM, 2 | 4 | 8);
-    if (st && !st.name) st = null;
+  if (t && !t.out && key !== homeSpot() && key.slice(0, 3) !== 'mr:') {
+    var la = t.la / t.n, lo = t.lo / t.n, avg = t.ms / t.n;
+    if (avg <= AIRPORT_MAX_MS) st = airportAt(la, lo);
+    if (!st && avg <= STOP_MAX_MS && packCodes().length) {
+      st = packStation(la, lo, STOP_TRAIN_KM, 1) || packStation(la, lo, STOP_TRAM_KM, 2 | 4 | 8);
+      if (st && st.name) {
+        st.role = 'transit';
+        st.ic = st.k & 1 ? 'TRAIN' : st.k & 4 ? 'SUBWAY' : 'TRAM';
+        st.kind = st.k & 1 ? 'Railway station' : st.k & 4 ? 'Metro station' : st.k & 8 ? 'Light rail stop' : 'Tram stop';
+      } else st = null;
+    }
   }
   return (D.stopOf[key] = st);
 }
-// The stop a spot is, when no MyRules rule names it.
+// The stop or airport a spot is, when no MyRules rule names it.
 function spotStop(s) { return !s || s.home || s.nearHome || mrRuleOf(s) ? null : spotStopKey(s.key); }
-// How many spots are stops, for Time by kind of place.
+// How many spots are stops or airports, for Time by kind of place.
 function stopSpots() {
-  if (!packCodes().length || !D || !D.vs || !D.vs.length) return 0;
-  spotKey(0); spotStopKey('');
+  if (!D || !D.vs || !D.vs.length) return 0;
+  spotStopKey('');
   var n = 0;
   for (var k in D.stopBy) if (spotStopKey(k)) n++;
   return n;
 }
-// The stop's kind, for lists: "Railway station", "Tram stop", "Metro station".
-function stopKind(st) { return st.k & 1 ? 'Railway station' : st.k & 4 ? 'Metro station' : st.k & 8 ? 'Light rail stop' : 'Tram stop'; }
-function stopIcon(st) { return st.k & 1 ? 'TRAIN' : st.k & 4 ? 'SUBWAY' : 'TRAM'; }
 
 // ---------- trips Timeline merged ----------
 // Timeline sometimes keeps a train ride, the wait at the station and the tram or walk after it as

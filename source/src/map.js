@@ -650,7 +650,7 @@ function buildPins() {
     var named = !s.home && mrActive('places').length && mrPlaceName(s);
     var st = !named && spotStop(s);
     if (st) named = true;
-    var ic = life || (s.home ? 'home' : r && MR_KIND[r.role] ? MR_KIND[r.role][1] : st ? stopIcon(st) : 'pin');
+    var ic = life || (s.home ? 'home' : r && MR_KIND[r.role] ? MR_KIND[r.role][1] : st ? st.ic : 'pin');
     var m = L.marker([s.lat, s.lng], {
       icon: L.divIcon({ className: '', html: '<div class="pin-ic' + (cur ? ' home' : named ? ' named' : '') + '" style="width:' + z + 'px;height:' + z + 'px">' + icon(ic) + '</div>', iconSize: [z, z], iconAnchor: [z / 2, z * 1.25] }),
       title: spotName(s) + ' · ' + fmt(n) + ' visits', riseOnHover: true

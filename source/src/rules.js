@@ -1458,10 +1458,10 @@ function mrRoutineDialog(r, isNew) {
 // radius that counts as this place (set on its own map with Define radius), and Hide. Saved as a
 // place rule in MyRules.
 var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['friends', 'Friends'], ['sport', 'Sport'],
-  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['transit', 'Transport stop']];
+  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['transit', 'Transport stop'], ['airport', 'Airport']];
 // Each kind of place: its name and icon, for pins, the places list and Time by kind of place.
 var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'home'], friends: ['Friends', 'friends'], sport: ['Sport', 'basketball'],
-  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], transit: ['Transport stop', 'BUS'] };
+  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], transit: ['Transport stop', 'BUS'], airport: ['Airport', 'FLYING'] };
 function mrKindName(role) { return MR_KIND[role] ? MR_KIND[role][0] : role ? role.charAt(0).toUpperCase() + role.slice(1) : ''; }
 // How a place looks wherever it's shown (pins, lists, its page): the icon of its kind, in the sunrise
 // colour when it's your current home, work or school, teal when you named it, grey otherwise.
@@ -1471,8 +1471,8 @@ function mrLook(r, home) {
 }
 function spotLook(s) {
   var st = spotStop(s);
-  // A stop from the station packs looks like a place you gave the Transport stop kind.
-  return st ? { ic: stopIcon(st), bg: '#0f7c8c' } : mrLook(mrRuleOf(s), s.home);
+  // A stop from the station packs or an airport looks like a place you gave that kind.
+  return st ? { ic: st.ic, bg: '#0f7c8c' } : mrLook(mrRuleOf(s), s.home);
 }
 function lookBadge(L, sm) { return '<span class="mode-badge' + (sm ? ' sm' : '') + '" style="background:' + L.bg + '">' + icon(L.ic) + '</span>'; }
 function mrSpotCentre(key) {
@@ -1494,14 +1494,14 @@ function mrSpotRule(key) {
 }
 function mrSpotHtml(key) {
   var r = mrSpotRule(key), st = !r && spotStop((spotsOf(spotStays(key))[0]) || null);
-  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + esc(stopKind(st)) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop. Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>')) +
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + (st.airport ? 'Within ' + dist(Math.max(st.d, 0.1)) + ' of <b>' + esc(st.name) + '</b> (from OurAirports), so it counts as an airport.' : esc(st.kind) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop.') + ' Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>')) +
     '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit this place' : 'Name this place') + '</button></div>';
 }
 function mrPlaceDialog(key) {
   var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0] || {};
   if (!c) return;
   var st = !r && s.key && spotStop(s);
-  var nm = r ? r.name || '' : s.name || (st ? st.name : ''), role = r ? r.role || '' : s.home ? 'home' : st ? 'transit' : '', rad = r ? +r.radius_m || 100 : 100;
+  var nm = r ? r.name || '' : s.name || (st ? st.name : ''), role = r ? r.role || '' : s.home ? 'home' : st ? st.role : '', rad = r ? +r.radius_m || 100 : 100;
   // Past: until the date the rule has, else the last stay there.
   var past = mrIsPast(r), until = r && r.when && r.when.to || isoDay(s.lv != null ? D.vday[s.lv] : todayDay() - 1);
   mrAsk({
