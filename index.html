@@ -1124,6 +1124,9 @@ div.hit-row:hover { background: none; }
 #map .leaflet-control-zoom a.sel-btn { display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
 #map .leaflet-control-zoom a.sel-btn svg { width: 18px; height: 18px; fill: currentColor; }
 .sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
+
+.mr-sort button { min-height: 36px; padding: 6px 12px; }
+.mr-grp { margin: 14px 0 4px; }
 </style>
 </head>
 <body>
@@ -11824,7 +11827,12 @@ function mrRenderRules() {
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
   }).join('') + '</div>';
-  if (cor.length) h += '<div class="sec" data-mr-tab="corrections"><h3>Corrections</h3>' + cor.map(function (c) {
+  // Corrections by date (newest first) or by type (then newest first), with a heading per type.
+  var csort = PREFS.corSort === 'type' ? 'type' : 'date', cgrp = null;
+  cor = cor.slice().sort(function (a, b) { return csort === 'type' && mrCorGroup(a).localeCompare(mrCorGroup(b)) || mrCorTime(b) - mrCorTime(a); });
+  if (cor.length) h += '<div class="sec" data-mr-tab="corrections"><div class="sec-head"><h3>Corrections</h3>' + (cor.length > 1 ? '<div class="seg mr-sort" role="group" aria-label="Sort corrections"><button type="button" data-cor-sort="date" aria-pressed="' + (csort === 'date') + '">By date</button><button type="button" data-cor-sort="type" aria-pressed="' + (csort === 'type') + '">By type</button></div>' : '') + '</div>' + cor.map(function (c) {
+    var gh = '';
+    if (csort === 'type' && mrCorGroup(c) !== cgrp) { cgrp = mrCorGroup(c); gh = '<h4 class="place-h mr-grp">' + esc(cgrp) + '</h4>'; }
     var t = c.trip || {}, th = c.then || {}, g = th.gear, gr = g && String(g).charAt(0) === '@' ? mrById(g) : null, bits = [];
     var when = t.trips ? (c.name || 'Bulk edit of ' + tripsText(t.trips.length)) : t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : '');
     if (th.mode) bits.push('Type: ' + esc(LABEL[th.mode] || th.mode));
@@ -11836,7 +11844,7 @@ function mrRenderRules() {
     var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
     var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : 'info');
     var applied = th.mode || th.name || g || th.hide != null;
-    return mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
+    return gh + mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
@@ -11870,7 +11878,20 @@ function mrRenderRules() {
   if (tabs.length > 1) body.querySelectorAll('[data-mr-tab]').forEach(function (el) { el.hidden = el.dataset.mrTab !== MR_TAB; });
 }
 var MR_TAB = 'routines';
+// When a correction is about: its trip's start, its day, the start of its span, its first trip.
+function mrCorTime(c) {
+  var t = c.trip || {}, v = t.start || t.day || t.span && t.span[0] || t.trips && t.trips[0] && t.trips[0].start;
+  var ms = v ? Date.parse(v.length === 10 ? v + 'T00:00' : v) : NaN;
+  return isFinite(ms) ? ms : 0;
+}
+// What sort of change it makes, to sort and group by: the type it sets, else what else it does.
+function mrCorGroup(c) {
+  var th = c.then || {};
+  return th.mode ? LABEL[th.mode] || th.mode : th.hide === true ? 'Hidden' : th.gear ? 'Gear' : th.name ? 'Titles' : th.checked ? 'Type checked' : 'Other';
+}
 $('mrBody').addEventListener('click', function (ev) {
+  var cs = ev.target.closest('[data-cor-sort]');
+  if (cs) { PREFS.corSort = cs.dataset.corSort; savePrefs(); mrRenderRules(); return; }
   if (ev.target.closest('#mrSwitchOn')) { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); return; }
   var t = ev.target.closest('[data-mr-tabbtn]');
   if (!t) return;
