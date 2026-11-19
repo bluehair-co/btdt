@@ -119,9 +119,22 @@ function packIndex() {
       densify(pts, 0.1, function (a, b, cs) { var c = cellKey(cellY(a), cellX(b, cs)); rail.set(c, (rail.get(c) || 0) | bit); });
       return { kind: bit, idx: idx };
     });
-    graphs.push({ cc: cc, N: N, lines: lines, adj: {} });
+    graphs.push({ cc: cc, N: N, lines: lines });
   });
-  PK = { st: st, grid: grid, rail: rail, graphs: graphs };
+  // One routing graph for all the installed packs, so a line runs on across a border (Amsterdam –
+  // Antwerpen with the Dutch and Belgian packs): their nodes one after the other, and a track that
+  // ends at the border joined to the other pack's track there like any dead end (packLines).
+  var tot = 0;
+  graphs.forEach(function (g) { tot += g.N.length; });
+  var NN = new Float64Array(tot), LL = [], spans = [], o = 0;
+  graphs.forEach(function (g) {
+    NN.set(g.N, o);
+    var off = o / 2;
+    spans.push([off, g.cc]);
+    g.lines.forEach(function (L) { LL.push({ kind: L.kind, idx: L.idx.map(function (k) { return k + off; }) }); });
+    o += g.N.length;
+  });
+  PK = { st: st, grid: grid, rail: rail, graphs: graphs.length ? [{ cc: packCodes().join('+'), N: NN, lines: LL, adj: {}, spans: spans }] : [] };
   return PK;
 }
 // The nearest station or stop of the kinds in bits within maxKm, or null.
@@ -165,7 +178,18 @@ var PACK_MODE_BITS = { TRAIN: 1 | 8, TRAM: 2 | 8, SUBWAY: 4 | 8 };
 // so far 4 times as long to cross (so both tracks of a double line) and searching again; it is kept
 // when at most 60% of it runs through cells of one found before and it is at most 1.6 times as long
 // as the shortest. Each is named after a junction station only it
-// passes ("via Haarlem and Leiden Centraal"): up to two, junctions first. Resolves to [] when no installed pack covers both ends.
+// passes ("via Haarlem and Leiden Centraal"): up to two, junctions first. All installed packs
+// are one network, so a way can cross a border. [] when no installed pack covers both ends.
+// The countries (packs) a way's nodes are in, in the order it passes them.
+function packCcsOf(g, nodes) {
+  var out = [];
+  nodes.forEach(function (u) {
+    var cc = g.spans[0][1];
+    for (var k = 1; k < g.spans.length && g.spans[k][0] <= u; k++) cc = g.spans[k][1];
+    if (out.indexOf(cc) < 0) out.push(cc);
+  });
+  return out;
+}
 function packNames(ccs) { var n = ccs.map(packName); return n.length > 1 ? n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1] : n[0] || ''; }
 var PACK_GAP_KM = 0.05, PACK_ALT = { n: 4, tries: 8, penalty: 4, shared: 0.6, longer: 1.6 };
 function packLines(mode, a, b) {
@@ -329,14 +353,11 @@ function packLines(mode, a, b) {
         via = two.length ? 'via ' + two.map(function (s) { return s.name; }).join(' and ') : n ? 'other way ' + n : 'shortest';
       }
       var pts = w.nodes.map(function (u) { return [g.N[2 * u], g.N[2 * u + 1]]; });
-      var ccs = [g.cc];
+      var ccs = packCcsOf(g, w.nodes);
       out.push({ id: 'pack:' + ccs.join('+') + (n ? ':' + n : ''), name: via ? label + ' ' + via : label + ' (' + packNames(ccs) + ' station pack' + (ccs.length > 1 ? 's' : '') + ')', pts: pts, km: w.km, off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: ccs[0], packs: ccs, n: n });
     });
   });
-  // The pack nearest the two ends, its ways shortest first.
-  if (!out.length) return out;
-  var best = out.slice().sort(function (x, y) { return x.off - y.off || x.n - y.n; })[0].pack;
-  return out.filter(function (x) { return x.pack === best; });
+  return out;
 }
 
 // ---------- after a change of packs ----------
