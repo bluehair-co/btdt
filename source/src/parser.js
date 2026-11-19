@@ -2438,11 +2438,15 @@ function splitPlan(run, near) {
     var res = { a: c.a, b: c.b, kind: c.kind, sure: false, st: null, vin: vin, vout: vout };
     if (c.kind === 'speed' && near && near.station) {
       // The point nearest a station among those around the change of speed (a train slows into it).
+      // A railway station first (the fast side was a train), else any stop.
       var best = null;
-      for (k = Math.max(a0 + 1, c.a - 2); k <= Math.min(b1 - 1, c.a + 2); k++) {
-        var s = near.station(ll[k][0], ll[k][1], 0.6, ST_ANY);
-        if (s && (!best || s.d < best.s.d)) best = { k: k, s: s };
-      }
+      [[ST_TRAIN, 0.8], [ST_ANY, 0.6]].forEach(function (w) {
+        if (best) return;
+        for (k = Math.max(a0 + 1, c.a - 2); k <= Math.min(b1 - 1, c.a + 2); k++) {
+          var s = near.station(ll[k][0], ll[k][1], w[1], w[0]);
+          if (s && (!best || s.d < best.s.d)) best = { k: k, s: s };
+        }
+      });
       if (best) { res.a = res.b = best.k; res.st = best.s; }
       // Sure when the fast side ran along railway lines (else it may be a drive into a city).
       var fast = c.fast, on = 0, all = 0;
@@ -2452,16 +2456,20 @@ function splitPlan(run, near) {
       var st = null;
       if (near && near.station) {
         // A stop: the station nearest the stop's points (a gap: near both ends of it, the arrival first).
-        if (c.kind === 'stop') {
-          for (k = c.a; k <= c.b; k++) { var s2 = near.station(ll[k][0], ll[k][1], 0.5, ST_ANY); if (s2 && (!st || s2.d < st.d)) st = s2; }
-        } else {
-          var sa = near.station(ll[c.a][0], ll[c.a][1], 2, ST_ANY), sb = near.station(ll[c.b][0], ll[c.b][1], 2, ST_ANY);
+        // Next to a train (one side at 30 km/h or more) a railway station first, else any stop.
+        (Math.max(vin, vout) >= SPLIT_FAST_KMH ? [ST_TRAIN, ST_ANY] : [ST_ANY]).forEach(function (bits) {
+          if (st) return;
+          if (c.kind === 'stop') {
+            for (k = c.a; k <= c.b; k++) { var s2 = near.station(ll[k][0], ll[k][1], 0.5, bits); if (s2 && (!st || s2.d < st.d)) st = s2; }
+            return;
+          }
+          var sa = near.station(ll[c.a][0], ll[c.a][1], 2, bits), sb = near.station(ll[c.b][0], ll[c.b][1], 2, bits);
           [sa, sb].forEach(function (s3) {
             if (!s3) return;
             var da = km(ll[c.a], [s3.lat, s3.lng]), db = km(ll[c.b], [s3.lat, s3.lng]);
             if (Math.min(da, db) <= 1 && Math.max(da, db) <= 2 && (!st || da + db < st.sum)) st = Object.assign({}, s3, { sum: da + db });
           });
-        }
+        });
       }
       res.st = st;
       // At a station with the same speed on both sides (one train, then another) it is only offered.

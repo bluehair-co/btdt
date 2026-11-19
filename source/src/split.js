@@ -36,8 +36,11 @@ function splitPackType(pts, avg, near) {
   pts.forEach(function (p) { var b = packRailBits(p[0], p[1]); n++; for (var k in on) if (b & k) on[k]++; });
   function share(bits) { var c = 0; pts.forEach(function (p) { if (packRailBits(p[0], p[1]) & bits) c++; }); return c / n; }
   if (avg >= 25 && share(1 | 8) >= 0.6 && on[1] >= on[4]) return { mode: 'TRAIN', conf: 85 };
-  if (avg >= 12 && share(4) >= 0.6) return { mode: 'SUBWAY', conf: 75 };
-  if (avg >= 8 && avg < 35 && share(2 | 8) >= 0.6) return { mode: 'TRAM', conf: 75 };
+  // A tram runs in the street, where a phone keeps its GPS; a metro mostly underground, where it
+  // doesn't. Points along both are a tram.
+  var tram = share(2 | 8), metro = share(4);
+  if (avg >= 8 && avg < 35 && tram >= 0.6 && tram >= metro) return { mode: 'TRAM', conf: 75 };
+  if (avg >= 12 && metro >= 0.6) return { mode: 'SUBWAY', conf: 70 };
   return null;
 }
 function splitTrips(R) {

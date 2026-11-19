@@ -14,7 +14,7 @@ on:
         required: false
         default: ''
   push:
-    branches: [main, claude/project-thread-321yt6]
+    branches: [main]
     paths:
       - 'source/packs/**'
       - '.github/workflows/station-packs.yml'
@@ -47,7 +47,7 @@ jobs:
           fi
       - name: Build
         env:
-          COUNTRIES: ${{ github.event.inputs.countries || (github.ref != 'refs/heads/main' && 'NL BE' || '') }}
+          COUNTRIES: ${{ github.event.inputs.countries }}
         run: cd source/packs && python3 build_all.py ../../out
       - name: Publish on the packs branch
         run: |

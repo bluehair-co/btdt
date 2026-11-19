@@ -1062,6 +1062,30 @@ div.hit-row:hover { background: none; }
 .mr-osm select { width: 100%; }
 .mr-match input[type=range] { width: 100%; accent-color: var(--accent); }
 #mrBody .sec[hidden] { display: none; }
+
+/* Trips Timeline merged (split.js) and station packs (packs.js) */
+.split-box { margin-top: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.split-box.offer { border-style: dashed; }
+.split-box .sb-head { font-size: 14px; margin-bottom: 4px; }
+.split-box > p { margin: 0 0 8px; }
+.split-legs .hit-row { padding: 8px 2px; }
+.split-legs .hit-row.on { background: var(--grid); border-radius: 8px; }
+.split-legs .hit-row .r { text-align: right; font-size: 13px; }
+.split-legs .hit-row .r small { display: block; color: var(--muted); font-size: 12px; }
+.split-stop { display: flex; align-items: center; gap: 6px; padding: 6px 4px 6px 8px; border-bottom: 1px solid var(--grid); }
+.split-stop .ic { width: 16px; height: 16px; fill: var(--muted); flex: none; }
+.split-box .sb-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.pack-list li { justify-content: space-between; }
+.pack-list .file-txt { flex: 1; }
+.pack-acts { display: flex; gap: 12px; flex: none; }
+.pack-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pack-add select { max-width: 100%; }
+.pack-offer { margin: 4px 0 6px; }
+.pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
+.pack-offer .lbl { flex-wrap: wrap; gap: 4px 8px; color: #fff; }
+.pack-offer .fine { color: rgba(255, 255, 255, .7); }
+.pack-dlg #packOfferMsg { color: rgba(255, 255, 255, .8); min-height: 1em; }
+.pack-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -1133,9 +1157,11 @@ div.hit-row:hover { background: none; }
           <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
           <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
           <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, and the fonts. Add the app to your home screen and it opens offline.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station packs you choose. Add the app to your home screen and it opens offline.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
-          <li><b>Public transport lines</b> for a routine are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
+          <li><b>Public transport lines</b> for a routine come from your station packs when you have one for that country. Otherwise they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
+          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) are downloaded from GitHub only when you choose a country, after an import or in Settings. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
+          <li><b>Trips Timeline merged</b>, such as a train ride and the tram after it kept as one trip, are split into their legs where the GPS points show a stop or a change of speed. Each leg shows the trip it came from, and <i>Keep as one trip</i> undoes it.</li>
         </ul>
       </details>
 
@@ -1150,6 +1176,7 @@ div.hit-row:hover { background: none; }
           <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
           <li>Demo Halfbike routes from <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> on <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> data <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Place names and the public transport lines of routines, on request, from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> via <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a> and the <a href="https://overpass-api.de" target="_blank" rel="noopener">Overpass API</a> <small>© OpenStreetMap contributors, ODbL</small></li>
+          <li>Station packs: railway stations, tram and metro stops and lines from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, via <a href="https://download.geofabrik.de" target="_blank" rel="noopener">Geofabrik</a> extracts, read with <a href="https://osmcode.org" target="_blank" rel="noopener">Osmium</a> <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
           <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
           <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
@@ -1172,6 +1199,18 @@ div.hit-row:hover { background: none; }
         <img src="bluehair-logo.png" alt="" width="44" height="44">
         <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
       </a>
+    </div>
+  </dialog>
+  <dialog class="about pack-dlg" id="packDlg" aria-labelledby="packDlgTitle">
+    <div class="about-head">
+      <h2 id="packDlgTitle">Download station packs?</h2>
+      <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
+    </div>
+    <div class="about-body">
+      <p class="about-lead">A station pack holds a country's railway stations, tram and metro stops and lines, from OpenStreetMap. With it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at, and draw a routine's line along the railway, all offline. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Settings any time.</p>
+      <div id="packOfferList" class="pack-offer"></div>
+      <p class="fine" id="packOfferMsg" aria-live="polite"></p>
+      <div class="pack-btns"><button type="button" class="btn" id="packOfferNo">Not now</button><button type="button" class="btn primary" id="packOfferYes">Download</button></div>
     </div>
   </dialog>
   <dialog class="about" id="getFiles" aria-labelledby="getFilesTitle">
@@ -1648,6 +1687,20 @@ div.hit-row:hover { background: none; }
     <div class="sec" id="homeSec">
       <h3>Home</h3>
       <p class="fine" id="homeNote"></p>
+    </div>
+    <div class="sec" id="splitSec">
+      <h3>Trips Timeline merged</h3>
+      <p class="fine">Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line.</p>
+      <div class="seg" role="group" aria-label="Split trips Timeline merged" id="splitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
+      <p class="fine" id="splitNote"></p>
+    </div>
+    <div class="sec" id="packSec">
+      <h3>Station packs</h3>
+      <p class="fine">A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <ul class="file-list pack-list" id="packList" hidden></ul>
+      <p class="fine" id="packNote"></p>
+      <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
+      <p class="fine" id="packMsg" aria-live="polite"></p>
     </div>
     <div class="sec">
       <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
@@ -2469,7 +2522,7 @@ function speedConf(avg) {
 }
 // How a guessed type was found (R.gby), and how sure it is (R.gconf, 0 to 100). Trips under
 // CHECK_CONF are offered for checking.
-var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 5, BY_FAST = 6, CHECK_CONF = 50;
+var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 5, BY_FAST = 6, BY_PACK = 7, CHECK_CONF = 50;
 
 // Guessed trips (no type from Timeline, or one that didn't fit) get their type from, in order:
 // 1. the speed: from the GPS legs for trips made from GPS points (loose Timeline points, Dawarich;
@@ -2484,11 +2537,14 @@ var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 
 //    station at one end and a train-like speed (steadyFast).
 // Strava activities and guessed flights are left as they are. MyRules corrections count in step 3
 // too, on the main thread (mrLearn).
-function retypeGuessed(R) {
+// only (optional): retype just the trips marked in it, leaving the others' guesses as they are (the
+// legs of a trip split where Timeline merged two, see splitTrips).
+function retypeGuessed(R, only) {
   var n = R.mode.length, i, q, todo = [], hist = null;
-  R.gby = new Uint8Array(n); R.gconf = new Uint8Array(n);
+  if (!only || !R.gby || R.gby.length !== n) { R.gby = new Uint8Array(n); R.gconf = new Uint8Array(n); }
   for (i = 0; i < n; i++) {
     var e = R.est[i];
+    if (only && !only[i]) continue;
     if (!(e & GUESSED) || e & STRAVA || MODES[R.mode[i]] === 'FLYING') continue;
     var hrs = (R.end[i] - R.start[i]) / 36e5, avg = hrs > 0 ? R.km[i] / hrs : 0, g, by = BY_SPEED, conf = speedConf(avg);
     var src = R.srcs ? R.srcs[i] : R.src, np = R.pathOff[i + 1] - R.pathOff[i];
@@ -4048,6 +4104,137 @@ function parseFile(file, onProgress) {
   });
 }
 
+// ---------- trips Timeline merged ----------
+// Timeline sometimes keeps a train ride, the wait at the station and the tram or walk after it as one
+// trip ("In a vehicle"). splitPlan finds where such a trip should be cut, from its own GPS points:
+// - a stop: points that stay within SPLIT_STOP_KM of each other for SPLIT_GAP_MS or more, or a gap of
+//   SPLIT_GAP_MS or more between two points that only moved at walking pace while the trip around it
+//   went much faster (the train arrived, then nothing until the tram);
+// - a change of speed: a stretch at train or road speed (SPLIT_FAST_KMH and up, SPLIT_FAST_KM long)
+//   next to one at walking or tram speed (under SPLIT_SLOW_KMH for SPLIT_SLOW_MS).
+// near (optional) is { station(lat, lng, maxKm, bits), rail(lat, lng, bits) } from the station packs:
+// a stop is placed at, and named after, the station it was at, and a cut at a station is sure.
+// Returns [{ a, b, kind, sure, st, why }]: the leg before ends at point a and the next starts at point b
+// (a === b for a change of speed). A cut is sure when it is at a station, or when the speed changes a
+// lot at a stop (SPLIT_RATIO); the others are only offered.
+var SPLIT_GAP_MS = 5 * 60000, SPLIT_STOP_KM = 0.35, SPLIT_FAST_KMH = 30, SPLIT_FAST_KM = 2, SPLIT_SLOW_KMH = 15, SPLIT_SLOW_MS = 5 * 60000;
+var SPLIT_RATIO = 2.5, SPLIT_SAME = 1.6, SPLIT_LONG_MS = 15 * 60000, SPLIT_LEG_KM = 0.25, SPLIT_LEG_MS = 2 * 60000, SPLIT_MIN_MS = 12 * 60000;
+var ST_TRAIN = 1, ST_TRAM = 2, ST_SUBWAY = 4, ST_LIGHT = 8, ST_ANY = 15;
+function splitPlan(run, near) {
+  var n = run.length, i, j, k;
+  if (n < 4 || run[n - 1][0] - run[0][0] < SPLIT_MIN_MS) return [];
+  var ll = run.map(function (r) { return r[1]; }), t = run.map(function (r) { return r[0]; });
+  var cum = [0];
+  for (i = 1; i < n; i++) cum.push(cum[i - 1] + km(ll[i - 1], ll[i]));
+  if (cum[n - 1] < 2 * SPLIT_LEG_KM) return [];
+  function kmh(a, b) { var h = (t[b] - t[a]) / 36e5; return h > 0 ? (cum[b] - cum[a]) / h : 0; }
+  // The speed while moving over up to 10 minutes before point a (dir -1) or after it (dir 1).
+  function around(a, dir) {
+    var b = a;
+    while (b + dir >= 0 && b + dir < n && Math.abs(t[b + dir] - t[a]) <= 10 * 60000) b += dir;
+    return b === a ? 0 : dir < 0 ? kmh(b, a) : kmh(a, b);
+  }
+  // 1. Stops.
+  var stops = [];
+  for (i = 0; i < n - 1;) {
+    j = i;
+    while (j + 1 < n && km(ll[i], ll[j + 1]) <= SPLIT_STOP_KM) j++;
+    if (j > i && t[j] - t[i] >= SPLIT_GAP_MS) { stops.push({ a: i, b: j, kind: 'stop' }); i = j; continue; }
+    var dt = t[i + 1] - t[i], v = kmh(i, i + 1);
+    if (dt >= SPLIT_GAP_MS && v < SPLIT_SLOW_KMH && v < 0.35 * Math.max(around(i, -1), around(i + 1, 1))) stops.push({ a: i, b: i + 1, kind: 'gap' });
+    i++;
+  }
+  // 2. Changes of speed, between the stops: runs of fast (F), slow (S) and in-between (M) segments,
+  // runs under 3 minutes taken into the longer run next to them.
+  var cuts = [];
+  function speedCuts(p0, p1) {
+    var runs = [];
+    for (k = p0; k < p1; k++) {
+      var v = kmh(k, k + 1), c = v >= SPLIT_FAST_KMH ? 'F' : v < SPLIT_SLOW_KMH ? 'S' : 'M', L = runs[runs.length - 1];
+      if (L && L.c === c) L.b = k + 1; else runs.push({ c: c, a: k, b: k + 1 });
+    }
+    for (;;) {
+      var w = -1, wt = 3 * 60000;
+      runs.forEach(function (r, x) { var d = t[r.b] - t[r.a]; if (runs.length > 1 && d < wt) { w = x; wt = d; } });
+      if (w < 0) break;
+      var r = runs[w], P = runs[w - 1], N = runs[w + 1], into = !P ? N : !N ? P : t[P.b] - t[P.a] >= t[N.b] - t[N.a] ? P : N;
+      if (into === P) P.b = r.b; else N.a = r.a;
+      runs.splice(w, 1);
+      // Neighbours of one kind become one run.
+      for (var q = runs.length - 1; q > 0; q--) if (runs[q].c === runs[q - 1].c) { runs[q - 1].b = runs[q].b; runs.splice(q, 1); }
+    }
+    for (var x = 1; x < runs.length; x++) {
+      var A = runs[x - 1], B = runs[x], F = A.c === 'F' ? A : B, S = A.c === 'S' ? A : B;
+      if (F === S || F.c !== 'F' || S.c !== 'S') continue;
+      if (cum[F.b] - cum[F.a] < SPLIT_FAST_KM || t[S.b] - t[S.a] < SPLIT_SLOW_MS || cum[S.b] - cum[S.a] < SPLIT_LEG_KM) continue;
+      if (kmh(S.a, S.b) >= kmh(F.a, F.b) / SPLIT_RATIO) continue;
+      cuts.push({ a: B.a, b: B.a, kind: 'speed', fast: F, slow: S });
+    }
+  }
+  var p = 0;
+  stops.forEach(function (s) { if (s.a > p) speedCuts(p, s.a); p = s.b; });
+  if (p < n - 1) speedCuts(p, n - 1);
+  cuts = cuts.concat(stops).sort(function (x, y) { return x.a - y.a; });
+  // 3. Legs too short to be a trip of their own lose their cut.
+  var out = [], last = 0;
+  cuts.forEach(function (c, x) {
+    var next = x + 1 < cuts.length ? cuts[x + 1].a : n - 1;
+    if (cum[c.a] - cum[last] < SPLIT_LEG_KM || t[c.a] - t[last] < SPLIT_LEG_MS) return;
+    if (cum[next] - cum[c.b] < SPLIT_LEG_KM || t[next] - t[c.b] < SPLIT_LEG_MS) return;
+    out.push(c); last = c.b;
+  });
+  // 4. Where each cut is, and how sure it is.
+  return out.map(function (c, x) {
+    var a0 = x ? out[x - 1].b : 0, b1 = x + 1 < out.length ? out[x + 1].a : n - 1;
+    var vin = kmh(a0, c.a), vout = kmh(c.b, b1), ratio = Math.max(vin, vout) / Math.max(1, Math.min(vin, vout));
+    var res = { a: c.a, b: c.b, kind: c.kind, sure: false, st: null, vin: vin, vout: vout };
+    if (c.kind === 'speed' && near && near.station) {
+      // The point nearest a station among those around the change of speed (a train slows into it).
+      // A railway station first (the fast side was a train), else any stop.
+      var best = null;
+      [[ST_TRAIN, 0.8], [ST_ANY, 0.6]].forEach(function (w) {
+        if (best) return;
+        for (k = Math.max(a0 + 1, c.a - 2); k <= Math.min(b1 - 1, c.a + 2); k++) {
+          var s = near.station(ll[k][0], ll[k][1], w[1], w[0]);
+          if (s && (!best || s.d < best.s.d)) best = { k: k, s: s };
+        }
+      });
+      if (best) { res.a = res.b = best.k; res.st = best.s; }
+      // Sure when the fast side ran along railway lines (else it may be a drive into a city).
+      var fast = c.fast, on = 0, all = 0;
+      for (k = fast.a; k <= fast.b; k++) { all++; if (near.rail && near.rail(ll[k][0], ll[k][1], ST_TRAIN | ST_LIGHT | ST_SUBWAY)) on++; }
+      res.sure = !!(best && all && on / all >= 0.6);
+    } else if (c.kind !== 'speed') {
+      var st = null;
+      if (near && near.station) {
+        // A stop: the station nearest the stop's points (a gap: near both ends of it, the arrival first).
+        // Next to a train (one side at 30 km/h or more) a railway station first, else any stop.
+        (Math.max(vin, vout) >= SPLIT_FAST_KMH ? [ST_TRAIN, ST_ANY] : [ST_ANY]).forEach(function (bits) {
+          if (st) return;
+          if (c.kind === 'stop') {
+            for (k = c.a; k <= c.b; k++) { var s2 = near.station(ll[k][0], ll[k][1], 0.5, bits); if (s2 && (!st || s2.d < st.d)) st = s2; }
+            return;
+          }
+          var sa = near.station(ll[c.a][0], ll[c.a][1], 2, bits), sb = near.station(ll[c.b][0], ll[c.b][1], 2, bits);
+          [sa, sb].forEach(function (s3) {
+            if (!s3) return;
+            var da = km(ll[c.a], [s3.lat, s3.lng]), db = km(ll[c.b], [s3.lat, s3.lng]);
+            if (Math.min(da, db) <= 1 && Math.max(da, db) <= 2 && (!st || da + db < st.sum)) st = Object.assign({}, s3, { sum: da + db });
+          });
+        });
+      }
+      res.st = st;
+      // At a station with the same speed on both sides (one train, then another) it is only offered.
+      res.sure = ratio >= SPLIT_RATIO || !!st && ratio >= SPLIT_SAME;
+      // The same speed on both sides of a short stop away from any station: a train waiting at a
+      // signal, a walk with a pause. Not worth a cut.
+      if (!st && ratio < SPLIT_SAME && t[c.b] - t[c.a] < SPLIT_LONG_MS) res = null;
+    }
+    if (res) res.ratio = ratio;
+    return res;
+  }).filter(Boolean);
+}
+
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
   self.onmessage = function (e) {
     var files = e.data.files;
@@ -4068,7 +4255,7 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -4085,6 +4272,9 @@ var NO_OFF = 32767;
 
 // Icons: 24×24 filled paths.
 var ICONS = {
+  // Material Icons: call_split and undo.
+  split: 'M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4h-6zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3L10 4z',
+  undo: 'M12.5 8c-2.65 0-5.05.99-6.9 2.6L2 7v9h9l-3.62-3.62c1.39-1.16 3.16-1.88 5.12-1.88 3.54 0 6.55 2.31 7.6 5.5l2.37-.78C21.08 11.03 17.15 8 12.5 8z',
   pin: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   chart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
   history: 'M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z',
@@ -4224,7 +4414,7 @@ function tripLabel(i) { var s = D.sport && D.sport[i]; if (s && SPORTS[s]) retur
 var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" fill="#fff"/></svg></span>';
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
-function simTag(i) { return (isSim(i) ? '<span class="guess sim">Simulated</span>' : '') + mrTag(i); }
+function simTag(i) { return (isSim(i) ? '<span class="guess sim">Simulated</span>' : '') + mrTag(i) + splitTag(i); }
 var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" fill="#fff"/></svg>';
 function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
 function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
@@ -4852,6 +5042,8 @@ function setData(R) {
   D = withStrava(RAW);
   // MyRules corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
   if (D === RAW) D = Object.assign({}, RAW);
+  // Trips Timeline merged are split into their legs (split.js), on D only.
+  D = splitTrips(D);
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
@@ -5822,6 +6014,8 @@ function importLocationFiles(list) {
       msg = msg.trim();
       if (r.errors.length) msg += ' Problems: ' + r.errors.join(' · ');
       setStatus(msg, r.errors.length > 0);
+      // Station packs for the countries the trips are in, offered once each.
+      setTimeout(packOffer, 800);
     }, 30);
   });
 }
@@ -7169,7 +7363,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + mrTripBlock(i) +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
     (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
     (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
@@ -7190,7 +7384,7 @@ function guessHow(i) {
   var l = D.learn && D.learn[i], c = D.conf && D.conf[i];
   var how = l ? 'from your other trips between these places at this speed, counting the types you fixed or checked yourself (it was ' + esc((LABEL[l.was] || l.was).toLowerCase()) + ' from its speed)'
     : ['from its average speed', 'from its average speed', 'from its speed along the way (its fastest and slowest stretches, not just the average)',
-      'from your other trips between these places at this speed', 'from your labelled trips along the same line', 'from railway stations at its ends', 'from its speed, too fast for a car'][D.gby ? D.gby[i] : 0] || 'from its speed';
+      'from your other trips between these places at this speed', 'from your labelled trips along the same line', 'from railway stations at its ends', 'from its speed, too fast for a car', 'from the railway, tram or metro lines it follows (station pack)'][D.gby ? D.gby[i] : 0] || 'from its speed';
   return how + (c ? ' (' + c + '% sure)' : '');
 }
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
@@ -7224,6 +7418,8 @@ function rawTrip(i) {
     gear: D.gear[i] ? GEAR[D.gear[i]].name : null, myRules: mrRaw(i),
     from: ll(D.from, i), to: ll(D.to, i)
   };
+  // A leg of a trip Timeline merged (split.js): which leg, the trip it came from and the stop after it.
+  if (legOf(i)) { o.flags.push('split from one Timeline trip'); o.split = splitRaw(i); }
   if (e & 16) {
     // The Timeline trips at the same time, including the ones this activity replaced.
     var sm = D.smeta && D.smeta[i];
@@ -12465,20 +12661,28 @@ function mrGhostStart(draft) {
   }
   $('mrPickPrev').onclick = function () { step(-1); };
   $('mrPickNext').onclick = function () { step(1); };
+  delete $('mrOsmBtn').dataset.online;
   $('mrPickRec').onclick = function () { MR_GHOST.pick = null; MR_GHOST.osm = null; draw(); };
   $('mrMatch').oninput = function () { MR_GHOST.match = +this.value; draw(); };
   $('mrOsmSel').onchange = function () { MR_GHOST.osm = MR_GHOST.osmList[+this.value]; draw(); };
   $('mrOsmBtn').onclick = function () {
     var r = draft(), a = r && mrEnd(r.from), b = r && mrEnd(r.to), m = r && r.then && r.then.mode, btn = this;
     if (!a || !b || !MR_OSM_ROUTES[m]) return;
-    btn.disabled = true; $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + (LABEL[m] || m).toLowerCase() + ' lines between the two ends…';
-    mrOsmLines(m, a.at, b.at).then(function (list) {
+    // A station pack covering both ends draws the line at once, offline (packLines); a second tap,
+    // or no pack, asks OpenStreetMap online for its route relations.
+    var local = btn.dataset.online ? [] : packLines(m, a.at, b.at);
+    btn.disabled = true;
+    if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + (LABEL[m] || m).toLowerCase() + ' lines between the two ends…';
+    (local.length ? Promise.resolve(local) : mrOsmLines(m, a.at, b.at)).then(function (list) {
       btn.disabled = false;
       if (!MR_GHOST) return;
       if (!list.length) { $('mrOsmTxt').textContent = 'OpenStreetMap has no ' + (LABEL[m] || m).toLowerCase() + ' line passing near both ends.'; return; }
       MR_GHOST.osmList = list; MR_GHOST.osm = list[0]; MR_GHOST.pick = undefined;
       $('mrOsmSel').innerHTML = list.map(function (x, k) { return '<option value="' + k + '">' + esc(x.name) + ' · ' + dist(x.km) + '</option>'; }).join('');
-      $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
+      if (local.length) {
+        $('mrOsmTxt').textContent = 'Line drawn along the ' + (m === 'TRAIN' ? 'railway' : 'lines') + ' from your ' + packName(local[0].pack) + ' station pack. Saved with the routine. Tap again to look up the routes online instead.';
+        btn.dataset.online = '1';
+      } else $('mrOsmTxt').textContent = list.length === 1 ? 'Line found. Saved with the routine.' : list.length + ' lines found: pick one. Saved with the routine.';
       draw();
     }).catch(function () { btn.disabled = false; $('mrOsmTxt').textContent = 'OpenStreetMap couldn\'t be reached. Check your connection and try again.'; });
   };
@@ -12653,6 +12857,562 @@ function mrUseV2() {
   if (v[0] === '0' && +v[1] < 2) { MR.doc.myrules = MR_VER; if (!MR.doc.$schema || /myrules-0\.1\.json$/.test(MR.doc.$schema)) MR.doc.$schema = MR_SCHEMA; }
 }
 
+// ---------- station packs ----------
+// A country's railway stations, tram and metro stops and its railway, tram and metro lines,
+// simplified, built from OpenStreetMap by .github/workflows/station-packs.yml every three months
+// and published on the repository's packs branch (source/packs/ has the format). A pack is only
+// downloaded when you choose its country, which tells GitHub that country and nothing about your
+// trips, and is kept in this browser (IndexedDB "btdt-packs") so it works offline. Packs place and
+// name the stops where Timeline merged two trips (splitTrips), type their legs from the lines they
+// follow, and draw a routine's line along the railway without asking OpenStreetMap (packLines).
+var PACK_BASE = 'https://raw.githubusercontent.com/bluehair-co/btdt/packs/';
+var PACKS = {};        // installed packs, by country code
+var PK = null;         // the installed packs, ready to look things up in (packIndex)
+var PACK_LIST = null;  // index.json from the packs branch, once fetched this visit
+var PACK_KINDS = { 1: 'railway', 2: 'tram', 4: 'metro', 8: 'light rail' };
+
+function packStore(mode, fn) { return withStore('btdt-packs', mode, fn); }
+function packsLoad() {
+  return packStore('readonly', function (s) { return s.getAll(); }).then(function (all) {
+    PACKS = {};
+    (all || []).forEach(function (p) { if (p && p.v === 1 && p.cc) PACKS[p.cc] = p; });
+    PK = null;
+  }).catch(function () { /* no packs */ });
+}
+function packCodes() { return Object.keys(PACKS).sort(); }
+function packList() {
+  if (PACK_LIST) return Promise.resolve(PACK_LIST);
+  return fetch(PACK_BASE + 'index.json', { cache: 'no-cache' }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.json();
+  }).then(function (j) { PACK_LIST = j && j.packs ? j : { packs: {} }; return PACK_LIST; });
+}
+function packGet(cc) {
+  return fetch(PACK_BASE + cc + '.json.gz', { cache: 'no-cache' }).then(function (r) {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return r.arrayBuffer();
+  }).then(function (buf) {
+    return gunzip(buf).then(function (raw) {
+      var p = JSON.parse(new TextDecoder().decode(raw));
+      if (!p || p.v !== 1 || p.cc !== cc) throw new Error('Not a station pack');
+      p.bytes = buf.byteLength; p.got = Date.now();
+      return packStore('readwrite', function (s) { return s.put(p, cc); }).then(function () { PACKS[cc] = p; PK = null; return p; });
+    });
+  });
+}
+function packRemove(cc) {
+  return packStore('readwrite', function (s) { return s.delete(cc); }).then(function () { delete PACKS[cc]; PK = null; });
+}
+// Downloads the packs in ccs one after the other, then splits the trips again with them.
+function packDownload(ccs, note) {
+  var got = [], failed = [];
+  return ccs.reduce(function (p, cc) {
+    return p.then(function () {
+      if (note) note('Downloading ' + packName(cc) + '…');
+      return packGet(cc).then(function () { got.push(cc); }, function () { failed.push(cc); });
+    });
+  }, Promise.resolve()).then(function () {
+    if (got.length) packsChanged();
+    return { got: got, failed: failed };
+  });
+}
+function packName(cc) { var x = PACK_LIST && PACK_LIST.packs[cc]; return PACKS[cc] ? PACKS[cc].name : x ? x.name : country(cc) || cc; }
+function packSize(b) { return b >= 1e6 ? fmt(b / 1e6, 1) + ' MB' : fmt(Math.max(1, Math.round(b / 1e3))) + ' kB'; }
+
+// The installed packs decoded: stations in a grid of 0.01° cells, the cells (about 150 m, as in
+// retypeGuessed) each kind of line runs through, and each pack's nodes and lines for routing.
+function packIndex() {
+  if (PK) return PK;
+  var st = { lat: [], lng: [], k: [], name: [], cc: [] }, grid = new Map(), rail = new Map(), graphs = [];
+  packCodes().forEach(function (cc) {
+    var p = PACKS[cc], s = p.stations || [], la = 0, lo = 0, j;
+    for (j = 0; j + 3 < s.length; j += 4) {
+      la += s[j]; lo += s[j + 1];
+      var x = st.lat.length, key = Math.floor(la / 1000) * 100000 + Math.floor(lo / 1000);
+      st.lat.push(la / 1e5); st.lng.push(lo / 1e5); st.k.push(s[j + 2]); st.name.push(s[j + 3]); st.cc.push(cc);
+      (grid.get(key) || grid.set(key, []).get(key)).push(x);
+    }
+    var nd = p.nodes || [], N = new Float64Array(nd.length);
+    la = 0; lo = 0;
+    for (j = 0; j + 1 < nd.length; j += 2) { la += nd[j]; lo += nd[j + 1]; N[j] = la / 1e5; N[j + 1] = lo / 1e5; }
+    var lines = (p.lines || []).map(function (L) {
+      var idx = [], v = 0;
+      for (var q = 1; q < L.length; q++) { v += L[q]; idx.push(v); }
+      var pts = idx.map(function (k) { return [N[2 * k], N[2 * k + 1]]; }), bit = L[0];
+      densify(pts, 0.1, function (a, b, cs) { var c = cellKey(cellY(a), cellX(b, cs)); rail.set(c, (rail.get(c) || 0) | bit); });
+      return { kind: bit, idx: idx };
+    });
+    graphs.push({ cc: cc, N: N, lines: lines, adj: {} });
+  });
+  PK = { st: st, grid: grid, rail: rail, graphs: graphs };
+  return PK;
+}
+// The nearest station or stop of the kinds in bits within maxKm, or null.
+function packStation(lat, lng, maxKm, bits) {
+  var P = packIndex(), S = P.st, best = null;
+  if (!S.lat.length) return null;
+  var y0 = Math.floor(lat * 100), x0 = Math.floor(lng * 100), ry = Math.ceil(maxKm / 1.1), rx = Math.ceil(maxKm / (1.1 * Math.max(0.2, Math.cos(lat * Math.PI / 180))));
+  for (var dy = -ry; dy <= ry; dy++) for (var dx = -rx; dx <= rx; dx++) {
+    var c = P.grid.get((y0 + dy) * 100000 + x0 + dx);
+    if (!c) continue;
+    for (var q = 0; q < c.length; q++) {
+      var x = c[q];
+      if (!(S.k[x] & bits)) continue;
+      var d = km([lat, lng], [S.lat[x], S.lng[x]]);
+      if (d <= maxKm && (!best || d < best.d)) best = { lat: S.lat[x], lng: S.lng[x], name: S.name[x], k: S.k[x], cc: S.cc[x], d: d };
+    }
+  }
+  return best;
+}
+// The kinds of line (bits) within about 150 to 300 m of a point.
+function packRailBits(lat, lng) {
+  var P = packIndex(), y = cellY(lat), x = cellX(lng, Math.max(0.2, Math.cos(lat * Math.PI / 180))), c = 0;
+  for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) c |= P.rail.get(cellKey(y + dy, x + dx)) || 0;
+  return c;
+}
+function packNear() {
+  if (!packCodes().length) return null;
+  packIndex();
+  return { station: packStation, rail: function (lat, lng, bits) { return !!(packRailBits(lat, lng) & bits); } };
+}
+// The packs' word for where a stop was: "Amsterdam Centraal".
+function packStopName(s) { return s && s.name ? s.name : s ? 'a ' + (PACK_KINDS[s.k & 1 ? 1 : s.k & 4 ? 4 : s.k & 8 ? 8 : 2] === 'railway' ? 'railway station' : PACK_KINDS[s.k & 4 ? 4 : s.k & 8 ? 8 : 2] + ' stop') : ''; }
+
+// ---------- a routine's line along the railway ----------
+// The kinds of line each type of routine can follow.
+var PACK_MODE_BITS = { TRAIN: 1 | 8, TRAM: 2 | 8, SUBWAY: 4 | 8 };
+// The shortest way along a pack's lines of the routine's type between the points nearest its two
+// ends (each within 1 km), like Use the line from OpenStreetMap but without going online.
+// Resolves to [] when no installed pack covers both ends.
+function packLines(mode, a, b) {
+  var bits = PACK_MODE_BITS[mode];
+  if (!bits || !packCodes().length) return [];
+  var out = [];
+  packIndex().graphs.forEach(function (g) {
+    var adj = g.adj[bits];
+    if (!adj) {
+      adj = g.adj[bits] = new Map();
+      g.lines.forEach(function (L) {
+        if (!(L.kind & bits)) return;
+        for (var q = 1; q < L.idx.length; q++) {
+          var u = L.idx[q - 1], v = L.idx[q], w = km([g.N[2 * u], g.N[2 * u + 1]], [g.N[2 * v], g.N[2 * v + 1]]);
+          (adj.get(u) || adj.set(u, []).get(u)).push(v, w);
+          (adj.get(v) || adj.set(v, []).get(v)).push(u, w);
+        }
+      });
+    }
+    function nearest(p) {
+      var best = -1, bd = 1;
+      adj.forEach(function (_, u) { var d = km(p, [g.N[2 * u], g.N[2 * u + 1]]); if (d < bd) { bd = d; best = u; } });
+      return best < 0 ? null : { u: best, d: bd };
+    }
+    var A = nearest(a), B = nearest(b);
+    if (!A || !B || A.u === B.u) return;
+    // Dijkstra with a binary heap of [distance, node].
+    var dist = new Map([[A.u, 0]]), prev = new Map(), heap = [[0, A.u]];
+    function push(x) { heap.push(x); var k = heap.length - 1; while (k > 0) { var p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; var t = heap[p]; heap[p] = heap[k]; heap[k] = t; k = p; } }
+    function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var k = 0; for (;;) { var l = 2 * k + 1, r = l + 1, m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; var t = heap[m]; heap[m] = heap[k]; heap[k] = t; k = m; } } return top; }
+    while (heap.length) {
+      var h = pop(), d = h[0], u = h[1];
+      if (d > dist.get(u)) continue;
+      if (u === B.u) break;
+      var e = adj.get(u) || [];
+      for (var q = 0; q < e.length; q += 2) {
+        var v = e[q], nd = d + e[q + 1];
+        if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, u); push([nd, v]); }
+      }
+    }
+    if (!dist.has(B.u)) return;
+    var pts = [], u2 = B.u;
+    while (u2 !== undefined) { pts.push([g.N[2 * u2], g.N[2 * u2 + 1]]); u2 = prev.get(u2); }
+    pts.reverse();
+    out.push({ id: 'pack:' + g.cc, name: 'Along the ' + (mode === 'TRAIN' ? 'railway' : mode === 'TRAM' ? 'tram lines' : 'metro lines') + ' (' + (PACKS[g.cc] && PACKS[g.cc].name || g.cc) + ' station pack)', pts: pts, km: dist.get(B.u), off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: g.cc });
+  });
+  return out.sort(function (x, y) { return x.off - y.off; }).slice(0, 1);
+}
+
+// ---------- after a change of packs ----------
+// The trips are split again with the packs there are now, keeping the filters and period.
+function packsChanged() {
+  PK = null;
+  refreshData();
+  renderPacks();
+}
+// setData again from what was loaded, keeping the filters (new types, sports and gear switched on).
+function refreshData() {
+  if (!RAW) return;
+  var oldF = F, oldM = M, oldCC = D && D.ccList;
+  // Trips are numbered again: an open trip's details would point at another trip.
+  if (openId === 'tripSheet') closeSheets(true);
+  setData(RAW);
+  if (!oldF || !oldM) return;
+  ['dm', 'one', 'unit', 'from', 'to', 'h0', 'h1', 'guess', 'src', 'years', 'months', 'dows'].forEach(function (k) { F[k] = oldF[k]; });
+  F.modes = new Set(M.modes.filter(function (m) { return oldF.modes.has(m) || oldM.modes.indexOf(m) < 0; }));
+  F.sports = new Set(M.sports.filter(function (s) { return oldF.sports.has(s) || oldM.sports.indexOf(s) < 0; }));
+  if (oldCC && oldF.countries.size !== oldM.countries.length) {
+    var codes = {};
+    oldF.countries.forEach(function (k) { codes[oldCC[k]] = 1; });
+    F.countries = new Set(M.countries.filter(function (k) { return codes[D.ccList[k]]; }));
+    if (!F.countries.size) F.countries = new Set(M.countries);
+  }
+  if (F.guess === 'check' && !M.nCheck) F.guess = 'all';
+  syncFilterUI();
+  apply();
+}
+
+// ---------- Settings: station packs ----------
+function renderPacks() {
+  var box = $('packList');
+  if (!box) return;
+  var ccs = packCodes();
+  box.innerHTML = ccs.map(function (cc) {
+    var p = PACKS[cc], x = PACK_LIST && PACK_LIST.packs[cc], newer = x && x.built && p.built && x.built > p.built;
+    return '<li><span class="file-txt"><b>' + flag(cc) + ' ' + esc(p.name || cc) + '</b><small>' + packSize(p.bytes || 0) + ' · ' + fmt((p.stations || []).length / 4) + ' stations and stops · OpenStreetMap data of ' + esc(p.built || '?') + '</small></span>' +
+      '<span class="pack-acts">' + (newer ? '<button type="button" class="link-btn" data-pack-act="update" data-cc="' + cc + '">Update</button>' : '') + '<button type="button" class="link-btn" data-pack-act="remove" data-cc="' + cc + '">Remove</button></span></li>';
+  }).join('');
+  box.hidden = !ccs.length;
+  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet. A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine\'s line along the railway without going online.';
+}
+function packOptions(sel, have) {
+  return packList().then(function (L) {
+    var rows = Object.keys(L.packs).filter(function (cc) { return !have[cc]; }).sort(function (a, b) { return String(L.packs[a].name).localeCompare(L.packs[b].name); });
+    sel.innerHTML = '<option value="">Choose a country…</option>' + rows.map(function (cc) { return '<option value="' + cc + '">' + esc(L.packs[cc].name) + ' (' + packSize(L.packs[cc].bytes) + ')</option>'; }).join('');
+    return rows.length;
+  });
+}
+$('packAdd').addEventListener('click', function () {
+  var sel = $('packSel'), btn = this, have = {};
+  packCodes().forEach(function (cc) { have[cc] = 1; });
+  btn.disabled = true; $('packMsg').textContent = 'Getting the list of countries…';
+  packOptions(sel, have).then(function (n) {
+    btn.disabled = false;
+    $('packMsg').textContent = n ? '' : 'You have every pack there is.';
+    sel.hidden = !n;
+    if (n) sel.focus();
+    renderPacks();
+  }, function () { btn.disabled = false; $('packMsg').textContent = 'The list of packs couldn\'t be fetched. Check your connection and try again.'; });
+});
+$('packSel').addEventListener('change', function () {
+  var cc = this.value, sel = this;
+  if (!cc) return;
+  sel.disabled = true;
+  packDownload([cc], function (t) { $('packMsg').textContent = t; }).then(function (r) {
+    sel.disabled = false; sel.hidden = true; sel.value = '';
+    $('packMsg').textContent = r.got.length ? packName(cc) + ' is ready.' : packName(cc) + ' couldn\'t be downloaded. Check your connection and try again.';
+  });
+});
+$('packList').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-pack-act]');
+  if (!b) return;
+  var cc = b.dataset.cc;
+  if (b.dataset.packAct === 'remove') packRemove(cc).then(function () { $('packMsg').textContent = packName(cc) + ' removed.'; packsChanged(); });
+  else packDownload([cc], function (t) { $('packMsg').textContent = t; }).then(function (r) { $('packMsg').textContent = r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
+});
+
+// ---------- offered after an import ----------
+// The countries your trips are in that have a pack you don't have yet, most trips first, ticked
+// when they hold a twentieth of your trips or more. Each country is offered once.
+function packOffer() {
+  if (!D || DEMO || !navigator.onLine) return;
+  var asked = PREFS.packAsked || [], count = {}, tot = 0;
+  for (var i = 0; i < D.day.length; i++) {
+    if (isDup(i) || MODES[D.mode[i]] === 'FLYING') continue;
+    var a = D.ccList[D.cs[i]], b = D.ccList[D.ce[i]];
+    if (a) count[a] = (count[a] || 0) + 1;
+    if (b && b !== a) count[b] = (count[b] || 0) + 1;
+    tot++;
+  }
+  packList().then(function (L) {
+    var ccs = Object.keys(count).filter(function (cc) { return L.packs[cc] && !PACKS[cc] && asked.indexOf(cc) < 0 && count[cc] >= 3; })
+      .sort(function (a, b) { return count[b] - count[a]; }).slice(0, 12);
+    if (!ccs.length) return;
+    $('packOfferList').innerHTML = ccs.map(function (cc) {
+      var on = count[cc] >= tot / 20;
+      return '<label class="toggle-row"><span class="lbl">' + flag(cc) + ' ' + esc(L.packs[cc].name) + ' <span class="fine">' + tripsText(count[cc]) + ' · ' + packSize(L.packs[cc].bytes) + '</span></span><input type="checkbox" class="switch" value="' + cc + '"' + (on ? ' checked' : '') + '></label>';
+    }).join('');
+    $('packOfferMsg').textContent = '';
+    var dlg = $('packDlg');
+    dlg.dataset.ccs = ccs.join(',');
+    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+  }).catch(function () { /* offline: offered next time */ });
+}
+function packOfferClose() {
+  var dlg = $('packDlg');
+  PREFS.packAsked = (PREFS.packAsked || []).concat((dlg.dataset.ccs || '').split(',').filter(Boolean));
+  savePrefs();
+  if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
+}
+$('packOfferNo').addEventListener('click', packOfferClose);
+$('packDlg').querySelector('.about-close').addEventListener('click', packOfferClose);
+$('packOfferYes').addEventListener('click', function () {
+  var ccs = Array.prototype.filter.call($('packOfferList').querySelectorAll('input:checked'), function () { return true; }).map(function (x) { return x.value; });
+  if (!ccs.length) { packOfferClose(); return; }
+  var btn = this;
+  btn.disabled = true;
+  packDownload(ccs, function (t) { $('packOfferMsg').textContent = t; }).then(function (r) {
+    btn.disabled = false;
+    packOfferClose();
+    toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Settings.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');
+  });
+});
+
+// ---------- trips Timeline merged ----------
+// Timeline sometimes keeps a train ride, the wait at the station and the tram or walk after it as
+// one trip. splitPlan (parser.js) finds the cuts from the trip's GPS points; splitTrips turns each
+// such trip into its legs, each a trip of its own (type, line, times, distance), so filters,
+// routines, Insights and the map treat them as what they were. The legs remember the trip they came
+// from (D.leg), and the trip details show them together with the stops between them.
+// - Automatic (PREFS.split 'auto', the default): sure cuts are made (a stop at a station, or the speed
+//   changing a lot at a stop); trips with only unsure cuts are offered (D.offer) with a Split button.
+// - Only suggest ('ask'): every trip is offered, none is split until you say so.
+// - Off: nothing is split or offered.
+// Keep as one trip (PREFS.splitKeep) and Split (PREFS.splitYes) are kept per trip, by its start time
+// in seconds. A trip a MyRules correction points at is only offered, as you have already looked at it.
+// Splitting happens on D only: what is saved stays as loaded, so turning it off brings the trips back.
+var SPLIT_MODES = { VEHICLE: 1, UNKNOWN: 1, TRAIN: 1, TRAM: 1, SUBWAY: 1, BUS: 1 };
+var SPLIT_TRIP = ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'sport', 'stype', 'smeta', 'gby', 'gconf', 'repl', 'dup', 'pathPts', 'pathT', 'pathOff'];
+function splitSetting() { return PREFS.split === 'ask' || PREFS.split === 'off' ? PREFS.split : 'auto'; }
+function splitKey(ms) { return String(Math.round(ms / 1000)); }
+function splitHas(list, key) { return Array.isArray(list) && list.indexOf(key) >= 0; }
+
+// Start times (ms) of trips MyRules corrections point at.
+function splitFixed() {
+  var out = [];
+  if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) { var t = c.trip && c.trip.start && Date.parse(c.trip.start); if (isFinite(t)) out.push(t); });
+  return out.sort(function (a, b) { return a - b; });
+}
+function splitCandidate(R, i) {
+  var e = R.est[i], m = MODES[R.mode[i]], s = R.srcs ? R.srcs[i] : R.src;
+  if (e & STRAVA || m === 'FLYING' || s === SRC.strava || s === SRC.sim || R.dup && R.dup[i]) return false;
+  if (!SPLIT_MODES[m] && !(e & GUESSED)) return false;
+  return R.pathOff[i + 1] - R.pathOff[i] >= 4;
+}
+// The type a leg's lines say, from the station packs: { mode, conf } or null.
+function splitPackType(pts, avg, near) {
+  if (!near || pts.length < 2) return null;
+  var on = { 1: 0, 2: 0, 4: 0, 8: 0 }, n = 0;
+  pts.forEach(function (p) { var b = packRailBits(p[0], p[1]); n++; for (var k in on) if (b & k) on[k]++; });
+  function share(bits) { var c = 0; pts.forEach(function (p) { if (packRailBits(p[0], p[1]) & bits) c++; }); return c / n; }
+  if (avg >= 25 && share(1 | 8) >= 0.6 && on[1] >= on[4]) return { mode: 'TRAIN', conf: 85 };
+  // A tram runs in the street, where a phone keeps its GPS; a metro mostly underground, where it
+  // doesn't. Points along both are a tram.
+  var tram = share(2 | 8), metro = share(4);
+  if (avg >= 8 && avg < 35 && tram >= 0.6 && tram >= metro) return { mode: 'TRAM', conf: 75 };
+  if (avg >= 12 && metro >= 0.6) return { mode: 'SUBWAY', conf: 70 };
+  return null;
+}
+function splitTrips(R) {
+  var n = R.start.length, i, set = splitSetting(), keep = PREFS.splitKeep || [], yes = PREFS.splitYes || [];
+  R.leg = null; R.offer = null; R.splitN = 0; R.offerN = 0;
+  if (set === 'off' && !yes.length) return R;
+  var near = packNear(), fixed = splitFixed(), plans = [], any = false;
+  function isFixed(ms) { for (var k = 0; k < fixed.length; k++) if (Math.abs(fixed[k] - ms) <= 3 * 60000) return true; return false; }
+  for (i = 0; i < n; i++) {
+    plans.push(null);
+    if (!splitCandidate(R, i)) continue;
+    var plan = splitPlan(tripRun(R, i), near);
+    if (!plan.length) continue;
+    var key = splitKey(R.start[i]), use;
+    if (splitHas(yes, key)) use = plan;
+    else if (set === 'auto' && !splitHas(keep, key) && !isFixed(R.start[i])) use = plan.filter(function (c) { return c.sure; });
+    else use = [];
+    if (set === 'off' && !splitHas(yes, key)) continue;
+    plans[i] = { key: key, all: plan, use: use, kept: splitHas(keep, key) };
+    if (use.length) any = true;
+  }
+  var offer = [], leg = [], out = { start: [], end: [], day: [], mode: [], km: [], est: [], off: [], orig: [], from: [], to: [], srcs: [], sport: [], stype: [], smeta: [], gby: [], gconf: [], repl: [], dup: [], pts: [], t: [] };
+  function push(o, l, f) {
+    for (var k in o) out[k].push(o[k]);
+    leg.push(l); offer.push(f);
+  }
+  function copy(i2) {
+    var pts = [], t = [];
+    for (var q = R.pathOff[i2]; q < R.pathOff[i2 + 1]; q++) { pts.push(R.pathPts[2 * q], R.pathPts[2 * q + 1]); t.push(R.pathT[q]); }
+    return { start: R.start[i2], end: R.end[i2], day: R.day[i2], mode: R.mode[i2], km: R.km[i2], est: R.est[i2], off: R.off[i2], orig: R.orig ? R.orig[i2] : 0,
+      from: [R.from[2 * i2], R.from[2 * i2 + 1]], to: [R.to[2 * i2], R.to[2 * i2 + 1]], srcs: R.srcs ? R.srcs[i2] : R.src || 0, sport: R.sport ? R.sport[i2] : 0,
+      stype: R.stype && R.stype[i2] || '', smeta: R.smeta && R.smeta[i2] || null, gby: R.gby ? R.gby[i2] : 0, gconf: R.gconf ? R.gconf[i2] : 0,
+      repl: R.repl ? R.repl[i2] : 0, dup: R.dup ? R.dup[i2] : 0, pts: pts, t: t };
+  }
+  var retype = [], splitN = 0, offerN = 0;
+  for (i = 0; i < n; i++) {
+    var P = plans[i];
+    if (!P || !P.use.length) {
+      var f = P && (set !== 'off' || P.kept) ? { key: P.key, plan: P.all, kept: P.kept } : null;
+      if (f) offerN++;
+      push(copy(i), null, f);
+      continue;
+    }
+    splitN++;
+    var legs = splitLegs(R, i, P.use, near), base = copy(i), first = out.start.length;
+    legs.forEach(function (L, k) {
+      var o = Object.assign({}, base, { start: L.start, end: L.end, km: L.km, orig: 0, from: L.pts[0], to: L.pts[L.pts.length - 1], pts: [].concat.apply([], L.pts), t: L.t,
+        day: base.off === NO_OFF ? base.day : Math.floor((L.start + base.off * 60000) / 864e5), mode: MODE_IDX[L.mode], gby: L.gby, gconf: L.conf, repl: 0, dup: 0,
+        est: (base.est & ~(GUESSED | 8)) | (L.guess ? GUESSED : 0) });
+      push(o, { key: P.key, k: k, n: legs.length, first: first, stop: L.stop, was: { mode: MODES[R.mode[i]], km: R.km[i], start: R.start[i], end: R.end[i], guessed: !!(R.est[i] & GUESSED) }, cuts: P.use.length < P.all.length ? P.all.length - P.use.length : 0 }, null);
+      if (L.retype) retype.push(out.start.length - 1);
+    });
+  }
+  if (!any && !offerN) return R;
+  var m = out.start.length, O = {};
+  Object.keys(R).forEach(function (k) { if (SPLIT_TRIP.indexOf(k) < 0) O[k] = R[k]; });
+  O.start = Float64Array.from(out.start); O.end = Float64Array.from(out.end); O.day = Int32Array.from(out.day); O.mode = Uint8Array.from(out.mode);
+  O.km = Float32Array.from(out.km); O.est = Uint8Array.from(out.est); O.off = Int16Array.from(out.off); O.orig = Float32Array.from(out.orig);
+  O.from = new Float32Array(2 * m); O.to = new Float32Array(2 * m);
+  for (i = 0; i < m; i++) { O.from[2 * i] = out.from[i][0]; O.from[2 * i + 1] = out.from[i][1]; O.to[2 * i] = out.to[i][0]; O.to[2 * i + 1] = out.to[i][1]; }
+  O.srcs = Uint8Array.from(out.srcs); O.sport = Uint8Array.from(out.sport); O.stype = out.stype; O.smeta = out.smeta;
+  O.gby = Uint8Array.from(out.gby); O.gconf = Uint8Array.from(out.gconf);
+  if (R.repl) O.repl = Uint16Array.from(out.repl);
+  if (R.dup) O.dup = Uint8Array.from(out.dup);
+  var np = 0;
+  out.t.forEach(function (t) { np += t.length; });
+  O.pathPts = new Float32Array(2 * np); O.pathT = new Float32Array(np); O.pathOff = new Uint32Array(m + 1);
+  var w = 0;
+  for (i = 0; i < m; i++) {
+    O.pathOff[i] = w;
+    for (var q = 0; q < out.t[i].length; q++, w++) { O.pathPts[2 * w] = out.pts[i][2 * q]; O.pathPts[2 * w + 1] = out.pts[i][2 * q + 1]; O.pathT[w] = out.t[i][q]; }
+  }
+  O.pathOff[m] = w;
+  O.leg = leg; O.offer = offer; O.splitN = splitN; O.offerN = offerN;
+  // Legs without a type from their lines are guessed like any untyped trip: speed, your other trips
+  // between the same places, labelled trips on the same line, stations named at their ends.
+  if (retype.length) {
+    var only = new Uint8Array(m);
+    retype.forEach(function (j) { only[j] = 1; });
+    retypeGuessed(O, only);
+  }
+  return O;
+}
+// The legs of trip i cut at cuts: [{ start, end, pts, t, km, mode, guess, retype, gby, conf, stop }].
+// A stop at a station ends the leg before at the station and starts the next one there. The distance
+// Timeline (or the trail) gave the whole trip is shared by the legs by the length of their trails,
+// so totals don't change.
+function splitLegs(R, i, cuts, near) {
+  var run = tripRun(R, i), ll = run.map(function (r) { return r[1]; }), t = run.map(function (r) { return (r[0] - R.start[i]) / 1000; });
+  var n = run.length, legs = [], from = 0, startS = 0;
+  cuts.forEach(function (c, x) {
+    var L = { a: from, b: c.a, s: startS, pre: x ? legs[x - 1].post : null, cut: c };
+    var tEnd = t[c.a], tNext = t[c.b];
+    if (c.st && c.kind !== 'speed') {
+      var S = [c.st.lat, c.st.lng], vin = Math.max(c.vin, 4), vout = Math.max(c.vout, 4);
+      var arr = Math.min(t[c.a] + km(ll[c.a], S) / vin * 3600, t[c.b]), dep = Math.max(arr, t[c.b] - km(S, ll[c.b]) / vout * 3600);
+      if (km(ll[c.a], S) > 0.05) { L.end = [S, arr]; tEnd = arr; }
+      if (km(S, ll[c.b]) > 0.05) { L.nextPre = [S, dep]; tNext = dep; }
+    }
+    L.e = tEnd;
+    L.stop = { kind: c.kind, st: c.st, name: c.st ? packStopName(c.st) : '', ms: (tNext - tEnd) * 1000, at: c.st ? [c.st.lat, c.st.lng] : ll[c.a], sure: c.sure };
+    legs.push(L);
+    from = c.b; startS = tNext;
+    L.post = L.nextPre || null;
+  });
+  legs.push({ a: from, b: n - 1, s: startS, pre: legs.length ? legs[legs.length - 1].post : null, e: (R.end[i] - R.start[i]) / 1000, stop: null });
+  var trail = 0;
+  legs.forEach(function (L, k) {
+    var pts = [], tt = [];
+    if (L.pre) { pts.push(L.pre[0]); tt.push(L.pre[1]); }
+    for (var q = L.a; q <= L.b; q++) { pts.push(ll[q]); tt.push(t[q]); }
+    if (L.end) { pts.push(L.end[0]); tt.push(L.end[1]); }
+    var s0 = k ? L.s : 0, s1 = k < legs.length - 1 ? L.e : (R.end[i] - R.start[i]) / 1000;
+    L.start = R.start[i] + s0 * 1000; L.end = R.start[i] + Math.max(s1, s0) * 1000;
+    if (!k) L.start = R.start[i];
+    if (k === legs.length - 1) L.end = R.end[i];
+    L.pts = pts; L.t = tt.map(function (x) { return Math.max(0, x - s0); });
+    L.trail = pathKm(pts); trail += L.trail;
+  });
+  var orig = MODES[R.mode[i]], typed = !(R.est[i] & GUESSED) && orig !== 'VEHICLE' && orig !== 'UNKNOWN', longest = 0;
+  legs.forEach(function (L, k) { if (L.trail > legs[longest].trail) longest = k; });
+  legs.forEach(function (L, k) {
+    L.km = trail > 0 ? R.km[i] * L.trail / trail : R.km[i] / legs.length;
+    var h = (L.end - L.start) / 36e5, avg = h > 0 ? L.trail / h : 0, pt = splitPackType(L.pts.slice(1, -1).length ? L.pts.slice(1, -1) : L.pts, avg, near);
+    if (pt) { L.mode = pt.mode; L.guess = true; L.gby = BY_PACK; L.conf = pt.conf; return; }
+    // A trip Timeline typed (a train, then a walk) keeps that type on its longest leg.
+    if (typed && k === longest) { L.mode = orig; L.guess = false; L.gby = 0; L.conf = 0; return; }
+    L.mode = guessMode(L.trail, h) || 'WALKING'; if (L.mode === 'FLYING') L.mode = 'CAR';
+    L.guess = true; L.retype = true; L.gby = BY_SPEED; L.conf = 0;
+  });
+  return legs;
+}
+
+// ---------- what the app shows ----------
+function legOf(i) { return D && D.leg ? D.leg[i] : null; }
+function offerOf(i) { return D && D.offer ? D.offer[i] : null; }
+function splitTag(i) {
+  var l = legOf(i);
+  if (l) return '<span class="guess inf" title="Split from one Timeline trip">Leg ' + (l.k + 1) + '/' + l.n + '</span>';
+  var f = offerOf(i);
+  return f && !f.kept && splitSetting() !== 'off' ? '<span class="guess" title="Looks like ' + (f.plan.length + 1) + ' trips Timeline merged">Split?</span>' : '';
+}
+function splitStopText(s) {
+  var mins = Math.round(s.ms / 60000), where = s.name ? 'at ' + esc(s.name) : s.at ? 'in ' + esc(nearestCity(s.at[0], s.at[1]) ? nearestCity(s.at[0], s.at[1]).name : 'the same place') : '';
+  return (s.kind === 'speed' ? 'Changed ' + (where || 'transport') : mins >= 1 ? hoursLabel(mins / 60) + ' stop ' + where : 'Stop ' + where).trim();
+}
+// The trip details: its legs and stops, with Keep as one trip; or, for a trip that looks merged, a Split button.
+function splitBlock(i) {
+  var l = legOf(i), f = offerOf(i);
+  if (l) {
+    var rows = '';
+    for (var k = 0; k < l.n; k++) {
+      var j = l.first + k, L = D.leg[j];
+      rows += '<button type="button" class="hit-row' + (j === i ? ' on' : '') + '" data-i="' + j + '"' + (j === i ? ' aria-current="true"' : '') + '>' + badge(modeOf(j), true, 0, tripIcon(j)) +
+        '<span class="t"><b>' + tripLabel(j) + '</b><small>' + clock(D.start[j], D.off[j]) + '–' + clock(D.end[j], D.off[j]) + '</small></span><span class="r num">' + dist(D.km[j]) + '<small>' + duration(D.end[j] - D.start[j]) + '</small></span></button>';
+      if (L.stop) rows += '<div class="split-stop fine">' + icon('pin') + splitStopText(L.stop) + '</div>';
+    }
+    var w = l.was;
+    return '<div class="split-box"><div class="sb-head"><b>' + (l.n === 1 ? 'Split' : l.n + ' legs of one Timeline trip') + '</b></div>' +
+      '<p class="fine">Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '. Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs, each with its own type and line. The distance is shared by the legs, so totals stay the same.</p>' +
+      '<div class="list-rows split-legs">' + rows + '</div>' +
+      '<div class="sb-acts"><button type="button" class="btn" data-split-act="keep" data-key="' + l.key + '" data-ms="' + w.start + '">' + icon('undo') + 'Keep as one trip</button></div></div>';
+  }
+  if (f && splitSetting() !== 'off') {
+    var p = f.plan, s = p.map(function (c) { return (c.kind === 'speed' ? 'the speed changing from about ' + speed(c.vin) + ' to ' + speed(c.vout) : 'a stop ' + (c.st ? 'at ' + esc(packStopName(c.st)) : 'of a few minutes') + ' between ' + speed(c.vin) + ' and ' + speed(c.vout)); });
+    return '<div class="split-box offer"><div class="sb-head"><b>' + (f.kept ? 'Kept as one trip' : 'Looks like ' + (p.length + 1) + ' trips') + '</b></div>' +
+      '<p class="fine">' + (f.kept ? 'You chose to keep this as one trip. ' : '') + 'Its GPS points show ' + s.join(', then ') + '. Timeline may have merged ' + (p.length === 1 ? 'two trips' : 'several trips') + ' here' + (packCodes().length ? '' : '; a station pack in Settings would show where the stops were') + '.</p>' +
+      '<div class="sb-acts"><button type="button" class="btn" data-split-act="split" data-key="' + f.key + '" data-ms="' + D.start[i] + '">' + icon('split') + 'Split into ' + (p.length + 1) + ' trips</button></div></div>';
+  }
+  return '';
+}
+function splitRaw(i) {
+  var l = legOf(i);
+  if (!l) return null;
+  return { leg: l.k + 1, of: l.n, timelineTrip: { start: new Date(l.was.start).toISOString(), end: new Date(l.was.end).toISOString(), mode: l.was.mode, km: +l.was.km.toFixed(3) },
+    stopAfter: l.stop ? { kind: l.stop.kind, minutes: Math.round(l.stop.ms / 60000), station: l.stop.name || null, at: [+l.stop.at[0].toFixed(6), +l.stop.at[1].toFixed(6)] } : null };
+}
+// Keep as one trip / Split: saved for this trip, then the trips are split again and its details reopen.
+function splitChoose(act, key, ms) {
+  var keep = (PREFS.splitKeep || []).filter(function (k) { return k !== key; }), yes = (PREFS.splitYes || []).filter(function (k) { return k !== key; });
+  if (act === 'keep') keep.push(key); else yes.push(key);
+  PREFS.splitKeep = keep; PREFS.splitYes = yes;
+  savePrefs();
+  refreshData();
+  // The trip (or its first leg) starts at the same time.
+  for (var i = 0; i < D.start.length; i++) if (Math.abs(D.start[i] - ms) < 1000 && !isDup(i)) { openTrip(i); break; }
+  toast(act === 'keep' ? 'Kept as one trip' : 'Split into legs');
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-split-act]');
+  if (!b) return;
+  ev.stopPropagation();
+  splitChoose(b.dataset.splitAct, b.dataset.key, +b.dataset.ms);
+});
+
+// ---------- Settings ----------
+function renderSplitSettings() {
+  setPressed('#splitSeg button', function (b) { return b.dataset.s === splitSetting(); });
+  var s = splitSetting(), note = $('splitNote');
+  if (!D) { note.textContent = ''; return; }
+  var n = D.splitN || 0, o = 0;
+  if (D.offer) D.offer.forEach(function (f) { if (f && !f.kept) o++; });
+  note.textContent = (s === 'off' ? 'Trips are shown as Timeline recorded them.' :
+    (n ? fmt(n) + ' trip' + (n === 1 ? ' is' : 's are') + ' split into legs' : 'No trips are split') + (o ? ', and ' + fmt(o) + ' more look merged (marked Split? in their details).' : '.')) +
+    (s === 'auto' ? ' Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds.' : '');
+}
+$('splitSeg').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-s]');
+  if (!b || b.dataset.s === splitSetting()) return;
+  PREFS.split = b.dataset.s; savePrefs();
+  refreshData();
+  renderSplitSettings();
+});
+
 // ---------- settings ----------
 function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unitF; });
@@ -12662,6 +13422,8 @@ function renderSettings() {
   buildFactors();
   renderHrSettings();
   renderImports();
+  renderSplitSettings();
+  renderPacks();
   $('homeSec').hidden = !D || !!DEMO;
   if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
@@ -12821,7 +13583,7 @@ window.addEventListener('resize', function () {
   resizeT = setTimeout(function () { if (!D) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
 busy('Opening your saved trips…');
-mrLoad().then(loadSaved).then(function (R) {
+mrLoad().then(packsLoad).then(loadSaved).then(function (R) {
   busy('');
   if (R && !D) { setData(R); toast('Showing the trips saved on this device.'); }
 }).catch(function () { busy(''); });

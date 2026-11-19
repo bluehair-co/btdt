@@ -167,7 +167,7 @@ function packLines(mode, a, b) {
     var pts = [], u2 = B.u;
     while (u2 !== undefined) { pts.push([g.N[2 * u2], g.N[2 * u2 + 1]]); u2 = prev.get(u2); }
     pts.reverse();
-    out.push({ id: 'pack:' + g.cc, name: 'Along the ' + (mode === 'TRAIN' ? 'railway' : mode === 'TRAM' ? 'tram lines' : 'metro lines') + ' (' + g.name + ' station pack)', pts: pts, km: dist.get(B.u), off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: g.cc });
+    out.push({ id: 'pack:' + g.cc, name: 'Along the ' + (mode === 'TRAIN' ? 'railway' : mode === 'TRAM' ? 'tram lines' : 'metro lines') + ' (' + (PACKS[g.cc] && PACKS[g.cc].name || g.cc) + ' station pack)', pts: pts, km: dist.get(B.u), off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: g.cc });
   });
   return out.sort(function (x, y) { return x.off - y.off; }).slice(0, 1);
 }
