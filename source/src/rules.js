@@ -9,7 +9,7 @@
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
 var MR = null;
-var MR_SECTIONS = ['places', 'gear', 'routines', 'corrections'];
+var MR_SECTIONS = ['places', 'gear', 'routines', 'snaps', 'corrections'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes', other: 'Other' };
 var MR_COUNT = {};   // trips (gear) or stays (places) each rule changed, by id
@@ -256,6 +256,7 @@ function mrApplyCorrections() {
   if (!MR || !MR.on) { mrLearn(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
+  mrApplySnaps();
   mrCorrections().forEach(function (x) {
     var t = x.c.then, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = 0;
     x.trips.forEach(function (i) {
@@ -841,6 +842,7 @@ $('mrDlg').addEventListener('close', function () {
   this.classList.remove('mr-side');
   MR_SIDE = false;
   mrGhostClear(true);
+  if (SN && SN.phase === 'edit') snapEnd();
 });
 // A panel isn't modal, so Escape is ours to handle.
 $('mrDlg').addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && MR_SIDE && !ev.defaultPrevented) { ev.preventDefault(); ev.stopPropagation(); this.close(); } });
@@ -935,7 +937,7 @@ function mrRenderRules() {
   if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p>'; return; }
   if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off in Imported data.</p>';
   if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
-  var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines');
+  var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
     var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
@@ -977,9 +979,10 @@ function mrRenderRules() {
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
     return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
+  if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
   if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length], ['routines', 'Routines', rout.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
+  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
   if (tabs.length > 1) {
     if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
     h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
@@ -1082,6 +1085,8 @@ function mrTripBlock(i) {
     else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over 1 km from the line, so it can\'t be drawn along it.');
     h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">It matches by place and time, but everything a routine sets (type, gear, line) applies together or not at all. ' + why + '</div></div>';
   }
+  var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
+  if (msr && sn) h += '<div class="mr-chg"><b>Map snap:</b> ' + esc(msr.name || msr.id) + way(msn.dir) + '<div class="fine">Drawn ' + esc(msr.line && msr.line.name ? msr.line.name.charAt(0).toLowerCase() + msr.line.name.slice(1) : 'along its line') + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). It follows the line for ' + sn.score + '% of its GPS points.</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
@@ -1305,6 +1310,7 @@ function mrEditRule(ref) {
   if (!r) return;
   if (sec === 'gear') { mrGearRuleDialog(r); return; }
   if (sec === 'routines') { mrRoutineDialog(r); return; }
+  if (sec === 'snaps') { closeSheets(true); snapStart(r); return; }
   if (!D) { toast('Load your Timeline file to edit this'); return; }
   if (sec === 'places') {
     if (!Array.isArray(r.at)) { toast('This place has no position to edit'); return; }
