@@ -24,7 +24,8 @@
   {
    "cc": "BA",
    "name": "Bosnia and Herzegovina",
-   "extract": "europe/bosnia-herzegovina"
+   "extract": "europe/bosnia-herzegovina",
+   "mirror": "europe/bosnia_herzegovina"
   },
   {
    "cc": "BG",
@@ -39,7 +40,8 @@
   {
    "cc": "CZ",
    "name": "Czechia",
-   "extract": "europe/czech-republic"
+   "extract": "europe/czech-republic",
+   "mirror": "europe/czech_republic"
   },
   {
    "cc": "DK",
@@ -69,7 +71,8 @@
   {
    "cc": "GB",
    "name": "United Kingdom",
-   "extract": "europe/great-britain"
+   "extract": "europe/great-britain",
+   "mirror": "europe/united_kingdom"
   },
   {
    "cc": "GR",
@@ -84,7 +87,8 @@
   {
    "cc": "IE",
    "name": "Ireland",
-   "extract": "europe/ireland-and-northern-ireland"
+   "extract": "europe/ireland-and-northern-ireland",
+   "mirror": "europe/ireland"
   },
   {
    "cc": "IT",

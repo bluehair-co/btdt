@@ -25,6 +25,19 @@ def run(*cmd):
     subprocess.run(cmd, check=True)
 
 
+def fetch(c, dest):
+    # Geofabrik first, then the openstreetmap.fr extracts (the same data, names with underscores).
+    urls = ['https://download.geofabrik.de/%s-latest.osm.pbf' % c['extract'],
+            'https://download.openstreetmap.fr/extracts/%s-latest.osm.pbf' % c.get('mirror', c['extract'].replace('-', '_'))]
+    for u in urls:
+        try:
+            run('curl', '-fsSL', '--retry', '4', '--retry-delay', '15', '--retry-all-errors', '-o', dest, u)
+            return
+        except subprocess.CalledProcessError:
+            continue
+    raise RuntimeError('no extract could be downloaded')
+
+
 def main():
     out = sys.argv[1]
     want = [c.strip().upper() for c in (sys.argv[2:] or os.environ.get('COUNTRIES', '').replace(',', ' ').split()) if c.strip()]
@@ -50,7 +63,7 @@ def main():
             continue
         pbf, rail = '/tmp/%s.osm.pbf' % cc, '/tmp/%s-rail.osm.pbf' % cc
         try:
-            run('curl', '-fsSL', '--retry', '3', '-o', pbf, 'https://download.geofabrik.de/%s-latest.osm.pbf' % c['extract'])
+            fetch(c, pbf)
             run('osmium', 'tags-filter', pbf, *FILTER, '-o', rail, '--overwrite')
             os.remove(pbf)
             pack, info = build_pack.build(rail, cc, c['name'])
