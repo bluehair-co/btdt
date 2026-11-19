@@ -122,9 +122,15 @@ function packStopName(s) { return s && s.name ? s.name : s ? 'a ' + (PACK_KINDS[
 // ---------- a routine's line along the railway ----------
 // The kinds of line each type of routine can follow.
 var PACK_MODE_BITS = { TRAIN: 1 | 8, TRAM: 2 | 8, SUBWAY: 4 | 8 };
-// The shortest way along a pack's lines of the routine's type between the points nearest its two
-// ends (each within 1 km), like Use the line from OpenStreetMap but without going online.
-// Resolves to [] when no installed pack covers both ends.
+// The ways along a pack's lines of the routine's type between the points nearest its two ends (each
+// within 2 km), like Use the line from OpenStreetMap but without going online: the shortest, then
+// up to three other ways (PACK_ALT) when the network has them, as for Amsterdam – Den Haag through
+// Schiphol or through Haarlem. Each other way is found by making the ~150 m cells of the ways found
+// so far 4 times as long to cross (so both tracks of a double line) and searching again; it is kept
+// when at most 60% of it runs through cells of one found before and it is at most 1.6 times as long
+// as the shortest. Each is named after a junction station only it
+// passes ("via Haarlem and Leiden Centraal"): up to two, junctions first. Resolves to [] when no installed pack covers both ends.
+var PACK_GAP_KM = 0.05, PACK_ALT = { n: 4, tries: 8, penalty: 4, shared: 0.6, longer: 1.6 };
 function packLines(mode, a, b) {
   var bits = PACK_MODE_BITS[mode];
   if (!bits || !packCodes().length) return [];
@@ -141,35 +147,149 @@ function packLines(mode, a, b) {
           (adj.get(v) || adj.set(v, []).get(v)).push(u, w);
         }
       });
+      // OpenStreetMap often joins a line to the next only through a crossover or siding, which
+      // packs leave out: each dead end is joined to the nearest other track within 50 m, at the
+      // nearest point of it (simplified tracks can have their points far apart), as edges to both
+      // ends of that stretch.
+      var cells = new Map(), segs = [];
+      function cellOf(la, lo) { return Math.floor(la * 500) * 1e6 + Math.floor(lo * 300); }
+      adj.forEach(function (e, u) {
+        for (var q = 0; q < e.length; q += 2) {
+          var v = e[q];
+          if (v < u) continue;
+          var s = segs.length, n = Math.max(1, Math.ceil(e[q + 1] / 0.1)), seen = {};
+          segs.push(u, v, e[q + 1]);
+          for (var j = 0; j <= n; j++) {
+            var c = cellOf(g.N[2 * u] + (g.N[2 * v] - g.N[2 * u]) * j / n, g.N[2 * u + 1] + (g.N[2 * v + 1] - g.N[2 * u + 1]) * j / n);
+            if (!seen[c]) { seen[c] = 1; (cells.get(c) || cells.set(c, []).get(c)).push(s); }
+          }
+        }
+      });
+      var links = [];
+      adj.forEach(function (e, u) {
+        // A dead end: one track out of it (a line drawn twice counts once).
+        for (var q = 2; q < e.length; q += 2) if (e[q] !== e[0]) return;
+        var la = g.N[2 * u], lo = g.N[2 * u + 1], c0 = cellOf(la, lo), best = null, bd = PACK_GAP_KM, cs = Math.cos(la * Math.PI / 180), done = {};
+        for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) (cells.get(c0 + dy * 1e6 + dx) || []).forEach(function (s) {
+          if (done[s]) return;
+          done[s] = 1;
+          var p = segs[s], r = segs[s + 1];
+          if (p === u || r === u || p === e[0] || r === e[0]) return;
+          // The nearest point of the stretch p–r, in km on a flat map.
+          var ax = (g.N[2 * p + 1] - lo) * 111.32 * cs, ay = (g.N[2 * p] - la) * 110.57, bx = (g.N[2 * r + 1] - lo) * 111.32 * cs, by = (g.N[2 * r] - la) * 110.57;
+          var ex = bx - ax, ey = by - ay, L = ex * ex + ey * ey, f = L ? Math.max(0, Math.min(1, -(ax * ex + ay * ey) / L)) : 0;
+          var d = Math.hypot(ax + f * ex, ay + f * ey);
+          if (d < bd) { bd = d; best = [p, r, f * segs[s + 2], (1 - f) * segs[s + 2]]; }
+        });
+        if (best) links.push([u, bd, best]);
+      });
+      links.forEach(function (l) {
+        var u = l[0], d = l[1], b = l[2];
+        adj.get(u).push(b[0], d + b[2], b[1], d + b[3]);
+        adj.get(b[0]).push(u, d + b[2]); adj.get(b[1]).push(u, d + b[3]);
+      });
     }
-    function nearest(p) {
-      var best = -1, bd = 1;
-      adj.forEach(function (_, u) { var d = km(p, [g.N[2 * u], g.N[2 * u + 1]]); if (d < bd) { bd = d; best = u; } });
-      return best < 0 ? null : { u: best, d: bd };
+    // The track points near an end: all within 400 m, or 150 m further than the nearest (up to 1 km),
+    // each with how far off it is (up to 2 km). A station where lines from two sides end on their own platforms
+    // (a terminus like Den Haag Centraal) is reached from either side.
+    function ends(p) {
+      var all = [], bd = 2;
+      adj.forEach(function (_, u) { var d = km(p, [g.N[2 * u], g.N[2 * u + 1]]); if (d <= 2) { all.push([u, d]); if (d < bd) bd = d; } });
+      var r = Math.min(2, Math.max(0.4, bd + 0.15)), m = new Map();
+      all.forEach(function (x) { if (x[1] <= r) m.set(x[0], x[1]); });
+      return m.size ? { m: m, d: bd } : null;
     }
-    var A = nearest(a), B = nearest(b);
-    if (!A || !B || A.u === B.u) return;
-    // Dijkstra with a binary heap of [distance, node].
-    var dist = new Map([[A.u, 0]]), prev = new Map(), heap = [[0, A.u]];
-    function push(x) { heap.push(x); var k = heap.length - 1; while (k > 0) { var p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; var t = heap[p]; heap[p] = heap[k]; heap[k] = t; k = p; } }
-    function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var k = 0; for (;;) { var l = 2 * k + 1, r = l + 1, m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; var t = heap[m]; heap[m] = heap[k]; heap[k] = t; k = m; } } return top; }
-    while (heap.length) {
-      var h = pop(), d = h[0], u = h[1];
-      if (d > dist.get(u)) continue;
-      if (u === B.u) break;
-      var e = adj.get(u) || [];
-      for (var q = 0; q < e.length; q += 2) {
-        var v = e[q], nd = d + e[q + 1];
-        if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, u); push([nd, v]); }
+    var A = ends(a), B = ends(b);
+    if (!A || !B) return;
+    // The ~150 m cells a stretch or a way runs through: the other track of a double line is in the
+    // same cells, so it counts as the same way.
+    function midCell(u, v) { var la = (g.N[2 * u] + g.N[2 * v]) / 2; return cellKey(cellY(la), cellX((g.N[2 * u + 1] + g.N[2 * v + 1]) / 2, Math.max(0.2, Math.cos(la * Math.PI / 180)))); }
+    function wayCells(w) {
+      var s = [], set = new Set();
+      densify(w.nodes.map(function (u) { return [g.N[2 * u], g.N[2 * u + 1]]; }), 0.05, function (la, lo, cs) { var c = cellKey(cellY(la), cellX(lo, cs)); s.push(c); set.add(c); });
+      w.samples = s; w.cells = set;
+    }
+    // Dijkstra with a binary heap of [distance, node] from all the start's points (off the track
+    // counting double), each edge's length times its penalty, to the nearest of the end's points.
+    function shortest(pen) {
+      var dist = new Map(), prev = new Map(), heap = [], goal = -1, gd = Infinity;
+      function push(x) { heap.push(x); var k = heap.length - 1; while (k > 0) { var p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; var t = heap[p]; heap[p] = heap[k]; heap[k] = t; k = p; } }
+      function pop() { var top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; var k = 0; for (;;) { var l = 2 * k + 1, r = l + 1, m = k; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === k) break; var t = heap[m]; heap[m] = heap[k]; heap[k] = t; k = m; } } return top; }
+      A.m.forEach(function (d0, u) { dist.set(u, 2 * d0); push([2 * d0, u]); });
+      while (heap.length) {
+        var h = pop(), d = h[0], u = h[1];
+        if (d > dist.get(u)) continue;
+        if (d >= gd) break;
+        if (B.m.has(u) && d + 2 * B.m.get(u) < gd) { gd = d + 2 * B.m.get(u); goal = u; }
+        var e = adj.get(u) || [];
+        for (var q = 0; q < e.length; q += 2) {
+          var v = e[q], nd = d + e[q + 1] * (pen.size ? pen.get(midCell(u, v)) || 1 : 1);
+          if (!dist.has(v) || nd < dist.get(v)) { dist.set(v, nd); prev.set(v, u); push([nd, v]); }
+        }
       }
+      if (goal < 0) return null;
+      var nodes = [], u2 = goal;
+      while (u2 !== undefined) { nodes.push(u2); u2 = prev.get(u2); }
+      nodes.reverse();
+      if (nodes.length < 2) return null;
+      var len = 0;
+      for (var k = 1; k < nodes.length; k++) len += km([g.N[2 * nodes[k - 1]], g.N[2 * nodes[k - 1] + 1]], [g.N[2 * nodes[k]], g.N[2 * nodes[k] + 1]]);
+      var w = { nodes: nodes, km: len };
+      wayCells(w);
+      return w;
     }
-    if (!dist.has(B.u)) return;
-    var pts = [], u2 = B.u;
-    while (u2 !== undefined) { pts.push([g.N[2 * u2], g.N[2 * u2 + 1]]); u2 = prev.get(u2); }
-    pts.reverse();
-    out.push({ id: 'pack:' + g.cc, name: 'Along the ' + (mode === 'TRAIN' ? 'railway' : mode === 'TRAM' ? 'tram lines' : 'metro lines') + ' (' + (PACKS[g.cc] && PACKS[g.cc].name || g.cc) + ' station pack)', pts: pts, km: dist.get(B.u), off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: g.cc });
+    var pen = new Map(), ways = [], first = shortest(pen);
+    if (!first) return;
+    ways.push(first);
+    for (var tr = 0; tr < PACK_ALT.tries && ways.length < PACK_ALT.n; tr++) {
+      ways[ways.length - 1].cells.forEach(function (c) { pen.set(c, (pen.get(c) || 1) * PACK_ALT.penalty); });
+      var w2 = shortest(pen);
+      if (!w2 || w2.km > first.km * PACK_ALT.longer) break;
+      var fresh = ways.every(function (w) {
+        var sh = 0;
+        w2.samples.forEach(function (c) { if (w.cells.has(c)) sh++; });
+        return sh <= PACK_ALT.shared * w2.samples.length;
+      });
+      if (fresh) ways.push(w2);
+    }
+    // The stations each way passes, in order, and which of them are junctions (3 or more ways out
+    // of a node within 500 m), to name the ways after.
+    var kind = mode === 'TRAIN' ? 1 : mode === 'TRAM' ? 2 | 8 : 4 | 8;
+    ways.forEach(function (w) {
+      var seen = {}, list = [], pts = w.nodes.map(function (u) { return [g.N[2 * u], g.N[2 * u + 1]]; }), k = 0;
+      densify(pts, 0.05, function (la, lo) {
+        k++;
+        var s = packStation(la, lo, kind === 1 ? 0.3 : 0.15, kind);
+        // Not the stations at the two ends.
+        if (!s || !s.name || seen[s.name] || km([s.lat, s.lng], a) < 1 || km([s.lat, s.lng], b) < 1) return;
+        seen[s.name] = 1;
+        var jn = w.nodes.some(function (x) {
+          var e = adj.get(x) || [], nb = {};
+          for (var q = 0; q < e.length; q += 2) nb[e[q]] = 1;
+          return Object.keys(nb).length >= 3 && km([s.lat, s.lng], [g.N[2 * x], g.N[2 * x + 1]]) <= 0.5;
+        });
+        list.push({ name: s.name, jn: jn, k: k });
+      });
+      w.stations = list; w.names = seen; w.nk = k;
+    });
+    var label = 'Along the ' + (mode === 'TRAIN' ? 'railway' : mode === 'TRAM' ? 'tram lines' : 'metro lines');
+    ways.forEach(function (w, n) {
+      var via = '';
+      if (ways.length > 1) {
+        // Stations on this way only, junctions first, nearest the middle of the way next.
+        var own = w.stations.filter(function (s) { return ways.every(function (o) { return o === w || !o.names[s.name]; }); });
+        own.sort(function (x, y) { return (y.jn - x.jn) || Math.abs(x.k - w.nk / 2) - Math.abs(y.k - w.nk / 2); });
+        var two = own.slice(0, 2).sort(function (x, y) { return x.k - y.k; });
+        via = two.length ? 'via ' + two.map(function (s) { return s.name; }).join(' and ') : n ? 'other way ' + n : 'shortest';
+      }
+      var pts = w.nodes.map(function (u) { return [g.N[2 * u], g.N[2 * u + 1]]; });
+      out.push({ id: 'pack:' + g.cc + (n ? ':' + n : ''), name: via ? label + ' ' + via : label + ' (' + (PACKS[g.cc] && PACKS[g.cc].name || g.cc) + ' station pack)', pts: pts, km: w.km, off: A.d + B.d, polyline: mrEncodePolyline(pts), pack: g.cc, n: n });
+    });
   });
-  return out.sort(function (x, y) { return x.off - y.off; }).slice(0, 1);
+  // The pack nearest the two ends, its ways shortest first.
+  if (!out.length) return out;
+  var best = out.slice().sort(function (x, y) { return x.off - y.off || x.n - y.n; })[0].pack;
+  return out.filter(function (x) { return x.pack === best; });
 }
 
 // ---------- after a change of packs ----------

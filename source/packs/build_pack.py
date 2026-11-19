@@ -29,7 +29,8 @@ import osmium
 
 LINE_KIND = {'rail': 1, 'narrow_gauge': 1, 'tram': 2, 'subway': 4, 'light_rail': 8}
 STATION_KIND = {'subway': 4, 'light_rail': 8, 'tram': 2}
-# Tracks for trains to stand or turn on, and lines no passenger rides, are left out.
+# Tracks for trains to stand or turn on (sidings, yards, spurs), and lines no passenger rides, are
+# left out. Crossovers stay: at many stations they are the only way from one line onto another.
 SKIP_USAGE = {'industrial', 'military', 'test', 'tourism', 'freight'}
 TOLERANCE_M = 12      # how far a simplified line may be from the real one
 SAME_STOP_KM = 0.3    # stops of one name and kind closer than this are one (one per platform in OSM)
@@ -77,7 +78,7 @@ class Reader(osmium.SimpleHandler):
             self.area_station(w, k)
             return
         kind = LINE_KIND.get(t.get('railway'))
-        if not kind or 'service' in t or t.get('usage') in SKIP_USAGE or t.get('passenger') == 'no':
+        if not kind or t.get('service') not in (None, 'crossover') or t.get('usage') in SKIP_USAGE or t.get('passenger') == 'no':
             return
         pts = [(nd.ref, nd.location.lat, nd.location.lon) for nd in w.nodes if nd.location.valid()]
         if len(pts) >= 2:
