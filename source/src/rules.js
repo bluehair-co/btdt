@@ -569,7 +569,34 @@ function mrSnapTrip(i, L) {
   var cum = [0], len = 0;
   for (q = 1; q < seg.length; q++) { len += km(seg[q - 1], seg[q]); cum.push(len); }
   var dur = Math.max(0, (D.end[i] - D.start[i]) / 1000);
-  return { pts: seg, ts: cum.map(function (c) { return len ? dur * c / len : 0; }), km: len };
+  return { pts: seg, ts: mrSnapTimes(i, seg, cum, len, dur), km: len };
+}
+// The time at each point of the line: the trip's own GPS points, each placed at how far along the
+// line it is, and the times between them spread by distance. So stops and slow stretches stay where
+// they were; with no GPS points near the line, an even speed from start to end.
+function mrSnapTimes(i, seg, cum, len, dur) {
+  if (!len || !dur) return cum.map(function () { return 0; });
+  var o0 = D.pathOff[i], o1 = D.pathOff[i + 1], A = [0], T = [0], k0 = 0, n = seg.length;
+  for (var j = o0; j < o1; j++) {
+    var t = D.pathT[j], p = [D.pathPts[2 * j], D.pathPts[2 * j + 1]];
+    if (!(t > T[T.length - 1]) || t >= dur || !isFinite(p[0])) continue;
+    // Its nearest place on the line, searched from the last one on: a trip goes forward along it.
+    var bd = Infinity, ba = 0, bk = k0;
+    for (var k = k0; k < n - 1; k++) {
+      var a = mrLL(seg[k], p), b = mrLL(seg[k + 1], p), dx = b[0] - a[0], dy = b[1] - a[1], l = dx * dx + dy * dy;
+      var u = l ? Math.max(0, Math.min(1, -(a[0] * dx + a[1] * dy) / l)) : 0, x = a[0] + u * dx, y = a[1] + u * dy, d = Math.sqrt(x * x + y * y);
+      if (d < bd) { bd = d; bk = k; ba = cum[k] + u * (cum[k + 1] - cum[k]); }
+    }
+    // Off the line (a detour, a GPS jump) or going back: left out.
+    if (bd > MR_MATCH_KM || ba <= A[A.length - 1] || ba >= len) continue;
+    A.push(ba); T.push(t); k0 = bk;
+  }
+  A.push(len); T.push(dur);
+  var m = 0;
+  return cum.map(function (c) {
+    while (m < A.length - 2 && A[m + 1] < c) m++;
+    return T[m] + (T[m + 1] - T[m]) * Math.max(0, Math.min(1, (c - A[m]) / (A[m + 1] - A[m])));
+  });
 }
 
 // Places: hidden places leave their stays out of the map's pins and heatmap and the places in
