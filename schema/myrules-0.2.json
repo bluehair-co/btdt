@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bluehair-co.github.io/btdt/schema/myrules-0.2.json",
   "title": "MyRules file",
-  "description": "Facts about a person's own history (gear, places, routines, corrections) applied on top of location data. Draft v0.2: v0.1 plus unless on rules.",
+  "description": "Facts about a person's own history (gear, places, routines, map snaps, corrections) applied on top of location data. Draft v0.2: v0.1 plus unless on rules.",
   "type": "object",
   "required": [
     "myrules"
@@ -42,6 +42,13 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/routine"
+      }
+    },
+    "snaps": {
+      "type": "array",
+      "description": "Map snaps: trips between two stations drawn along one public transport line, both ways, with no period, days or times.",
+      "items": {
+        "$ref": "#/$defs/map_snap"
       }
     },
     "corrections": {
@@ -462,13 +469,28 @@
         "radius_m": {
           "description": "How far from from and to a trip may start and end (a place's own radius when larger): one number for both ends, or each end its own",
           "oneOf": [
-            { "type": "number", "minimum": 50, "maximum": 5000, "default": 500 },
+            {
+              "type": "number",
+              "minimum": 50,
+              "maximum": 5000,
+              "default": 500
+            },
             {
               "type": "object",
               "additionalProperties": false,
               "properties": {
-                "from": { "type": "number", "minimum": 50, "maximum": 5000, "default": 500 },
-                "to": { "type": "number", "minimum": 50, "maximum": 5000, "default": 500 }
+                "from": {
+                  "type": "number",
+                  "minimum": 50,
+                  "maximum": 5000,
+                  "default": 500
+                },
+                "to": {
+                  "type": "number",
+                  "minimum": 50,
+                  "maximum": 5000,
+                  "default": 500
+                }
               }
             }
           ]
@@ -649,6 +671,70 @@
         }
       },
       "additionalProperties": false
+    },
+    "map_snap": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "required": [
+        "mode",
+        "from",
+        "to",
+        "line"
+      ],
+      "properties": {
+        "mode": {
+          "description": "The type the snapped trips get: TRAIN, TRAM or SUBWAY.",
+          "$ref": "#/$defs/mode"
+        },
+        "from": {
+          "$ref": "#/$defs/latlng"
+        },
+        "to": {
+          "$ref": "#/$defs/latlng"
+        },
+        "from_name": {
+          "type": "string"
+        },
+        "to_name": {
+          "type": "string"
+        },
+        "radius_m": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 500,
+          "description": "How near each end a trip has to start and end."
+        },
+        "line": {
+          "type": "object",
+          "required": [
+            "polyline"
+          ],
+          "properties": {
+            "polyline": {
+              "type": "string",
+              "description": "Google's encoded polyline, 5 decimals."
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        },
+        "match": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 67,
+          "description": "The share of a trip's GPS points within 500 m of the line, in %, for it to be snapped."
+        },
+        "other_types": {
+          "type": "boolean",
+          "default": false,
+          "description": "Also trips the files give another type (they take the snap's type)."
+        }
+      }
     }
   }
 }

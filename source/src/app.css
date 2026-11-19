@@ -1042,3 +1042,13 @@ div.hit-row:hover { background: none; }
 .pack-offer .fine { color: rgba(255, 255, 255, .7); }
 .pack-dlg #packOfferMsg { color: rgba(255, 255, 255, .8); min-height: 1em; }
 .pack-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+/* Map snaps: the bar over the map while you tap the two stations. */
+.snap-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + 116px); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 8px 8px 14px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.snap-bar[hidden] { display: none; }
+.snap-bar-t { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.35; }
+.snap-bar-t svg { flex: none; color: var(--accent); }
+.snap-bar-t b { display: block; font-size: 14px; }
+.leaflet-tooltip.snap-tip { font: 600 12px var(--font-body); padding: 2px 8px; border-radius: 8px; }
+#snapMode button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+#snapMode svg { width: 16px; height: 16px; }

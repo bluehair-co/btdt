@@ -312,7 +312,7 @@ function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
   // While a routine's ghost trips are on the map, nothing else is, so which ones the routine takes
   // (solid) and which it leaves (dashed) stand out.
-  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map) {
+  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main) {
     [sqLayer, pathLayer, speedLayer, ccLayer, heatLayer, pinLayer, hlLayer, beaconLayer].forEach(function (l) { if (l && map.hasLayer(l)) map.removeLayer(l); });
     return;
   }
@@ -878,6 +878,8 @@ function hitsAt(pt) {
 function onMapTap(pt, ev) {
   // The routine panel is open: the ghosts on the map take the taps, the trips under them don't.
   if (mrSideOpen()) return;
+  // Making a map snap: the tap picks one of its ends.
+  if (SN && SN.phase === 'pick') { snapTap(map.containerPointToLatLng(pt)); return; }
   var list = hitsAt(pt);
   // On a phone with the chart open, the trip details are out of sight: a tap on an empty spot
   // leaves the chart open, and a tap on several trips closes it to list them.
@@ -956,7 +958,7 @@ function tripRows(i) {
   var m = modeOf(i), k = D.km[i], ms = D.end[i] - D.start[i], off = D.off[i], e = D.est[i];
   var line = haversine([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]), nGps = D.pathOff[i + 1] - D.pathOff[i];
   var t0 = localTime(D.start[i], zoneAt(D.from[2 * i], D.from[2 * i + 1]), off), t1 = localTime(D.end[i], zoneAt(D.to[2 * i], D.to[2 * i + 1]), off);
-  var src = D.snap && D.snap[i] ? 'along your routine\'s line' : e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
+  var src = D.snap && D.snap[i] ? (D.snap[i].snap ? 'along a map snap\'s line' : 'along your routine\'s line') : e & 16 ? (actApp(i) ? 'from ' + esc(actApp(i)) : 'from the activity file') : isSim(i) ? 'simulated' : e & 8 || e & JUMPS && (e & 3) === 0 && D.orig[i] > 0 ? 'corrected' : (e & 3) === 1 ? 'along the GPS trail' : (e & 3) === 2 ? 'straight line' : 'from Timeline';
   var rows = [
     ['From', placeOf(i, false)], ['To', placeOf(i, true)],
     ['Start', t0.time + ' <span class="fine">' + t0.label + '</span>'],
@@ -1255,12 +1257,13 @@ function mrRaw(i) {
   if (g) o.push({ field: 'gear', value: GEAR[g.gear].name, rule: g.rule, inferred: !g.cor });
   var sn = D.snap && D.snap[i], rt = D.mrRoute && D.mrRoute[i];
   if (rt) o.push({ field: 'routine', value: rt.rule, direction: rt.dir > 0 ? 'there' : 'back' });
+  if (D.mrSnap && D.mrSnap[i]) o.push({ field: 'map_snap', value: D.mrSnap[i].rule, direction: D.mrSnap[i].dir > 0 ? 'there' : 'back' });
   if (sn) o.push({ field: 'line', value: sn.pts.map(function (p) { return [+p[0].toFixed(6), +p[1].toFixed(6)]; }), km: +sn.km.toFixed(3), was: +D.base.km[i].toFixed(3), rule: sn.rule, inferred: true });
   return o.length ? o : null;
 }
 function mrFlags(i) {
   return (D.mrGear && D.mrGear[i] && !D.mrGear[i].cor ? ['gear from MyRules'] : []).concat(D.mrMode && D.mrMode[i] && D.mrMode[i].inf ? ['type from a MyRules routine'] : [])
-    .concat(D.snap && D.snap[i] ? ['line from a MyRules routine'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
+    .concat(D.snap && D.snap[i] ? [D.snap[i].snap ? 'line from a MyRules map snap' : 'line from a MyRules routine'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
 }
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
