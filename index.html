@@ -1916,12 +1916,15 @@ function pathKm(pts) {
 // - inside the trail, the trail goes out to it and comes straight back (an out-and-back spike);
 // - at either end, the rest of the trail is consistent and the end is wrong rather than the times
 //   being a little off: the trip couldn't even have gone between its two ends in its time, or the
-//   end repeats a point from inside the trail (a stale fix), or both ends are the same stale point.
+//   end repeats a point from inside the trail (a stale fix), or both ends are the same stale point,
+//   or what comes right before or after the trip (nb: the trip or stay next to it in time, if any)
+//   is where the trail is next to the end, not at the end.
 //   A jump under 5 km at an end also needs a minute between the end and the next point, as
 //   Timeline's first and last points are often only seconds apart from the ends.
 // The worst point goes first and the check is repeated, so neighbouring bad points come out one by one.
-// pts are [lat, lng]; t is seconds; cap is km/h. Returns the indices kept.
-function jumpKeep(pts, t, cap) {
+// pts are [lat, lng]; t is seconds; cap is km/h; nb is [before, after], each [lat, lng] or null.
+// Returns the indices kept.
+function jumpKeep(pts, t, cap, nb) {
   var keep = [], i;
   for (i = 0; i < pts.length; i++) keep.push(i);
   if (pts.length < 3 || !(cap > 0)) return keep;
@@ -1948,7 +1951,8 @@ function jumpKeep(pts, t, cap) {
       return n >= 5 && v(o, q2) > endCap && v(q2, r2) <= cap && (km(pts[o], pts[q2]) >= 5 || Math.abs(t[q2] - t[o]) >= 60) ? 2 : 0;
     }
     var h = Math.abs(t[o] - t[p]) / 3600;
-    return !(h > 0) || km(pts[p], pts[o]) / h > cap || repeats(p) ? 1 : 0;
+    var w = nb && nb[j ? 1 : 0];
+    return !(h > 0) || km(pts[p], pts[o]) / h > cap || repeats(p) || w && km(pts[q], w) <= 0.2 * d ? 1 : 0;
   }
   for (;;) {
     var n = keep.length, best = -1, top = 0, both = false, j;
@@ -1977,17 +1981,44 @@ var JUMPS = 128;
 // Single legs may beat a mode's average by half, except on the road, where nothing beats 160 km/h.
 var ROAD = { CAR: 1, TAXI: 1, VEHICLE: 1, MOTORCYCLE: 1, BUS: 1 };
 function jumpCap(mode) { return ROAD[mode] ? MAX_KMH.CAR : 1.5 * (MAX_KMH[mode] || 200); }
+// For each trip in R, where you were right before it and right after it: the end of the trip or stay
+// that ends within STAY_GAP before it starts, and the start of the one that starts within STAY_GAP after
+// it ends (the nearest in time), each [lat, lng] or null.
+function tripNeighbours(R) {
+  var n = R.start.length, nv = R.vs ? R.vs.length : 0, E = [], S = [], i, out = [];
+  function ll(a, k) { return isFinite(a[2 * k]) && isFinite(a[2 * k + 1]) ? [a[2 * k], a[2 * k + 1]] : null; }
+  for (i = 0; i < n; i++) {
+    var a = ll(R.from, i), b = ll(R.to, i);
+    if (b) E.push({ t: R.end[i], ll: b, k: i });
+    if (a) S.push({ t: R.start[i], ll: a, k: i });
+  }
+  for (i = 0; i < nv; i++) {
+    var v = ll(R.vll, i);
+    if (v) { E.push({ t: R.ve[i], ll: v, k: -1 }); S.push({ t: R.vs[i], ll: v, k: -1 }); }
+  }
+  function by(x, y) { return x.t - y.t; }
+  E.sort(by); S.sort(by);
+  // The entry of A (sorted by t) other than trip k nearest to t within [lo, hi].
+  function near(A, k, t, lo, hi) {
+    var a = 0, b = A.length, best = null, bd = Infinity;
+    while (a < b) { var m = (a + b) >> 1; if (A[m].t < lo) a = m + 1; else b = m; }
+    for (var j = a; j < A.length && A[j].t <= hi; j++) if (A[j].k !== k && Math.abs(A[j].t - t) < bd) { bd = Math.abs(A[j].t - t); best = A[j].ll; }
+    return best;
+  }
+  for (i = 0; i < n; i++) out.push([near(E, i, R.start[i], R.start[i] - STAY_GAP, R.start[i]), near(S, i, R.end[i], R.end[i], R.end[i] + STAY_GAP)]);
+  return out;
+}
 // Leaves bad GPS jumps out of every trip's line in R and fixes the distance they inflated (see jumpKm).
 // Strava, simulated trips and flights are left as they are.
 function cleanTrails(R) {
-  var n = R.start.length, i, q, any = false, out = [];
+  var n = R.start.length, i, q, any = false, out = [], nb = tripNeighbours(R);
   for (i = 0; i < n; i++) {
     var o0 = R.pathOff[i], o1 = R.pathOff[i + 1], s = R.srcs ? R.srcs[i] : R.src, mode = MODES[R.mode[i]];
     out.push(null);
     if (o1 - o0 < 3 || mode === 'FLYING' || s === SRC.strava || s === SRC.sim || R.est[i] & STRAVA) continue;
     var pts = [], t = [];
     for (q = o0; q < o1; q++) { pts.push([R.pathPts[2 * q], R.pathPts[2 * q + 1]]); t.push(R.pathT[q]); }
-    var keep = jumpKeep(pts, t, jumpCap(mode));
+    var keep = jumpKeep(pts, t, jumpCap(mode), nb[i]);
     if (keep.length === pts.length) continue;
     out[i] = keep; any = true;
     var e = R.est[i], raw = pathKm(pts), clean = pathKm(keep.map(function (k) { return pts[k]; })), first = pts[keep[0]], last = pts[keep[keep.length - 1]];
