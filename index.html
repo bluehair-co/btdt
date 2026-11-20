@@ -1778,6 +1778,11 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
       <div class="seg" role="group" aria-label="Split trips Timeline merged" id="tripSplitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
       <p class="fine" id="splitNote"></p>
     </div>
+    <div class="sec" id="netSec">
+      <h3>GPS cleanup</h3>
+      <label class="toggle-row"><span class="lbl" style="display:block">Leave out cell-tower fixes<small class="fine" style="display:block">Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</small></span><input type="checkbox" class="switch" id="netFix" checked></label>
+      <p class="fine" id="netNote" aria-live="polite"></p>
+    </div>
     <div class="sec" id="packSec">
       <h3>Station packs</h3>
       <p class="fine">A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
@@ -2511,6 +2516,62 @@ function cleanJumps(R) {
   cleanEnds(R);
   retypeGuessed(R);
   return R;
+}
+// ---------- Cell-tower and Wi-Fi fixes ----------
+// Without a GPS fix (indoors, in a station, in a tunnel) the phone places itself at a cell tower or a
+// Wi-Fi router, at the spot Google's database has for it, often hundreds of metres off. The same tower
+// gives the very same coordinates every time, so these fixes pile up in a few spots across many days,
+// while real GPS points never repeat to the centimetre. A point whose coordinates (as stored, Float32)
+// turn up in trips on NET_DAYS or more different days is such a fix. On the author's data, nine in ten
+// of them that Records.json also has are marked there as cell or Wi-Fi fixes over 200 m off. Fixes of
+// one tower a few metres apart aren't caught: points near such a spot looked the same as good GPS on
+// a much-walked street, so they are left alone.
+// They are left out of a trip's line, except its very first and last points (where Timeline says the
+// trip starts and ends: the station or the airport you went to has its own Wi-Fi, which you pass
+// often, and leaving it out would cut the trip short), and the ones before the first real point (or
+// after the last) within NET_END_KM of it: most often the Wi-Fi at home or work, which is where you were.
+// A trip whose points are all such fixes, or that would keep fewer than two, is left as it is, and so are
+// flights and recorded activities (their own GPS).
+// netFixes(R, order): { trip index: [indices (from the trip's first point) of the points to keep] },
+// for the trips that lose any. order: the trips in time order (any order works, a little slower).
+var NET_DAYS = 3, NET_END_KM = 0.15;
+function netFixes(R, order) {
+  var n = R.start.length, P = R.pathPts, O = R.pathOff, fly = MODE_IDX.FLYING, i, k, q;
+  var bits = new Uint32Array(P.buffer, P.byteOffset, P.length);
+  function skip(j) { return R.mode[j] === fly || R.est[j] & STRAVA || O[j + 1] - O[j] < 3; }
+  // Days each spot was seen on: the last day and how many, as trips come in time order.
+  var seen = new Map();
+  for (k = 0; k < n; k++) {
+    i = order ? order[k] : k;
+    if (skip(i)) continue;
+    for (q = O[i]; q < O[i + 1]; q++) {
+      var key = bits[2 * q] + ',' + bits[2 * q + 1], s = seen.get(key);
+      if (!s) seen.set(key, s = { d: R.day[i], n: 1, m: null });
+      else if (s.d !== R.day[i]) {
+        if (order) { s.d = R.day[i]; s.n++; }
+        else { if (!s.m) s.m = new Set([s.d]); s.m.add(R.day[i]); s.n = s.m.size; s.d = R.day[i]; }
+      }
+    }
+  }
+  var out = {};
+  for (i = 0; i < n; i++) {
+    if (skip(i)) continue;
+    var o0 = O[i], len = O[i + 1] - o0, net = [], any = false, first = -1, last = -1;
+    for (q = 0; q < len; q++) {
+      net.push(seen.get(bits[2 * (o0 + q)] + ',' + bits[2 * (o0 + q) + 1]).n >= NET_DAYS);
+      if (net[q]) any = true; else { if (first < 0) first = q; last = q; }
+    }
+    if (!any || first < 0) continue;
+    var keep = [];
+    for (q = 0; q < len; q++) {
+      if (!net[q] || q === 0 || q === len - 1) { keep.push(q); continue; }
+      // At the ends: kept when near the first (last) real point.
+      var ref = q < first ? first : q > last ? last : -1;
+      if (ref >= 0 && kmLL(P[2 * (o0 + q)], P[2 * (o0 + q) + 1], P[2 * (o0 + ref)], P[2 * (o0 + ref) + 1]) < NET_END_KM) keep.push(q);
+    }
+    if (keep.length < len && keep.length >= 2) out[i] = keep;
+  }
+  return out;
 }
 // A guessed type is worked out again every time the data opens, from the speed and then from what
 // else the data knows (see retypeGuessed), so saved trips pick up a better guess without a reload.
@@ -4417,7 +4478,7 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, netFixes: netFixes, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -7385,6 +7446,8 @@ function tripRows(i) {
   else if (D.orig[i] > 0 && D.orig[i] < k && (e & 3) === 1 && !(e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, no more than the straight line between its ends, so BT•DT measures the distance along the GPS trail instead.');
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT•DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');
   if (e & JUMPS) notes.push('Some GPS points here were bad (a fix that jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip, an end at a stale position away from the stay next to it, or time parked counted as part of the trip), so the line, times and distance leave them out' + (D.orig[i] > k && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting them).' : '.'));
+  var nd = D.netDrop && D.netDrop[i];
+  if (nd) notes.push(fmt(nd.n) + ' of its GPS points ' + (nd.n === 1 ? 'was a cell-tower or Wi-Fi fix' : 'were cell-tower or Wi-Fi fixes') + ': the phone had no GPS and put itself where a tower or router is, a spot your other trips land on too. The line, distance and heatmap leave ' + (nd.n === 1 ? 'it' : 'them') + ' out' + (Math.abs(nd.km - D.km[i]) >= 0.01 ? ' (' + dist(nd.km) + ' with ' + (nd.n === 1 ? 'it' : 'them') + ')' : '') + '. Turn it off in Settings, GPS cleanup.');
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
@@ -11267,7 +11330,8 @@ function* mrCorrectSteps(dry) {
     try { mrApplyCorrections(true); MR_WOULD = { count: MR_COUNT, left: MR_LEFT, line: D.mrLine }; } finally { MR.on = false; }
     reset();
   }
-  if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
+  // With MyRules off, cell-tower fixes still go (a setting of their own).
+  if (!MR || !MR.on) { mrApplyDrops(true); yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
   // GPS points you said to ignore go first, so routines, lines and distances all go without them.
   mrApplyDrops();
   yield;
@@ -11328,9 +11392,20 @@ function mrBasePoints(i) {
   for (var q = b.pathOff[i]; q < b.pathOff[i + 1]; q++) out.push({ ll: [b.pathPts[2 * q], b.pathPts[2 * q + 1]], s: b.pathT[q], t: mrIgnoreKey(D.start[i] + b.pathT[q] * 1000) });
   return out;
 }
-function mrApplyDrops() {
-  var b = D.base, by = {};
-  mrCorrections().forEach(function (x) {
+// Cell-tower and Wi-Fi fixes (netFixes in parser.js) are left out the same way, for every trip, while
+// Leave out cell-tower fixes is on in Settings (PREFS.netFix, on unless switched off). D.netDrop[i]:
+// { n (points left out), of, km (distance before) }; worked out once for the trips as loaded (D.base.net).
+function netFixOn() { return PREFS.netFix !== false; }
+function mrNetFixes() {
+  var b = D.base;
+  if (!b.net) b.net = netFixes(b === D ? D : Object.assign({}, D, b), D.order);
+  return b.net;
+}
+// netOnly: with MyRules off, only the network fixes.
+function mrApplyDrops(netOnly) {
+  var b = D.base, by = {}, net = netFixOn() ? mrNetFixes() : {};
+  D.netDrop = [];
+  if (!netOnly) mrCorrections().forEach(function (x) {
     var ig = x.c.then.ignore_points;
     if (!x.one || x.trips.length !== 1 || !Array.isArray(ig) || !ig.length) return;
     var i = x.trips[0], set = mrIgnoreSet(ig), pts = mrBasePoints(i), keep = [];
@@ -11339,6 +11414,15 @@ function mrApplyDrops() {
     if (keep.length === pts.length || keep.length < 2) return;
     by[i] = { rule: x.c.id, keep: keep, pts: pts };
     MR_COUNT[x.c.id] = 1;
+  });
+  // The network fixes go too: on their own, or on top of the points you ignored (still keeping two).
+  Object.keys(net).forEach(function (k) {
+    var i = +k, nk = net[k], x = by[i];
+    if (!x) { x = by[i] = { keep: nk, pts: mrBasePoints(i) }; x.net = x.pts.length - nk.length; return; }
+    var on = {};
+    nk.forEach(function (q) { on[q] = 1; });
+    var both = x.keep.filter(function (q) { return on[q]; });
+    if (both.length >= 2 && both.length < x.keep.length) { x.net = x.keep.length - both.length; x.userKeep = x.keep.length; x.keep = both; }
   });
   var list = Object.keys(by).map(Number);
   if (!list.length) return;
@@ -11366,8 +11450,10 @@ function mrApplyDrops() {
       gaps.push([Math.max(a >= 0 ? x.pts[a].s : -Infinity, p.s - 30), Math.min(c < x.pts.length ? x.pts[c].s : Infinity, p.s + 30)]);
     });
     var before = pathKm(x.pts.map(function (p) { return p.ll; })), after = pathKm(kept.map(function (p) { return p.ll; }));
-    D.mrDrop[i] = { rule: x.rule, n: x.pts.length - kept.length, of: x.pts.length, km: b.km[i], gaps: gaps };
-    if (before > 0) D.km[i] = Math.max(after, b.km[i] - (before - after));
+    if (x.rule) D.mrDrop[i] = { rule: x.rule, n: (x.userKeep ? x.pts.length - x.userKeep : x.pts.length - kept.length), of: x.pts.length, km: b.km[i], gaps: gaps };
+    if (x.net) D.netDrop[i] = { n: x.net, of: x.pts.length, km: b.km[i] };
+    // Never longer than before, nor shorter than the trail that's left.
+    if (before > 0) D.km[i] = Math.min(b.km[i], Math.max(after, b.km[i] - (before - after)));
   }
   O[n] = w;
   D.pathPts = P; D.pathT = T; D.pathOff = O;
@@ -15560,12 +15646,34 @@ function renderSettings() {
   renderHrSettings();
   renderImports();
   renderSplitSettings();
+  netSettings();
   renderPacks();
   $('homeSec').hidden = !D || !!DEMO;
   if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
 }
+// Leave out cell-tower fixes (see mrApplyDrops): the switch, and how many points and trips it takes.
+function netSettings() {
+  var el = $('netFix');
+  el.checked = netFixOn();
+  var note = '';
+  if (D && D.base) {
+    var pts = 0, trips = 0;
+    if (netFixOn()) (D.netDrop || []).forEach(function (x) { if (x) { pts += x.n; trips++; } });
+    else { var net = mrNetFixes(); Object.keys(net).forEach(function (k) { trips++; pts += (D.base.pathOff[+k + 1] - D.base.pathOff[+k]) - net[k].length; }); }
+    note = !trips ? 'None of your trips has any.' : (netFixOn() ? fmt(pts) + ' GPS point' + (pts === 1 ? '' : 's') + ' left out of ' : 'Would leave out ' + fmt(pts) + ' GPS point' + (pts === 1 ? '' : 's') + ' from ') + tripsText(trips) + '.';
+  }
+  $('netNote').textContent = note;
+}
+$('netFix').addEventListener('change', function () {
+  var on = this.checked;
+  working(on ? 'Leaving out cell-tower fixes…' : 'Bringing cell-tower fixes back…', function () {
+    PREFS.netFix = on; savePrefs();
+    mrReapply();
+    netSettings();
+  });
+});
 // The files behind D, one row each: a file read as two kinds (a ZIP with a Timeline and activities) is one row.
 function importedFiles() {
   var by = {}, out = [];

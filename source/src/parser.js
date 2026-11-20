@@ -668,6 +668,62 @@ function cleanJumps(R) {
   retypeGuessed(R);
   return R;
 }
+// ---------- Cell-tower and Wi-Fi fixes ----------
+// Without a GPS fix (indoors, in a station, in a tunnel) the phone places itself at a cell tower or a
+// Wi-Fi router, at the spot Google's database has for it, often hundreds of metres off. The same tower
+// gives the very same coordinates every time, so these fixes pile up in a few spots across many days,
+// while real GPS points never repeat to the centimetre. A point whose coordinates (as stored, Float32)
+// turn up in trips on NET_DAYS or more different days is such a fix. On the author's data, nine in ten
+// of them that Records.json also has are marked there as cell or Wi-Fi fixes over 200 m off. Fixes of
+// one tower a few metres apart aren't caught: points near such a spot looked the same as good GPS on
+// a much-walked street, so they are left alone.
+// They are left out of a trip's line, except its very first and last points (where Timeline says the
+// trip starts and ends: the station or the airport you went to has its own Wi-Fi, which you pass
+// often, and leaving it out would cut the trip short), and the ones before the first real point (or
+// after the last) within NET_END_KM of it: most often the Wi-Fi at home or work, which is where you were.
+// A trip whose points are all such fixes, or that would keep fewer than two, is left as it is, and so are
+// flights and recorded activities (their own GPS).
+// netFixes(R, order): { trip index: [indices (from the trip's first point) of the points to keep] },
+// for the trips that lose any. order: the trips in time order (any order works, a little slower).
+var NET_DAYS = 3, NET_END_KM = 0.15;
+function netFixes(R, order) {
+  var n = R.start.length, P = R.pathPts, O = R.pathOff, fly = MODE_IDX.FLYING, i, k, q;
+  var bits = new Uint32Array(P.buffer, P.byteOffset, P.length);
+  function skip(j) { return R.mode[j] === fly || R.est[j] & STRAVA || O[j + 1] - O[j] < 3; }
+  // Days each spot was seen on: the last day and how many, as trips come in time order.
+  var seen = new Map();
+  for (k = 0; k < n; k++) {
+    i = order ? order[k] : k;
+    if (skip(i)) continue;
+    for (q = O[i]; q < O[i + 1]; q++) {
+      var key = bits[2 * q] + ',' + bits[2 * q + 1], s = seen.get(key);
+      if (!s) seen.set(key, s = { d: R.day[i], n: 1, m: null });
+      else if (s.d !== R.day[i]) {
+        if (order) { s.d = R.day[i]; s.n++; }
+        else { if (!s.m) s.m = new Set([s.d]); s.m.add(R.day[i]); s.n = s.m.size; s.d = R.day[i]; }
+      }
+    }
+  }
+  var out = {};
+  for (i = 0; i < n; i++) {
+    if (skip(i)) continue;
+    var o0 = O[i], len = O[i + 1] - o0, net = [], any = false, first = -1, last = -1;
+    for (q = 0; q < len; q++) {
+      net.push(seen.get(bits[2 * (o0 + q)] + ',' + bits[2 * (o0 + q) + 1]).n >= NET_DAYS);
+      if (net[q]) any = true; else { if (first < 0) first = q; last = q; }
+    }
+    if (!any || first < 0) continue;
+    var keep = [];
+    for (q = 0; q < len; q++) {
+      if (!net[q] || q === 0 || q === len - 1) { keep.push(q); continue; }
+      // At the ends: kept when near the first (last) real point.
+      var ref = q < first ? first : q > last ? last : -1;
+      if (ref >= 0 && kmLL(P[2 * (o0 + q)], P[2 * (o0 + q) + 1], P[2 * (o0 + ref)], P[2 * (o0 + ref) + 1]) < NET_END_KM) keep.push(q);
+    }
+    if (keep.length < len && keep.length >= 2) out[i] = keep;
+  }
+  return out;
+}
 // A guessed type is worked out again every time the data opens, from the speed and then from what
 // else the data knows (see retypeGuessed), so saved trips pick up a better guess without a reload.
 // Motorised types a guessed car trip can take from a labelled trip on the same line.
@@ -2573,4 +2629,4 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, netFixes: netFixes, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
