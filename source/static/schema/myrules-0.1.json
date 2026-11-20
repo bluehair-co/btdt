@@ -112,7 +112,8 @@
         "BOAT",
         "FLYING",
         "SKIING",
-        "OTHER"
+        "OTHER",
+        "UNKNOWN"
       ]
     },
     "when": {

@@ -1160,6 +1160,9 @@ function mrTripBlock(i) {
   if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">Drawn along the motorways and main roads of your road pack where its GPS points stay close to them (' + D.snap[i].cov + '% of the way), and along its own GPS points elsewhere: ' + dist(D.snap[i].km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). Turn it off in Settings, Station packs.</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
+  // Remove edit: every correction that changed this trip lets go of it (mrRemoveEdits).
+  var eds = mrTripEdits(i);
+  if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
   // Find similar trips: a new routine with this trip as its line, matched by route, not by time.
@@ -1225,6 +1228,44 @@ function mrDetach(c, i) {
   c.trip.trips = c.trip.trips.filter(function (r) { return mrRefTrips(r).indexOf(i) < 0; });
   if (!c.trip.trips.length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
+// The corrections (edits) that apply to trip i: its own, bulk edits listing it, days and spans.
+function mrTripEdits(i) { return mrCorrections().filter(function (x) { return x.trips.indexOf(i) >= 0; }).map(function (x) { return x.c; }); }
+// Remove edit: an edit on this trip alone is deleted, a bulk edit lets go of it (mrDetach), and a
+// correction on a day or span leaves it out (its except). Asks first, saying what each one does.
+function mrRemoveEdits(i) {
+  var eds = mrTripEdits(i);
+  if (!eds.length) return;
+  function what(c) {
+    var t = c.then || {}, b = [];
+    if (t.mode) b.push('type ' + (LABEL[t.mode] || t.mode).toLowerCase());
+    if (t.name) b.push('title “' + t.name + '”');
+    if (t.gear) b.push('gear');
+    if (t.hide === true) b.push('hidden');
+    if (t.checked === true) b.push('type checked');
+    return b.join(', ');
+  }
+  var lines = eds.map(function (c) {
+    var w = what(c), nm = esc(c.name || c.id);
+    if (c.trip.start) return '<li>This trip\'s own edit' + (w ? ' (' + esc(w) + ')' : '') + ' is deleted.</li>';
+    if (Array.isArray(c.trip.trips)) return '<li>The trip is detached from the bulk edit <i>' + nm + '</i>' + (w ? ' (' + esc(w) + ')' : '') + (c.trip.trips.length > 1 ? '; its other trips keep it.' : ', which goes with it.') + '</li>';
+    return '<li>The trip is left out of the correction for ' + esc(c.trip.day || (c.trip.span || []).join(' – ')) + (w ? ' (' + esc(w) + ')' : '') + '; its other trips keep it.</li>';
+  }).join('');
+  mrAsk({
+    title: eds.length > 1 ? 'Remove the edits on this trip?' : 'Remove the edit on this trip?',
+    text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + '<ul class="fine" style="margin:8px 0 0;padding-left:18px">' + lines + '</ul>',
+    buttons: [['Remove', 'danger', function () {
+      eds.forEach(function (c) {
+        if (c.trip.start) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+        else if (Array.isArray(c.trip.trips)) mrDetach(c, i);
+        else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
+      });
+      mrChange('Edit removed: the trip on ' + mrWhere(i));
+      toast(eds.length > 1 ? 'Edits removed.' : 'Edit removed.');
+      openTrip(i);
+    }], ['Cancel', 'quiet', null]],
+    note: 'It goes back to what your files say. Rules like routines and gear periods still apply.'
+  });
+}
 function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
@@ -1277,6 +1318,7 @@ $('tripBody').addEventListener('click', function (ev) {
   else if (act === 'type') mrQuickType(i, b.dataset.m);
   else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
+  else if (act === 'remove') mrRemoveEdits(i);
 });
 // The correction for this one trip that Edit trip changes: the last one pointing at it by its start.
 function mrTripCorrection(i) {
@@ -1287,12 +1329,13 @@ function mrTripCorrection(i) {
 // survives loading the files again.
 function mrEditDialog(i) {
   var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]], hidden = !!D.mrHide[i];
-  var modes = MODES.filter(function (m) { return m !== 'UNKNOWN' || cur === 'UNKNOWN'; });
+  // Unclassified last: for a trip that looks wrong (a GPS glitch?) when you aren't sure what it was.
+  var modes = MODES.filter(function (m) { return m !== 'UNKNOWN'; }).concat(['UNKNOWN']);
   mrAsk({
     title: 'Edit trip',
     text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Type</span><select id="mrEType">' + modes.map(function (m) {
-      return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
+      return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === 'UNKNOWN' && m !== was ? ' (not sure what it was)' : '') + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
     }).join('') + '</select></label>' +
       '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
       '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
@@ -1321,7 +1364,7 @@ function mrSaveEdit(i) {
   mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
   if (openId === 'mrSheet') return;
   if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
-  else { openTrip(i); if (type !== oldMode) setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
+  else { openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
 }
 
 // Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
