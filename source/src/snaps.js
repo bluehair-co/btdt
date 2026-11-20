@@ -172,7 +172,8 @@ function snapPanel() {
       '<label class="field mr-match"><span>Within <b class="num" id="snapRaV"></b> of ' + esc(SN.a.name) + '</span><input type="range" id="snapRa" min="100" max="2000" step="50" value="' + SN.ra + '"></label>' +
       '<label class="field mr-match"><span>Within <b class="num" id="snapRbV"></b> of ' + esc(SN.b.name) + '</span><input type="range" id="snapRb" min="100" max="2000" step="50" value="' + SN.rb + '"></label>' +
       '<label class="field mr-match"><span>Follow the line for at least <b class="num" id="snapMatchV"></b></span><input type="range" id="snapMatch" min="10" max="100" step="5" value="' + SN.match + '"></label>' +
-      '<label class="toggle-row"><span class="lbl">Other types too<small class="fine" style="display:block">Also trips your files give another type (a bus, a car), which then become ' + esc((LABEL[SN.mode] || 'this type').toLowerCase()) + '. Without it, only trips of this type, with no type, Vehicle or a guessed one.</small></span><input type="checkbox" class="switch" id="snapOther"' + (SN.other ? ' checked' : '') + '></label>' +
+      '<label class="toggle-row"><span class="lbl">Other types too' + infoBtn('snapOtherInfo', 'About other types') + '</span><input type="checkbox" class="switch" id="snapOther"' + (SN.other ? ' checked' : '') + '></label>' +
+      infoBox('snapOtherInfo', 'Also trips your files give another type (a bus, a car), which then become ' + esc((LABEL[SN.mode] || 'this type').toLowerCase()) + '. Without it, only trips of this type, with no type, Vehicle or a guessed one.') +
       '<small class="fine" id="snapTxt" aria-live="polite"></small>' +
       '<button type="button" class="btn quiet" id="snapRepick">' + icon('pin') + 'Pick other ends</button></div>',
     buttons: [[r ? 'Save' : 'Save map snap', 'primary', snapSave], ['Cancel', 'quiet', null]],

@@ -696,8 +696,11 @@ $('layersBtn').addEventListener('click', function () { toggleSheet('layersSheet'
 document.addEventListener('click', function (ev) {
   var info = ev.target.closest('.info-btn');
   if (info) {
-    var head = info.closest('.card-head'), op = !head.classList.contains('info-open');
-    head.classList.toggle('info-open', op);
+    // Opens the box its aria-controls names (Settings, the map panel, dialogs), else its card's explanation.
+    var box = info.getAttribute('aria-controls') && $(info.getAttribute('aria-controls')), op;
+    ev.preventDefault();
+    if (box) { op = box.hidden; box.hidden = !op; }
+    else { var head = info.closest('.card-head'); if (!head) return; op = !head.classList.contains('info-open'); head.classList.toggle('info-open', op); }
     info.setAttribute('aria-expanded', op ? 'true' : 'false');
   } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
   else if (ev.target.closest('[data-open-settings]')) { if (openId === 'settingsSheet') closeSheets(); else { renderSettings(); openSheet('settingsSheet'); } }
