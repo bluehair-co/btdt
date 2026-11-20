@@ -1572,6 +1572,16 @@ function scopeSeg(nAll, nF) {
     '<button type="button" data-pscope="all" aria-pressed="' + !f + '">All history · ' + fmt(nAll) + '</button>' +
     '<button type="button" data-pscope="filters" aria-pressed="' + f + '">These filters · ' + fmt(nF) + '</button></div>';
 }
+// The top of a place page: Edit (or Name) this place on a spot, Show on the map, and ⋯ with Google
+// Maps, the whole town and This place moved….
+function placeActs(o, lat, lng, pid) {
+  var more = [];
+  more.push('<a role="menuitem" href="' + esc(mapsUrl(lat, lng, pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + '<span>Open in Google Maps</span></a>');
+  if (o.town != null) more.push(moreItem('data-ptown="' + o.town + '"', 'pin', 'All of ' + esc(placeLabel(o.town))));
+  if (o.spot && mvCanNew(o.spot)) more.push(moreItem('data-mv-new="' + esc(o.spot) + '"', 'pin', 'This place moved…'));
+  return '<div class="trip-edit">' + (o.spot ? '<button type="button" class="btn primary" data-mr-place="' + esc(o.spot) + '">' + icon('edit') + (mrSpotRule(o.spot) ? 'Edit this place' : 'Name this place') + '</button>' : '') +
+    '<button type="button" class="btn' + (o.spot ? '' : ' primary') + '" data-pmap="' + (o.ll ? o.ll.join(',') : lat + ',' + lng) + '">' + icon('fit') + 'Show on the map</button>' + moreMenu(more, 'More for this place') + '</div>';
+}
 function placePage(o, keepScroll) {
   placeLast = o;
   setPinOn(spotsOf(o.vs).map(function (x) { return x.key; }));
@@ -1582,7 +1592,7 @@ function placePage(o, keepScroll) {
   if (scoped && !inF.length) {
     var s0 = spotsOf(o.vs)[0], c0 = countryAt(s0.lat, s0.lng);
     showPlaceHtml('<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
-      esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + seg +
+      esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + placeActs(o, s0.lat, s0.lng, s0.pid) + seg +
       '<p class="empty" style="margin-top:14px">No visits here in ' + scopeTxt + '. Change the filters or choose All history.</p>', keepScroll);
     return;
   }
@@ -1607,7 +1617,7 @@ function placePage(o, keepScroll) {
   var withIds = spots.filter(function (s) { return s.pid; }).length;
   placeVisits = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; });
   var html = '<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
-    esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + seg +
+    esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + placeActs(o, top.lat, top.lng, top.pid) + seg +
     '<dl class="kv" style="margin-top:12px">' + [
       ['Visits', fmt(n)], ['How often', oftenTxt],
       ['Time there', hoursLabel(h).replace(/ \d+ min$/, '')], ['Average stay', hoursLabel(h / n)],
@@ -1625,9 +1635,7 @@ function placePage(o, keepScroll) {
     }).join('') + '</div>' + (spots.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '');
   if (o.spot) html += mrSpotHtml(o.spot) + mvSpotHtml(o.spot) + mergeHtml(o.spot);
   html += '<h4 class="place-h">Visits</h4><div class="list-rows" id="placeVisits">' + placeVisits.slice(0, 20).map(visitRow).join('') + '</div>' +
-    (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
-    mapsLink(top.lat, top.lng, top.pid) + (o.town != null ? '<button type="button" class="btn" data-ptown="' + o.town + '">' + icon('pin') + 'All of ' + esc(placeLabel(o.town)) + '</button>' : '') + '</div>';
+    (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '');
   showPlaceHtml(html, keepScroll);
 }
 function showPlaceHtml(html, keepScroll) {

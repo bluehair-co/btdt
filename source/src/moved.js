@@ -140,6 +140,11 @@ function mvWhen(w) {
   return f != null && t != null ? 'from ' + niceDate(f) + ' to ' + niceDate(t) : t != null ? 'until ' + niceDate(t) : f != null ? 'since ' + niceDate(f) : 'on all your visits';
 }
 function mvStays(n) { return fmt(n) + ' stay' + (n === 1 ? '' : 's'); }
+// This place moved… is offered for a spot with Google place IDs that has no move rule yet.
+function mvCanNew(key) {
+  var ids = mvPids(spotStays(key));
+  return ids.length > 0 && !mvRulesFor(ids).some(function (r) { return !r.keep; });
+}
 function mvSpotHtml(key) {
   var vs = spotStays(key), ids = mvPids(vs);
   if (!ids.length) return '';
@@ -158,11 +163,8 @@ function mvSpotHtml(key) {
       (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but MyRules are switched off.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-edit="' + esc(r.id) + '" data-key="' + esc(key) + '">' + icon('edit') + 'Edit where it was</button></div>';
   });
-  // Nothing to say yet: the explanation sits behind the (i) next to the heading.
-  if (!h) return infoHead('h4', 'place-h', 'Where it was', 'If this place moved and your old visits show at its new address, say where it was then.', 'About Where it was') +
-    (R.some(function (r) { return !r.keep; }) ? '' : '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>');
-  if (!R.some(function (r) { return !r.keep; })) h += '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>';
-  return '<h4 class="place-h">Where it was</h4>' + h;
+  // Nothing to say: This place moved… is in the page's ⋯ menu (placeActs, mvCanNew).
+  return h ? '<h4 class="place-h">Where it was</h4>' + h : '';
 }
 function mvName(key) {
   var s = spotsOf(spotStays(key))[0];

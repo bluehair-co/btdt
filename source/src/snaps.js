@@ -77,7 +77,7 @@ function snapRuleRow(s) {
   bits.push('trips that follow it for ' + mrMatchMin(s) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : ''));
   if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type (turn on Other types to take them)');
   if (!snapOk(s)) bits.push('It has no line or ends, so it takes no trips');
-  return mrRuleRow('snaps', s, s.name || s.id, bits.join(' · '), s.mode || 'OTHER', s.mode ? modeColor(s.mode) : '#9aa49d', D ? MR_COUNT[s.id] || 0 : null);
+  return mrRuleRow('snaps', s, s.name || s.id, bits, s.mode || 'OTHER', s.mode ? modeColor(s.mode) : '#9aa49d', D ? MR_COUNT[s.id] || 0 : null);
 }
 
 // ---------- making one ----------
