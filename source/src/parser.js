@@ -59,9 +59,13 @@ function e7(a, b) {
 }
 function km(a, b) {
   if (!a || !b) return 0;
+  return kmLL(a[0], a[1], b[0], b[1]);
+}
+// km between two points given as numbers, without making arrays for them.
+function kmLL(la1, lo1, la2, lo2) {
   var R = 6371.0088, r = Math.PI / 180;
-  var dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
-  var h = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+  var dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  var h = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
@@ -734,7 +738,10 @@ function tripAvg(R, i) { var h = (R.end[i] - R.start[i]) / 36e5; return h > 0 ? 
 // counts (0 leaves it out): 1 for a type from your files, more for one you set yourself.
 function TripIndex(R, weight) {
   this.R = R; this.w = new Float32Array(R.mode.length); this.m = new Map();
+  // Each trip's average speed, and the vote it was last seen in (so votes needs no Set of its own).
+  this.avg = new Float64Array(R.mode.length); this.seen = new Uint32Array(R.mode.length); this.stamp = 0;
   for (var i = 0; i < R.mode.length; i++) {
+    this.avg[i] = tripAvg(R, i);
     var w = weight(i), la = R.from[2 * i], lb = R.to[2 * i];
     if (!(w > 0) || !VOTE_GROUP[MODES[R.mode[i]]] || !isFinite(la) || !isFinite(lb)) continue;
     var k = endKey(Math.floor(la / END_LAT), Math.floor(R.from[2 * i + 1] / END_LNG), Math.floor(lb / END_LAT), Math.floor(R.to[2 * i + 1] / END_LNG));
@@ -750,25 +757,39 @@ TripIndex.prototype.votes = function (i, avg) {
   var R = this.R, S = this.R, a0 = R.from[2 * i], a1 = R.from[2 * i + 1], b0 = R.to[2 * i], b1 = R.to[2 * i + 1];
   if (!isFinite(a0) || !isFinite(b0)) return null;
   if (avg == null) avg = tripAvg(R, i);
-  var tol = Math.max(VOTE_DKMH, VOTE_DREL * avg), by = {}, raw = {}, tot = 0, cnt = 0, seen = new Set(), self = this;
+  var tol = Math.max(VOTE_DKMH, VOTE_DREL * avg), by = {}, raw = {}, tot = 0, cnt = 0, self = this;
+  var seen = this.seen, AV = this.avg, stamp = this.stamp = this.stamp + 1 >>> 0 || 1;
+  if (stamp === 1) seen.fill(0);
   var ya = Math.floor(a0 / END_LAT), xa = Math.floor(a1 / END_LNG), yb = Math.floor(b0 / END_LAT), xb = Math.floor(b1 / END_LNG);
-  function look(y0, x0, y1, x1, p, q) {
+  // Whether two ends are within END_KM: further apart in latitude alone is a quick no; else a flat
+  // estimate (with the cosine at the first end, off by well under 0.5 % this close) settles all but
+  // the ends right at END_KM, which km measures.
+  var dLat = END_KM / 111.19, KD = 6371.0088 * Math.PI / 180, lo2 = END_KM * 0.995 / KD, hi2 = END_KM * 1.005 / KD;
+  lo2 *= lo2; hi2 *= hi2;
+  function near(la, lo, lb, lob, cs) {
+    var dy = lb - la;
+    if (dy > dLat || dy < -dLat) return false;
+    var dx = (lob - lo) * cs, d2 = dy * dy + dx * dx;
+    return d2 < lo2 || d2 <= hi2 && kmLL(la, lo, lb, lob) <= END_KM;
+  }
+  function look(y0, x0, y1, x1, p0, p1, q0, q1) {
+    var cp = Math.cos(p0 * Math.PI / 180), cq = Math.cos(q0 * Math.PI / 180);
     for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) for (var ey = -1; ey <= 1; ey++) for (var ex = -1; ex <= 1; ex++) {
       var L = self.m.get(endKey(y0 + dy, x0 + dx, y1 + ey, x1 + ex));
       if (!L) continue;
       for (var k = 0; k < L.length; k++) {
         var j = L[k];
-        if (j === i || seen.has(j)) continue;
-        seen.add(j);
-        if (km(p, [S.from[2 * j], S.from[2 * j + 1]]) > END_KM || km(q, [S.to[2 * j], S.to[2 * j + 1]]) > END_KM) continue;
-        if (Math.abs(tripAvg(S, j) - avg) > tol) continue;
+        if (j === i || seen[j] === stamp) continue;
+        seen[j] = stamp;
+        if (!near(p0, p1, S.from[2 * j], S.from[2 * j + 1], cp) || !near(q0, q1, S.to[2 * j], S.to[2 * j + 1], cq)) continue;
+        if (Math.abs(AV[j] - avg) > tol) continue;
         var m = MODES[S.mode[j]], g = VOTE_GROUP[m], w = self.w[j];
         by[g] = (by[g] || 0) + w; raw[m] = (raw[m] || 0) + w; tot += w; cnt++;
       }
     }
   }
-  look(ya, xa, yb, xb, [a0, a1], [b0, b1]);
-  look(yb, xb, ya, xa, [b0, b1], [a0, a1]);
+  look(ya, xa, yb, xb, a0, a1, b0, b1);
+  look(yb, xb, ya, xa, b0, b1, a0, a1);
   if (!tot) return null;
   var best = null, alt = null;
   Object.keys(by).forEach(function (g) {
@@ -1982,7 +2003,6 @@ function dwSniff(name, head) {
   if (/\.jsonl$/i.test(name) && /"timestamp"\s*:/.test(head) && /"(battery_status|tracker_id|latitude|lonlat)"\s*:/.test(head)) return 'points';
   return null;
 }
-function kmLL(a0, a1, b0, b1) { return km([a0, a1], [b0, b1]); }
 // Stays: points that keep within 150 m of their middle for at least 10 minutes (a phone that
 // stops reporting while still counts, as long as its next point is there too). Stays at the same
 // spot less than 15 minutes apart are one stay (a stray GPS fix doesn't split it).

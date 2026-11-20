@@ -165,13 +165,15 @@ $('mapNote').textContent = PATH_NOTE;
 var resizeT = 0;
 window.addEventListener('resize', function () {
   clearTimeout(resizeT);
-  resizeT = setTimeout(function () { if (!D) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
+  resizeT = setTimeout(function () { if (!D || BUILDING) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
 busy('Opening your saved trips…');
-mrLoad().then(packsLoad).then(loadSaved).then(function (R) {
-  busy('');
-  if (R && !D) { setData(R); toast('Showing the trips saved on this device.'); }
-}).catch(function () { busy(''); });
+// The road packs' graph is made first (when snapping to roads is on), so the trips are drawn along
+// the roads in one go. setDataSoon works through the trips in slices, so the loader keeps moving.
+mrLoad().then(packsLoad).then(function () { return roadOn() && !RG ? roadsLoad() : null; }).then(loadSaved).then(function (R) {
+  if (!R || D) return;
+  return setDataSoon(R).then(function () { toast('Showing the trips saved on this device.'); });
+}).catch(function () { /* opens without them */ }).then(function () { busy(''); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js').catch(function () { /* offline start unavailable */ });
 }

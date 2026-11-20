@@ -134,14 +134,31 @@ function modeStats() {
   }
   return { modes: MODES.filter(function (m) { return present[m]; }), sports: Object.keys(sp).map(Number).sort(function (a, b) { return a - b; }), sportN: sp, plain: plain };
 }
-function setData(R) {
+function setData(R) { runAll(setDataSteps(R)); }
+// setData a slice at a time (runSoon), for when the loader shows: while it runs, BUILDING is set,
+// and a reapply of the rules asked for meanwhile (a road pack ready) waits until it's done.
+var BUILDING = null;
+function setDataSoon(R) {
+  var b = BUILDING = {};
+  function done() { if (BUILDING === b) BUILDING = null; }
+  // The rules are applied again in slices too, the loader still showing, until nothing more asks.
+  function more(ran) {
+    if (!b.again || !D) { done(); if (ran && D) mrReapplied(); return; }
+    b.again = false;
+    return runSoon(mrCorrectSteps()).then(function () { return more(true); });
+  }
+  return runSoon(setDataSteps(R)).then(function () { return more(false); }).catch(function (e) { done(); throw e; });
+}
+function* setDataSteps(R) {
   RAW = upgrade(R);
   rematchSports(RAW.strava);
   D = withStrava(RAW);
+  yield;
   // MyRules corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
   if (D === RAW) D = Object.assign({}, RAW);
   // Trips Timeline merged are split into their legs (split.js), on D only.
   D = splitTrips(D);
+  yield;
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
@@ -154,7 +171,8 @@ function setData(R) {
     D.hour[i] = localHour(D.start[i], D.off[i]);
     yc[D.year[i]] = 1;
   }
-  mrApplyCorrections();
+  yield;
+  yield* mrCorrectSteps();
   var ms = modeStats();
   D.vyear = new Int16Array(nv); D.vmonth = new Int8Array(nv); D.vdow = new Int8Array(nv);
   for (i = 0; i < nv; i++) {
@@ -163,6 +181,7 @@ function setData(R) {
     yc[D.vyear[i]] = 1;
   }
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
+  yield;
   tagCountries();
   D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
   var minD = Infinity, maxD = -Infinity;
@@ -170,6 +189,7 @@ function setData(R) {
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
   if (!isFinite(minD)) minD = maxD = Math.floor(Date.now() / 864e5);
   buildGear();
+  yield;
   mrApplyPlaces();
   var anyGuess = mrAnyGuess();
   M = {
@@ -187,8 +207,10 @@ function setData(R) {
   };
   F = defaultFilters();
   buildFilterUI();
+  yield;
   mapReset();
   apply();
+  yield;
   renderSettings();
 }
 
@@ -1096,24 +1118,25 @@ function importLocationFiles(list) {
       // Your own files replace the demo rather than joining it.
       if (DEMO) { RAW = null; leaveDemo(); }
       var next = merge(RAW, r.results);
-      setData(next);
-      // Saved after setData, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
-      saveData(next);
-      busy('');
-      var nv = next.vs.length;
-      var onlyStrava = r.results.every(function (x) { return x.strava; }), nfiles = new Set(r.results.map(function (x) { return x.name; })).size;
-      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + nfiles + ' file' + (nfiles > 1 ? 's' : '') + '.';
-      if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without location data.';
-      if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
-      if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
-      if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';
-      if (next.simReplaced) msg += ' Simulated trips replaced ' + fmt(next.simReplaced) + ' exported trip' + (next.simReplaced === 1 ? '' : 's') + '.';
-      if (r.results.some(function (x) { return x.strava; })) msg += ' ' + stravaText(D.stravaStats);
-      msg = msg.trim();
-      if (r.errors.length) msg += ' Problems: ' + r.errors.join(' · ');
-      setStatus(msg, r.errors.length > 0);
-      // Station packs for the countries the trips are in, offered once each.
-      setTimeout(packOffer, 800);
+      setDataSoon(next).then(function () {
+        // Saved after the trips are set up, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
+        saveData(next);
+        busy('');
+        var nv = next.vs.length;
+        var onlyStrava = r.results.every(function (x) { return x.strava; }), nfiles = new Set(r.results.map(function (x) { return x.name; })).size;
+        var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + nfiles + ' file' + (nfiles > 1 ? 's' : '') + '.';
+        if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without location data.';
+        if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
+        if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
+        if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';
+        if (next.simReplaced) msg += ' Simulated trips replaced ' + fmt(next.simReplaced) + ' exported trip' + (next.simReplaced === 1 ? '' : 's') + '.';
+        if (r.results.some(function (x) { return x.strava; })) msg += ' ' + stravaText(D.stravaStats);
+        msg = msg.trim();
+        if (r.errors.length) msg += ' Problems: ' + r.errors.join(' · ');
+        setStatus(msg, r.errors.length > 0);
+        // Station packs for the countries the trips are in, offered once each.
+        setTimeout(packOffer, 800);
+      });
     }, 30);
   });
 }
@@ -1177,14 +1200,15 @@ $('demoBtn').addEventListener('click', function () {
     RAW = null;
     // Your own MyRules don't apply to the made-up person; a file loaded during the demo does, unsaved.
     MR = null;
-    setData(merge(null, r.results));
-    // The demo opens on all of its data, the whole map in view.
-    F.dm = 'all';
-    allCalendar();
-    syncFilterUI();
-    mapReset();
-    apply();
-    busy('');
+    return setDataSoon(merge(null, r.results)).then(function () {
+      // The demo opens on all of its data, the whole map in view.
+      F.dm = 'all';
+      allCalendar();
+      syncFilterUI();
+      mapReset();
+      apply();
+      busy('');
+    });
   }).catch(function () {
     busy('');
     setStatus('The demo couldn\'t open. Check your internet connection and try again.', true);

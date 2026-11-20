@@ -1895,9 +1895,13 @@ function e7(a, b) {
 }
 function km(a, b) {
   if (!a || !b) return 0;
+  return kmLL(a[0], a[1], b[0], b[1]);
+}
+// km between two points given as numbers, without making arrays for them.
+function kmLL(la1, lo1, la2, lo2) {
   var R = 6371.0088, r = Math.PI / 180;
-  var dLa = (b[0] - a[0]) * r, dLo = (b[1] - a[1]) * r;
-  var h = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
+  var dLa = (la2 - la1) * r, dLo = (lo2 - lo1) * r;
+  var h = Math.sin(dLa / 2) * Math.sin(dLa / 2) + Math.cos(la1 * r) * Math.cos(la2 * r) * Math.sin(dLo / 2) * Math.sin(dLo / 2);
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
 
@@ -2570,7 +2574,10 @@ function tripAvg(R, i) { var h = (R.end[i] - R.start[i]) / 36e5; return h > 0 ? 
 // counts (0 leaves it out): 1 for a type from your files, more for one you set yourself.
 function TripIndex(R, weight) {
   this.R = R; this.w = new Float32Array(R.mode.length); this.m = new Map();
+  // Each trip's average speed, and the vote it was last seen in (so votes needs no Set of its own).
+  this.avg = new Float64Array(R.mode.length); this.seen = new Uint32Array(R.mode.length); this.stamp = 0;
   for (var i = 0; i < R.mode.length; i++) {
+    this.avg[i] = tripAvg(R, i);
     var w = weight(i), la = R.from[2 * i], lb = R.to[2 * i];
     if (!(w > 0) || !VOTE_GROUP[MODES[R.mode[i]]] || !isFinite(la) || !isFinite(lb)) continue;
     var k = endKey(Math.floor(la / END_LAT), Math.floor(R.from[2 * i + 1] / END_LNG), Math.floor(lb / END_LAT), Math.floor(R.to[2 * i + 1] / END_LNG));
@@ -2586,25 +2593,39 @@ TripIndex.prototype.votes = function (i, avg) {
   var R = this.R, S = this.R, a0 = R.from[2 * i], a1 = R.from[2 * i + 1], b0 = R.to[2 * i], b1 = R.to[2 * i + 1];
   if (!isFinite(a0) || !isFinite(b0)) return null;
   if (avg == null) avg = tripAvg(R, i);
-  var tol = Math.max(VOTE_DKMH, VOTE_DREL * avg), by = {}, raw = {}, tot = 0, cnt = 0, seen = new Set(), self = this;
+  var tol = Math.max(VOTE_DKMH, VOTE_DREL * avg), by = {}, raw = {}, tot = 0, cnt = 0, self = this;
+  var seen = this.seen, AV = this.avg, stamp = this.stamp = this.stamp + 1 >>> 0 || 1;
+  if (stamp === 1) seen.fill(0);
   var ya = Math.floor(a0 / END_LAT), xa = Math.floor(a1 / END_LNG), yb = Math.floor(b0 / END_LAT), xb = Math.floor(b1 / END_LNG);
-  function look(y0, x0, y1, x1, p, q) {
+  // Whether two ends are within END_KM: further apart in latitude alone is a quick no; else a flat
+  // estimate (with the cosine at the first end, off by well under 0.5 % this close) settles all but
+  // the ends right at END_KM, which km measures.
+  var dLat = END_KM / 111.19, KD = 6371.0088 * Math.PI / 180, lo2 = END_KM * 0.995 / KD, hi2 = END_KM * 1.005 / KD;
+  lo2 *= lo2; hi2 *= hi2;
+  function near(la, lo, lb, lob, cs) {
+    var dy = lb - la;
+    if (dy > dLat || dy < -dLat) return false;
+    var dx = (lob - lo) * cs, d2 = dy * dy + dx * dx;
+    return d2 < lo2 || d2 <= hi2 && kmLL(la, lo, lb, lob) <= END_KM;
+  }
+  function look(y0, x0, y1, x1, p0, p1, q0, q1) {
+    var cp = Math.cos(p0 * Math.PI / 180), cq = Math.cos(q0 * Math.PI / 180);
     for (var dy = -1; dy <= 1; dy++) for (var dx = -1; dx <= 1; dx++) for (var ey = -1; ey <= 1; ey++) for (var ex = -1; ex <= 1; ex++) {
       var L = self.m.get(endKey(y0 + dy, x0 + dx, y1 + ey, x1 + ex));
       if (!L) continue;
       for (var k = 0; k < L.length; k++) {
         var j = L[k];
-        if (j === i || seen.has(j)) continue;
-        seen.add(j);
-        if (km(p, [S.from[2 * j], S.from[2 * j + 1]]) > END_KM || km(q, [S.to[2 * j], S.to[2 * j + 1]]) > END_KM) continue;
-        if (Math.abs(tripAvg(S, j) - avg) > tol) continue;
+        if (j === i || seen[j] === stamp) continue;
+        seen[j] = stamp;
+        if (!near(p0, p1, S.from[2 * j], S.from[2 * j + 1], cp) || !near(q0, q1, S.to[2 * j], S.to[2 * j + 1], cq)) continue;
+        if (Math.abs(AV[j] - avg) > tol) continue;
         var m = MODES[S.mode[j]], g = VOTE_GROUP[m], w = self.w[j];
         by[g] = (by[g] || 0) + w; raw[m] = (raw[m] || 0) + w; tot += w; cnt++;
       }
     }
   }
-  look(ya, xa, yb, xb, [a0, a1], [b0, b1]);
-  look(yb, xb, ya, xa, [b0, b1], [a0, a1]);
+  look(ya, xa, yb, xb, a0, a1, b0, b1);
+  look(yb, xb, ya, xa, b0, b1, a0, a1);
   if (!tot) return null;
   var best = null, alt = null;
   Object.keys(by).forEach(function (g) {
@@ -3818,7 +3839,6 @@ function dwSniff(name, head) {
   if (/\.jsonl$/i.test(name) && /"timestamp"\s*:/.test(head) && /"(battery_status|tracker_id|latitude|lonlat)"\s*:/.test(head)) return 'points';
   return null;
 }
-function kmLL(a0, a1, b0, b1) { return km([a0, a1], [b0, b1]); }
 // Stays: points that keep within 150 m of their middle for at least 10 minutes (a phone that
 // stops reporting while still counts, as long as its next point is there too). Stays at the same
 // spot less than 15 minutes apart are one stay (a stray GPS fix doesn't split it).
@@ -4743,6 +4763,26 @@ function toast(text) {
   var t = $('toast'); t.textContent = text; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3500);
 }
+// Long work written as a generator (function*) that yields now and then. runAll does it in one go;
+// runSoon does it SLICE_MS at a time, letting the page paint in between, so the loader's icons keep
+// changing while the trips are worked out (in a hidden tab, where nothing paints, it goes straight on).
+function runAll(g) { while (!g.next().done); }
+var SLICE_MS = 40;
+function runSoon(g) {
+  return new Promise(function (resolve, reject) {
+    function step() {
+      var t0 = performance.now();
+      try {
+        for (;;) {
+          if (g.next().done) { resolve(); return; }
+          if (!document.hidden && performance.now() - t0 > SLICE_MS) break;
+        }
+      } catch (e) { reject(e); return; }
+      setTimeout(step, 0);
+    }
+    step();
+  });
+}
 // A slow change (a switch that makes every trip be worked out again): the "Working on it" pill and a
 // veil over the page show at once, a frame paints, then the work runs and both go when it's done.
 // The pill fades in only after 150 ms, so quick changes don't flash it; its spinner and fade are
@@ -5194,14 +5234,31 @@ function modeStats() {
   }
   return { modes: MODES.filter(function (m) { return present[m]; }), sports: Object.keys(sp).map(Number).sort(function (a, b) { return a - b; }), sportN: sp, plain: plain };
 }
-function setData(R) {
+function setData(R) { runAll(setDataSteps(R)); }
+// setData a slice at a time (runSoon), for when the loader shows: while it runs, BUILDING is set,
+// and a reapply of the rules asked for meanwhile (a road pack ready) waits until it's done.
+var BUILDING = null;
+function setDataSoon(R) {
+  var b = BUILDING = {};
+  function done() { if (BUILDING === b) BUILDING = null; }
+  // The rules are applied again in slices too, the loader still showing, until nothing more asks.
+  function more(ran) {
+    if (!b.again || !D) { done(); if (ran && D) mrReapplied(); return; }
+    b.again = false;
+    return runSoon(mrCorrectSteps()).then(function () { return more(true); });
+  }
+  return runSoon(setDataSteps(R)).then(function () { return more(false); }).catch(function (e) { done(); throw e; });
+}
+function* setDataSteps(R) {
   RAW = upgrade(R);
   rematchSports(RAW.strava);
   D = withStrava(RAW);
+  yield;
   // MyRules corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
   if (D === RAW) D = Object.assign({}, RAW);
   // Trips Timeline merged are split into their legs (split.js), on D only.
   D = splitTrips(D);
+  yield;
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
@@ -5214,7 +5271,8 @@ function setData(R) {
     D.hour[i] = localHour(D.start[i], D.off[i]);
     yc[D.year[i]] = 1;
   }
-  mrApplyCorrections();
+  yield;
+  yield* mrCorrectSteps();
   var ms = modeStats();
   D.vyear = new Int16Array(nv); D.vmonth = new Int8Array(nv); D.vdow = new Int8Array(nv);
   for (i = 0; i < nv; i++) {
@@ -5223,6 +5281,7 @@ function setData(R) {
     yc[D.vyear[i]] = 1;
   }
   D.vorder = Int32Array.from(Array.from({ length: nv }, function (_, k) { return k; }).sort(function (a, b) { return D.vs[a] - D.vs[b]; }));
+  yield;
   tagCountries();
   D.places = null; D.home = undefined; D.spotN = null; D.homeSpot = undefined; D.skey = null;
   var minD = Infinity, maxD = -Infinity;
@@ -5230,6 +5289,7 @@ function setData(R) {
   for (i = 0; i < nv; i++) { if (D.vday[i] < minD) minD = D.vday[i]; if (D.vday[i] > maxD) maxD = D.vday[i]; }
   if (!isFinite(minD)) minD = maxD = Math.floor(Date.now() / 864e5);
   buildGear();
+  yield;
   mrApplyPlaces();
   var anyGuess = mrAnyGuess();
   M = {
@@ -5247,8 +5307,10 @@ function setData(R) {
   };
   F = defaultFilters();
   buildFilterUI();
+  yield;
   mapReset();
   apply();
+  yield;
   renderSettings();
 }
 
@@ -6156,24 +6218,25 @@ function importLocationFiles(list) {
       // Your own files replace the demo rather than joining it.
       if (DEMO) { RAW = null; leaveDemo(); }
       var next = merge(RAW, r.results);
-      setData(next);
-      // Saved after setData, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
-      saveData(next);
-      busy('');
-      var nv = next.vs.length;
-      var onlyStrava = r.results.every(function (x) { return x.strava; }), nfiles = new Set(r.results.map(function (x) { return x.name; })).size;
-      var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + nfiles + ' file' + (nfiles > 1 ? 's' : '') + '.';
-      if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without location data.';
-      if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
-      if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
-      if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';
-      if (next.simReplaced) msg += ' Simulated trips replaced ' + fmt(next.simReplaced) + ' exported trip' + (next.simReplaced === 1 ? '' : 's') + '.';
-      if (r.results.some(function (x) { return x.strava; })) msg += ' ' + stravaText(D.stravaStats);
-      msg = msg.trim();
-      if (r.errors.length) msg += ' Problems: ' + r.errors.join(' · ');
-      setStatus(msg, r.errors.length > 0);
-      // Station packs for the countries the trips are in, offered once each.
-      setTimeout(packOffer, 800);
+      setDataSoon(next).then(function () {
+        // Saved after the trips are set up, which leaves out bad GPS jumps, so the saved copy is the cleaned one.
+        saveData(next);
+        busy('');
+        var nv = next.vs.length;
+        var onlyStrava = r.results.every(function (x) { return x.strava; }), nfiles = new Set(r.results.map(function (x) { return x.name; })).size;
+        var msg = onlyStrava ? '' : 'Loaded ' + tripsText(tripTotal()) + (nv ? ' and ' + fmt(nv) + ' stays' : '') + ' from ' + nfiles + ' file' + (nfiles > 1 ? 's' : '') + '.';
+        if (r.skipped) msg += ' Skipped ' + r.skipped + ' file' + (r.skipped > 1 ? 's' : '') + ' without location data.';
+        if (next.dropped) msg += ' Left out ' + fmt(next.dropped) + ' trips already covered by another export.';
+        if (next.gapKept) msg += ' Kept ' + tripsText(next.gapKept) + ' from ' + pointsName(next.files) + ' where Timeline recorded nothing.';
+        if (next.redrawn) msg += ' Drew ' + tripsText(next.redrawn) + ' along the GPS trail from ' + pointsName(next.files) + '.';
+        if (next.simReplaced) msg += ' Simulated trips replaced ' + fmt(next.simReplaced) + ' exported trip' + (next.simReplaced === 1 ? '' : 's') + '.';
+        if (r.results.some(function (x) { return x.strava; })) msg += ' ' + stravaText(D.stravaStats);
+        msg = msg.trim();
+        if (r.errors.length) msg += ' Problems: ' + r.errors.join(' · ');
+        setStatus(msg, r.errors.length > 0);
+        // Station packs for the countries the trips are in, offered once each.
+        setTimeout(packOffer, 800);
+      });
     }, 30);
   });
 }
@@ -6237,14 +6300,15 @@ $('demoBtn').addEventListener('click', function () {
     RAW = null;
     // Your own MyRules don't apply to the made-up person; a file loaded during the demo does, unsaved.
     MR = null;
-    setData(merge(null, r.results));
-    // The demo opens on all of its data, the whole map in view.
-    F.dm = 'all';
-    allCalendar();
-    syncFilterUI();
-    mapReset();
-    apply();
-    busy('');
+    return setDataSoon(merge(null, r.results)).then(function () {
+      // The demo opens on all of its data, the whole map in view.
+      F.dm = 'all';
+      allCalendar();
+      syncFilterUI();
+      mapReset();
+      apply();
+      busy('');
+    });
   }).catch(function () {
     busy('');
     setStatus('The demo couldn\'t open. Check your internet connection and try again.', true);
@@ -11164,7 +11228,8 @@ function mrCorrections() {
 // With MyRules switched off: what the routines and corrections would do if they were on (counts,
 // trips left out, lines), for the rules sheet. Worked out by applying them once and starting again.
 var MR_WOULD = null;
-function mrApplyCorrections(dry) {
+function mrApplyCorrections(dry) { runAll(mrCorrectSteps(dry)); }
+function* mrCorrectSteps(dry) {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
   function reset() {
@@ -11179,10 +11244,12 @@ function mrApplyCorrections(dry) {
     try { mrApplyCorrections(true); MR_WOULD = { count: MR_COUNT, left: MR_LEFT, line: D.mrLine }; } finally { MR.on = false; }
     reset();
   }
-  if (!MR || !MR.on) { mrApplyTracks(); mrApplyRoads(); mrLearn(); return; }
+  if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
+  yield;
   mrApplySnaps();
+  yield;
   mrCorrections().forEach(function (x) {
     var t = x.c.then, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = 0;
     x.trips.forEach(function (i) {
@@ -11206,10 +11273,11 @@ function mrApplyCorrections(dry) {
   D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
   if (dry) return;
   // Train trips nothing above drew, along the tracks of the packs (when that's on).
-  mrApplyTracks();
+  yield* mrTrackSteps();
   // Car trips nothing above drew, along the roads of the road packs (when that's on).
   mrApplyRoads();
-  mrLearn();
+  yield;
+  yield* mrLearnSteps();
 }
 
 // ---------- learning from your fixes, and trips to check ----------
@@ -11227,7 +11295,7 @@ function mrApplyCorrections(dry) {
 // Trips you fixed or checked, recorded activities and flights are never offered.
 var VOTE_FIX = 3, DOUBT_MIN = 5, DOUBT_SHARE = 0.8, DOUBT_OWN = 0.1;
 var DOUBT_GROUPS = { CYCLING: 1, CAR: 1, BUS: 1, TRAM: 1, TRAIN: 1, SUBWAY: 1 };
-function mrLearn() {
+function* mrLearnSteps() {
   var n = D.day.length, i, fly = MODE_IDX.FLYING;
   D.chk = new Int8Array(n).fill(-1); D.chkWhy = []; D.learn = []; D.conf = new Uint8Array(n);
   function fixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
@@ -11237,6 +11305,7 @@ function mrLearn() {
     return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
   });
   for (i = 0; i < n; i++) {
+    if (!(i & 127)) yield;
     if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || fixed(i)) continue;
     var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
     if (D.est[i] & GUESSED) {
@@ -11591,7 +11660,13 @@ function mrPlaceName(q) {
 // and sports trips now have for the first time are turned on).
 function mrReapply() {
   if (!D) { renderImports(); return; }
+  // The trips are still being set up (setDataSoon): this comes once they are.
+  if (BUILDING) { BUILDING.again = true; return; }
   mrApplyCorrections();
+  mrReapplied();
+}
+// After the rules are applied again: the filters, gear, places and views follow.
+function mrReapplied() {
   var ms = modeStats();
   ms.modes.forEach(function (m) { if (M.modes.indexOf(m) < 0) F.modes.add(m); });
   ms.sports.forEach(function (sp) { if (M.sports.indexOf(sp) < 0) F.sports.add(sp); });
@@ -14048,15 +14123,17 @@ function trackWays(sa, sb) {
   if (!tw.has(k)) tw.set(k, packLines('TRAIN', [sa.lat, sa.lng], [sb.lat, sb.lng]));
   return tw.get(k);
 }
-function mrApplyTracks() {
+function* mrTrackSteps() {
   D.mrTrack = [];
-  if (trackOn()) mrTrackTrips();
+  if (trackOn()) yield* mrTrackTrips();
   trackSettings();
 }
-function mrTrackTrips() {
+function* mrTrackTrips() {
   var n = D.day.length, T = MODE_IDX.TRAIN;
   for (var i = 0; i < n; i++) {
     if (D.mode[i] !== T || D.snap[i] || isDup(i) || D.mrHide && D.mrHide[i] || D.pathOff[i + 1] - D.pathOff[i] < 3) continue;
+    // A train trip can take a while (the ways between two new stations), so the loader gets a turn.
+    yield;
     var a = [D.from[2 * i], D.from[2 * i + 1]], z = [D.to[2 * i], D.to[2 * i + 1]];
     if (!isFinite(a[0]) || !isFinite(z[0]) || km(a, z) < 2) continue;
     var sa = packStation(a[0], a[1], TRACK_END_KM, 1 | 8), sb = sa && packStation(z[0], z[1], TRACK_END_KM, 1 | 8);
@@ -15234,13 +15311,15 @@ $('mapNote').textContent = PATH_NOTE;
 var resizeT = 0;
 window.addEventListener('resize', function () {
   clearTimeout(resizeT);
-  resizeT = setTimeout(function () { if (!D) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
+  resizeT = setTimeout(function () { if (!D || BUILDING) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
 busy('Opening your saved trips…');
-mrLoad().then(packsLoad).then(loadSaved).then(function (R) {
-  busy('');
-  if (R && !D) { setData(R); toast('Showing the trips saved on this device.'); }
-}).catch(function () { busy(''); });
+// The road packs' graph is made first (when snapping to roads is on), so the trips are drawn along
+// the roads in one go. setDataSoon works through the trips in slices, so the loader keeps moving.
+mrLoad().then(packsLoad).then(function () { return roadOn() && !RG ? roadsLoad() : null; }).then(loadSaved).then(function (R) {
+  if (!R || D) return;
+  return setDataSoon(R).then(function () { toast('Showing the trips saved on this device.'); });
+}).catch(function () { /* opens without them */ }).then(function () { busy(''); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js').catch(function () { /* offline start unavailable */ });
 }

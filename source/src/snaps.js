@@ -317,15 +317,17 @@ function trackWays(sa, sb) {
   if (!tw.has(k)) tw.set(k, packLines('TRAIN', [sa.lat, sa.lng], [sb.lat, sb.lng]));
   return tw.get(k);
 }
-function mrApplyTracks() {
+function* mrTrackSteps() {
   D.mrTrack = [];
-  if (trackOn()) mrTrackTrips();
+  if (trackOn()) yield* mrTrackTrips();
   trackSettings();
 }
-function mrTrackTrips() {
+function* mrTrackTrips() {
   var n = D.day.length, T = MODE_IDX.TRAIN;
   for (var i = 0; i < n; i++) {
     if (D.mode[i] !== T || D.snap[i] || isDup(i) || D.mrHide && D.mrHide[i] || D.pathOff[i + 1] - D.pathOff[i] < 3) continue;
+    // A train trip can take a while (the ways between two new stations), so the loader gets a turn.
+    yield;
     var a = [D.from[2 * i], D.from[2 * i + 1]], z = [D.to[2 * i], D.to[2 * i + 1]];
     if (!isFinite(a[0]) || !isFinite(z[0]) || km(a, z) < 2) continue;
     var sa = packStation(a[0], a[1], TRACK_END_KM, 1 | 8), sb = sa && packStation(z[0], z[1], TRACK_END_KM, 1 | 8);

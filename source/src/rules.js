@@ -261,7 +261,8 @@ function mrCorrections() {
 // With MyRules switched off: what the routines and corrections would do if they were on (counts,
 // trips left out, lines), for the rules sheet. Worked out by applying them once and starting again.
 var MR_WOULD = null;
-function mrApplyCorrections(dry) {
+function mrApplyCorrections(dry) { runAll(mrCorrectSteps(dry)); }
+function* mrCorrectSteps(dry) {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
   function reset() {
@@ -276,10 +277,12 @@ function mrApplyCorrections(dry) {
     try { mrApplyCorrections(true); MR_WOULD = { count: MR_COUNT, left: MR_LEFT, line: D.mrLine }; } finally { MR.on = false; }
     reset();
   }
-  if (!MR || !MR.on) { mrApplyTracks(); mrApplyRoads(); mrLearn(); return; }
+  if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
+  yield;
   mrApplySnaps();
+  yield;
   mrCorrections().forEach(function (x) {
     var t = x.c.then, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = 0;
     x.trips.forEach(function (i) {
@@ -303,10 +306,11 @@ function mrApplyCorrections(dry) {
   D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
   if (dry) return;
   // Train trips nothing above drew, along the tracks of the packs (when that's on).
-  mrApplyTracks();
+  yield* mrTrackSteps();
   // Car trips nothing above drew, along the roads of the road packs (when that's on).
   mrApplyRoads();
-  mrLearn();
+  yield;
+  yield* mrLearnSteps();
 }
 
 // ---------- learning from your fixes, and trips to check ----------
@@ -324,7 +328,7 @@ function mrApplyCorrections(dry) {
 // Trips you fixed or checked, recorded activities and flights are never offered.
 var VOTE_FIX = 3, DOUBT_MIN = 5, DOUBT_SHARE = 0.8, DOUBT_OWN = 0.1;
 var DOUBT_GROUPS = { CYCLING: 1, CAR: 1, BUS: 1, TRAM: 1, TRAIN: 1, SUBWAY: 1 };
-function mrLearn() {
+function* mrLearnSteps() {
   var n = D.day.length, i, fly = MODE_IDX.FLYING;
   D.chk = new Int8Array(n).fill(-1); D.chkWhy = []; D.learn = []; D.conf = new Uint8Array(n);
   function fixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
@@ -334,6 +338,7 @@ function mrLearn() {
     return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
   });
   for (i = 0; i < n; i++) {
+    if (!(i & 127)) yield;
     if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || fixed(i)) continue;
     var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
     if (D.est[i] & GUESSED) {
@@ -688,7 +693,13 @@ function mrPlaceName(q) {
 // and sports trips now have for the first time are turned on).
 function mrReapply() {
   if (!D) { renderImports(); return; }
+  // The trips are still being set up (setDataSoon): this comes once they are.
+  if (BUILDING) { BUILDING.again = true; return; }
   mrApplyCorrections();
+  mrReapplied();
+}
+// After the rules are applied again: the filters, gear, places and views follow.
+function mrReapplied() {
   var ms = modeStats();
   ms.modes.forEach(function (m) { if (M.modes.indexOf(m) < 0) F.modes.add(m); });
   ms.sports.forEach(function (sp) { if (M.sports.indexOf(sp) < 0) F.sports.add(sp); });
