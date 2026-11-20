@@ -350,6 +350,18 @@ The app never asks someone to type JSON. People who like files can still edit it
 
 **Exporting.** *Export MyRules* in the card downloads the `.myrules.json`. Because it contains places like home, the export button says so: "This file includes your home and work locations." The demo gets a small example file so the feature can be tried.
 
+### Cleaning up the corrections
+
+Edits pile up over time: a trip fixed twice, a type set to what the files already said, a trip that is no longer in the data, bulk edits made in several goes. When some of them can be written more simply, the top of the rules sheet says so, with **Clean up rules**. It opens a preview with one group per kind of tidy-up, each with a count, a switch, and *See them* for the list:
+
+- **Several edits on one trip** are joined into one edit per trip (the later one wins a field both set).
+- **Type set to what your files already say** (not a guess, not taken by a routine or map snap, no other edit giving it another type, not a recorded activity) becomes *Type checked* (`checked: true`), which is all it did.
+- **Edits on trips that aren't in your data** are deleted, but only for dates your loaded data covers, so rules for years you haven't loaded stay. In a bulk edit only the missing trips go.
+- **Edits that change nothing** are deleted.
+- **Bulk edits that do the same thing** are joined into one, when no other bulk edit, day or span between them touches their trips.
+
+Your trips come out exactly as before: it only changes how the edits are written down. It counts as one change (*Cleaned up corrections: 120 → 96…*), and *Undo* at the top of the rules puts the file back as it was, until anything else changes or the page reloads. It needs your trips loaded and MyRules switched on, since it checks what each edit did. Routines, places, gear periods and map snaps are left alone.
+
 ### Changes that haven't been exported
 
 The browser copy is often the only copy of rules made in the app, so the app has to keep track of what hasn't been saved anywhere else.

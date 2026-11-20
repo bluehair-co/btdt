@@ -153,6 +153,43 @@ function mrStayPlace(v) {
   var U = mrUnits(), u = U.list[U.of[v]];
   return mrPlaceAt(u.lat, u.lng);
 }
+// mrPlaceAt and mrStayPlace for a whole pass over the trips or stays: the place rules are listed once
+// and put in a grid of MR_PF_CELL° cells (each in every cell its radius reaches), so a point is only
+// measured against the few places near it, and a stay's original place (mrUnits) is looked up once.
+// Same answers as mrPlaceAt: the nearest place whose radius it is within, the first in the file on a tie.
+// Made fresh for each pass, as rules change between them.
+var MR_PF_CELL = 0.05;
+function mrPlaceFinder() {
+  var L = mrActive('places').filter(function (r) { return Array.isArray(r.at) && isFinite(r.at[0]) && isFinite(r.at[1]); });
+  var grid = new Map(), wide = [], U = null, memo = null;
+  L.forEach(function (r, k) {
+    var rad = Math.max(+r.radius_m || 100, 1) / 1000 * 1.05 + 0.01, la = +r.at[0], lo = +r.at[1];
+    var dla = rad / 110.57, cs = Math.cos(Math.min(89, Math.abs(la) + dla) * Math.PI / 180), dlo = rad / (111.32 * Math.max(cs, 0.01));
+    var y0 = Math.floor((la - dla) / MR_PF_CELL), y1 = Math.floor((la + dla) / MR_PF_CELL), x0 = Math.floor((lo - dlo) / MR_PF_CELL), x1 = Math.floor((lo + dlo) / MR_PF_CELL);
+    // Near the poles or the date line, or a radius over many cells: checked for every point.
+    if (Math.abs(la) + dla > 85 || lo - dlo < -180 || lo + dlo > 180 || (y1 - y0 + 1) * (x1 - x0 + 1) > 400) { wide.push(k); return; }
+    for (var y = y0; y <= y1; y++) for (var x = x0; x <= x1; x++) { var key = y * 8192 + x, c = grid.get(key); if (!c) grid.set(key, c = []); c.push(k); }
+  });
+  function at(lat, lng) {
+    if (!L.length || !isFinite(lat)) return null;
+    var c = grid.get(Math.floor(lat / MR_PF_CELL) * 8192 + Math.floor(lng / MR_PF_CELL)), best = null, bk = -1, bd = Infinity, j, k;
+    // In file order, as mrPlaceAt goes: the wide ones merged into the cell's list.
+    for (var a = 0, b = 0, na = c ? c.length : 0, nb = wide.length; a < na || b < nb;) {
+      if (b >= nb || a < na && c[a] < wide[b]) k = c[a++]; else k = wide[b++];
+      var r = L[k], d = km([lat, lng], r.at) * 1000;
+      if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; bk = k; }
+    }
+    return best;
+  }
+  function stay(v) {
+    if (!L.length) return null;
+    if (!U) { U = mrUnits(); memo = new Array(U.list.length); }
+    var k = U.of[v];
+    if (memo[k] === undefined) { var u = U.list[k]; memo[k] = at(u.lat, u.lng); }
+    return memo[k];
+  }
+  return { at: at, stay: stay, n: L.length };
+}
 function mrNearestPlace(at) {
   var best = -1, bd = Infinity;
   D.places.forEach(function (q, k) { if (q.ap) return; var d = km([q.lat, q.lng], at); if (d < bd) { bd = d; best = k; } });
@@ -737,8 +774,10 @@ function mrApplyPlaces() {
   D.vhide = new Uint8Array(nv);
   mrActive('places').forEach(function (r) { MR_COUNT[r.id] = 0; });
   if (!MR || !MR.on) return;
+  var pf = mrPlaceFinder();
+  if (!pf.n) return;
   for (var v = 0; v < nv; v++) {
-    var r = mrStayPlace(v);
+    var r = pf.stay(v);
     if (!r) continue;
     MR_COUNT[r.id]++;
     if (r.hide) D.vhide[v] = 1;
@@ -1075,6 +1114,7 @@ function mrRenderRules() {
   // Off: the counts, left-out trips and lines the rules would have.
   var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
   if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off, so none of these rules change your trips. Routines and corrections show how many trips they would change. <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
+  if (D && MR.on) h += mrCleanBar();
   if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
   var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
@@ -1156,9 +1196,175 @@ function mrCorGroup(c) {
   var th = c.then || {};
   return th.mode ? LABEL[th.mode] || th.mode : th.hide === true ? 'Hidden' : th.gear ? 'Gear' : th.name ? 'Titles' : th.checked ? 'Type checked' : Array.isArray(th.ignore_points) && th.ignore_points.length ? 'Ignored GPS points' : 'Other';
 }
+// ---------- cleaning up the corrections ----------
+// Edits pile up: a trip fixed twice, a type set to what the files already said, a trip that is no
+// longer in the data, bulk edits made in several goes. mrCleanPlan finds them, with what would change
+// (nothing on the map: every step keeps what the corrections do to the trips loaded), and mrCleanRun
+// does the ones ticked. Needs the trips and MyRules on, since it looks at what each correction did.
+// Groups: empty (nothing to change), gone (no trip in the data, only for dates the data covers), same
+// (a type the trip already had in the files: kept as Type checked, which is what it did), dup (more
+// than one edit on one trip: one edit with all of it, the later one winning a field both set), bulk
+// (bulk edits that do the same, joined).
+var MR_CLEAN = null;   // the last clean-up, for Undo: { before (the rules), stamp (about.updated after it), text }
+var MR_CLEAN_GROUPS = [
+  ['dup', 'Several edits on one trip', 'joined into one edit per trip'],
+  ['same', 'Type set to what your files already say', 'kept as Type checked, which is all they did'],
+  ['gone', 'Edits on trips that aren\'t in your data', 'deleted (only for dates your data covers)'],
+  ['empty', 'Edits that change nothing', 'deleted'],
+  ['bulk', 'Bulk edits that do the same thing', 'joined into one']
+];
+function mrCorDoes(t) {
+  t = t || {};
+  return !!(t.mode != null && MODE_IDX[t.mode] != null || typeof t.name === 'string' && t.name.trim() || t.gear || typeof t.hide === 'boolean' || t.checked === true || Array.isArray(t.ignore_points) && t.ignore_points.length || t.replace);
+}
+function mrRefDay(ref) {
+  var v = ref && (ref.start || ref.day || ref.span && ref.span[0]);
+  return v ? mrDayNum(String(v).slice(0, 10)) : null;
+}
+function mrCleanPlan() {
+  var plan = { items: [], n: {} };
+  if (!D || !MR || !MR.on || !D.base) return plan;
+  var b = D.base, all = mrList('corrections'), act = all.filter(function (c) { return c.id && c.enabled !== false && c.trip && typeof c.trip === 'object'; });
+  var minD = M ? M.minD : -Infinity, maxD = M ? M.maxD : Infinity, cut = {};
+  function inData(ref) { var d = mrRefDay(ref); return d != null && d >= minD && d <= maxD; }
+  function add(kind, c, text, i, extra) { plan.items.push(Object.assign({ kind: kind, c: c, text: text, i: i }, extra || {})); plan.n[kind] = (plan.n[kind] || 0) + 1; }
+  function when(c) { var t = c.trip; return t.start ? t.start.slice(0, 16).replace('T', ', ') : t.day || (t.span ? t.span.join(' – ') : c.name || c.id); }
+  // Which trips each correction points at, and the other corrections on each trip.
+  var refs = new Map(), on = {};
+  act.forEach(function (c) {
+    var tr = c.then && typeof c.then === 'object' ? mrRefTrips(c.trip) : [];
+    refs.set(c, tr);
+    tr.forEach(function (i) { (on[i] || (on[i] = [])).push(c); });
+  });
+  act.forEach(function (c) {
+    var t = c.trip, th = c.then;
+    if (!th || typeof th !== 'object' || !mrCorDoes(th)) { add('empty', c, when(c) + ': nothing to change'); cut[c.id] = 1; return; }
+    if (Array.isArray(t.trips)) {
+      var lost = t.trips.filter(function (r) { return inData(r) && !mrRefTrips(r).length; });
+      if (lost.length) { add('gone', c, (c.name || 'Bulk edit') + ': ' + tripsText(lost.length) + ' of ' + fmt(t.trips.length) + ' not in your data', null, { lost: lost }); if (lost.length === t.trips.length) cut[c.id] = 1; }
+      return;
+    }
+    if (!refs.get(c).length) { if (inData(t)) { add('gone', c, when(c) + ': no trip there'); cut[c.id] = 1; } return; }
+    if (!t.start) return;
+    var i = refs.get(c)[0];
+    // A type the trip already had: not a guess, no routine or map snap took it, no other edit gives it another type, not a recorded activity.
+    if (th.mode != null && MODE_IDX[th.mode] === b.mode[i] && !(b.est[i] & GUESSED) && !(b.est[i] & STRAVA) && !(D.mrRoute && D.mrRoute[i]) && !(D.mrSnap && D.mrSnap[i]) &&
+      !(on[i] || []).some(function (o) { return o !== c && o.then && o.then.mode != null && o.then.mode !== th.mode; }))
+      add('same', c, when(c) + ': ' + (LABEL[th.mode] || th.mode) + ', as in your files', i);
+  });
+  // Several edits on one trip (each on that trip alone): joined into the last one.
+  Object.keys(on).forEach(function (k) {
+    var own = on[k].filter(function (c) { return c.trip.start && !cut[c.id]; });
+    if (own.length < 2) return;
+    add('dup', own[own.length - 1], when(own[own.length - 1]) + ': ' + own.length + ' edits', +k, { from: own.slice(0, -1) });
+  });
+  // Bulk edits that do the same: joined when nothing between them touches their trips.
+  var bulks = act.filter(function (c) { return Array.isArray(c.trip.trips) && !cut[c.id] && !(c.except && c.except.length) && !(c.unless && c.unless.length) && c.then && typeof c.then === 'object'; });
+  var byThen = {};
+  bulks.forEach(function (c) { var key = JSON.stringify(c.then); (byThen[key] || (byThen[key] = [])).push(c); });
+  Object.keys(byThen).forEach(function (key) {
+    var L = byThen[key];
+    if (L.length < 2) return;
+    var keep = L[L.length - 1], at = act.indexOf(keep), join = L.slice(0, -1).filter(function (c) {
+      // Moving c's trips to where keep is must not jump them over another day, span or bulk edit on them.
+      var mine = {}, from = act.indexOf(c);
+      refs.get(c).forEach(function (i) { mine[i] = 1; });
+      return !act.slice(from + 1, at).some(function (o) { return !o.trip.start && L.indexOf(o) < 0 && (refs.get(o) || []).some(function (i) { return mine[i]; }); });
+    });
+    if (join.length) add('bulk', keep, (keep.name || 'Bulk edit') + ': ' + (join.length + 1) + ' bulk edits', null, { from: join });
+  });
+  return plan;
+}
+// Does the groups ticked (all when kinds is left out) on MR.doc. Returns how many corrections went or changed.
+function mrCleanRun(plan, kinds) {
+  var gone = new Set(), changed = new Set(), fix = {};
+  function want(k) { return !kinds || kinds[k]; }
+  plan.items.forEach(function (x) {
+    if (!want(x.kind)) return;
+    var c = x.c;
+    if (x.kind === 'empty' || x.kind === 'gone' && !x.lost) gone.add(c);
+    else if (x.kind === 'gone') { c.trip.trips = c.trip.trips.filter(function (r) { return x.lost.indexOf(r) < 0; }); if (!c.trip.trips.length) gone.add(c); else changed.add(c); }
+    else if (x.kind === 'same') fix[c.id] = c;
+  });
+  // A type the trip already had becomes Type checked (before joining, so a joined edit keeps a type from another).
+  Object.keys(fix).forEach(function (id) { var c = fix[id]; delete c.then.mode; c.then.checked = true; changed.add(c); });
+  plan.items.forEach(function (x) {
+    if (!want(x.kind) || (x.kind !== 'dup' && x.kind !== 'bulk')) return;
+    var c = x.c, from = x.from.filter(function (o) { return !gone.has(o); });
+    if (!from.length) return;
+    if (x.kind === 'dup') {
+      var th = {}, nm = '';
+      from.concat([c]).forEach(function (o) { Object.assign(th, o.then); if (o.name) nm = o.name; });
+      if (th.mode != null) delete th.checked;
+      c.then = th;
+      if (nm && !c.name) c.name = nm;
+    } else {
+      var seen = {}, list = [];
+      from.concat([c]).forEach(function (o) { o.trip.trips.forEach(function (r) { var k = JSON.stringify(r); if (!seen[k]) { seen[k] = 1; list.push(r); } }); });
+      list.sort(function (p, q) { return Date.parse(p.start || p.day) - Date.parse(q.start || q.day); });
+      c.trip.trips = list;
+      if (!c.name || /^Bulk edit: /.test(c.name)) c.name = 'Bulk edit: ' + tripsText(list.length) + (c.then.mode ? ' to ' + (LABEL[c.then.mode] || c.then.mode).toLowerCase() : '');
+    }
+    from.forEach(function (o) { gone.add(o); });
+    changed.add(c);
+  });
+  if (gone.size) MR.doc.corrections = (MR.doc.corrections || []).filter(function (c) { return !gone.has(c); });
+  gone.forEach(function (c) { changed.delete(c); });
+  return { gone: gone.size, changed: changed.size };
+}
+function mrCleanAsk() {
+  var plan = mrCleanPlan();
+  if (!plan.items.length) { toast('Your corrections are already tidy'); return; }
+  var groups = MR_CLEAN_GROUPS.filter(function (g) { return plan.n[g[0]]; });
+  var extra = '<div class="mr-clean">' + groups.map(function (g) {
+    var items = plan.items.filter(function (x) { return x.kind === g[0]; });
+    return '<div class="mr-clean-g"><label class="toggle-row"><span class="lbl"><b>' + esc(g[1]) + '</b> <span class="num">' + fmt(items.length) + '</span><small class="fine" style="display:block">' + esc(g[2]) + '</small></span>' +
+      '<input type="checkbox" class="switch" data-clean="' + g[0] + '" checked></label>' +
+      '<details><summary class="fine">See ' + (items.length === 1 ? 'it' : 'them') + '</summary><ul class="mr-changes">' + items.map(function (x) { return '<li>' + esc(x.text) + '</li>'; }).join('') + '</ul></details></div>';
+  }).join('') + '</div>';
+  mrAsk({
+    title: 'Clean up your corrections?',
+    text: 'Your trips stay as they are now: these only tidy how your edits are written down, so the file is shorter and easier to go through.',
+    extra: extra,
+    buttons: [['Clean up', 'primary', function () {
+      var kinds = {};
+      $('mrDlgExtra').querySelectorAll('[data-clean]').forEach(function (el) { if (el.checked) kinds[el.dataset.clean] = 1; });
+      if (!Object.keys(kinds).length) return;
+      working('Cleaning up your rules…', function () { mrCleanDo(plan, kinds); });
+    }], ['Cancel', 'quiet', null]],
+    note: 'You can undo it from the top of your rules until you change anything else or reload the page.'
+  });
+}
+function mrCleanDo(plan, kinds) {
+  var before = JSON.parse(JSON.stringify(MR.doc)), n0 = mrList('corrections').length;
+  var r = mrCleanRun(plan, kinds), n1 = mrList('corrections').length;
+  var text = 'Cleaned up corrections: ' + fmt(n0) + ' → ' + fmt(n1) + (r.changed ? ', ' + fmt(r.changed) + ' rewritten' : '');
+  mrChange(text);
+  MR_CLEAN = { before: before, stamp: MR.doc.about && MR.doc.about.updated, text: text };
+  if (openId === 'mrSheet') mrRenderRules();
+  toast(text);
+}
+function mrCleanUndo() {
+  if (!MR_CLEAN || !MR || !MR.doc.about || MR.doc.about.updated !== MR_CLEAN.stamp) return;
+  MR.doc = MR_CLEAN.before;
+  MR_CLEAN = null;
+  mrChange('Undid the clean-up');
+  if (openId === 'mrSheet') mrRenderRules();
+  toast('Clean-up undone');
+}
+// The line at the top of the rules: Undo for the last clean-up, else Clean up when there is something to do.
+function mrCleanBar() {
+  if (!MR) return '';
+  if (MR_CLEAN && MR.doc.about && MR.doc.about.updated === MR_CLEAN.stamp) return '<p class="fine mr-warn">' + esc(MR_CLEAN.text) + '. <button type="button" class="link-btn" id="mrCleanUndo">Undo</button></p>';
+  var plan = mrCleanPlan(), n = plan.items.length;
+  if (!n) return '';
+  return '<p class="fine mr-warn mr-clean-bar">Some of your corrections can be written more simply, without changing your trips. <button type="button" class="link-btn" id="mrCleanBtn">Clean up rules</button></p>';
+}
 $('mrBody').addEventListener('click', function (ev) {
   var cs = ev.target.closest('[data-cor-sort]');
   if (cs) { PREFS.corSort = cs.dataset.corSort; savePrefs(); mrRenderRules(); return; }
+  if (ev.target.closest('#mrCleanBtn')) { mrCleanAsk(); return; }
+  if (ev.target.closest('#mrCleanUndo')) { working('Undoing the clean-up…', mrCleanUndo); return; }
   if (ev.target.closest('#mrSwitchOn')) { working('Applying MyRules…', function () { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); }); return; }
   var t = ev.target.closest('[data-mr-tabbtn]');
   if (!t) return;

@@ -693,18 +693,23 @@ function netFixes(R, order) {
   var n = R.start.length, P = R.pathPts, O = R.pathOff, fly = MODE_IDX.FLYING, i, k, q;
   var bits = new Uint32Array(P.buffer, P.byteOffset, P.length);
   function skip(j) { return R.mode[j] === fly || R.est[j] & STRAVA || O[j + 1] - O[j] < 3; }
-  // Days each spot was seen on: the last day and how many, as trips come in time order.
-  var seen = new Map();
+  // Days each spot was seen on: the last day and how many, as trips come in time order. Spots are
+  // keyed by their latitude's bits, then their longitude's (no string per point), and each point
+  // keeps its spot (at) for the second pass.
+  var seen = new Map(), at = new Array(P.length >> 1);
   for (k = 0; k < n; k++) {
     i = order ? order[k] : k;
     if (skip(i)) continue;
     for (q = O[i]; q < O[i + 1]; q++) {
-      var key = bits[2 * q] + ',' + bits[2 * q + 1], s = seen.get(key);
-      if (!s) seen.set(key, s = { d: R.day[i], n: 1, m: null });
+      var row = seen.get(bits[2 * q]);
+      if (!row) seen.set(bits[2 * q], row = new Map());
+      var s = row.get(bits[2 * q + 1]);
+      if (!s) row.set(bits[2 * q + 1], s = { d: R.day[i], n: 1, m: null });
       else if (s.d !== R.day[i]) {
         if (order) { s.d = R.day[i]; s.n++; }
         else { if (!s.m) s.m = new Set([s.d]); s.m.add(R.day[i]); s.n = s.m.size; s.d = R.day[i]; }
       }
+      at[q] = s;
     }
   }
   var out = {};
@@ -712,7 +717,7 @@ function netFixes(R, order) {
     if (skip(i)) continue;
     var o0 = O[i], len = O[i + 1] - o0, net = [], any = false, first = -1, last = -1;
     for (q = 0; q < len; q++) {
-      net.push(seen.get(bits[2 * (o0 + q)] + ',' + bits[2 * (o0 + q) + 1]).n >= NET_DAYS);
+      net.push(at[o0 + q].n >= NET_DAYS);
       if (net[q]) any = true; else { if (first < 0) first = q; last = q; }
     }
     if (!any || first < 0) continue;
