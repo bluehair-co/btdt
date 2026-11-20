@@ -1,5 +1,5 @@
 {
- "about": "Countries BT•DT builds station packs for, from Geofabrik extracts (download.geofabrik.de/<extract>-latest.osm.pbf). Add a country here to offer its pack.",
+ "about": "Countries BT•DT builds station packs for, from Geofabrik extracts (download.geofabrik.de/<extract>-latest.osm.pbf). Add a country here to offer its pack. A big country can be built from \"parts\" (provinces, states), each its own extract; with \"roads\": \"parts\" each part also gets its own road pack (roads/US-CA.json.gz), with \"roads\": true the country gets one.",
  "countries": [
   {
    "cc": "AL",
@@ -209,7 +209,74 @@
   {
    "cc": "CA",
    "name": "Canada",
-   "extract": "north-america/canada"
+   "roads": "parts",
+   "parts": [
+    {
+     "code": "CA-AB",
+     "name": "Alberta",
+     "extract": "north-america/canada/alberta"
+    },
+    {
+     "code": "CA-BC",
+     "name": "British Columbia",
+     "extract": "north-america/canada/british-columbia"
+    },
+    {
+     "code": "CA-MB",
+     "name": "Manitoba",
+     "extract": "north-america/canada/manitoba"
+    },
+    {
+     "code": "CA-NB",
+     "name": "New Brunswick",
+     "extract": "north-america/canada/new-brunswick"
+    },
+    {
+     "code": "CA-NL",
+     "name": "Newfoundland and Labrador",
+     "extract": "north-america/canada/newfoundland-and-labrador"
+    },
+    {
+     "code": "CA-NT",
+     "name": "Northwest Territories",
+     "extract": "north-america/canada/northwest-territories"
+    },
+    {
+     "code": "CA-NS",
+     "name": "Nova Scotia",
+     "extract": "north-america/canada/nova-scotia"
+    },
+    {
+     "code": "CA-NU",
+     "name": "Nunavut",
+     "extract": "north-america/canada/nunavut"
+    },
+    {
+     "code": "CA-ON",
+     "name": "Ontario",
+     "extract": "north-america/canada/ontario"
+    },
+    {
+     "code": "CA-PE",
+     "name": "Prince Edward Island",
+     "extract": "north-america/canada/prince-edward-island"
+    },
+    {
+     "code": "CA-QC",
+     "name": "Quebec",
+     "extract": "north-america/canada/quebec"
+    },
+    {
+     "code": "CA-SK",
+     "name": "Saskatchewan",
+     "extract": "north-america/canada/saskatchewan"
+    },
+    {
+     "code": "CA-YT",
+     "name": "Yukon",
+     "extract": "north-america/canada/yukon"
+    }
+   ]
   },
   {
    "cc": "AU",
@@ -225,14 +292,274 @@
    "cc": "MA",
    "name": "Morocco",
    "extract": "africa/morocco"
-  }
- ],
- "road_regions": [
+  },
   {
-   "code": "CA-ON",
-   "cc": "CA",
-   "name": "Ontario",
-   "extract": "north-america/canada/ontario"
+   "cc": "US",
+   "name": "United States",
+   "roads": "parts",
+   "parts": [
+    {
+     "code": "US-AL",
+     "name": "Alabama",
+     "extract": "north-america/us/alabama"
+    },
+    {
+     "code": "US-AK",
+     "name": "Alaska",
+     "extract": "north-america/us/alaska"
+    },
+    {
+     "code": "US-AZ",
+     "name": "Arizona",
+     "extract": "north-america/us/arizona"
+    },
+    {
+     "code": "US-AR",
+     "name": "Arkansas",
+     "extract": "north-america/us/arkansas"
+    },
+    {
+     "code": "US-CA",
+     "name": "California",
+     "extract": "north-america/us/california"
+    },
+    {
+     "code": "US-CO",
+     "name": "Colorado",
+     "extract": "north-america/us/colorado"
+    },
+    {
+     "code": "US-CT",
+     "name": "Connecticut",
+     "extract": "north-america/us/connecticut"
+    },
+    {
+     "code": "US-DE",
+     "name": "Delaware",
+     "extract": "north-america/us/delaware"
+    },
+    {
+     "code": "US-DC",
+     "name": "District of Columbia",
+     "extract": "north-america/us/district-of-columbia"
+    },
+    {
+     "code": "US-FL",
+     "name": "Florida",
+     "extract": "north-america/us/florida"
+    },
+    {
+     "code": "US-GA",
+     "name": "Georgia",
+     "extract": "north-america/us/georgia"
+    },
+    {
+     "code": "US-HI",
+     "name": "Hawaii",
+     "extract": "north-america/us/hawaii"
+    },
+    {
+     "code": "US-ID",
+     "name": "Idaho",
+     "extract": "north-america/us/idaho"
+    },
+    {
+     "code": "US-IL",
+     "name": "Illinois",
+     "extract": "north-america/us/illinois"
+    },
+    {
+     "code": "US-IN",
+     "name": "Indiana",
+     "extract": "north-america/us/indiana"
+    },
+    {
+     "code": "US-IA",
+     "name": "Iowa",
+     "extract": "north-america/us/iowa"
+    },
+    {
+     "code": "US-KS",
+     "name": "Kansas",
+     "extract": "north-america/us/kansas"
+    },
+    {
+     "code": "US-KY",
+     "name": "Kentucky",
+     "extract": "north-america/us/kentucky"
+    },
+    {
+     "code": "US-LA",
+     "name": "Louisiana",
+     "extract": "north-america/us/louisiana"
+    },
+    {
+     "code": "US-ME",
+     "name": "Maine",
+     "extract": "north-america/us/maine"
+    },
+    {
+     "code": "US-MD",
+     "name": "Maryland",
+     "extract": "north-america/us/maryland"
+    },
+    {
+     "code": "US-MA",
+     "name": "Massachusetts",
+     "extract": "north-america/us/massachusetts"
+    },
+    {
+     "code": "US-MI",
+     "name": "Michigan",
+     "extract": "north-america/us/michigan"
+    },
+    {
+     "code": "US-MN",
+     "name": "Minnesota",
+     "extract": "north-america/us/minnesota"
+    },
+    {
+     "code": "US-MS",
+     "name": "Mississippi",
+     "extract": "north-america/us/mississippi"
+    },
+    {
+     "code": "US-MO",
+     "name": "Missouri",
+     "extract": "north-america/us/missouri"
+    },
+    {
+     "code": "US-MT",
+     "name": "Montana",
+     "extract": "north-america/us/montana"
+    },
+    {
+     "code": "US-NE",
+     "name": "Nebraska",
+     "extract": "north-america/us/nebraska"
+    },
+    {
+     "code": "US-NV",
+     "name": "Nevada",
+     "extract": "north-america/us/nevada"
+    },
+    {
+     "code": "US-NH",
+     "name": "New Hampshire",
+     "extract": "north-america/us/new-hampshire"
+    },
+    {
+     "code": "US-NJ",
+     "name": "New Jersey",
+     "extract": "north-america/us/new-jersey"
+    },
+    {
+     "code": "US-NM",
+     "name": "New Mexico",
+     "extract": "north-america/us/new-mexico"
+    },
+    {
+     "code": "US-NY",
+     "name": "New York",
+     "extract": "north-america/us/new-york"
+    },
+    {
+     "code": "US-NC",
+     "name": "North Carolina",
+     "extract": "north-america/us/north-carolina"
+    },
+    {
+     "code": "US-ND",
+     "name": "North Dakota",
+     "extract": "north-america/us/north-dakota"
+    },
+    {
+     "code": "US-OH",
+     "name": "Ohio",
+     "extract": "north-america/us/ohio"
+    },
+    {
+     "code": "US-OK",
+     "name": "Oklahoma",
+     "extract": "north-america/us/oklahoma"
+    },
+    {
+     "code": "US-OR",
+     "name": "Oregon",
+     "extract": "north-america/us/oregon"
+    },
+    {
+     "code": "US-PA",
+     "name": "Pennsylvania",
+     "extract": "north-america/us/pennsylvania"
+    },
+    {
+     "code": "US-RI",
+     "name": "Rhode Island",
+     "extract": "north-america/us/rhode-island"
+    },
+    {
+     "code": "US-SC",
+     "name": "South Carolina",
+     "extract": "north-america/us/south-carolina"
+    },
+    {
+     "code": "US-SD",
+     "name": "South Dakota",
+     "extract": "north-america/us/south-dakota"
+    },
+    {
+     "code": "US-TN",
+     "name": "Tennessee",
+     "extract": "north-america/us/tennessee"
+    },
+    {
+     "code": "US-TX",
+     "name": "Texas",
+     "extract": "north-america/us/texas"
+    },
+    {
+     "code": "US-UT",
+     "name": "Utah",
+     "extract": "north-america/us/utah"
+    },
+    {
+     "code": "US-VT",
+     "name": "Vermont",
+     "extract": "north-america/us/vermont"
+    },
+    {
+     "code": "US-VA",
+     "name": "Virginia",
+     "extract": "north-america/us/virginia"
+    },
+    {
+     "code": "US-WA",
+     "name": "Washington",
+     "extract": "north-america/us/washington"
+    },
+    {
+     "code": "US-WV",
+     "name": "West Virginia",
+     "extract": "north-america/us/west-virginia"
+    },
+    {
+     "code": "US-WI",
+     "name": "Wisconsin",
+     "extract": "north-america/us/wisconsin"
+    },
+    {
+     "code": "US-WY",
+     "name": "Wyoming",
+     "extract": "north-america/us/wyoming"
+    }
+   ]
+  },
+  {
+   "cc": "MX",
+   "name": "Mexico",
+   "extract": "north-america/mexico",
+   "roads": true
   }
  ]
 }
