@@ -1606,7 +1606,7 @@ function placePage(o, keepScroll) {
         '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
         '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
     }).join('') + '</div>' + (spots.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '');
-  if (o.spot) html += mrSpotHtml(o.spot) + mergeHtml(o.spot);
+  if (o.spot) html += mrSpotHtml(o.spot) + mvSpotHtml(o.spot) + mergeHtml(o.spot);
   html += '<h4 class="place-h">Visits</h4><div class="list-rows" id="placeVisits">' + placeVisits.slice(0, 20).map(visitRow).join('') + '</div>' +
     (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +

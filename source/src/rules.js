@@ -9,7 +9,7 @@
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
 var MR = null;
-var MR_SECTIONS = ['places', 'gear', 'routines', 'snaps', 'corrections'];
+var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes', other: 'Other' };
 var MR_COUNT = {};   // trips (gear) or stays (places) each rule changed, by id
@@ -268,6 +268,7 @@ function* mrCorrectSteps(dry) {
   function reset() {
     D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
     D.pathPts = b.pathPts; D.pathT = b.pathT; D.pathOff = b.pathOff; D.from = b.from; D.to = b.to; D.mrDrop = [];
+    if (b.vll) D.vll = b.vll; D.mvStay = {};
     D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
     MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
   }
@@ -281,6 +282,8 @@ function* mrCorrectSteps(dry) {
   if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
   // GPS points you said to ignore go first, so routines, lines and distances all go without them.
   mrApplyDrops();
+  // Places that moved (moved.js): stays and the ends of trips to and from them, before routines look at the ends.
+  mrApplyMoves();
   yield;
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
@@ -1050,7 +1053,7 @@ function mrRenderRules() {
   var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
   if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off, so none of these rules change your trips. Routines and corrections show how many trips they would change. <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
-  var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
+  var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
     var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
@@ -1059,10 +1062,13 @@ function mrRenderRules() {
     var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR.on ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
-  if (places.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
+  if (places.length || moves.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
-  }).join('') + '</div>';
+  }).join('') + (moves.length ? '<h4 class="place-h mr-grp">Places that moved</h4>' + moves.map(function (r) {
+    var sub = (r.keep ? 'Google\'s location kept' : 'Where it was ' + mvWhen(r.when)) + ' · ' + mvStays(MR.on ? MR_COUNT[r.id] || 0 : 0);
+    return mrRuleRow('moves', r, r.name || r.id, sub, 'pin', r.keep ? '#9aa49d' : '#0f7c8c', null);
+  }).join('') : '') + '</div>';
   // Corrections by date (newest first) or by type (then newest first), with a heading per type.
   var csort = PREFS.corSort === 'type' ? 'type' : 'date', cgrp = null;
   cor = cor.slice().sort(function (a, b) { return csort === 'type' && mrCorGroup(a).localeCompare(mrCorGroup(b)) || mrCorTime(b) - mrCorTime(a); });
@@ -1103,7 +1109,7 @@ function mrRenderRules() {
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
   if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
+  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
   if (tabs.length > 1) {
     if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
     h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
@@ -1531,6 +1537,7 @@ function mrEditRule(ref) {
   if (sec === 'routines') { mrRoutineDialog(r); return; }
   if (sec === 'snaps') { closeSheets(true); snapStart(r); return; }
   if (!D) { toast('Load your Timeline file to edit this'); return; }
+  if (sec === 'moves') { mvEditRule(r); return; }
   if (sec === 'places') {
     if (!Array.isArray(r.at)) { toast('This place has no position to edit'); return; }
     needPlaces(); mrPlaceDialog('mr:' + r.id); return;

@@ -32,6 +32,13 @@
         "$ref": "#/$defs/place"
       }
     },
+    "moves": {
+      "type": "array",
+      "description": "Places Google moved: Google keeps one location per place (today's), so stays at a place that moved show at its new address. A move puts a place's stays (within when, from and to only) back where you were. keep: true instead keeps Google's location for stays BT•DT moved itself to where your phone was.",
+      "items": {
+        "$ref": "#/$defs/move"
+      }
+    },
     "gear": {
       "type": "array",
       "items": {
@@ -599,7 +606,10 @@
             },
             "ignore_points": {
               "type": "array",
-              "items": { "type": "string", "format": "date-time" },
+              "items": {
+                "type": "string",
+                "format": "date-time"
+              },
               "description": "Times of this trip's GPS points to leave out (bad points); only on a correction for one trip"
             },
             "checked": {
@@ -780,6 +790,46 @@
           "type": "boolean",
           "default": false,
           "description": "Also trips the files give another type (they take the snap's type)."
+        }
+      }
+    },
+    "move": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "required": [
+        "google_place_ids"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "at"
+          ]
+        },
+        {
+          "required": [
+            "keep"
+          ]
+        }
+      ],
+      "properties": {
+        "google_place_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "description": "Google's place IDs of the place (one place can have more than one)."
+        },
+        "at": {
+          "$ref": "#/$defs/latlng",
+          "description": "Where the place was during when."
+        },
+        "keep": {
+          "type": "boolean",
+          "description": "true: keep Google's location for these stays, even where your GPS says otherwise."
         }
       }
     }
