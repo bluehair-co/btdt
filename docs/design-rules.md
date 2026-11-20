@@ -25,6 +25,18 @@ Every place in the app answers one question, and a new feature goes where its qu
 - **A choice of one is a segmented control**, never switches that turn each other off.
 - **One main action per sheet**, at most one outline button beside it, the rest grouped or in a ⋯ menu (the button version of the (i) rule).
 
+## Patterns for every new feature
+
+| Pattern | Rule |
+|---|---|
+| Sheet header | ‹ back when drilled in · title · (i) · at most one action · ✕ |
+| Buttons | One filled button per sheet or dialog, at most one outline button, the rest in ⋯ (`moreMenu`) |
+| Switch rows | Label · (i) · switch, with a status line underneath that stays in view |
+| A choice of one | A segmented control, never switches that turn each other off |
+| Names | One name per thing: *Zoom to all trips*, *Export trips*, *Export MyRules file*, *Station packs* |
+| Where it goes | A filter › Filters · how the map looks › map sheet · an action on the map › *Map tools* · a change to how trips are cleaned › *Menu › Trip cleanup* · an action on one trip › *Edit trip* or ⋯ · a new Insights card › one of its groups (Scores, Overview, Places, Countries, Fitness, CO₂) |
+| Lists of trips | One tap opens the trip. Where the main map isn't in view, the sheet shows the trip's own map at the top. |
+
 ## Feedback while the app works
 
 - **Any switch that makes the app work for a while shows the "Working on it…" pill** (`working(text, fn)` in `core.js`): a spinner pill and a veil over the page, fading in after 150 ms so quick changes don't flash. Applying rules, snapping trains to tracks or cars to roads, splitting trips and similar switches all use it.

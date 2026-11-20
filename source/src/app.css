@@ -587,13 +587,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .tl-search-clear:hover { background: var(--grid); color: var(--fg); }
 .tl-search-clear svg { width: 18px; height: 18px; }
 .tl-end mark { background: none; color: var(--fg); font-weight: 600; }
-.tl-map-wrap { position: relative; flex: 0 0 44%; border-block: 1px solid var(--line); }
-#tlMap { position: absolute; inset: 0; }
-.tl-map-close { position: absolute; z-index: 500; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.tl-map-info { position: absolute; z-index: 500; left: 10px; bottom: 10px; right: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--glass); box-shadow: var(--shadow); font-size: 13px; }
-.tl-map-info .t { min-width: 0; }
-.tl-map-info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-map-info small { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-map { height: 190px; margin: -4px 0 14px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--chip); }
 .tl-list { flex: 1; overflow-y: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; position: relative; }
 .tl-inner { position: relative; max-width: 760px; margin: 0 auto; }
 .tl-item { position: absolute; left: 0; right: 0; padding: 0 16px; }
@@ -856,7 +850,6 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   .sheet-head::before { display: none; }
   .sheet-body { padding-bottom: 20px; }
   .scrim.light { background: transparent; }
-  .tl-map-wrap { flex-basis: 50%; }
 }
 @media (pointer: coarse) {
   .chip { padding: 8px 13px; font-size: 14px; }
@@ -1185,3 +1178,14 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
 .more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }
+
+/* Insights sections: a chip row in the sticky bar, a heading per group (insGroups in insights.js) */
+.ins-group { display: contents; }
+.ins-group[hidden] { display: none; }
+.ins-group-h { grid-column: 1 / -1; margin: 14px 2px -4px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ins-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px 2px 2px; margin: 0 -2px; }
+.ins-chips::-webkit-scrollbar { display: none; }
+.ins-chips button { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.ins-chips button[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: var(--accent-fg); }
+.ins-chips button[hidden] { display: none; }
+@media (min-width: 960px) { .cards .card.span { grid-column: 1 / -1; } }

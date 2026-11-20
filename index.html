@@ -631,13 +631,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .tl-search-clear:hover { background: var(--grid); color: var(--fg); }
 .tl-search-clear svg { width: 18px; height: 18px; }
 .tl-end mark { background: none; color: var(--fg); font-weight: 600; }
-.tl-map-wrap { position: relative; flex: 0 0 44%; border-block: 1px solid var(--line); }
-#tlMap { position: absolute; inset: 0; }
-.tl-map-close { position: absolute; z-index: 500; top: 10px; right: 10px; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; cursor: pointer; }
-.tl-map-info { position: absolute; z-index: 500; left: 10px; bottom: 10px; right: 60px; display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 14px; background: var(--glass); box-shadow: var(--shadow); font-size: 13px; }
-.tl-map-info .t { min-width: 0; }
-.tl-map-info b { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tl-map-info small { color: var(--muted); display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trip-map { height: 190px; margin: -4px 0 14px; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); background: var(--chip); }
 .tl-list { flex: 1; overflow-y: auto; scrollbar-gutter: stable both-edges; overscroll-behavior: contain; position: relative; }
 .tl-inner { position: relative; max-width: 760px; margin: 0 auto; }
 .tl-item { position: absolute; left: 0; right: 0; padding: 0 16px; }
@@ -900,7 +894,6 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
   .sheet-head::before { display: none; }
   .sheet-body { padding-bottom: 20px; }
   .scrim.light { background: transparent; }
-  .tl-map-wrap { flex-basis: 50%; }
 }
 @media (pointer: coarse) {
   .chip { padding: 8px 13px; font-size: 14px; }
@@ -1229,6 +1222,17 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
 .more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }
+
+/* Insights sections: a chip row in the sticky bar, a heading per group (insGroups in insights.js) */
+.ins-group { display: contents; }
+.ins-group[hidden] { display: none; }
+.ins-group-h { grid-column: 1 / -1; margin: 14px 2px -4px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.ins-chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px 2px 2px; margin: 0 -2px; }
+.ins-chips::-webkit-scrollbar { display: none; }
+.ins-chips button { flex: none; padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.ins-chips button[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: var(--accent-fg); }
+.ins-chips button[hidden] { display: none; }
+@media (min-width: 960px) { .cards .card.span { grid-column: 1 / -1; } }
 </style>
 </head>
 <body>
@@ -1490,8 +1494,10 @@ details.when-more > .sec:last-child { border-bottom: 0; }
             <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
+          <nav class="ins-chips" id="insChips" aria-label="Insights sections"><button type="button" data-ig-go="scores" aria-pressed="true">Scores</button><button type="button" data-ig-go="overview" aria-pressed="false">Overview</button><button type="button" data-ig-go="places" aria-pressed="false">Places</button><button type="button" data-ig-go="countries" aria-pressed="false">Countries</button><button type="button" data-ig-go="fitness" aria-pressed="false">Fitness</button><button type="button" data-ig-go="co2" aria-pressed="false">CO₂</button></nav>
         </div>
       <div class="cards">
+        <div class="ins-group" data-ig="scores">
         <section class="card wide far-card" id="farCard" aria-roledescription="carousel" aria-label="Distance scores">
           <div class="card-head"><div class="card-title"><h2 id="farTitle" aria-live="polite">Marco Polo score</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this score" title="About this score"><span data-icon="info"></span></button></div>
             <div class="far-nav"><button type="button" class="icon-btn" data-far="prev" aria-label="Previous score"><span data-icon="left"></span></button><div class="far-dots" id="farDots"></div><button type="button" class="icon-btn" data-far="next" aria-label="Next score"><span data-icon="right"></span></button></div>
@@ -1505,6 +1511,9 @@ details.when-more > .sec:last-child { border-bottom: 0; }
             <div class="far-slide" data-title="Voyager score" role="group" aria-roledescription="slide"><div id="voyager"></div></div>
           </div></div>
         </section>
+        </div>
+        <div class="ins-group" data-ig="overview">
+        <h2 class="ins-group-h" id="ig-overview">Overview</h2>
         <section class="card wide" id="sumCard">
           <div class="card-head"><h2>Summary</h2><span class="fine" id="sumNote"></span></div>
           <div class="stats" id="sumStats"></div>
@@ -1527,6 +1536,13 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <div class="chart" id="timeChart"></div>
           <div class="time-units"><div class="seg" role="group" aria-label="Group by" id="timeUnitSeg"><button type="button" data-u="year" aria-pressed="true">Years</button><button type="button" data-u="month" aria-pressed="false">Months</button><button type="button" data-u="week" aria-pressed="false">Weeks</button><button type="button" data-u="day" aria-pressed="false" hidden>Days</button></div></div>
         </section>
+        <section class="card wide">
+          <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
+          <div class="records" id="records"></div>
+        </section>
+        </div>
+        <div class="ins-group" data-ig="places">
+        <h2 class="ins-group-h" id="ig-places">Places</h2>
         <section class="card">
           <div class="card-head"><div class="card-title"><h2>Top routes</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Trips between the same two places, either way. Tap one for its latest trip.</span></div>
           <div class="list-rows" id="topRoutes"></div>
@@ -1544,23 +1560,9 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <div class="stats" id="sqStats"></div>
           <div class="bars" id="sqYears" style="margin-top:14px"></div>
         </section>
-        <section class="card" id="gearCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
-          <div class="list-rows" id="gearList"></div>
-        </section>
-        <section class="card wide" id="hrCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
-            <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
-            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Menu › Preferences.</span></div>
-          <div class="hr-cols">
-            <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
-            <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
-          </div>
-        </section>
-        <section class="card wide">
-          <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
-          <div class="records" id="records"></div>
-        </section>
+        </div>
+        <div class="ins-group" data-ig="countries">
+        <h2 class="ins-group-h" id="ig-countries">Countries</h2>
         <section class="card wide" id="cctlCard">
           <div class="card-head"><div class="card-title"><h2>Countries over time</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine info-text">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out. Faded stretches have no records and are guessed from before and after.</span></div>
           <div class="cctl-off" id="cctlOff" hidden><p>The country timeline needs every kind of transport, since leaving some trips out would leave holes in where you were.</p><button type="button" class="btn" id="cctlAllModes">Show all transport</button></div>
@@ -1572,10 +1574,30 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <div class="card-head"><div class="card-title"><h2>Countries</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="ccNote"></span></div>
           <div class="list-rows" id="ccList"></div>
         </section>
+        </div>
+        <div class="ins-group" data-ig="fitness">
+        <h2 class="ins-group-h" id="ig-fitness">Fitness</h2>
+        <section class="card wide" id="hrCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
+            <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
+            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Menu › Preferences.</span></div>
+          <div class="hr-cols">
+            <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
+            <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
+          </div>
+        </section>
+        <section class="card" id="gearCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
+          <div class="list-rows" id="gearList"></div>
+        </section>
+        </div>
+        <div class="ins-group" data-ig="co2">
+        <h2 class="ins-group-h" id="ig-co2">CO₂</h2>
         <section class="card">
           <div class="card-head"><div class="card-title"><h2>CO₂ from travel</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Estimated from average emissions per km. Change the factors in Menu › Preferences.</span></div>
           <div id="co2Card"></div>
         </section>
+        </div>
       </div>
     </div>
   </section>
@@ -1601,11 +1623,6 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <input type="search" id="tlSearch" placeholder="Search trips by name or place" aria-label="Search the trips in these filters by name or place" autocomplete="off" spellcheck="false" enterkeyhint="search">
           <button type="button" class="tl-search-clear" id="tlSearchClear" aria-label="Clear search" hidden><span data-icon="close"></span></button>
         </div>
-    </div>
-    <div class="tl-map-wrap" id="tlMapWrap" hidden>
-      <div id="tlMap"></div>
-      <div class="tl-map-info" id="tlMapInfo"></div>
-      <button type="button" class="tl-map-close" id="tlMapClose" aria-label="Close map"><span data-icon="close"></span></button>
     </div>
     <div class="tl-list" id="tlList"><div class="tl-inner" id="tlInner"></div></div>
   </section>
@@ -8021,7 +8038,7 @@ function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
+  $('tripBody').innerHTML = (tab !== 'map' ? '<div class="trip-map" id="tripMap" role="img" aria-label="Map of this trip"></div>' : '') + tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) + mrFixGps(i) +
     '<div id="rawWrap" hidden><div style="display:flex;gap:8px;margin:12px 0 8px"><button type="button" class="btn" data-act="copy" data-i="' + i + '">Copy</button>' +
@@ -8030,6 +8047,7 @@ function openTrip(i, fromList) {
   openSheet('tripSheet');
   $('tripBody').scrollTop = 0;
   if (tab === 'map') highlight(i);
+  if (tab !== 'map') tlSheetMap(i);
   // The chart panel follows the open trip.
   if (chartPanelTrip != null) chartPanelOpen(i);
 }
@@ -9552,11 +9570,47 @@ function renderInsights() {
   if (!n) {
     $('sumStats').innerHTML = '<p class="empty" style="grid-column:1/-1">No trips match your filters.</p>';
     $('sumNote').textContent = '';
+    insGroups();
     return;
   }
   needPlaces(); findHome();
   renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderKinds(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
+  insGroups();
 }
+// Sections: the cards in groups (Scores first, then Overview, Places, Countries, Fitness, CO₂), with
+// a chip for each under the sticky top bar. A group with no card showing is hidden with its chip; on
+// a wide screen, the last card of a group that would sit alone in its row takes the whole row.
+function insGroups() {
+  $('insightsPage').querySelectorAll('.ins-group').forEach(function (g) {
+    var cards = [].slice.call(g.querySelectorAll(':scope > .card')).filter(function (c) { return !c.hidden; });
+    g.hidden = !cards.length;
+    var chip = document.querySelector('[data-ig-go="' + g.dataset.ig + '"]');
+    if (chip) chip.hidden = g.hidden;
+    var half = cards.filter(function (c) { return !c.classList.contains('wide'); });
+    cards.forEach(function (c) { c.classList.remove('span'); });
+    if (half.length % 2) half[half.length - 1].classList.add('span');
+  });
+  insSpy();
+}
+function insSpy() {
+  var page = $('insightsPage'), bar = page.querySelector('.pnav'), top = bar.getBoundingClientRect().bottom + 24, cur = 'scores';
+  page.querySelectorAll('.ins-group:not([hidden]) > .ins-group-h').forEach(function (h) { if (h.getBoundingClientRect().top <= top) cur = h.parentNode.dataset.ig; });
+  // At the very end of the page the last group counts, even when it is too short to reach the top.
+  if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) { var hs = page.querySelectorAll('.ins-group:not([hidden]) > .ins-group-h'); if (hs.length) cur = hs[hs.length - 1].parentNode.dataset.ig; }
+  $('insChips').querySelectorAll('[data-ig-go]').forEach(function (b) {
+    var on = b.dataset.igGo === cur;
+    if ((b.getAttribute('aria-pressed') === 'true') !== on) { b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (on && b.scrollIntoView) b.parentNode.scrollTo({ left: b.offsetLeft - 16, behavior: 'smooth' }); }
+  });
+}
+$('insightsPage').addEventListener('scroll', function () { insSpy(); }, { passive: true });
+$('insChips').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-ig-go]');
+  if (!b) return;
+  var page = $('insightsPage'), g = page.querySelector('[data-ig="' + b.dataset.igGo + '"]'), t = g && (g.querySelector('.ins-group-h') || g.querySelector('.card'));
+  if (!t) return;
+  var bar = page.querySelector('.pnav');
+  page.scrollTo({ top: b.dataset.igGo === 'scores' ? 0 : page.scrollTop + t.getBoundingClientRect().top - bar.getBoundingClientRect().bottom - 12, behavior: 'smooth' });
+});
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
   for (j = 0; j < n; j++) {
@@ -11298,7 +11352,7 @@ function buildTimeline(keepHay) {
   tlLayout();
 }
 function tlLayout() {
-  if (TL.map && !$('tlMapWrap').hidden) TL.map.invalidateSize();
+  if (TL.map && $('tripMap')) TL.map.invalidateSize();
   tlRender(true);
 }
 // Index of the item at height y.
@@ -11338,63 +11392,57 @@ $('tlList').addEventListener('scroll', function () { if (!tlRaf) tlRaf = request
 $('tlInner').addEventListener('click', function (ev) {
   var b = ev.target.closest('.tl-trip[data-i]');
   if (!b) return;
+  // One tap opens the trip, with its map at the top of the sheet (tlSheetMap).
   var i = +b.dataset.i;
-  if (i === TL.sel) tlClose(); else tlSelect(i, false);
+  tlSelect(i, false);
+  openTrip(i);
 });
 
-// The selected trip, on a map above the list.
+// The selected trip: marked in the list (and scrolled to, from the map or Insights).
 function tlSelect(i, scroll) {
   if (dirty.timeline) { dirty.timeline = false; buildTimeline(); }
   // A trip opened from the map or Insights that the search hides: clear the search to show it.
   if (TL.words.length && !tlMatch(i)) tlSetSearch('');
   TL.sel = i;
-  var wrap = $('tlMapWrap');
-  wrap.hidden = false;
-  if (!window.L) $('tlMap').innerHTML = '<p class="empty">The map library couldn\'t load. Check your internet connection and reload.</p>';
-  else {
-    if (!TL.map) {
-      TL.map = L.map('tlMap', { worldCopyJump: true, minZoom: 2, zoomControl: false, attributionControl: true }).setView([50, 8], 4);
-      addTiles(TL.map);
-      TL.layer = L.layerGroup().addTo(TL.map);
-    }
-    TL.map.invalidateSize();
-    TL.layer.clearLayers();
-    var pts = tripPath(i), color = cssVar(groupOf(modeOf(i)).v), panel = cssVar('--panel');
-    if (pts.length) {
-      L.polyline(pts, { color: panel, weight: 8, opacity: 0.9, interactive: false }).addTo(TL.layer);
-      L.polyline(pts, { color: color, weight: 4.5, opacity: 1, interactive: false }).addTo(TL.layer);
-      L.circleMarker(pts[0], { radius: 7, color: panel, weight: 2, fillColor: color, fillOpacity: 1 }).bindTooltip('Start').addTo(TL.layer);
-      L.circleMarker(pts[pts.length - 1], { radius: 7, color: color, weight: 3, fillColor: panel, fillOpacity: 1 }).bindTooltip('End').addTo(TL.layer);
-      var bb = L.latLngBounds(pts);
-      if (bb.getNorthEast().equals(bb.getSouthWest())) TL.map.setView(bb.getCenter(), 15);
-      else TL.map.fitBounds(bb, { paddingTopLeft: [24, 24], paddingBottomRight: [24, 84], maxZoom: 16 });
-    }
-  }
-  var m = modeOf(i), ms = D.end[i] - D.start[i];
-  $('tlMapInfo').innerHTML = badge(m, true, 0, tripIcon(i)) + '<span class="t" style="flex:1"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) +
-    ' · ' + dist(D.km[i]) + (ms > 0 ? ' · ' + duration(ms) : '') + '</small></span><button type="button" class="btn quiet" data-details="' + i + '" style="padding:6px 10px">Details</button>';
   var k = -1;
   for (var q = 0; q < TL.ref.length; q++) if (TL.type[q] === 1 && TL.ref[q] === i) { k = q; break; }
   if (scroll && k >= 0) {
     // Leave room for the day header above the trip.
     requestAnimationFrame(function () { $('tlList').scrollTop = Math.max(0, TL.tops[k] - TL_H[0]); tlRender(true); });
-  } else {
-    tlRender(true);
-    // Keep the tapped row in view now that the list is shorter.
-    requestAnimationFrame(function () {
-      var list = $('tlList');
-      if (k >= 0 && (TL.tops[k] < list.scrollTop || TL.tops[k] + TL_H[1] > list.scrollTop + list.clientHeight)) list.scrollTop = Math.max(0, TL.tops[k] - 8);
-      tlRender(true);
-    });
+  } else tlRender(true);
+}
+// The trip's own map at the top of its sheet, when it is opened from Timeline (the main map isn't
+// in view there). Made again for each trip; the one before is let go.
+function tlSheetMap(i) {
+  if (TL.map) { TL.map.remove(); TL.map = null; }
+  var el = $('tripMap');
+  if (!el) return;
+  if (!window.L) { el.innerHTML = '<p class="empty">The map library couldn\'t load. Check your internet connection and reload.</p>'; return; }
+  TL.map = L.map(el, { worldCopyJump: true, minZoom: 2, zoomControl: false, attributionControl: true }).setView([50, 8], 4);
+  addTiles(TL.map);
+  TL.layer = L.layerGroup().addTo(TL.map);
+  var pts = tripPath(i), color = cssVar(groupOf(modeOf(i)).v), panel = cssVar('--panel');
+  function fit() {
+    if (!TL.map || !pts.length) return;
+    TL.map.invalidateSize();
+    var bb = L.latLngBounds(pts);
+    if (bb.getNorthEast().equals(bb.getSouthWest())) TL.map.setView(bb.getCenter(), 15);
+    else TL.map.fitBounds(bb, { padding: [20, 20], maxZoom: 16 });
   }
+  if (pts.length) {
+    L.polyline(pts, { color: panel, weight: 8, opacity: 0.9, interactive: false }).addTo(TL.layer);
+    L.polyline(pts, { color: color, weight: 4.5, opacity: 1, interactive: false }).addTo(TL.layer);
+    L.circleMarker(pts[0], { radius: 7, color: panel, weight: 2, fillColor: color, fillOpacity: 1 }).bindTooltip('Start').addTo(TL.layer);
+    L.circleMarker(pts[pts.length - 1], { radius: 7, color: color, weight: 3, fillColor: panel, fillOpacity: 1 }).bindTooltip('End').addTo(TL.layer);
+  }
+  fit();
+  // Once the sheet has slid in, its size is final.
+  setTimeout(fit, 260);
 }
 function tlClose() {
   TL.sel = null;
-  $('tlMapWrap').hidden = true;
   tlRender(true);
 }
-$('tlMapClose').addEventListener('click', tlClose);
-$('tlMapInfo').addEventListener('click', function (ev) { var b = ev.target.closest('[data-details]'); if (b) openTrip(+b.dataset.details); });
 
 // The search box.
 var tlQT = 0;
