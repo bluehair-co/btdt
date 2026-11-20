@@ -1,0 +1,1405 @@
+{
+ "attribution": "© OpenStreetMap contributors, ODbL 1.0",
+ "packs": {
+  "AL": {
+   "built": "2026-11-20",
+   "bytes": 7308,
+   "km": 423,
+   "lines": 495,
+   "name": "Albania",
+   "nodes": 1074,
+   "stations": 42
+  },
+  "AT": {
+   "built": "2026-11-20",
+   "bytes": 414641,
+   "km": 9418,
+   "lines": 40849,
+   "name": "Austria",
+   "nodes": 51724,
+   "stations": 2379
+  },
+  "AU": {
+   "built": "2026-11-20",
+   "bytes": 460347,
+   "km": 37553,
+   "lines": 31138,
+   "name": "Australia",
+   "nodes": 76343,
+   "stations": 2675
+  },
+  "BA": {
+   "built": "2026-11-20",
+   "bytes": 24967,
+   "km": 1104,
+   "lines": 1514,
+   "name": "Bosnia and Herzegovina",
+   "nodes": 3976,
+   "stations": 218
+  },
+  "BE": {
+   "built": "2026-11-20",
+   "bytes": 201433,
+   "km": 7420,
+   "lines": 20107,
+   "name": "Belgium",
+   "nodes": 26586,
+   "stations": 1402
+  },
+  "BG": {
+   "built": "2026-11-20",
+   "bytes": 100000,
+   "km": 5269,
+   "lines": 5919,
+   "name": "Bulgaria",
+   "nodes": 16464,
+   "stations": 934
+  },
+  "BY": {
+   "built": "2026-11-20",
+   "bytes": 100059,
+   "km": 8051,
+   "lines": 6612,
+   "name": "Belarus",
+   "nodes": 13391,
+   "stations": 1122
+  },
+  "CA": {
+   "built": "2026-11-20",
+   "bytes": 494662,
+   "km": 48188,
+   "lines": 28144,
+   "name": "Canada",
+   "nodes": 89766,
+   "stations": 1433
+  },
+  "CH": {
+   "built": "2026-11-20",
+   "bytes": 318620,
+   "km": 8508,
+   "lines": 28305,
+   "name": "Switzerland",
+   "nodes": 41373,
+   "stations": 2553
+  },
+  "CZ": {
+   "built": "2026-11-20",
+   "bytes": 490025,
+   "km": 12844,
+   "lines": 41938,
+   "name": "Czechia",
+   "nodes": 66760,
+   "stations": 3552
+  },
+  "DE": {
+   "built": "2026-11-20",
+   "bytes": 2100166,
+   "km": 65590,
+   "lines": 183330,
+   "name": "Germany",
+   "nodes": 254046,
+   "stations": 13730
+  },
+  "DK": {
+   "built": "2026-11-20",
+   "bytes": 83726,
+   "km": 4022,
+   "lines": 6852,
+   "name": "Denmark",
+   "nodes": 11247,
+   "stations": 663
+  },
+  "EE": {
+   "built": "2026-11-20",
+   "bytes": 14698,
+   "km": 1143,
+   "lines": 1013,
+   "name": "Estonia",
+   "nodes": 1880,
+   "stations": 169
+  },
+  "ES": {
+   "built": "2026-11-20",
+   "bytes": 464347,
+   "km": 24172,
+   "lines": 34816,
+   "name": "Spain",
+   "nodes": 69269,
+   "stations": 2814
+  },
+  "FI": {
+   "built": "2026-11-20",
+   "bytes": 136956,
+   "km": 6817,
+   "lines": 12499,
+   "name": "Finland",
+   "nodes": 18739,
+   "stations": 474
+  },
+  "FR": {
+   "built": "2026-11-20",
+   "bytes": 1242703,
+   "km": 51073,
+   "lines": 106701,
+   "name": "France",
+   "nodes": 171426,
+   "stations": 5614
+  },
+  "GB": {
+   "built": "2026-11-20",
+   "bytes": 904662,
+   "km": 32272,
+   "lines": 84261,
+   "name": "United Kingdom",
+   "nodes": 117147,
+   "stations": 3951
+  },
+  "GR": {
+   "built": "2026-11-20",
+   "bytes": 54315,
+   "km": 2760,
+   "lines": 4139,
+   "name": "Greece",
+   "nodes": 7891,
+   "stations": 448
+  },
+  "HR": {
+   "built": "2026-11-20",
+   "bytes": 56558,
+   "km": 3015,
+   "lines": 3600,
+   "name": "Croatia",
+   "nodes": 8109,
+   "stations": 652
+  },
+  "HU": {
+   "built": "2026-11-20",
+   "bytes": 164354,
+   "km": 9565,
+   "lines": 11701,
+   "name": "Hungary",
+   "nodes": 21391,
+   "stations": 2068
+  },
+  "IE": {
+   "built": "2026-11-20",
+   "bytes": 57541,
+   "km": 2706,
+   "lines": 4929,
+   "name": "Ireland",
+   "nodes": 7733,
+   "stations": 296
+  },
+  "IT": {
+   "built": "2026-11-20",
+   "bytes": 737254,
+   "km": 28656,
+   "lines": 65246,
+   "name": "Italy",
+   "nodes": 95429,
+   "stations": 4957
+  },
+  "JP": {
+   "built": "2026-11-20",
+   "bytes": 1176688,
+   "km": 41497,
+   "lines": 105516,
+   "name": "Japan",
+   "nodes": 156557,
+   "stations": 9490
+  },
+  "KR": {
+   "built": "2026-11-20",
+   "bytes": 191474,
+   "km": 9993,
+   "lines": 17630,
+   "name": "South Korea",
+   "nodes": 28572,
+   "stations": 1323
+  },
+  "LT": {
+   "built": "2026-11-20",
+   "bytes": 27294,
+   "km": 2485,
+   "lines": 1642,
+   "name": "Lithuania",
+   "nodes": 4166,
+   "stations": 166
+  },
+  "LU": {
+   "built": "2026-11-20",
+   "bytes": 20588,
+   "km": 571,
+   "lines": 1916,
+   "name": "Luxembourg",
+   "nodes": 2867,
+   "stations": 107
+  },
+  "LV": {
+   "built": "2026-11-20",
+   "bytes": 36699,
+   "km": 2366,
+   "lines": 2584,
+   "name": "Latvia",
+   "nodes": 4834,
+   "stations": 386
+  },
+  "MA": {
+   "built": "2026-11-20",
+   "bytes": 45516,
+   "km": 4144,
+   "lines": 2228,
+   "name": "Morocco",
+   "nodes": 8093,
+   "stations": 312
+  },
+  "MD": {
+   "built": "2026-11-20",
+   "bytes": 25836,
+   "km": 1382,
+   "lines": 1425,
+   "name": "Moldova",
+   "nodes": 4496,
+   "stations": 208
+  },
+  "ME": {
+   "built": "2026-11-20",
+   "bytes": 7416,
+   "km": 256,
+   "lines": 592,
+   "name": "Montenegro",
+   "nodes": 1020,
+   "stations": 47
+  },
+  "MK": {
+   "built": "2026-11-20",
+   "bytes": 14051,
+   "km": 660,
+   "lines": 822,
+   "name": "North Macedonia",
+   "nodes": 2330,
+   "stations": 106
+  },
+  "MX": {
+   "built": "2026-11-20",
+   "bytes": 163609,
+   "km": 18540,
+   "lines": 8299,
+   "name": "Mexico",
+   "nodes": 32029,
+   "stations": 574
+  },
+  "NL": {
+   "built": "2026-11-20",
+   "bytes": 203080,
+   "km": 6752,
+   "lines": 22899,
+   "name": "Netherlands",
+   "nodes": 25621,
+   "stations": 1229
+  },
+  "NO": {
+   "built": "2026-11-20",
+   "bytes": 143818,
+   "km": 4740,
+   "lines": 11460,
+   "name": "Norway",
+   "nodes": 21267,
+   "stations": 640
+  },
+  "NZ": {
+   "built": "2026-11-20",
+   "bytes": 71292,
+   "km": 3696,
+   "lines": 4917,
+   "name": "New Zealand",
+   "nodes": 11791,
+   "stations": 249
+  },
+  "PL": {
+   "built": "2026-11-20",
+   "bytes": 616904,
+   "km": 31214,
+   "lines": 50739,
+   "name": "Poland",
+   "nodes": 76489,
+   "stations": 6091
+  },
+  "PT": {
+   "built": "2026-11-20",
+   "bytes": 99847,
+   "km": 3742,
+   "lines": 7887,
+   "name": "Portugal",
+   "nodes": 14405,
+   "stations": 800
+  },
+  "RO": {
+   "built": "2026-11-20",
+   "bytes": 224679,
+   "km": 13596,
+   "lines": 15257,
+   "name": "Romania",
+   "nodes": 31590,
+   "stations": 2802
+  },
+  "RS": {
+   "built": "2026-11-20",
+   "bytes": 62105,
+   "km": 3468,
+   "lines": 4220,
+   "name": "Serbia",
+   "nodes": 8865,
+   "stations": 587
+  },
+  "SE": {
+   "built": "2026-11-20",
+   "bytes": 250680,
+   "km": 14059,
+   "lines": 16954,
+   "name": "Sweden",
+   "nodes": 38676,
+   "stations": 1247
+  },
+  "SI": {
+   "built": "2026-11-20",
+   "bytes": 46613,
+   "km": 1629,
+   "lines": 3618,
+   "name": "Slovenia",
+   "nodes": 7098,
+   "stations": 290
+  },
+  "SK": {
+   "built": "2026-11-20",
+   "bytes": 137917,
+   "km": 4957,
+   "lines": 11719,
+   "name": "Slovakia",
+   "nodes": 18596,
+   "stations": 1120
+  },
+  "TR": {
+   "built": "2026-11-20",
+   "bytes": 214511,
+   "km": 13341,
+   "lines": 13034,
+   "name": "Türkiye",
+   "nodes": 36386,
+   "stations": 1885
+  },
+  "TW": {
+   "built": "2026-11-20",
+   "bytes": 65663,
+   "km": 3273,
+   "lines": 5684,
+   "name": "Taiwan",
+   "nodes": 8969,
+   "stations": 598
+  },
+  "UA": {
+   "built": "2026-11-20",
+   "bytes": 428062,
+   "km": 27634,
+   "lines": 25997,
+   "name": "Ukraine",
+   "nodes": 59409,
+   "stations": 6166
+  },
+  "US": {
+   "built": "2026-11-20",
+   "bytes": 3139407,
+   "km": 256780,
+   "lines": 222733,
+   "name": "United States",
+   "nodes": 505676,
+   "stations": 5934
+  }
+ },
+ "roads": {
+  "CA-AB": {
+   "bbox": [
+    48.972,
+    -120.106,
+    60.067,
+    -109.632
+   ],
+   "built": "2026-11-20",
+   "bytes": 247165,
+   "cc": "CA",
+   "km": 19900,
+   "lines": 22205,
+   "name": "Alberta",
+   "nodes": 35245
+  },
+  "CA-BC": {
+   "bbox": [
+    48.358,
+    -136.929,
+    60.111,
+    -114.67
+   ],
+   "built": "2026-11-20",
+   "bytes": 356865,
+   "cc": "CA",
+   "km": 15605,
+   "lines": 30746,
+   "name": "British Columbia",
+   "nodes": 54230
+  },
+  "CA-MB": {
+   "bbox": [
+    48.849,
+    -101.999,
+    56.875,
+    -95.087
+   ],
+   "built": "2026-11-20",
+   "bytes": 89147,
+   "cc": "CA",
+   "km": 9277,
+   "lines": 8128,
+   "name": "Manitoba",
+   "nodes": 13331
+  },
+  "CA-NB": {
+   "bbox": [
+    44.974,
+    -68.606,
+    48.067,
+    -63.705
+   ],
+   "built": "2026-11-20",
+   "bytes": 100869,
+   "cc": "CA",
+   "km": 6756,
+   "lines": 7833,
+   "name": "New Brunswick",
+   "nodes": 16637
+  },
+  "CA-NL": {
+   "bbox": [
+    46.707,
+    -67.261,
+    53.709,
+    -52.688
+   ],
+   "built": "2026-11-20",
+   "bytes": 88588,
+   "cc": "CA",
+   "km": 7079,
+   "lines": 4610,
+   "name": "Newfoundland and Labrador",
+   "nodes": 17662
+  },
+  "CA-NS": {
+   "bbox": [
+    43.493,
+    -66.185,
+    46.885,
+    -59.955
+   ],
+   "built": "2026-11-20",
+   "bytes": 96803,
+   "cc": "CA",
+   "km": 4755,
+   "lines": 8349,
+   "name": "Nova Scotia",
+   "nodes": 15423
+  },
+  "CA-NT": {
+   "bbox": [
+    59.916,
+    -136.365,
+    69.434,
+    -111.838
+   ],
+   "built": "2026-11-20",
+   "bytes": 15957,
+   "cc": "CA",
+   "km": 2474,
+   "lines": 365,
+   "name": "Northwest Territories",
+   "nodes": 3439
+  },
+  "CA-NU": {
+   "built": "2026-11-20",
+   "bytes": 174,
+   "cc": "CA",
+   "km": 0,
+   "lines": 0,
+   "name": "Nunavut",
+   "nodes": 0
+  },
+  "CA-ON": {
+   "bbox": [
+    42.066,
+    -95.179,
+    51.075,
+    -74.326
+   ],
+   "built": "2026-11-20",
+   "bytes": 491776,
+   "cc": "CA",
+   "km": 20434,
+   "lines": 47667,
+   "name": "Ontario",
+   "nodes": 66796
+  },
+  "CA-PE": {
+   "bbox": [
+    45.954,
+    -64.18,
+    46.95,
+    -62.238
+   ],
+   "built": "2026-11-20",
+   "bytes": 11152,
+   "cc": "CA",
+   "km": 606,
+   "lines": 1126,
+   "name": "Prince Edward Island",
+   "nodes": 1553
+  },
+  "CA-QC": {
+   "bbox": [
+    44.948,
+    -79.871,
+    53.812,
+    -57.0
+   ],
+   "built": "2026-11-20",
+   "bytes": 479748,
+   "cc": "CA",
+   "km": 18960,
+   "lines": 46126,
+   "name": "Quebec",
+   "nodes": 68234
+  },
+  "CA-SK": {
+   "bbox": [
+    48.596,
+    -110.468,
+    56.481,
+    -101.276
+   ],
+   "built": "2026-11-20",
+   "bytes": 99649,
+   "cc": "CA",
+   "km": 18478,
+   "lines": 6869,
+   "name": "Saskatchewan",
+   "nodes": 16886
+  },
+  "CA-YT": {
+   "bbox": [
+    59.622,
+    -141.333,
+    67.139,
+    -126.959
+   ],
+   "built": "2026-11-20",
+   "bytes": 28143,
+   "cc": "CA",
+   "km": 3113,
+   "lines": 795,
+   "name": "Yukon",
+   "nodes": 6167
+  },
+  "MX": {
+   "bbox": [
+    14.629,
+    -117.123,
+    32.733,
+    -86.746
+   ],
+   "built": "2026-11-20",
+   "bytes": 1932673,
+   "km": 95893,
+   "lines": 168465,
+   "name": "Mexico",
+   "nodes": 288789
+  },
+  "NL": {
+   "bbox": [
+    50.752,
+    3.347,
+    53.443,
+    7.241
+   ],
+   "built": "2026-11-20",
+   "bytes": 810719,
+   "km": 16014,
+   "lines": 93311,
+   "name": "Netherlands",
+   "nodes": 95822
+  },
+  "US-AK": {
+   "bbox": [
+    57.464,
+    -161.843,
+    70.207,
+    -134.408
+   ],
+   "built": "2026-11-20",
+   "bytes": 70211,
+   "cc": "US",
+   "km": 4908,
+   "lines": 4473,
+   "name": "Alaska",
+   "nodes": 12540
+  },
+  "US-AL": {
+   "bbox": [
+    30.248,
+    -88.515,
+    35.17,
+    -84.969
+   ],
+   "built": "2026-11-20",
+   "bytes": 367636,
+   "cc": "US",
+   "km": 17137,
+   "lines": 38845,
+   "name": "Alabama",
+   "nodes": 49242
+  },
+  "US-AR": {
+   "bbox": [
+    32.918,
+    -94.597,
+    36.562,
+    -89.871
+   ],
+   "built": "2026-11-20",
+   "bytes": 209598,
+   "cc": "US",
+   "km": 13104,
+   "lines": 17855,
+   "name": "Arkansas",
+   "nodes": 32062
+  },
+  "US-AZ": {
+   "bbox": [
+    31.3,
+    -114.844,
+    37.076,
+    -108.729
+   ],
+   "built": "2026-11-20",
+   "bytes": 417091,
+   "cc": "US",
+   "km": 17254,
+   "lines": 46210,
+   "name": "Arizona",
+   "nodes": 55406
+  },
+  "US-CA": {
+   "bbox": [
+    32.531,
+    -124.217,
+    42.08,
+    -114.129
+   ],
+   "built": "2026-11-20",
+   "bytes": 2144551,
+   "cc": "US",
+   "km": 51978,
+   "lines": 230122,
+   "name": "California",
+   "nodes": 267142
+  },
+  "US-CO": {
+   "bbox": [
+    36.808,
+    -109.33,
+    41.185,
+    -101.838
+   ],
+   "built": "2026-11-20",
+   "bytes": 515059,
+   "cc": "US",
+   "km": 18712,
+   "lines": 55643,
+   "name": "Colorado",
+   "nodes": 69258
+  },
+  "US-CT": {
+   "bbox": [
+    40.993,
+    -73.718,
+    42.077,
+    -71.627
+   ],
+   "built": "2026-11-20",
+   "bytes": 172989,
+   "cc": "US",
+   "km": 4960,
+   "lines": 17302,
+   "name": "Connecticut",
+   "nodes": 22681
+  },
+  "US-DC": {
+   "bbox": [
+    38.792,
+    -77.118,
+    38.993,
+    -76.908
+   ],
+   "built": "2026-11-20",
+   "bytes": 39583,
+   "cc": "US",
+   "km": 492,
+   "lines": 4999,
+   "name": "District of Columbia",
+   "nodes": 4841
+  },
+  "US-DE": {
+   "bbox": [
+    38.405,
+    -75.797,
+    39.844,
+    -75.052
+   ],
+   "built": "2026-11-20",
+   "bytes": 90756,
+   "cc": "US",
+   "km": 2129,
+   "lines": 11149,
+   "name": "Delaware",
+   "nodes": 11082
+  },
+  "US-FL": {
+   "bbox": [
+    24.55,
+    -87.609,
+    31.087,
+    -80.036
+   ],
+   "built": "2026-11-20",
+   "bytes": 1314373,
+   "cc": "US",
+   "km": 34901,
+   "lines": 149930,
+   "name": "Florida",
+   "nodes": 148382
+  },
+  "US-GA": {
+   "bbox": [
+    30.36,
+    -85.694,
+    35.055,
+    -80.843
+   ],
+   "built": "2026-11-20",
+   "bytes": 788116,
+   "cc": "US",
+   "km": 27604,
+   "lines": 86086,
+   "name": "Georgia",
+   "nodes": 101233
+  },
+  "US-HI": {
+   "bbox": [
+    19.058,
+    -159.779,
+    22.214,
+    -154.941
+   ],
+   "built": "2026-11-20",
+   "bytes": 52612,
+   "cc": "US",
+   "km": 1552,
+   "lines": 5718,
+   "name": "Hawaii",
+   "nodes": 7241
+  },
+  "US-IA": {
+   "bbox": [
+    40.366,
+    -96.65,
+    43.638,
+    -90.157
+   ],
+   "built": "2026-11-20",
+   "bytes": 245521,
+   "cc": "US",
+   "km": 19778,
+   "lines": 22401,
+   "name": "Iowa",
+   "nodes": 33474
+  },
+  "US-ID": {
+   "bbox": [
+    41.953,
+    -117.117,
+    49.082,
+    -110.983
+   ],
+   "built": "2026-11-20",
+   "bytes": 119822,
+   "cc": "US",
+   "km": 8444,
+   "lines": 9609,
+   "name": "Idaho",
+   "nodes": 18712
+  },
+  "US-IL": {
+   "bbox": [
+    36.972,
+    -91.428,
+    42.567,
+    -87.378
+   ],
+   "built": "2026-11-20",
+   "bytes": 624278,
+   "cc": "US",
+   "km": 26501,
+   "lines": 65426,
+   "name": "Illinois",
+   "nodes": 81008
+  },
+  "US-IN": {
+   "bbox": [
+    37.775,
+    -88.128,
+    41.838,
+    -84.643
+   ],
+   "built": "2026-11-20",
+   "bytes": 380605,
+   "cc": "US",
+   "km": 19098,
+   "lines": 38160,
+   "name": "Indiana",
+   "nodes": 50767
+  },
+  "US-KS": {
+   "bbox": [
+    36.907,
+    -102.332,
+    40.165,
+    -94.555
+   ],
+   "built": "2026-11-20",
+   "bytes": 203881,
+   "cc": "US",
+   "km": 15288,
+   "lines": 20673,
+   "name": "Kansas",
+   "nodes": 27588
+  },
+  "US-KY": {
+   "bbox": [
+    36.445,
+    -89.576,
+    39.109,
+    -82.209
+   ],
+   "built": "2026-11-20",
+   "bytes": 342749,
+   "cc": "US",
+   "km": 18027,
+   "lines": 28402,
+   "name": "Kentucky",
+   "nodes": 52813
+  },
+  "US-LA": {
+   "bbox": [
+    29.158,
+    -94.269,
+    33.106,
+    -89.353
+   ],
+   "built": "2026-11-20",
+   "bytes": 278961,
+   "cc": "US",
+   "km": 15119,
+   "lines": 29336,
+   "name": "Louisiana",
+   "nodes": 36348
+  },
+  "US-MA": {
+   "bbox": [
+    41.395,
+    -73.507,
+    42.889,
+    -69.955
+   ],
+   "built": "2026-11-20",
+   "bytes": 333132,
+   "cc": "US",
+   "km": 8624,
+   "lines": 33928,
+   "name": "Massachusetts",
+   "nodes": 43583
+  },
+  "US-MD": {
+   "bbox": [
+    37.983,
+    -79.5,
+    39.903,
+    -75.052
+   ],
+   "built": "2026-11-20",
+   "bytes": 392268,
+   "cc": "US",
+   "km": 9907,
+   "lines": 41119,
+   "name": "Maryland",
+   "nodes": 49144
+  },
+  "US-ME": {
+   "bbox": [
+    43.078,
+    -71.069,
+    47.369,
+    -67.074
+   ],
+   "built": "2026-11-20",
+   "bytes": 109815,
+   "cc": "US",
+   "km": 5943,
+   "lines": 9265,
+   "name": "Maine",
+   "nodes": 16295
+  },
+  "US-MI": {
+   "bbox": [
+    41.668,
+    -90.21,
+    47.48,
+    -82.413
+   ],
+   "built": "2026-11-20",
+   "bytes": 459590,
+   "cc": "US",
+   "km": 21820,
+   "lines": 44903,
+   "name": "Michigan",
+   "nodes": 60272
+  },
+  "US-MN": {
+   "bbox": [
+    43.32,
+    -97.269,
+    49.288,
+    -89.54
+   ],
+   "built": "2026-11-20",
+   "bytes": 381663,
+   "cc": "US",
+   "km": 21339,
+   "lines": 37306,
+   "name": "Minnesota",
+   "nodes": 51220
+  },
+  "US-MO": {
+   "bbox": [
+    35.982,
+    -95.658,
+    40.638,
+    -89.089
+   ],
+   "built": "2026-11-20",
+   "bytes": 431627,
+   "cc": "US",
+   "km": 22414,
+   "lines": 44019,
+   "name": "Missouri",
+   "nodes": 60576
+  },
+  "US-MS": {
+   "bbox": [
+    30.239,
+    -91.526,
+    35.052,
+    -88.084
+   ],
+   "built": "2026-11-20",
+   "bytes": 282375,
+   "cc": "US",
+   "km": 16886,
+   "lines": 28777,
+   "name": "Mississippi",
+   "nodes": 39446
+  },
+  "US-MT": {
+   "bbox": [
+    44.487,
+    -116.176,
+    49.223,
+    -103.814
+   ],
+   "built": "2026-11-20",
+   "bytes": 133196,
+   "cc": "US",
+   "km": 13103,
+   "lines": 9813,
+   "name": "Montana",
+   "nodes": 22010
+  },
+  "US-NC": {
+   "bbox": [
+    33.887,
+    -84.369,
+    36.72,
+    -75.466
+   ],
+   "built": "2026-11-20",
+   "bytes": 724799,
+   "cc": "US",
+   "km": 27849,
+   "lines": 70713,
+   "name": "North Carolina",
+   "nodes": 95558
+  },
+  "US-ND": {
+   "bbox": [
+    45.842,
+    -104.103,
+    49.178,
+    -96.595
+   ],
+   "built": "2026-11-20",
+   "bytes": 80001,
+   "cc": "US",
+   "km": 8790,
+   "lines": 7364,
+   "name": "North Dakota",
+   "nodes": 11686
+  },
+  "US-NE": {
+   "bbox": [
+    39.775,
+    -104.16,
+    43.301,
+    -95.363
+   ],
+   "built": "2026-11-20",
+   "bytes": 129035,
+   "cc": "US",
+   "km": 10489,
+   "lines": 12763,
+   "name": "Nebraska",
+   "nodes": 17557
+  },
+  "US-NH": {
+   "bbox": [
+    42.674,
+    -72.567,
+    45.253,
+    -70.752
+   ],
+   "built": "2026-11-20",
+   "bytes": 114071,
+   "cc": "US",
+   "km": 3995,
+   "lines": 10788,
+   "name": "New Hampshire",
+   "nodes": 16333
+  },
+  "US-NJ": {
+   "bbox": [
+    38.955,
+    -75.537,
+    41.354,
+    -73.912
+   ],
+   "built": "2026-11-20",
+   "bytes": 520892,
+   "cc": "US",
+   "km": 11516,
+   "lines": 54693,
+   "name": "New Jersey",
+   "nodes": 63571
+  },
+  "US-NM": {
+   "bbox": [
+    31.769,
+    -109.238,
+    37.185,
+    -102.672
+   ],
+   "built": "2026-11-20",
+   "bytes": 173690,
+   "cc": "US",
+   "km": 16019,
+   "lines": 15304,
+   "name": "New Mexico",
+   "nodes": 25989
+  },
+  "US-NV": {
+   "bbox": [
+    34.93,
+    -120.028,
+    42.175,
+    -113.89
+   ],
+   "built": "2026-11-20",
+   "bytes": 232544,
+   "cc": "US",
+   "km": 10000,
+   "lines": 26494,
+   "name": "Nevada",
+   "nodes": 29851
+  },
+  "US-NY": {
+   "bbox": [
+    40.505,
+    -79.78,
+    45.049,
+    -71.859
+   ],
+   "built": "2026-11-20",
+   "bytes": 880349,
+   "cc": "US",
+   "km": 29475,
+   "lines": 81976,
+   "name": "New York",
+   "nodes": 117809
+  },
+  "US-OH": {
+   "bbox": [
+    38.408,
+    -85.004,
+    41.961,
+    -80.422
+   ],
+   "built": "2026-11-20",
+   "bytes": 654798,
+   "cc": "US",
+   "km": 26321,
+   "lines": 65328,
+   "name": "Ohio",
+   "nodes": 85341
+  },
+  "US-OK": {
+   "bbox": [
+    33.627,
+    -103.123,
+    37.153,
+    -94.201
+   ],
+   "built": "2026-11-20",
+   "bytes": 462388,
+   "cc": "US",
+   "km": 17462,
+   "lines": 53764,
+   "name": "Oklahoma",
+   "nodes": 58776
+  },
+  "US-OR": {
+   "bbox": [
+    41.54,
+    -124.498,
+    46.251,
+    -116.891
+   ],
+   "built": "2026-11-20",
+   "bytes": 287181,
+   "cc": "US",
+   "km": 12684,
+   "lines": 26472,
+   "name": "Oregon",
+   "nodes": 41044
+  },
+  "US-PA": {
+   "bbox": [
+    39.669,
+    -80.567,
+    42.281,
+    -74.693
+   ],
+   "built": "2026-11-20",
+   "bytes": 842246,
+   "cc": "US",
+   "km": 27002,
+   "lines": 83815,
+   "name": "Pennsylvania",
+   "nodes": 112075
+  },
+  "US-RI": {
+   "bbox": [
+    41.347,
+    -71.844,
+    42.021,
+    -71.157
+   ],
+   "built": "2026-11-20",
+   "bytes": 63246,
+   "cc": "US",
+   "km": 1620,
+   "lines": 6766,
+   "name": "Rhode Island",
+   "nodes": 8180
+  },
+  "US-SC": {
+   "bbox": [
+    32.099,
+    -83.306,
+    35.219,
+    -78.578
+   ],
+   "built": "2026-11-20",
+   "bytes": 300881,
+   "cc": "US",
+   "km": 14178,
+   "lines": 29880,
+   "name": "South Carolina",
+   "nodes": 38930
+  },
+  "US-SD": {
+   "bbox": [
+    42.493,
+    -104.223,
+    46.056,
+    -96.262
+   ],
+   "built": "2026-11-20",
+   "bytes": 98287,
+   "cc": "US",
+   "km": 10989,
+   "lines": 8529,
+   "name": "South Dakota",
+   "nodes": 14333
+  },
+  "US-TN": {
+   "bbox": [
+    34.696,
+    -90.168,
+    36.756,
+    -81.734
+   ],
+   "built": "2026-11-20",
+   "bytes": 479066,
+   "cc": "US",
+   "km": 21219,
+   "lines": 45816,
+   "name": "Tennessee",
+   "nodes": 67471
+  },
+  "US-TX": {
+   "bbox": [
+    25.831,
+    -106.684,
+    36.657,
+    -93.496
+   ],
+   "built": "2026-11-20",
+   "bytes": 1694367,
+   "cc": "US",
+   "km": 78695,
+   "lines": 175783,
+   "name": "Texas",
+   "nodes": 203235
+  },
+  "US-UT": {
+   "bbox": [
+    36.738,
+    -114.225,
+    42.057,
+    -108.886
+   ],
+   "built": "2026-11-20",
+   "bytes": 199906,
+   "cc": "US",
+   "km": 9931,
+   "lines": 19676,
+   "name": "Utah",
+   "nodes": 28465
+  },
+  "US-VA": {
+   "bbox": [
+    36.449,
+    -83.657,
+    39.445,
+    -75.371
+   ],
+   "built": "2026-11-20",
+   "bytes": 708629,
+   "cc": "US",
+   "km": 24302,
+   "lines": 67156,
+   "name": "Virginia",
+   "nodes": 95063
+  },
+  "US-VT": {
+   "bbox": [
+    42.664,
+    -73.425,
+    45.102,
+    -71.464
+   ],
+   "built": "2026-11-20",
+   "bytes": 76487,
+   "cc": "US",
+   "km": 3780,
+   "lines": 5706,
+   "name": "Vermont",
+   "nodes": 12487
+  },
+  "US-WA": {
+   "bbox": [
+    45.538,
+    -124.414,
+    49.062,
+    -117.002
+   ],
+   "built": "2026-11-20",
+   "bytes": 377778,
+   "cc": "US",
+   "km": 13557,
+   "lines": 37501,
+   "name": "Washington",
+   "nodes": 50295
+  },
+  "US-WI": {
+   "bbox": [
+    42.458,
+    -92.816,
+    46.899,
+    -86.978
+   ],
+   "built": "2026-11-20",
+   "bytes": 499117,
+   "cc": "US",
+   "km": 22086,
+   "lines": 50540,
+   "name": "Wisconsin",
+   "nodes": 64803
+  },
+  "US-WV": {
+   "bbox": [
+    37.203,
+    -82.646,
+    40.645,
+    -77.71
+   ],
+   "built": "2026-11-20",
+   "bytes": 191730,
+   "cc": "US",
+   "km": 9762,
+   "lines": 12463,
+   "name": "West Virginia",
+   "nodes": 35914
+  },
+  "US-WY": {
+   "bbox": [
+    40.594,
+    -111.158,
+    45.092,
+    -103.857
+   ],
+   "built": "2026-11-20",
+   "bytes": 96944,
+   "cc": "US",
+   "km": 9263,
+   "lines": 7011,
+   "name": "Wyoming",
+   "nodes": 16221
+  }
+ },
+ "updated": "2026-11-20T05:20:52Z",
+ "v": 1
+}
