@@ -1270,8 +1270,9 @@ function mrTripBlock(i) {
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
-  // Find similar trips: a new routine with this trip as its line, matched by route, not by time.
-  if (!rr && !mr && MODES[D.mode[i]] !== 'FLYING' && D.pathOff[i + 1] - D.pathOff[i] >= 5 && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1) btns += '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>';
+  // Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
+  // its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
+  if (!rr && !mr && MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1) btns += '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>';
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
@@ -1630,13 +1631,15 @@ function mrGearRuleDialog(r) {
   });
 }
 // A routine from one trip: its two ends, any day and time, both ways, its type, and its own trail as
-// the line, so the trips that follow that line closely enough (the match slider) are its trips.
+// the line, so the trips that follow that line closely enough (the match slider) are its trips. A trip
+// with under 5 GPS points has too little trail to be a line: its routine goes by the ends and type alone.
 function mrSimilar(i) {
   needPlaces();
   var m = MODES[D.mode[i]], A = placeLabel(D.pa[i]), B = placeLabel(D.pb[i]), lab = LABEL[m] || m;
   var r = { id: mrNewId(lab + ' ' + A + ' ' + B), name: lab + ' ' + A + ' – ' + B, from: mrEndRef({ at: [D.from[2 * i], D.from[2 * i + 1]] }), to: mrEndRef({ at: [D.to[2 * i], D.to[2 * i + 1]] }),
     both_ways: true, then: { mode: m, snap: { trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] } } } };
   if (m === 'UNKNOWN') delete r.then.mode;
+  if (D.pathOff[i + 1] - D.pathOff[i] < 5) delete r.then.snap;
   mrRoutineDialog(r, true);
 }
 // isNew: a routine not saved yet (Find similar trips), added to MyRules on Save.
@@ -1645,7 +1648,8 @@ function mrRoutineDialog(r, isNew) {
   mrAsk({
     side: true,
     title: isNew ? 'Trips like this one' : 'Edit routine',
-    text: (isNew ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' : 'Trips between its two ends in this period get what you set here.') +
+    text: (isNew ? (t.snap ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' :
+      'Your trips between the same two ends, any day and any time. This trip has too few GPS points to be a line, so they go by their ends: set how close below, then save them as a routine.') : 'Trips between its two ends in this period get what you set here.') +
       (MR && !MR.on ? '<b class="mr-off-warn">MyRules are switched off, so this routine won\'t change any trips until you switch them on.</b>' : ''),
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
       '<label class="field"><span>Type</span><select id="mrRMode"><option value="">Leave the type as it is</option>' + MODES.filter(function (m) { return m !== 'UNKNOWN'; }).map(function (m) {
