@@ -185,8 +185,8 @@ function selInside(shape) {
   }
   return out;
 }
-// Change type…: one correction listing every picked trip.
-var SEL_TYPES = ['TRAIN', 'BUS', 'CAR', 'TRAM', 'SUBWAY', 'FERRY', 'CYCLING', 'WALKING', 'RUNNING', 'MOTORCYCLE', 'TAXI', 'FLYING', 'VEHICLE'];
+// Change type…: one correction listing every picked trip. Unclassified last, for trips that look wrong.
+var SEL_TYPES = ['TRAIN', 'BUS', 'CAR', 'TRAM', 'SUBWAY', 'FERRY', 'CYCLING', 'WALKING', 'RUNNING', 'MOTORCYCLE', 'TAXI', 'FLYING', 'VEHICLE', 'UNKNOWN'];
 function selTypeDialog() {
   if (!SEL || !SEL.picked.length) return;
   var n = SEL.picked.length, now = {}, kmT = 0;
