@@ -1102,7 +1102,12 @@ function movedPlaces(V, paths) {
     if (near.length < 3 || near.length < MOVED_SHARE * far.length || km(c, ll) <= MOVED_KM || nearAirport(ll)) return;
     var here = L.filter(function (x) { return km(x.g, ll) <= MOVED_KM; }).map(function (x) { return x.v.st; });
     if (handover(near.map(function (x) { return x.v.st; }), here) > Math.floor(MOVED_OFF * near.length)) return;
+    // The old building's period: from the first of them to the last, and on to the stays that agree
+    // with the place on either side (so the very first or last visits there go too).
     var t0 = Math.min.apply(null, near.map(function (x) { return x.v.st; })), t1 = Math.max.apply(null, near.map(function (x) { return x.v.st; }));
+    var before = here.filter(function (t) { return t < t0; }), after = here.filter(function (t) { return t > t1; });
+    t0 = before.length ? Math.max.apply(null, before) : -Infinity;
+    t1 = after.length ? Math.min.apply(null, after) : Infinity;
     A.forEach(function (x) { if (x.v.st >= t0 && x.v.st <= t1 && !(x.g && km(x.g, x.v.ll) <= MOVED_KM) && km(c, x.v.ll) > MOVED_KM) x.v.fix = c; });
   });
 }
