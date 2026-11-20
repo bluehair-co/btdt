@@ -10,11 +10,24 @@ function renderSettings() {
   renderSplitSettings();
   netSettings();
   renderPacks();
+  renderMenu();
   $('homeSec').hidden = !D || !!DEMO;
+  $('homeEdit').hidden = true;
   if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
+  $('homeEdit').hidden = h < 0;
 }
+// The Menu's rows: what each page holds right now.
+function renderMenu() {
+  $('menuSub-mrSheet').textContent = !MR ? 'Add what only you know: gear, places, routines' : mrCount(MR.doc) + (MR.on ? '' : ' · switched off');
+  var packs = typeof packCodes === 'function' ? packCodes().length : 0, split = splitSetting();
+  $('menuSub-cleanupSheet').textContent = [split === 'auto' ? 'Merged trips split' : split === 'ask' ? 'Merged trips suggested' : 'Merged trips kept whole',
+    packs ? packs + ' station pack' + (packs === 1 ? '' : 's') : 'No station packs'].join(' · ');
+  var u = PREFS.unitF === 'km' ? 'Kilometres' : PREFS.unitF === 'mi' ? 'Miles' : LOCALE_FMT.unit === 'mi' ? 'Miles' : 'Kilometres';
+  $('menuSub-prefsSheet').textContent = u + ' · ' + niceDate(todayDay()) + ' · ' + (PREFS.theme === 'dark' ? 'Dark' : PREFS.theme === 'light' ? 'Light' : 'System') + ' theme';
+}
+$('homeEdit').addEventListener('click', function () { var h = findHome(); if (h >= 0) openPlace(h); });
 // Leave out cell-tower fixes (see mrApplyDrops): the switch, and how many points and trips it takes.
 function netSettings() {
   var el = $('netFix');
@@ -62,10 +75,10 @@ function renderImports() {
   $('filesHead').textContent = files.length ? 'Files (' + files.length + ')' : 'Files';
   $('fileList').closest('.sec').hidden = !files.length;
   renderMyRules();
-  if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('forgetBtn').hidden = true; $('dataRowSub').textContent = 'No data loaded'; return; }
+  if (!D) { $('dataSummary').textContent = 'No data loaded yet.'; $('forgetBtn').hidden = true; $('menuSub-importsSheet').textContent = 'No data loaded'; return; }
   $('forgetBtn').hidden = !!DEMO;
   var span = niceDate(M.minD) + ' – ' + niceDate(M.maxD);
-  $('dataRowSub').textContent = (DEMO ? 'Demo data' : files.length + ' file' + (files.length === 1 ? '' : 's')) + ' · ' + span;
+  $('menuSub-importsSheet').textContent = (DEMO ? 'Demo data' : files.length + ' file' + (files.length === 1 ? '' : 's')) + ' · ' + span;
   if (DEMO) {
     $('dataSummary').textContent = 'This is the demo: ' + tripsText(tripTotal()) + ' and ' + fmt(D.vs.length) + ' stays, ' + span +
       ', all made up. Nothing is saved. Import your own files to replace it.';

@@ -58,7 +58,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 | `split.js` | Trips Timeline merged: automatic/suggested splits, *Keep as one trip*, *Split trip…* by hand. |
 | `select.js` | *Select trips* on the map (lasso/rectangle, touch too) and bulk *Change type…*. |
 | `ignore.js` | *Ignore GPS points…* of one trip. |
-| `settings.js` | The Settings panel (units, theme, date/time format, CO₂ factors, heart rate, packs, switches). |
+| `settings.js` | The *Menu* (the gear) and its pages: *Your data*, *Trip cleanup* (merged trips, cell-tower fixes, packs, snapping) and *Preferences* (units, theme, date/time format, CO₂ factors, heart rate). |
 
 ## Data formats
 

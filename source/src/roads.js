@@ -1,5 +1,5 @@
 // ---------- car trips along the roads ----------
-// With "Snap car trips to roads" on (Settings, Station packs), car, taxi and motorcycle trips are
+// With "Snap car trips to roads" on (Menu › Trip cleanup), car, taxi and motorcycle trips are
 // drawn along the motorways and main roads of a road pack (roads/NL.json.gz on the packs branch:
 // motorway, trunk and primary roads with their links, from OpenStreetMap, same node and line format
 // as a station pack). The packs are only downloaded when you turn it on, kept in IndexedDB

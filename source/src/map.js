@@ -557,7 +557,7 @@ var HR_ZONES = [
   { n: 'Z4', name: 'Threshold', lo: 0.8 }, { n: 'Z5', name: 'Maximum', lo: 0.9 }];
 // The same in both themes, on the map and in the charts: grey-blue, blue, green, amber, red.
 var HR_COLORS = ['#8a9bb0', '#2a78d6', '#1baf7a', '#eda100', '#e34948'];
-// Your maximum heart rate: the one set in Settings, or else the highest any activity held (its 99th
+// Your maximum heart rate: the one set in Preferences, or else the highest any activity held (its 99th
 // percentile, so a strap's brief spike doesn't count). Kept per import.
 var hrAuto = { d: null, v: 0, n: 0 };
 function hrMaxAuto() {
@@ -998,7 +998,7 @@ function tripRows(i) {
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT•DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');
   if (e & JUMPS) notes.push('Some GPS points here were bad (a fix that jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip, an end at a stale position away from the stay next to it, or time parked counted as part of the trip), so the line, times and distance leave them out' + (D.orig[i] > k && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting them).' : '.'));
   var nd = D.netDrop && D.netDrop[i];
-  if (nd) notes.push(fmt(nd.n) + ' of its GPS points ' + (nd.n === 1 ? 'was a cell-tower or Wi-Fi fix' : 'were cell-tower or Wi-Fi fixes') + ': the phone had no GPS and put itself where a tower or router is, a spot your other trips land on too. The line, distance and heatmap leave ' + (nd.n === 1 ? 'it' : 'them') + ' out' + (Math.abs(nd.km - D.km[i]) >= 0.01 ? ' (' + dist(nd.km) + ' with ' + (nd.n === 1 ? 'it' : 'them') + ')' : '') + '. Turn it off in Settings, GPS cleanup.');
+  if (nd) notes.push(fmt(nd.n) + ' of its GPS points ' + (nd.n === 1 ? 'was a cell-tower or Wi-Fi fix' : 'were cell-tower or Wi-Fi fixes') + ': the phone had no GPS and put itself where a tower or router is, a spot your other trips land on too. The line, distance and heatmap leave ' + (nd.n === 1 ? 'it' : 'them') + ' out' + (Math.abs(nd.km - D.km[i]) >= 0.01 ? ' (' + dist(nd.km) + ' with ' + (nd.n === 1 ? 'it' : 'them') + ')' : '') + '. Turn it off in Menu › Trip cleanup.');
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };

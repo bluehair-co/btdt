@@ -796,7 +796,7 @@ function renderHeart() {
       return '<div class="hz-row' + (zt[z] ? '' : ' none') + '"><i style="background:' + HR_COLORS[z] + '"></i><span class="hz-n">' + Z.n + ' ' + Z.name + '</span><span class="fine">' + hrZoneRange(z) + ' bpm</span>' +
         '<span class="num">' + (zt[z] ? hoursLabel(zt[z] / 3600).replace(/ \d+ min$/, '') : '–') + '</span><span class="num hz-p">' + Math.round(zt[z] / tot * 100) + '%</span></div>';
     }).join('') + '</div>' +
-    '<p class="fine" style="margin:10px 0 0">' + fmt(hrData.n) + ' activit' + (hrData.n === 1 ? 'y' : 'ies') + ' with heart rate, ' + hoursLabel(tot / 3600).replace(/ \d+ min$/, '') + ' in all. Maximum heart rate ' + hrMax() + ' bpm' + (PREFS.maxHr >= 100 ? ', as set in Settings.' : ', the highest they reached; set your own in Settings.') + '</p>';
+    '<p class="fine" style="margin:10px 0 0">' + fmt(hrData.n) + ' activit' + (hrData.n === 1 ? 'y' : 'ies') + ' with heart rate, ' + hoursLabel(tot / 3600).replace(/ \d+ min$/, '') + ' in all. Maximum heart rate ' + hrMax() + ' bpm' + (PREFS.maxHr >= 100 ? ', as set in Menu › Preferences.' : ', the highest they reached; set your own in Menu › Preferences.') + '</p>';
 }
 function drawHrFit() {
   var host = $('hrFitChart'), G = hrData && hrData.groups, g = G && G.filter(function (x) { return x.key === PREFS.hrSport; })[0];

@@ -381,7 +381,7 @@ function mrBasePoints(i) {
   return out;
 }
 // Cell-tower and Wi-Fi fixes (netFixes in parser.js) are left out the same way, for every trip, while
-// Leave out cell-tower fixes is on in Settings (PREFS.netFix, on unless switched off). D.netDrop[i]:
+// Leave out cell-tower fixes is on in Trip cleanup (PREFS.netFix, on unless switched off). D.netDrop[i]:
 // { n (points left out), of, km (distance before) }; worked out once for the trips as loaded (D.base.net).
 function netFixOn() { return PREFS.netFix !== false; }
 function mrNetFixes() {
@@ -1069,6 +1069,11 @@ function mrConfirm(what, lost, go) {
 function renderMyRules() {
   var el = $('mrCard');
   if (!el) return;
+  // Export sits in the MyRules header and in Your data, with a dot while changes aren't exported.
+  var unsaved = MR && MR.changes.length;
+  $('mrSheetExport').hidden = $('mrExportData').hidden = !MR;
+  $('mrSheetExport').innerHTML = icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '');
+  $('mrSheetExport').classList.add('mr-export');
   if (!MR) {
     el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
     return;
@@ -1078,13 +1083,10 @@ function renderMyRules() {
   el.innerHTML = '<div class="mr-card"><div class="mr-card-head"><span class="mr-ic">' + icon('flag') + '</span><span class="file-txt"><b>' + esc(MR.name) + '</b><small>' + mrCount(MR.doc) + '</small></span>' +
     '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply MyRules"' + (MR.on ? ' checked' : '') + '></div>' +
     '<p class="fine" style="margin:8px 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + (nEd ? ', ' + tripsText(nEd) + ' edited' : '') + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button type="button" class="btn" id="mrOpen">Open rules</button>' +
-    '<button type="button" class="btn mr-export" id="mrExportBtn">' + icon('upload') + 'Export' + (n ? '<i class="mr-dot"></i>' : '') + '</button>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
     '<span class="fine mr-unsaved">' + (n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
     '<p class="fine" style="margin-top:8px">The exported file includes your places, such as home.</p></div>';
   $('mrOn').addEventListener('change', function () { var on = this.checked; working(on ? 'Applying MyRules…' : 'Switching MyRules off…', function () { MR.on = on; mrSave(); mrReapply(); }); });
-  $('mrOpen').addEventListener('click', function () { mrRenderRules(); openSheet('mrSheet'); });
-  $('mrExportBtn').addEventListener('click', mrExport);
 }
 
 // ---------- the rules sheet ----------
@@ -1416,8 +1418,8 @@ $('mrBody').addEventListener('click', function (ev) {
     }], ['Cancel', 'quiet', null]]
   });
 });
-$('mrBack').addEventListener('click', function () { openSheet('importsSheet'); });
 $('mrSheetExport').addEventListener('click', mrExport);
+$('mrExportData').addEventListener('click', mrExport);
 
 // ---------- trip details ----------
 // What MyRules did to a trip, each with Undo (a correction) or Not this trip (a gear period); Edit
@@ -1469,8 +1471,8 @@ function mrTripBlock(i) {
   var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
   if (msr && sn) h += '<div class="mr-chg"><b>Map snap:</b> ' + esc(msr.name || msr.id) + way(msn.dir) + '<div class="fine">Drawn ' + esc(msr.line && msr.line.name ? msr.line.name.charAt(0).toLowerCase() + msr.line.name.slice(1) : 'along its line') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. It follows the line for ' + sn.score + '% of its GPS points.') + '</div></div>';
   var tk = D.mrTrack && D.mrTrack[i];
-  if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. ' + tk.score + '% of them are near the line. Turn it off in Settings, Station packs.') + '</div></div>';
-  if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">' + infoMore('Drawn along main roads for ' + D.snap[i].cov + '% of the way: ' + dist(D.snap[i].km) + '.', 'It follows the motorways and main roads of your road pack where its GPS points stay close to them, and its own GPS points elsewhere. Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. Turn it off in Settings, Station packs.') + '</div></div>';
+  if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. ' + tk.score + '% of them are near the line. Turn it off in Menu › Trip cleanup.') + '</div></div>';
+  if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">' + infoMore('Drawn along main roads for ' + D.snap[i].cov + '% of the way: ' + dist(D.snap[i].km) + '.', 'It follows the motorways and main roads of your road pack where its GPS points stay close to them, and its own GPS points elsewhere. Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. Turn it off in Menu › Trip cleanup.') + '</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   // Edit trip is at the top of the details, under the trip's icon (mrEditTop).
   var btns = '';
@@ -2609,8 +2611,7 @@ function mrRenderHere(L) {
 }
 function mrOpenHere() { mrRenderHere(); openSheet('mrHereSheet'); }
 $('mrHereBtn').addEventListener('click', mrOpenHere);
-$('mrHereBack').addEventListener('click', function () { openSheet('filtersSheet'); });
-$('mrHereAll').addEventListener('click', function () { mrRenderRules(); openSheet('mrSheet'); });
+$('mrHereBack').addEventListener('click', function () { mrRenderRules(); openSheet('mrSheet'); });
 $('mrHereList').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-off]');
   if (b) mrTurnOffHere(b.dataset.mrOff);
