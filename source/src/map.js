@@ -987,7 +987,8 @@ function tripRows(i) {
   ].filter(Boolean);
   var notes = [];
   if (e & 16) notes.push(D.repl[i] ? 'Recorded ' + esc(actFrom(i)) + '. It replaces ' + (D.repl[i] === 1 ? 'the less precise trip' : D.repl[i] + ' less precise trips') + ' Timeline recorded at the same time.' : 'Recorded ' + esc(actFrom(i)) + '. Timeline has no trip at this time.');
-  if (isDup(i)) notes.push('A recorded activity covers this trip too. It shows here because Timeline is the only source chosen; with ' + esc(actsLabel(D.stravaStats)) + ' included, the activity takes its place.');
+  if (isDup(i) && D.dup[i] === 2) notes.push('This sits right next to a recorded activity of the same kind: Timeline still saw you moving where the activity was cut short at its start or end, or it has the same journey a few minutes off. It shows here because Timeline is the only source chosen; with ' + esc(actsLabel(D.stravaStats)) + ' included, only the activity is drawn.');
+  else if (isDup(i)) notes.push('A recorded activity covers this trip too. It shows here because Timeline is the only source chosen; with ' + esc(actsLabel(D.stravaStats)) + ' included, the activity takes its place.');
   if (isSim(i)) notes.push('Simulated from a file you loaded, not recorded by Timeline. It replaces any exported trip at the same time.');
   if (e & PATH_TRIP) notes.push('Timeline kept GPS points here but no trip, so BT•DT made this trip from them.');
   if (e & 4 && e & 16) notes.push((D.stype && D.stype[i] ? (actApp(i) ? esc(actApp(i)) + ' calls' : 'Its file calls') + ' this activity “' + esc(D.stype[i]) + '”, which BT•DT doesn\'t match to a transport type yet' : (actApp(i) ? esc(actApp(i)) + ' gives' : 'Its file gives') + ' this activity no type') + ', so it is counted as ' + (LABEL[m] || m).toLowerCase() + ' from its average speed.');

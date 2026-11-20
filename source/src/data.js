@@ -1008,11 +1008,95 @@ function gather(all, out, src) {
 // R itself is left as loaded (it is what gets saved); the result also has repl, the number
 // of Timeline trips each Strava trip replaced, dup, and stravaStats.
 // Trips shown with every source: a Timeline trip a Strava activity replaced isn't counted.
-function isDup(i) { return D.dup ? D.dup[i] === 1 : false; }
+// dup is 1 for a trip inside an activity's time, 2 for a bit right next to one (see stravaEdges).
+function isDup(i) { return D.dup ? D.dup[i] > 0 : false; }
 function tripTotal() {
   if (!D.dup) return D.day.length;
-  for (var i = 0, c = 0; i < D.dup.length; i++) c += 1 - D.dup[i];
+  for (var i = 0, c = 0; i < D.dup.length; i++) if (!D.dup[i]) c++;
   return c;
+}
+// Kinds of travel that count as the same activity when a Timeline trip sits next to one.
+function stravaFamily(m) { return VOTE_GROUP[MODES[m]] || ''; }
+var EDGE_GAP = 5 * 60000, STAY_NEAR = 10 * 60000, STAY_KM = 0.25, EDGE_DUR = 20 * 60000, EDGE_KM = 0.6, COPY_SHIFT = 15 * 60000, COPY_KM = 0.4;
+// Timeline trips right next to an activity, of the same kind, that are the activity recorded less
+// precisely: Timeline keeps moving through the start or end of a ride that was cropped in Strava
+// (GPS fixes before and after it, within EDGE_GAP of it, never more than EDGE_KM from its start or
+// end, each under EDGE_DUR), or it has the same journey a few minutes off (both ends within COPY_KM
+// of the activity's, start and end each within COPY_SHIFT). A walk to the bike is another kind, and a
+// ride after a stop of a minute or more (a stay between them) is a trip of its own, so both stay, and so
+// are bits that leave from or reach a stay more than STAY_KM from the activity's start or end.
+// Marks them in drop with 2 and returns how many each activity took.
+function stravaEdges(R, S, ord, first, drop) {
+  var n = R.start.length, m = S.start.length, fly = MODES.indexOf('FLYING'), took = new Uint16Array(m);
+  function near(i, la, lo, lim) {
+    var a = R.pathOff[i], b = R.pathOff[i + 1];
+    if (b - a < 1) return kmLL(R.from[2 * i], R.from[2 * i + 1], la, lo) <= lim && kmLL(R.to[2 * i], R.to[2 * i + 1], la, lo) <= lim;
+    for (var q = a; q < b; q++) if (kmLL(R.pathPts[2 * q], R.pathPts[2 * q + 1], la, lo) > lim) return false;
+    return true;
+  }
+  // A stay of a minute or more between two times means you stopped there: what comes after is a trip of its own.
+  var nv = R.vs ? R.vs.length : 0, vo = Array.from({ length: nv }, function (_, x) { return x; }).sort(function (a, b) { return R.vs[a] - R.vs[b]; }), vmax = 0;
+  for (var v = 0; v < nv; v++) vmax = Math.max(vmax, R.ve[v] - R.vs[v]);
+  function stopped(a, b) {
+    if (b - a < 60000) return false;
+    var lo = 0, hi = nv; while (lo < hi) { var mid = (lo + hi) >> 1; if (R.vs[vo[mid]] < a - vmax) lo = mid + 1; else hi = mid; }
+    for (var x = lo; x < nv && R.vs[vo[x]] < b; x++) if (Math.min(b, R.ve[vo[x]]) - Math.max(a, R.vs[vo[x]]) >= 60000) return true;
+    return false;
+  }
+  // The stay where bits going out from the activity (before: the stay they left; after: the one they reached)
+  // must be the activity's own end, within STAY_KM: a short ride on to a café 400 m away is a trip of its own.
+  // The longest run of bits that passes is kept, marked 2 in drop.
+  function keep(chain, la, lo, before) {
+    for (var c = chain.length; c > 0; c--) {
+      var last = chain[c - 1], t = before ? R.start[last] : R.end[last], bad = false;
+      var lo_ = 0, hi = nv; while (lo_ < hi) { var mid = (lo_ + hi) >> 1; if (R.vs[vo[mid]] < t - vmax - STAY_NEAR) lo_ = mid + 1; else hi = mid; }
+      for (var x = lo_; x < nv && R.vs[vo[x]] <= t + STAY_NEAR; x++) {
+        var w = vo[x], at = before ? R.ve[w] : R.vs[w];
+        if (at >= t - STAY_NEAR && at <= t + STAY_NEAR && kmLL(R.vll[2 * w], R.vll[2 * w + 1], la, lo) > STAY_KM) { bad = true; break; }
+      }
+      if (!bad) { for (var y = 0; y < c; y++) drop[chain[y]] = 2; return c; }
+    }
+    return 0;
+  }
+  function ok(i, fam) { return !drop[i] && R.mode[i] !== fly && fam && stravaFamily(R.mode[i]) === fam; }
+  for (var k = 0; k < m; k++) {
+    var fam = stravaFamily(S.mode[k]), s = S.start[k], e = S.end[k], j, i, cur, hit;
+    if (!fam) continue;
+    var sa = S.pathOff[k], sb = S.pathOff[k + 1] - 1;
+    if (sb < sa) continue;
+    var fLa = S.pathPts[2 * sa], fLo = S.pathPts[2 * sa + 1], tLa = S.pathPts[2 * sb], tLo = S.pathPts[2 * sb + 1];
+    // The same journey a few minutes off.
+    for (j = first(s - COPY_SHIFT); j < n && R.start[ord[j]] <= s + COPY_SHIFT; j++) {
+      i = ord[j];
+      if (!ok(i, fam) || Math.abs(R.end[i] - e) > COPY_SHIFT) continue;
+      if (kmLL(R.from[2 * i], R.from[2 * i + 1], fLa, fLo) <= COPY_KM && kmLL(R.to[2 * i], R.to[2 * i + 1], tLa, tLo) <= COPY_KM) { drop[i] = 2; took[k]++; }
+    }
+    // Bits before the start, one after another back from it.
+    var chain = [];
+    for (cur = s; ; cur = R.start[hit]) {
+      hit = -1;
+      for (j = first(cur) - 1; j >= 0 && R.start[ord[j]] >= cur - EDGE_GAP - EDGE_DUR; j--) {
+        i = ord[j];
+        if (ok(i, fam) && chain.indexOf(i) < 0 && R.end[i] >= cur - EDGE_GAP && R.end[i] <= e && R.end[i] - R.start[i] <= EDGE_DUR && !stopped(R.end[i], cur) && near(i, fLa, fLo, EDGE_KM)) { hit = i; break; }
+      }
+      if (hit < 0) break;
+      chain.push(hit);
+    }
+    took[k] += keep(chain, fLa, fLo, true);
+    // Bits after the end, one after another on from it.
+    chain = [];
+    for (cur = e; ; cur = R.end[hit]) {
+      hit = -1;
+      for (j = first(s); j < n && R.start[ord[j]] <= cur + EDGE_GAP; j++) {
+        i = ord[j];
+        if (ok(i, fam) && chain.indexOf(i) < 0 && R.end[i] > cur && R.end[i] - R.start[i] <= EDGE_DUR && !stopped(cur, R.start[i]) && near(i, tLa, tLo, EDGE_KM)) { hit = i; break; }
+      }
+      if (hit < 0) break;
+      chain.push(hit);
+    }
+    took[k] += keep(chain, tLa, tLo, false);
+  }
+  return took;
 }
 function withStrava(R) {
   var S = R.strava;
@@ -1044,6 +1128,8 @@ function withStrava(R) {
     }
     off[k] = o;
   }
+  var took = stravaEdges(R, S, ord, first, drop);
+  for (k = 0; k < m; k++) if (took[k]) { if (!cnt[k]) matched++; cnt[k] += took[k]; replaced += took[k]; }
   var list = [];
   for (i = 0; i < n; i++) list.push([0, i]);
   for (k = 0; k < m; k++) list.push([1, k]);
