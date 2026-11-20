@@ -347,6 +347,26 @@ function toast(text) {
   var t = $('toast'); t.textContent = text; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3500);
 }
+// Long work written as a generator (function*) that yields now and then. runAll does it in one go;
+// runSoon does it SLICE_MS at a time, letting the page paint in between, so the loader's icons keep
+// changing while the trips are worked out (in a hidden tab, where nothing paints, it goes straight on).
+function runAll(g) { while (!g.next().done); }
+var SLICE_MS = 40;
+function runSoon(g) {
+  return new Promise(function (resolve, reject) {
+    function step() {
+      var t0 = performance.now();
+      try {
+        for (;;) {
+          if (g.next().done) { resolve(); return; }
+          if (!document.hidden && performance.now() - t0 > SLICE_MS) break;
+        }
+      } catch (e) { reject(e); return; }
+      setTimeout(step, 0);
+    }
+    step();
+  });
+}
 // A slow change (a switch that makes every trip be worked out again): the "Working on it" pill and a
 // veil over the page show at once, a frame paints, then the work runs and both go when it's done.
 // The pill fades in only after 150 ms, so quick changes don't flash it; its spinner and fade are
