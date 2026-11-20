@@ -43,7 +43,7 @@ function buildTimeline(keepHay) {
   tlLayout();
 }
 function tlLayout() {
-  if (TL.map && !$('tlMapWrap').hidden) TL.map.invalidateSize();
+  if (TL.map && $('tripMap')) TL.map.invalidateSize();
   tlRender(true);
 }
 // Index of the item at height y.
@@ -83,63 +83,57 @@ $('tlList').addEventListener('scroll', function () { if (!tlRaf) tlRaf = request
 $('tlInner').addEventListener('click', function (ev) {
   var b = ev.target.closest('.tl-trip[data-i]');
   if (!b) return;
+  // One tap opens the trip, with its map at the top of the sheet (tlSheetMap).
   var i = +b.dataset.i;
-  if (i === TL.sel) tlClose(); else tlSelect(i, false);
+  tlSelect(i, false);
+  openTrip(i);
 });
 
-// The selected trip, on a map above the list.
+// The selected trip: marked in the list (and scrolled to, from the map or Insights).
 function tlSelect(i, scroll) {
   if (dirty.timeline) { dirty.timeline = false; buildTimeline(); }
   // A trip opened from the map or Insights that the search hides: clear the search to show it.
   if (TL.words.length && !tlMatch(i)) tlSetSearch('');
   TL.sel = i;
-  var wrap = $('tlMapWrap');
-  wrap.hidden = false;
-  if (!window.L) $('tlMap').innerHTML = '<p class="empty">The map library couldn\'t load. Check your internet connection and reload.</p>';
-  else {
-    if (!TL.map) {
-      TL.map = L.map('tlMap', { worldCopyJump: true, minZoom: 2, zoomControl: false, attributionControl: true }).setView([50, 8], 4);
-      addTiles(TL.map);
-      TL.layer = L.layerGroup().addTo(TL.map);
-    }
-    TL.map.invalidateSize();
-    TL.layer.clearLayers();
-    var pts = tripPath(i), color = cssVar(groupOf(modeOf(i)).v), panel = cssVar('--panel');
-    if (pts.length) {
-      L.polyline(pts, { color: panel, weight: 8, opacity: 0.9, interactive: false }).addTo(TL.layer);
-      L.polyline(pts, { color: color, weight: 4.5, opacity: 1, interactive: false }).addTo(TL.layer);
-      L.circleMarker(pts[0], { radius: 7, color: panel, weight: 2, fillColor: color, fillOpacity: 1 }).bindTooltip('Start').addTo(TL.layer);
-      L.circleMarker(pts[pts.length - 1], { radius: 7, color: color, weight: 3, fillColor: panel, fillOpacity: 1 }).bindTooltip('End').addTo(TL.layer);
-      var bb = L.latLngBounds(pts);
-      if (bb.getNorthEast().equals(bb.getSouthWest())) TL.map.setView(bb.getCenter(), 15);
-      else TL.map.fitBounds(bb, { paddingTopLeft: [24, 24], paddingBottomRight: [24, 84], maxZoom: 16 });
-    }
-  }
-  var m = modeOf(i), ms = D.end[i] - D.start[i];
-  $('tlMapInfo').innerHTML = badge(m, true, 0, tripIcon(i)) + '<span class="t" style="flex:1"><b>' + esc(tripRoute(i)) + '</b><small>' + tripLabel(i) + simTag(i) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) +
-    ' · ' + dist(D.km[i]) + (ms > 0 ? ' · ' + duration(ms) : '') + '</small></span><button type="button" class="btn quiet" data-details="' + i + '" style="padding:6px 10px">Details</button>';
   var k = -1;
   for (var q = 0; q < TL.ref.length; q++) if (TL.type[q] === 1 && TL.ref[q] === i) { k = q; break; }
   if (scroll && k >= 0) {
     // Leave room for the day header above the trip.
     requestAnimationFrame(function () { $('tlList').scrollTop = Math.max(0, TL.tops[k] - TL_H[0]); tlRender(true); });
-  } else {
-    tlRender(true);
-    // Keep the tapped row in view now that the list is shorter.
-    requestAnimationFrame(function () {
-      var list = $('tlList');
-      if (k >= 0 && (TL.tops[k] < list.scrollTop || TL.tops[k] + TL_H[1] > list.scrollTop + list.clientHeight)) list.scrollTop = Math.max(0, TL.tops[k] - 8);
-      tlRender(true);
-    });
+  } else tlRender(true);
+}
+// The trip's own map at the top of its sheet, when it is opened from Timeline (the main map isn't
+// in view there). Made again for each trip; the one before is let go.
+function tlSheetMap(i) {
+  if (TL.map) { TL.map.remove(); TL.map = null; }
+  var el = $('tripMap');
+  if (!el) return;
+  if (!window.L) { el.innerHTML = '<p class="empty">The map library couldn\'t load. Check your internet connection and reload.</p>'; return; }
+  TL.map = L.map(el, { worldCopyJump: true, minZoom: 2, zoomControl: false, attributionControl: true }).setView([50, 8], 4);
+  addTiles(TL.map);
+  TL.layer = L.layerGroup().addTo(TL.map);
+  var pts = tripPath(i), color = cssVar(groupOf(modeOf(i)).v), panel = cssVar('--panel');
+  function fit() {
+    if (!TL.map || !pts.length) return;
+    TL.map.invalidateSize();
+    var bb = L.latLngBounds(pts);
+    if (bb.getNorthEast().equals(bb.getSouthWest())) TL.map.setView(bb.getCenter(), 15);
+    else TL.map.fitBounds(bb, { padding: [20, 20], maxZoom: 16 });
   }
+  if (pts.length) {
+    L.polyline(pts, { color: panel, weight: 8, opacity: 0.9, interactive: false }).addTo(TL.layer);
+    L.polyline(pts, { color: color, weight: 4.5, opacity: 1, interactive: false }).addTo(TL.layer);
+    L.circleMarker(pts[0], { radius: 7, color: panel, weight: 2, fillColor: color, fillOpacity: 1 }).bindTooltip('Start').addTo(TL.layer);
+    L.circleMarker(pts[pts.length - 1], { radius: 7, color: color, weight: 3, fillColor: panel, fillOpacity: 1 }).bindTooltip('End').addTo(TL.layer);
+  }
+  fit();
+  // Once the sheet has slid in, its size is final.
+  setTimeout(fit, 260);
 }
 function tlClose() {
   TL.sel = null;
-  $('tlMapWrap').hidden = true;
   tlRender(true);
 }
-$('tlMapClose').addEventListener('click', tlClose);
-$('tlMapInfo').addEventListener('click', function (ev) { var b = ev.target.closest('[data-details]'); if (b) openTrip(+b.dataset.details); });
 
 // The search box.
 var tlQT = 0;

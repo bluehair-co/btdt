@@ -256,8 +256,10 @@
             <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
+          <nav class="ins-chips" id="insChips" aria-label="Insights sections"><button type="button" data-ig-go="scores" aria-pressed="true">Scores</button><button type="button" data-ig-go="overview" aria-pressed="false">Overview</button><button type="button" data-ig-go="places" aria-pressed="false">Places</button><button type="button" data-ig-go="countries" aria-pressed="false">Countries</button><button type="button" data-ig-go="fitness" aria-pressed="false">Fitness</button><button type="button" data-ig-go="co2" aria-pressed="false">CO₂</button></nav>
         </div>
       <div class="cards">
+        <div class="ins-group" data-ig="scores">
         <section class="card wide far-card" id="farCard" aria-roledescription="carousel" aria-label="Distance scores">
           <div class="card-head"><div class="card-title"><h2 id="farTitle" aria-live="polite">Marco Polo score</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this score" title="About this score"><span data-icon="info"></span></button></div>
             <div class="far-nav"><button type="button" class="icon-btn" data-far="prev" aria-label="Previous score"><span data-icon="left"></span></button><div class="far-dots" id="farDots"></div><button type="button" class="icon-btn" data-far="next" aria-label="Next score"><span data-icon="right"></span></button></div>
@@ -271,6 +273,9 @@
             <div class="far-slide" data-title="Voyager score" role="group" aria-roledescription="slide"><div id="voyager"></div></div>
           </div></div>
         </section>
+        </div>
+        <div class="ins-group" data-ig="overview">
+        <h2 class="ins-group-h" id="ig-overview">Overview</h2>
         <section class="card wide" id="sumCard">
           <div class="card-head"><h2>Summary</h2><span class="fine" id="sumNote"></span></div>
           <div class="stats" id="sumStats"></div>
@@ -293,6 +298,13 @@
           <div class="chart" id="timeChart"></div>
           <div class="time-units"><div class="seg" role="group" aria-label="Group by" id="timeUnitSeg"><button type="button" data-u="year" aria-pressed="true">Years</button><button type="button" data-u="month" aria-pressed="false">Months</button><button type="button" data-u="week" aria-pressed="false">Weeks</button><button type="button" data-u="day" aria-pressed="false" hidden>Days</button></div></div>
         </section>
+        <section class="card wide">
+          <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
+          <div class="records" id="records"></div>
+        </section>
+        </div>
+        <div class="ins-group" data-ig="places">
+        <h2 class="ins-group-h" id="ig-places">Places</h2>
         <section class="card">
           <div class="card-head"><div class="card-title"><h2>Top routes</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Trips between the same two places, either way. Tap one for its latest trip.</span></div>
           <div class="list-rows" id="topRoutes"></div>
@@ -310,23 +322,9 @@
           <div class="stats" id="sqStats"></div>
           <div class="bars" id="sqYears" style="margin-top:14px"></div>
         </section>
-        <section class="card" id="gearCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
-          <div class="list-rows" id="gearList"></div>
-        </section>
-        <section class="card wide" id="hrCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
-            <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
-            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Menu › Preferences.</span></div>
-          <div class="hr-cols">
-            <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
-            <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
-          </div>
-        </section>
-        <section class="card wide">
-          <div class="card-head"><div class="card-title"><h2>Records</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Tap a record to see the trip.</span></div>
-          <div class="records" id="records"></div>
-        </section>
+        </div>
+        <div class="ins-group" data-ig="countries">
+        <h2 class="ins-group-h" id="ig-countries">Countries</h2>
         <section class="card wide" id="cctlCard">
           <div class="card-head"><div class="card-title"><h2>Countries over time</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><div class="seg" role="group" aria-label="Zoom"><button type="button" id="cctlOut" aria-label="Zoom out">−</button><button type="button" id="cctlFit">Fit</button><button type="button" id="cctlIn" aria-label="Zoom in">+</button></div><span class="fine info-text">Which country you were in each day. Scroll sideways; pinch, Ctrl+scroll or the buttons zoom; tap anything for details. Stops of under a day are marked: a circle below the strip for a layover where you stayed at the airport, a pentagon above it where you got out. Faded stretches have no records and are guessed from before and after.</span></div>
           <div class="cctl-off" id="cctlOff" hidden><p>The country timeline needs every kind of transport, since leaving some trips out would leave holes in where you were.</p><button type="button" class="btn" id="cctlAllModes">Show all transport</button></div>
@@ -338,10 +336,30 @@
           <div class="card-head"><div class="card-title"><h2>Countries</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text" id="ccNote"></span></div>
           <div class="list-rows" id="ccList"></div>
         </section>
+        </div>
+        <div class="ins-group" data-ig="fitness">
+        <h2 class="ins-group-h" id="ig-fitness">Fitness</h2>
+        <section class="card wide" id="hrCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
+            <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
+            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Menu › Preferences.</span></div>
+          <div class="hr-cols">
+            <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
+            <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
+          </div>
+        </section>
+        <section class="card" id="gearCard" hidden>
+          <div class="card-head"><div class="card-title"><h2>Your gear</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The bikes and shoes your Strava activities were recorded with, and how far each went. Tap one to see only its trips.</span></div>
+          <div class="list-rows" id="gearList"></div>
+        </section>
+        </div>
+        <div class="ins-group" data-ig="co2">
+        <h2 class="ins-group-h" id="ig-co2">CO₂</h2>
         <section class="card">
           <div class="card-head"><div class="card-title"><h2>CO₂ from travel</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Estimated from average emissions per km. Change the factors in Menu › Preferences.</span></div>
           <div id="co2Card"></div>
         </section>
+        </div>
       </div>
     </div>
   </section>
@@ -367,11 +385,6 @@
           <input type="search" id="tlSearch" placeholder="Search trips by name or place" aria-label="Search the trips in these filters by name or place" autocomplete="off" spellcheck="false" enterkeyhint="search">
           <button type="button" class="tl-search-clear" id="tlSearchClear" aria-label="Clear search" hidden><span data-icon="close"></span></button>
         </div>
-    </div>
-    <div class="tl-map-wrap" id="tlMapWrap" hidden>
-      <div id="tlMap"></div>
-      <div class="tl-map-info" id="tlMapInfo"></div>
-      <button type="button" class="tl-map-close" id="tlMapClose" aria-label="Close map"><span data-icon="close"></span></button>
     </div>
     <div class="tl-list" id="tlList"><div class="tl-inner" id="tlInner"></div></div>
   </section>
