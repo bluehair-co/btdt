@@ -1151,6 +1151,8 @@ div.hit-row:hover { background: none; }
 body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .snap-bar:not(.sel-top), body.sel-mode #roadPill { display: none !important; }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
 body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
+.bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .bg-spin { animation-duration: 2s; } }
 </style>
 </head>
 <body>
@@ -14379,7 +14381,7 @@ function roadCan(i) {
 function mrApplyRoads() {
   D.mrRoad = [];
   if (!roadOn()) { roadSettings(); return; }
-  if (!RG) { roadsLoad().then(function (G) { if (G && D) mrReapply(); }); roadSettings(); return; }
+  if (!RG) { if (!ROAD_WAIT) roadLoadApply(); roadSettings(); return; }
   var todo = [];
   for (var i = 0, n = D.day.length; i < n; i++) {
     if (!roadCan(i)) continue;
@@ -14408,23 +14410,38 @@ function roadRun(todo) {
     if (k < todo.length) { roadPill(k, todo.length); setTimeout(slice, 0); return; }
     ROAD_STAT = { trips: todo.length, snapped: got, ms: Math.round(busy), wall: Math.round(performance.now() - t0), build: G.ms, nodes: G.n, segs: G.segs };
     ROAD_RUN = null;
-    roadPill();
-    mrReapply();
+    // Applying the rules again with them takes a moment too: the pill stays, spinning, meanwhile.
+    roadPill(null, null, 'Drawing car trips along the roads…');
+    setTimeout(function () { try { mrReapply(); } finally { roadPill(); } }, 30);
   }
   setTimeout(slice, 0);
 }
-function roadPill(done, all) {
+// The pill over the map, with a spinner: how far the snapping is (done of all), or a text alone;
+// nothing hides it.
+function roadPill(done, all, text) {
   var el = $('roadPill');
-  if (done == null) { if (el) el.hidden = true; return; }
+  if (done == null && !text) { if (el) el.hidden = true; return; }
   if (!el) {
     el = document.createElement('div');
     el.id = 'roadPill'; el.className = 'bg-pill'; el.setAttribute('role', 'status');
-    el.innerHTML = '<span></span><div class="dl-bar"><i></i></div>';
+    el.innerHTML = '<i class="bg-spin" aria-hidden="true"></i><span></span><div class="dl-bar"><i></i></div>';
     document.body.appendChild(el);
   }
   el.hidden = false;
-  el.firstChild.textContent = 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all);
-  el.querySelector('i').style.width = Math.round(100 * done / Math.max(1, all)) + '%';
+  el.querySelector('span').textContent = text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all);
+  el.querySelector('.dl-bar').hidden = done == null;
+  if (done != null) el.querySelector('.dl-bar i').style.width = Math.round(100 * done / Math.max(1, all)) + '%';
+}
+// Loads the road pack with the pill up, then applies the rules again.
+var ROAD_WAIT = false;
+function roadLoadApply() {
+  ROAD_WAIT = true;
+  roadPill(null, null, 'Loading the road pack…');
+  return roadsLoad().then(function (G) {
+    ROAD_WAIT = false;
+    if (!G || !D) { roadPill(); roadSettings(); return; }
+    setTimeout(function () { try { mrReapply(); } finally { if (!ROAD_RUN) roadPill(); } }, 30);
+  }, function () { ROAD_WAIT = false; roadPill(); });
 }
 
 // ---------- the switch ----------
@@ -14491,7 +14508,7 @@ function roadTurnOn() {
       }
       PREFS.roadSnap = true; savePrefs();
       RG = null;
-      roadsLoad().then(function () { if (D) mrReapply(); else roadSettings(); });
+      if (D) roadLoadApply(); else roadsLoad().then(roadSettings);
     });
   }, function () {
     box.checked = false; box.disabled = false;
