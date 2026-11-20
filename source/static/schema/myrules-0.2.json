@@ -597,6 +597,11 @@
             "hide": {
               "type": "boolean"
             },
+            "ignore_points": {
+              "type": "array",
+              "items": { "type": "string", "format": "date-time" },
+              "description": "Times of this trip's GPS points to leave out (bad points); only on a correction for one trip"
+            },
             "checked": {
               "type": "boolean",
               "description": "true: the type the files give this trip was checked and is right"

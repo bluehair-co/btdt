@@ -162,7 +162,7 @@ function* setDataSteps(R) {
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
-  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km };
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to };
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {

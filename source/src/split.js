@@ -21,6 +21,8 @@ function splitHas(list, key) { return Array.isArray(list) && list.indexOf(key) >
 function splitFixed() {
   var out = [];
   if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) {
+    // Ignoring a few GPS points isn't looking at the trip as a whole.
+    if (c.then && Object.keys(c.then).every(function (k) { return k === 'ignore_points'; })) return;
     (c.trip && Array.isArray(c.trip.trips) ? c.trip.trips : [c.trip]).forEach(function (r) { var t = r && r.start && Date.parse(r.start); if (isFinite(t)) out.push(t); });
   });
   return out.sort(function (a, b) { return a - b; });
@@ -295,6 +297,8 @@ function splitHandStart(i) {
   setTab('map');
   if (!initMap()) return;
   if (typeof snapEnd === 'function') snapEnd();
+  if (typeof ignEnd === 'function') ignEnd();
+  if (typeof selEnd === 'function') selEnd();
   splitHandEnd();
   SPL = { i: i, key: key, ms: l ? l.was.start : D.start[i], pts: pts, t: t, cuts: [], layer: L.layerGroup().addTo(map), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) || '#c25228' };
   layerToggles();

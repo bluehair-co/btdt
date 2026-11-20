@@ -13,6 +13,7 @@ function selStart() {
   if (!initMap()) return;
   if (typeof snapEnd === 'function') snapEnd();
   if (typeof splitHandEnd === 'function') splitHandEnd();
+  if (typeof ignEnd === 'function') ignEnd();
   selEnd();
   if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
   SEL = { shape: PREFS.selShape === 'rect' ? 'rect' : 'lasso', picked: [], on: new Set(), list: false };

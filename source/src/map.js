@@ -312,7 +312,7 @@ function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
   // While a routine's ghost trips are on the map, nothing else is, so which ones the routine takes
   // (solid) and which it leaves (dashed) stand out.
-  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main || typeof SPL !== 'undefined' && SPL) {
+  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main || typeof SPL !== 'undefined' && SPL || typeof IGN !== 'undefined' && IGN) {
     [sqLayer, pathLayer, speedLayer, ccLayer, heatLayer, pinLayer, hlLayer, beaconLayer].forEach(function (l) { if (l && map.hasLayer(l)) map.removeLayer(l); });
     return;
   }
@@ -887,6 +887,8 @@ function onMapTap(pt, ev) {
   if (SN && SN.phase === 'pick') { snapTap(map.containerPointToLatLng(pt)); return; }
   // Selecting trips: the selection handles its own taps.
   if (SEL) return;
+  // Ignoring GPS points: it handles its own taps too.
+  if (IGN) return;
   // Splitting a trip by hand: the tap picks a point of its path.
   if (SPL) { splitHandTap(pt); return; }
   var list = hitsAt(pt);
@@ -906,6 +908,8 @@ function setHovered(list) {
   if (map) map.getContainer().style.cursor = list.length ? 'pointer' : '';
 }
 function onMapHover(e) {
+  // Ignoring GPS points: only the trip's own points are on the map.
+  if (IGN) { setHovered([]); hideTip(); return; }
   if (hits.length > 8000) return;
   var list = hitsAt(e.containerPoint);
   setHovered(list);
@@ -1033,7 +1037,9 @@ function tripSpeeds(i) {
   if (modeOf(i) === 'FLYING') return [];
   // A Strava activity keeps its speed from every recorded point.
   var sm = D.est[i] & STRAVA && D.smeta && D.smeta[i];
-  if (sm && sm.spd) return sm.spd.t.map(function (t, k) { return [t, sm.spd.v[k]]; });
+  // GPS points you ignored (D.mrDrop): its speed where they were is left out too.
+  var gaps = D.mrDrop && D.mrDrop[i] && D.mrDrop[i].gaps;
+  if (sm && sm.spd) return sm.spd.t.map(function (t, k) { return [t, sm.spd.v[k]]; }).filter(function (q) { return !gaps || !gaps.some(function (g) { return q[0] > g[0] && q[0] < g[1]; }); });
   var tr = trail(i), p = tr.pts, ts = tr.ts, out = [];
   if (p.length < 3 || !(ts[ts.length - 1] > 0)) return out;
   var a = 0;
@@ -1229,7 +1235,7 @@ function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = tripHead(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
+  $('tripBody').innerHTML = tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
@@ -1264,6 +1270,8 @@ function mrRaw(i) {
   if (m) o.push({ field: 'mode', value: MODES[D.mode[i]], was: m.was, rule: m.rule, inferred: !!m.inf });
   if (n) o.push({ field: 'name', value: n.name, was: recName(i) || null, rule: n.rule });
   if (g) o.push({ field: 'gear', value: GEAR[g.gear].name, rule: g.rule, inferred: !g.cor });
+  var dr = D.mrDrop && D.mrDrop[i];
+  if (dr) o.push({ field: 'ignore_points', value: dr.n, of: dr.of, km: +D.km[i].toFixed(3), was: +dr.km.toFixed(3), rule: dr.rule });
   var sn = D.snap && D.snap[i], rt = D.mrRoute && D.mrRoute[i];
   if (rt) o.push({ field: 'routine', value: rt.rule, direction: rt.dir > 0 ? 'there' : 'back' });
   if (D.mrSnap && D.mrSnap[i]) o.push({ field: 'map_snap', value: D.mrSnap[i].rule, direction: D.mrSnap[i].dir > 0 ? 'there' : 'back' });
