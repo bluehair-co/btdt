@@ -16,6 +16,8 @@ Every place in the app answers one question, and a new feature goes where its qu
 
 - **Filters**: what am I looking at? Only filters: *When* (Navigator, All, Date range), *More about when* (years, months, days of the week, time of day, closed unless one is in use), transport, countries, source. Filters in use show as chips at the top, each with ✕.
 - **Menu** (the gear): my data and the app. *Your data* (files, import, export, Home, remove), *MyRules*, *Trip cleanup* (every switch that changes how trips are split or drawn, and the packs they need), *Preferences* (units, dates, theme, heart rate, CO₂), *About*. Each page has a back arrow to the Menu, and each Menu row shows what is on right now.
+- **Map sheet** (the layers button): how the map looks. The view, *Colour lines by* (Transport, Speed, Heart rate, No lines), the heatmap, and what sits on top. Actions on the map are not here.
+- **Map tools** (the pencil button beside layers): things you do on the map, such as *Select trips on the map* and *New map snap*. A new map action goes in this menu, not as another floating button.
 - **One door per thing.** A feature has one entry point and one name. Don't add a second button for something that already has one.
 - **Importance sets depth.** What drives the app sits shallow; rarely changed settings can sit a level deeper.
 - **A choice of one is a segmented control**, never switches that turn each other off.
