@@ -48,6 +48,7 @@ The JSON Schema is published with the app at [`schema/myrules-0.2.json`](../sche
   "myrules": "0.2",
   "about": { "name": "David's context", "updated": "2026-11-14T21:40:00Z", "generator": "BT•DT 2.4" },
   "places": [ … ],
+  "moves": [ … ],
   "gear": [ … ],
   "routines": [ … ],
   "corrections": [ … ]
@@ -154,6 +155,24 @@ Corrections and exceptions have to point at one trip in a way that survives a re
 | `hide` | `true` hides the place: stays there are left out of the map's pins and heatmap and the places in Insights, and trips to or from it show the town instead of the place's name. The trips themselves still count. |
 
 What a place does: it names stays, decides the Home pin, and anchors routines (`"from": "@home-oudwest"`). Places don't change trips.
+
+### 5.1.1 Places that moved
+
+Google keeps one location per place, today's. When a place moves and keeps its Google place ID (an employer moving across town), your old stays there show at the new address. BT•DT puts them back where your phone's GPS was when that is clear (see *Places Google moved* in `source/README.md`); a move says it yourself, or keeps Google's location instead. *This place moved…* and *Use Google's location* on a place's page write them.
+
+```json
+{ "id": "moved-office", "name": "Office", "google_place_ids": ["ChIJZ_pybQW3xUcRLuvdd3msBtg"],
+  "at": [52.078562, 4.335813], "when": { "to": "2019-01-16" } }
+{ "id": "google-office", "name": "Office", "google_place_ids": ["ChIJZ_pybQW3xUcRLuvdd3msBtg"], "keep": true }
+```
+
+| Field | Meaning |
+|---|---|
+| `google_place_ids` | The place's Google place IDs (one place can have more than one). |
+| `at` | Where the place was, `[lat, lng]`. Its stays in `when` (`from` and `to` only) go there, with the ends of the trips arriving within 10 minutes before them or leaving within 10 minutes after them (within 200 m of where the stay was), and those trips' distances change by what the end moved. |
+| `keep` | `true` instead: the stays BT•DT moved to where your phone was go back to Google's location, with the ends of their trips. |
+
+A move with `at` wins over `keep` on the stays in its dates; of two moves, the later one in the file wins.
 
 ### 5.2 Gear periods
 

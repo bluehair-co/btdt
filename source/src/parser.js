@@ -100,7 +100,7 @@ function dayOf(t) {
 function Collector() {
   this.start = []; this.end = []; this.day = []; this.mode = []; this.km = []; this.est = []; this.off = []; this.orig = []; this.from = []; this.to = [];
   this.pathPts = []; this.pathT = []; this.pathOff = [0];
-  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = []; this.vpid = [];
+  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = []; this.vpid = []; this.vgoog = [];
 }
 // Trips Timeline couldn't classify get a mode guessed from their average speed,
 // marked with the GUESSED bit in est.
@@ -203,12 +203,15 @@ function fillTimes(pts, t, dur) {
 }
 // Google's home and work tags (semanticType) are left out: they often don't match what you
 // labelled yourself. vtype stays in the data (always 0) so saved data keeps its shape.
-Collector.prototype.visit = function (st, et, ll, type, name, pid) {
+// goog: Google's location for the place, when the stay was moved off it to where your GPS was (see
+// movedPlaces); kept so the app can put it back (vgoog, NaN for every other stay).
+Collector.prototype.visit = function (st, et, ll, type, name, pid, goog) {
   if (!st || !et || !ll || !(et.ms > st.ms)) return;
   var d = dayOf(st);
   if (d == null || !isFinite(d)) return;
   this.vs.push(st.ms); this.ve.push(et.ms); this.vday.push(d); this.voff.push(st.off != null ? st.off : NO_OFF);
   this.vll.push(ll[0], ll[1]); this.vtype.push(0); this.vname.push(name || ''); this.vpid.push(pid ? String(pid) : '');
+  this.vgoog.push(goog ? goog[0] : NaN, goog ? goog[1] : NaN);
 };
 function pathKm(pts) {
   var t = 0;
@@ -1028,16 +1031,31 @@ function badPoint(ms, ll) {
 }
 // Timeline keeps a stay as a place and that place's location today, not where it was when you were
 // there: when a business moves, every old stay there moves with it (years of office days showing up
-// across town), along with the ends of the trips to and from them. The GPS points recorded during a
-// stay say where you really were. A stay's GPS spot is the middle of its points when none of them is
-// within MOVED_KM of the place and most are within 500 m of that middle; a stay with no points of its
-// own uses the last point before it and the first after it (each within 10 minutes, within 500 m of
-// each other). A place is moved when at least 3 of its stays have a GPS spot over MOVED_KM from it and
-// within 500 m of the middle of those spots: those stays take that middle, and the trips ending or
-// starting within 10 minutes of them at the place's location follow. Stays whose GPS agrees with the
-// place (such as later visits to the new building) are left alone, as is a place that is off only once.
+// across town, or a few streets away), along with the ends of the trips to and from them. The GPS
+// points recorded during a stay say where you really were. A stay's GPS spot is the middle of its
+// points when most of them are within SPOT_KM of that middle; a stay with no points of its own uses
+// the last point before it and the first after it (each within 10 minutes, within 500 m of each
+// other). A place moved when, of its stays whose spot is over MOVED_KM from it, at least 3 and
+// MOVED_SHARE of them are within SPOT_KM of the middle of those spots (one spot, not GPS spread
+// around), and in time they come before or after the stays whose spot agrees with the place, give or
+// take MOVED_OFF of them (the old building, then the new one; GPS that is off now and then is mixed in
+// time). The stays from the first to the last of them take that middle, except those whose spot
+// agrees with the place (indoors, GPS is often too scattered to give a spot at all), and the trips
+// ending or starting within 10 minutes of them at the place's location follow. Later visits to the
+// new building are left alone, as is a place that is off only once or twice.
+// Airports are left alone: they are big, and Google's pin is often far from the terminal or station
+// where your phone was, on every visit, which looks just like a place that moved. A place within
+// MOVED_AIRPORT_KM of an airport with scheduled flights is one (the app's airport list: sent to the
+// worker as MOVED_AIRPORTS, or nearestAirport when this runs on the main thread).
 // V: [{st, et, ll, pid}] (ms); paths: [[ms, ll], …] by time. Sets fix on the moved stays.
-var MOVED_KM = 2;
+var MOVED_AIRPORTS = null, MOVED_AIRPORT_KM = 4;
+function nearAirport(ll) {
+  var L = MOVED_AIRPORTS, i;
+  if (L) { for (i = 0; i < L.length; i++) if (Math.abs(L[i][0] - ll[0]) < 0.1 && km(ll, L[i]) < MOVED_AIRPORT_KM) return true; return false; }
+  var a = typeof nearestAirport === 'function' ? nearestAirport(ll[0], ll[1]) : null;
+  return !!a && km(ll, [a.lat, a.lng]) < MOVED_AIRPORT_KM;
+}
+var MOVED_KM = 0.6, SPOT_KM = 0.5, MOVED_SHARE = 0.6, MOVED_OFF = 0.1;
 function movedPlaces(V, paths) {
   function mid(L) {
     var a = L.map(function (x) { return x[0]; }).sort(function (x, y) { return x - y; }), b = L.map(function (x) { return x[1]; }).sort(function (x, y) { return x - y; });
@@ -1052,25 +1070,40 @@ function movedPlaces(V, paths) {
     var i = at(v.st), pts = [], k;
     for (k = i; k < paths.length && paths[k][0] <= v.et; k++) pts.push(paths[k][1]);
     if (pts.length) {
-      for (k = 0; k < pts.length; k++) if (km(pts[k], v.ll) <= MOVED_KM) return null;
       var g = mid(pts), n = 0;
-      for (k = 0; k < pts.length; k++) if (km(pts[k], g) < 0.5) n++;
-      return 2 * n >= pts.length && km(g, v.ll) > MOVED_KM ? g : null;
+      for (k = 0; k < pts.length; k++) if (km(pts[k], g) < SPOT_KM) n++;
+      return 2 * n >= pts.length ? g : null;
     }
     var p = paths[i - 1], q = paths[i];
     if (!p || !q || v.st - p[0] > 6e5 || q[0] - v.et > 6e5 || km(p[1], q[1]) > 0.5) return null;
-    return km(p[1], v.ll) > MOVED_KM && km(q[1], v.ll) > MOVED_KM ? [(p[1][0] + q[1][0]) / 2, (p[1][1] + q[1][1]) / 2] : null;
+    return [(p[1][0] + q[1][0]) / 2, (p[1][1] + q[1][1]) / 2];
+  }
+  // The fewest stays that would have to go for all of a's to come before all of b's, or after.
+  function handover(a, b) {
+    var ev = a.map(function (t) { return [t, 0]; }).concat(b.map(function (t) { return [t, 1]; })).sort(function (x, y) { return x[0] - y[0]; });
+    var best = Infinity;
+    [0, 1].forEach(function (first) {
+      var after = ev.filter(function (e) { return e[1] === first; }).length, before = 0;
+      best = Math.min(best, after);
+      ev.forEach(function (e) { if (e[1] === first) after--; else before++; best = Math.min(best, after + before); });
+    });
+    return best;
   }
   var by = {};
   V.forEach(function (v) {
-    var g = v.ll && v.et > v.st && spot(v);
-    if (g) (by[v.pid || v.ll.join()] = by[v.pid || v.ll.join()] || []).push({ v: v, g: g });
+    if (!v.ll || !(v.et > v.st)) return;
+    var k = v.pid || v.ll.join();
+    (by[k] = by[k] || []).push({ v: v, g: spot(v) });
   });
   Object.keys(by).forEach(function (k) {
-    var L = by[k];
-    if (L.length < 3) return;
-    var c = mid(L.map(function (x) { return x.g; })), near = L.filter(function (x) { return km(x.g, c) < 0.5; });
-    if (near.length >= 3) near.forEach(function (x) { x.v.fix = c; });
+    var A = by[k], ll = A[0].v.ll, L = A.filter(function (x) { return x.g; }), far = L.filter(function (x) { return km(x.g, ll) > MOVED_KM; });
+    if (far.length < 3) return;
+    var c = mid(far.map(function (x) { return x.g; })), near = far.filter(function (x) { return km(x.g, c) < SPOT_KM; });
+    if (near.length < 3 || near.length < MOVED_SHARE * far.length || km(c, ll) <= MOVED_KM || nearAirport(ll)) return;
+    var here = L.filter(function (x) { return km(x.g, ll) <= MOVED_KM; }).map(function (x) { return x.v.st; });
+    if (handover(near.map(function (x) { return x.v.st; }), here) > Math.floor(MOVED_OFF * near.length)) return;
+    var t0 = Math.min.apply(null, near.map(function (x) { return x.v.st; })), t1 = Math.max.apply(null, near.map(function (x) { return x.v.st; }));
+    A.forEach(function (x) { if (x.v.st >= t0 && x.v.st <= t1 && !(x.g && km(x.g, x.v.ll) <= MOVED_KM) && km(c, x.v.ll) > MOVED_KM) x.v.fix = c; });
   });
 }
 // The stays among Timeline's segments (or iOS items), in order: {st, et, ll, type, pid}.
@@ -1126,7 +1159,7 @@ function parseAndroid(o, c) {
     var st = parseTime(s.startTime), et = parseTime(s.endTime);
     if (s.visit) {
       var v = V[vi++];
-      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid);
+      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid, v.fix && v.ll);
     }
     if (!s.activity) continue;
     var a = s.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -1237,7 +1270,7 @@ function parseIos(arr, c) {
     var st = parseTime(it.startTime), et = parseTime(it.endTime);
     if (it.visit) {
       var v = V[vi++];
-      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid);
+      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid, v.fix && v.ll);
     }
     if (!it.activity) continue;
     var a = it.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -1472,7 +1505,7 @@ function dropDuplicateFlights(c) {
   }
   if (!any) return c;
   var o = new Collector();
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid'].forEach(function (k) { o[k] = c[k]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vgoog'].forEach(function (k) { o[k] = c[k]; });
   for (i = 0; i < c.mode.length; i++) {
     if (drop[i]) continue;
     o.start.push(c.start[i]); o.end.push(c.end[i]); o.day.push(c.day[i]); o.mode.push(c.mode[i]); o.km.push(c.km[i]); o.est.push(c.est[i]); o.off.push(c.off[i]); o.orig.push(c.orig[i]);
@@ -1492,7 +1525,8 @@ function finish(c, src) {
     from: Float32Array.from(c.from), to: Float32Array.from(c.to),
     pathPts: Float32Array.from(c.pathPts), pathT: Float32Array.from(c.pathT), pathOff: Uint32Array.from(c.pathOff),
     vs: Float64Array.from(c.vs), ve: Float64Array.from(c.ve), vday: Int32Array.from(c.vday), voff: Int16Array.from(c.voff),
-    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid
+    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid,
+    vgoog: c.vgoog.some(isFinite) ? Float32Array.from(c.vgoog) : null
   };
 }
 var NOT_TIMELINE = "This file doesn't look like location data BT•DT can read. Pick Timeline.json from your phone, Records.json or Semantic Location History from Google Takeout, a Dawarich or Strava export, or GPX, KML, GeoJSON, TCX or FIT files.";
@@ -2612,6 +2646,7 @@ function splitPlan(run, near) {
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
   self.onmessage = function (e) {
     var files = e.data.files;
+    if (e.data.airports) MOVED_AIRPORTS = e.data.airports;
     (function next(i) {
       if (i >= files.length) { self.postMessage({ type: 'done' }); return; }
       var f = files[i], label = files.length > 1 ? ' (' + (i + 1) + ' of ' + files.length + ')' : '';
@@ -2629,4 +2664,4 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, netFixes: netFixes, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, netFixes: netFixes, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm, setMovedAirports: function (L) { MOVED_AIRPORTS = L; } };

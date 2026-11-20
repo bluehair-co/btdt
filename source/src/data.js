@@ -162,7 +162,7 @@ function* setDataSteps(R) {
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
-  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to };
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to, vll: D.vll };
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {
@@ -937,12 +937,16 @@ function merge(base, parts) {
   var nv = vout.length;
   var R = gather(all, out, src);
   R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vpid = []; R.vsrcs = new Uint8Array(nv);
+  // Google's location for stays moved to where your GPS was (see movedPlaces), NaN for the rest.
+  var anyG = all.some(function (p) { return p.vgoog; });
+  R.vgoog = anyG ? new Float32Array(2 * nv).fill(NaN) : null;
   R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind, n: p.start.length }; }));
   vout.forEach(function (x, j) {
     var p = all[x[0]], i = x[1];
     R.vs[j] = x[2]; R.ve[j] = x[3]; R.voff[j] = p.voff[i];
     R.vday[j] = x[2] === p.vs[i] ? p.vday[i] : dayOf({ ms: x[2], off: p.voff[i] === NO_OFF ? null : p.voff[i] });
     R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vpid.push(p.vpid && p.vpid[i] || ''); R.vsrcs[j] = vsrc(p, i);
+    if (anyG && p.vgoog) { R.vgoog[2 * j] = p.vgoog[2 * i]; R.vgoog[2 * j + 1] = p.vgoog[2 * i + 1]; }
   });
   // Records.json and Dawarich points give the Timeline trips their full GPS trail (see withTrack).
   var track = mergeTracks(all.map(function (p) { return p.track; }));
@@ -1051,7 +1055,7 @@ function withStrava(R) {
     O.est[j] |= STRAVA;
     if (off[k_] !== NO_OFF) { O.off[j] = off[k_]; O.day[j] = Math.floor((S.start[k_] + off[k_] * 60000) / 864e5); }
   });
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vgoog', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
   var apps = {};
   for (k = 0; k < m; k++) { var sm = S.smeta && S.smeta[k], a = sm && sm.app != null ? sm.app : 'Strava'; apps[a] = (apps[a] || 0) + 1; }
   O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched, apps: apps };
@@ -1077,7 +1081,9 @@ function runParser(files) {
         else if (m.type === 'done') { worker.terminate(); done(); }
       };
       worker.onerror = function () { worker.terminate(); mainThread(); };
-      worker.postMessage({ files: files });
+      // The airports, for the check on places Google moved (see movedPlaces).
+      if (!AP) buildAirports();
+      worker.postMessage({ files: files, airports: AP.all.map(function (a) { return [a.lat, a.lng]; }) });
     } else mainThread();
     function mainThread() {
       results = []; errors = []; skipped = 0;
@@ -1243,7 +1249,7 @@ function saveData(R) {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
   var keep = {};
   ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'pathPts', 'pathT', 'pathOff',
-    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
+    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vgoog', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
   return withStore('btdt', 'readwrite', function (s) { return s.put(keep, 'trips'); }).catch(function () { /* this visit still works */ });
 }
 function loadSaved() {
