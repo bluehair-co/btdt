@@ -131,6 +131,29 @@ function fillIcons(root) {
   });
 }
 
+// ---------- (i) buttons ----------
+// Long explanations sit behind a small (i) button so the UI stays clean: the short label stays in
+// view and the button opens the rest under it. infoBtn is the button, infoBox the text it opens
+// (hidden until then), infoMore a short text with its button and the rest; the click handler in
+// data.js opens and closes the box named by the button's aria-controls.
+var INFO_N = 0;
+function infoId() { return 'info' + (++INFO_N); }
+function infoBtn(id, label, cls) {
+  label = label || 'More about this';
+  return '<button type="button" class="icon-btn info-btn' + (cls ? ' ' + cls : '') + '" aria-expanded="false" aria-controls="' + id + '" aria-label="' + label + '" title="' + label + '">' + icon('info') + '</button>';
+}
+function infoBox(id, html, tag) { tag = tag || 'p'; return '<' + tag + ' class="fine info-box" id="' + id + '" hidden>' + html + '</' + tag + '>'; }
+function infoMore(short, more, label) {
+  if (!more) return short;
+  var id = infoId();
+  return '<span class="info-line">' + short + infoBtn(id, label, 'sm') + '</span>' + infoBox(id, more, 'span');
+}
+// A heading with its (i) button and the explanation under it.
+function infoHead(tag, cls, title, more, label) {
+  var id = infoId();
+  return '<div class="info-head"><' + tag + (cls ? ' class="' + cls + '"' : '') + '>' + title + '</' + tag + '>' + infoBtn(id, label) + '</div>' + infoBox(id, more);
+}
+
 // ---------- transport modes ----------
 var LABEL = { WALKING: 'Walking', RUNNING: 'Running', CYCLING: 'Cycling', CAR: 'Car', MOTORCYCLE: 'Motorbike', BUS: 'Bus',
   TRAIN: 'Train', VEHICLE: 'Vehicle', TAXI: 'Taxi', OTHER: 'Other', TRAM: 'Tram', SUBWAY: 'Metro', FERRY: 'Ferry', BOAT: 'Boat', FLYING: 'Flight', SKIING: 'Snow sports',

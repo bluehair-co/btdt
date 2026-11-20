@@ -429,7 +429,8 @@
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
       <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
-        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
+        <div class="info-head"><span class="fine">Trips with a guessed type or a rule applied</span><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="guessInfo" aria-label="About guessed types" title="About guessed types"><span data-icon="info"></span></button></div>
+        <p class="fine info-box" id="guessInfo" hidden>Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
         <div class="seg" role="group" aria-label="Trips with a guessed type or a rule applied" id="guessSeg">
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
@@ -443,13 +444,14 @@
       </div>
     </div>
     <div class="sec">
-      <div class="sec-head"><h3>Countries</h3><div class="quick"><button type="button" data-q="countries" data-all="1">All</button><button type="button" data-q="countries" data-all="0">None</button></div></div>
+      <div class="sec-head"><div class="info-head"><h3>Countries</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="ccInfo" aria-label="About countries" title="About countries"><span data-icon="info"></span></button></div><div class="quick"><button type="button" data-q="countries" data-all="1">All</button><button type="button" data-q="countries" data-all="0">None</button></div></div>
+      <p class="fine info-box" id="ccInfo" hidden>A trip counts when it starts or ends in a selected country.</p>
       <input type="search" id="ccSearch" placeholder="Search countries" hidden>
       <div class="chips" id="countries"></div>
-      <p class="fine">A trip counts when it starts or ends in a selected country.</p>
     </div>
     <div class="sec" id="exportSec">
-      <h3>Export</h3>
+      <div class="info-head"><h3>Export</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="exportInfo" aria-label="About the export" title="About the export"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="exportInfo" hidden>The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip. The time slider only plays the trips back, so it doesn't narrow the export.</p>
       <p class="fine" id="exportText"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button type="button" class="btn" id="exportJson">{ } Raw data (JSON)</button>
@@ -475,14 +477,16 @@
     </div>
     <div class="sec" style="gap:0">
       <h3 style="margin-bottom:4px">Layers</h3>
-      <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
-      <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
-      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Heart rate paths</span><input type="checkbox" class="switch" id="layHr"></label>
-      <p class="fine" id="hrNote" hidden style="margin:0 0 8px">Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
-      <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
+      <label class="toggle-row"><span class="lbl">Paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mapNote" aria-label="About paths" title="About paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPaths" checked></label>
+      <p class="fine info-box" id="mapNote" hidden></p>
+      <label class="toggle-row"><span class="lbl">Speed paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="speedNote" aria-label="About speed paths" title="About speed paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySpeed"></label>
+      <p class="fine info-box" id="speedNote" hidden>The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Heart rate paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="hrNote" aria-label="About heart rate paths" title="About heart rate paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHr"></label>
+      <p class="fine info-box" id="hrNote" hidden>Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
+      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Heatmap<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="heatNote" aria-label="About the heatmap" title="About the heatmap"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHeat"></label>
+      <p class="fine info-box" id="heatNote" hidden></p>
       <div id="heatOpts" hidden style="display:flex;flex-direction:column;gap:12px;padding:4px 0 12px">
         <div class="seg full" role="group" aria-label="Heatmap shows" id="heatSrc">
           <button type="button" data-src="moves" aria-pressed="true">Where I travelled</button><button type="button" data-src="stays" aria-pressed="false">Where I stayed</button>
@@ -492,24 +496,22 @@
         </div>
         <div class="slider-row"><label for="heatSize">Dot size</label><input type="range" id="heatSize" min="4" max="40" step="1" value="14"></div>
         <div class="slider-row"><label for="heatGain">Intensity</label><input type="range" id="heatGain" min="0" max="100" step="1" value="50"></div>
-        <p class="fine" id="heatNote"></p>
       </div>
       <label class="toggle-row"><span class="lbl">Countries visited</span><input type="checkbox" class="switch" id="layCC"></label>
-      <label class="toggle-row"><span class="lbl">Regular places</span><input type="checkbox" class="switch" id="layPins"></label>
-      <p class="fine" id="pinNote" hidden style="margin:0 0 8px">A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
+      <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
     </div>
     <div class="sec">
       <button type="button" class="btn" id="fitBtn"><span data-icon="fit"></span>Zoom to my trips</button>
-      <p class="fine" id="mapNote"></p>
     </div>
     <div class="sec">
-      <h3>Select trips</h3>
-      <p class="fine">Draw around an area to pick every trip on the map that passes through it, then change their type at once. Filter first to narrow down what can be picked, such as In vehicle only.</p>
+      <div class="info-head"><h3>Select trips</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="selInfo" aria-label="About Select trips" title="About Select trips"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="selInfo" hidden>Draw around an area to pick every trip on the map that passes through it, then change their type at once. Filter first to narrow down what can be picked, such as In vehicle only.</p>
       <button type="button" class="btn" id="selNewBtn"><span data-icon="select"></span>Select trips on the map</button>
     </div>
     <div class="sec">
-      <h3>Map snaps</h3>
-      <p class="fine">Draw your trips between two stations along one railway, tram or metro line of your station packs, to clean up their paths. Tap the two stations on the map, pick the way, and choose how closely a trip has to follow it.</p>
+      <div class="info-head"><h3>Map snaps</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="snapInfo" aria-label="About map snaps" title="About map snaps"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="snapInfo" hidden>Draw your trips between two stations along one railway, tram or metro line of your station packs, to clean up their paths. Tap the two stations on the map, pick the way, and choose how closely a trip has to follow it.</p>
       <button type="button" class="btn" id="snapNewBtn"><span data-icon="TRAIN"></span>New map snap</button>
     </div>
   </div>
@@ -560,9 +562,9 @@
   </div>
 </aside>
 <aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
-    <p class="fine">What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
+    <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
     <div id="mrBody"></div>
   </div>
 </aside>
@@ -575,8 +577,9 @@
   </div>
 </dialog>
 <dialog class="mr-dlg" id="mrDlg" aria-labelledby="mrDlgTitle">
-  <h2 id="mrDlgTitle"></h2>
+  <div class="info-head"><h2 id="mrDlgTitle"></h2><button type="button" id="mrDlgInfoBtn" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrDlgInfo" aria-label="More about this" title="More about this"><span data-icon="info"></span></button></div>
   <p id="mrDlgText"></p>
+  <p class="fine info-box" id="mrDlgInfo" hidden></p>
   <div id="mrDlgExtra"></div>
   <div class="mr-dlg-btns" id="mrDlgBtns"></div>
   <p class="fine" id="mrDlgNote"></p>
@@ -592,15 +595,15 @@
       <p class="fine" id="unitNote"></p>
     </div>
     <div class="sec">
-      <h3>Date and time</h3>
+      <div class="info-head"><h3>Date and time</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="dtNote" aria-label="About dates and times" title="About dates and times"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="dtNote" hidden></p>
       <div class="field"><label for="dateFmt">Dates</label><select id="dateFmt"></select></div>
       <div class="field"><label for="timeFmt">Times</label><select id="timeFmt"></select></div>
-      <p class="fine" id="dtNote"></p>
     </div>
     <div class="sec" id="hrSec" hidden>
-      <h3>Heart rate</h3>
+      <div class="info-head"><h3>Heart rate</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="maxHrNote" aria-label="About heart rate zones" title="About heart rate zones"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="maxHrNote" hidden></p>
       <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>
-      <p class="fine" id="maxHrNote"></p>
     </div>
     <div class="sec">
       <h3>Appearance</h3>
@@ -611,27 +614,30 @@
       <p class="fine" id="homeNote"></p>
     </div>
     <div class="sec" id="splitSec">
-      <h3>Trips Timeline merged</h3>
-      <p class="fine">Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line.</p>
+      <div class="info-head"><h3>Trips Timeline merged</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="splitInfo" aria-label="About splitting trips" title="About splitting trips"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="splitInfo" hidden>Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line. Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds. Only suggest marks such trips Split? in their details.</p>
       <div class="seg" role="group" aria-label="Split trips Timeline merged" id="tripSplitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
       <p class="fine" id="splitNote"></p>
     </div>
     <div class="sec" id="netSec">
       <h3>GPS cleanup</h3>
-      <label class="toggle-row"><span class="lbl" style="display:block">Leave out cell-tower fixes<small class="fine" style="display:block">Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</small></span><input type="checkbox" class="switch" id="netFix" checked></label>
+      <label class="toggle-row"><span class="lbl">Leave out cell-tower fixes<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="netFixInfo" aria-label="About leave out cell-tower fixes" title="About leave out cell-tower fixes"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="netFix" checked></label>
+      <p class="fine info-box" id="netFixInfo" hidden>Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</p>
       <p class="fine" id="netNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
-      <h3>Station packs</h3>
-      <p class="fine">A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <div class="info-head"><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="packInfo" hidden>A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine's line along the railway without going online. A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
       <ul class="file-list pack-list" id="packList" hidden></ul>
       <p class="fine" id="packNote"></p>
       <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
       <div class="dl-bar" id="packBar" hidden><i></i></div>
       <p class="fine" id="packMsg" aria-live="polite"></p>
-      <label class="toggle-row"><span class="lbl" style="display:block">Snap train trips to the tracks<small class="fine" style="display:block">Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="trackSnap"></label>
+      <label class="toggle-row"><span class="lbl">Snap train trips to the tracks<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="trackSnapInfo" aria-label="About snap train trips to the tracks" title="About snap train trips to the tracks"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="trackSnap"></label>
+      <p class="fine info-box" id="trackSnapInfo" hidden>Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</p>
       <p class="fine" id="trackNote" aria-live="polite"></p>
-      <label class="toggle-row"><span class="lbl" style="display:block">Snap car trips to roads<small class="fine" style="display:block">Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</p>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
       <p class="fine" id="roadNote" aria-live="polite"></p>
       <button type="button" class="link-btn" id="roadDel" hidden>Remove road packs from this device</button>

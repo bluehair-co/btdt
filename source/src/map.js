@@ -1239,7 +1239,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
     (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
     (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
@@ -1336,7 +1336,7 @@ function syncExport() {
   var n = sel.length, nv = selV.length;
   var what = [n ? tripsText(n) : '', nv ? fmt(nv) + ' stay' + (nv === 1 ? '' : 's') : ''].filter(Boolean).join(' and ');
   $('exportText').textContent = n || nv ? 'Download the ' + what +
-    ' that match these filters (' + filterText() + '). The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip.' : 'No trips match these filters.';
+    ' that match these filters (' + filterText() + ').' : 'No trips match these filters.';
   $('exportJson').disabled = $('exportCsv').disabled = !n && !nv;
   $('exportCsv').disabled = !n;
 }
@@ -2354,8 +2354,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('hrNote').hidden = !PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
-  $('pinNote').hidden = !PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
   $('map').hidden = PREFS.proj !== 'merc';

@@ -224,14 +224,14 @@ function splitBlock(i) {
     }
     var w = l.was;
     return '<div class="split-box"><div class="sb-head"><b>' + (l.n === 1 ? 'Split' : l.n + ' legs of one Timeline trip') + '</b></div>' +
-      '<p class="fine">Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '. ' + (l.hand >= l.n - 1 ? 'You split it into legs' : l.hand ? 'Its GPS points show ' + (l.n - 1 - l.hand === 1 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', and you split it further, into legs' : 'Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs') + ', each with its own type and line. The distance is shared by the legs, so totals stay the same.</p>' +
+      '<p class="fine">' + infoMore('Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '.', (l.hand >= l.n - 1 ? 'You split it into legs' : l.hand ? 'Its GPS points show ' + (l.n - 1 - l.hand === 1 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', and you split it further, into legs' : 'Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs') + ', each with its own type and line. The distance is shared by the legs, so totals stay the same.') + '</p>' +
       '<div class="list-rows split-legs">' + rows + '</div>' +
       '<div class="sb-acts"><button type="button" class="btn" data-split-act="keep" data-key="' + l.key + '" data-ms="' + w.start + '">' + icon('undo') + 'Keep as one trip</button></div></div>';
   }
   if (f && splitSetting() !== 'off') {
     var p = f.plan, s = p.map(function (c) { return (c.kind === 'speed' ? 'the speed changing from about ' + speed(c.vin) + ' to ' + speed(c.vout) : 'a stop ' + (c.st ? 'at ' + esc(packStopName(c.st)) : 'of a few minutes') + ' between ' + speed(c.vin) + ' and ' + speed(c.vout)); });
     return '<div class="split-box offer"><div class="sb-head"><b>' + (f.kept ? 'Kept as one trip' : 'Looks like ' + (p.length + 1) + ' trips') + '</b></div>' +
-      '<p class="fine">' + (f.kept ? 'You chose to keep this as one trip. ' : '') + 'Its GPS points show ' + s.join(', then ') + '. Timeline may have merged ' + (p.length === 1 ? 'two trips' : 'several trips') + ' here' + (packCodes().length ? '' : '; a station pack in Settings would show where the stops were') + '.</p>' +
+      '<p class="fine">' + infoMore((f.kept ? 'You chose to keep this as one trip. ' : '') + 'Timeline may have merged ' + (p.length === 1 ? 'two trips' : 'several trips') + ' here.', 'Its GPS points show ' + s.join(', then ') + '.' + (packCodes().length ? '' : ' A station pack in Settings would show where the stops were.')) + '</p>' +
       '<div class="sb-acts"><button type="button" class="btn" data-split-act="split" data-key="' + f.key + '" data-ms="' + D.start[i] + '">' + icon('split') + 'Split into ' + (p.length + 1) + ' trips</button></div></div>';
   }
   return '';
@@ -268,8 +268,7 @@ function renderSplitSettings() {
   var n = D.splitN || 0, o = 0;
   if (D.offer) D.offer.forEach(function (f) { if (f && !f.kept) o++; });
   note.textContent = (s === 'off' ? 'Trips are shown as Timeline recorded them.' :
-    (n ? fmt(n) + ' trip' + (n === 1 ? ' is' : 's are') + ' split into legs' : 'No trips are split') + (o ? ', and ' + fmt(o) + ' more look merged (marked Split? in their details).' : '.')) +
-    (s === 'auto' ? ' Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds.' : '');
+    (n ? fmt(n) + ' trip' + (n === 1 ? ' is' : 's are') + ' split into legs' : 'No trips are split') + (o ? ', and ' + fmt(o) + ' more look merged.' : '.'));
 }
 $('tripSplitSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-s]');

@@ -403,7 +403,7 @@ function renderPacks() {
   }).join('');
   box.hidden = !ccs.length;
   trackSettings();
-  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet. A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine\'s line along the railway without going online.';
+  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet.';
 }
 function packOptions(sel, have) {
   return packList().then(function (L) {

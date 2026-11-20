@@ -479,6 +479,20 @@ details.help b { color: var(--fg); font-weight: 500; }
 .card-head .info-text { display: none; order: 10; margin-top: -2px; padding: 8px 10px; border-radius: 10px; background: var(--chip); line-height: 1.45; }
 .card-head.info-open .info-text { display: block; }
 .card-head:has(> .info-text:empty) .info-btn { display: none; }
+/* The same (i) button anywhere else: next to a section's heading, a switch's label, a dialog's title
+   or a short line, opening the box its aria-controls names. */
+.info-box { display: block; margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--chip); line-height: 1.45; }
+.info-box[hidden] { display: none; }
+.info-head { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.info-head > :first-child { margin-top: 0; margin-bottom: 0; }
+.sec .info-btn, .toggle-row .info-btn, .info-line .info-btn, .mr-dlg .info-btn, .sheet-head .info-btn { width: 26px; height: 26px; margin: -6px 0; }
+.info-btn.sm { width: 22px; height: 22px; margin: -4px 0 -4px 2px; vertical-align: middle; }
+.info-btn.sm svg { width: 16px; height: 16px; }
+.toggle-row .lbl .info-btn { margin-left: -6px; }
+.info-line { display: inline; }
+span.info-box { margin-top: 6px; }
+.toggle-row + .info-box { margin-bottom: 8px; }
+.sec-head .info-head h3 { margin: 0; }
 .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 16px; }
 .stat .label { font-size: 12px; color: var(--muted); }
 .stat .value { font-size: 24px; font-weight: 600; letter-spacing: -.01em; line-height: 1.15; }
@@ -1165,6 +1179,11 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 @media (prefers-reduced-motion: reduce) { .bg-spin { animation-duration: 2s; } }
 .mv-map { height: 240px; border-radius: 10px; border: 1px solid var(--line); }
 .mv-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.info-head:has(> .place-h) { margin: 18px 0 4px; }
+.mr-check .info-head:has(> .place-h) { margin-top: 0; }
+.mr-dlg .info-head { margin-bottom: 8px; }
+.mr-dlg .info-head h2 { margin: 0; }
+.mr-dlg #mrDlgInfo { margin: -4px 0 10px; }
 </style>
 </head>
 <body>
@@ -1599,7 +1618,8 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
       <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
-        <p class="fine" style="margin-bottom:6px">Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
+        <div class="info-head"><span class="fine">Trips with a guessed type or a rule applied</span><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="guessInfo" aria-label="About guessed types" title="About guessed types"><span data-icon="info"></span></button></div>
+        <p class="fine info-box" id="guessInfo" hidden>Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
         <div class="seg" role="group" aria-label="Trips with a guessed type or a rule applied" id="guessSeg">
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
@@ -1613,13 +1633,14 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
       </div>
     </div>
     <div class="sec">
-      <div class="sec-head"><h3>Countries</h3><div class="quick"><button type="button" data-q="countries" data-all="1">All</button><button type="button" data-q="countries" data-all="0">None</button></div></div>
+      <div class="sec-head"><div class="info-head"><h3>Countries</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="ccInfo" aria-label="About countries" title="About countries"><span data-icon="info"></span></button></div><div class="quick"><button type="button" data-q="countries" data-all="1">All</button><button type="button" data-q="countries" data-all="0">None</button></div></div>
+      <p class="fine info-box" id="ccInfo" hidden>A trip counts when it starts or ends in a selected country.</p>
       <input type="search" id="ccSearch" placeholder="Search countries" hidden>
       <div class="chips" id="countries"></div>
-      <p class="fine">A trip counts when it starts or ends in a selected country.</p>
     </div>
     <div class="sec" id="exportSec">
-      <h3>Export</h3>
+      <div class="info-head"><h3>Export</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="exportInfo" aria-label="About the export" title="About the export"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="exportInfo" hidden>The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip. The time slider only plays the trips back, so it doesn't narrow the export.</p>
       <p class="fine" id="exportText"></p>
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button type="button" class="btn" id="exportJson">{ } Raw data (JSON)</button>
@@ -1645,14 +1666,16 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
     </div>
     <div class="sec" style="gap:0">
       <h3 style="margin-bottom:4px">Layers</h3>
-      <label class="toggle-row"><span class="lbl">Paths</span><input type="checkbox" class="switch" id="layPaths" checked></label>
-      <label class="toggle-row"><span class="lbl">Speed paths</span><input type="checkbox" class="switch" id="laySpeed"></label>
-      <p class="fine" id="speedNote" hidden style="margin:0 0 8px">The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Heart rate paths</span><input type="checkbox" class="switch" id="layHr"></label>
-      <p class="fine" id="hrNote" hidden style="margin:0 0 8px">Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Explorer squares</span><input type="checkbox" class="switch" id="laySquares"></label>
-      <p class="fine" id="squaresNote" hidden style="margin:0 0 8px">The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Heatmap</span><input type="checkbox" class="switch" id="layHeat"></label>
+      <label class="toggle-row"><span class="lbl">Paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mapNote" aria-label="About paths" title="About paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPaths" checked></label>
+      <p class="fine info-box" id="mapNote" hidden></p>
+      <label class="toggle-row"><span class="lbl">Speed paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="speedNote" aria-label="About speed paths" title="About speed paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySpeed"></label>
+      <p class="fine info-box" id="speedNote" hidden>The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Heart rate paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="hrNote" aria-label="About heart rate paths" title="About heart rate paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHr"></label>
+      <p class="fine info-box" id="hrNote" hidden>Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
+      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Heatmap<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="heatNote" aria-label="About the heatmap" title="About the heatmap"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHeat"></label>
+      <p class="fine info-box" id="heatNote" hidden></p>
       <div id="heatOpts" hidden style="display:flex;flex-direction:column;gap:12px;padding:4px 0 12px">
         <div class="seg full" role="group" aria-label="Heatmap shows" id="heatSrc">
           <button type="button" data-src="moves" aria-pressed="true">Where I travelled</button><button type="button" data-src="stays" aria-pressed="false">Where I stayed</button>
@@ -1662,24 +1685,22 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
         </div>
         <div class="slider-row"><label for="heatSize">Dot size</label><input type="range" id="heatSize" min="4" max="40" step="1" value="14"></div>
         <div class="slider-row"><label for="heatGain">Intensity</label><input type="range" id="heatGain" min="0" max="100" step="1" value="50"></div>
-        <p class="fine" id="heatNote"></p>
       </div>
       <label class="toggle-row"><span class="lbl">Countries visited</span><input type="checkbox" class="switch" id="layCC"></label>
-      <label class="toggle-row"><span class="lbl">Regular places</span><input type="checkbox" class="switch" id="layPins"></label>
-      <p class="fine" id="pinNote" hidden style="margin:0 0 8px">A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
+      <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
     </div>
     <div class="sec">
       <button type="button" class="btn" id="fitBtn"><span data-icon="fit"></span>Zoom to my trips</button>
-      <p class="fine" id="mapNote"></p>
     </div>
     <div class="sec">
-      <h3>Select trips</h3>
-      <p class="fine">Draw around an area to pick every trip on the map that passes through it, then change their type at once. Filter first to narrow down what can be picked, such as In vehicle only.</p>
+      <div class="info-head"><h3>Select trips</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="selInfo" aria-label="About Select trips" title="About Select trips"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="selInfo" hidden>Draw around an area to pick every trip on the map that passes through it, then change their type at once. Filter first to narrow down what can be picked, such as In vehicle only.</p>
       <button type="button" class="btn" id="selNewBtn"><span data-icon="select"></span>Select trips on the map</button>
     </div>
     <div class="sec">
-      <h3>Map snaps</h3>
-      <p class="fine">Draw your trips between two stations along one railway, tram or metro line of your station packs, to clean up their paths. Tap the two stations on the map, pick the way, and choose how closely a trip has to follow it.</p>
+      <div class="info-head"><h3>Map snaps</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="snapInfo" aria-label="About map snaps" title="About map snaps"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="snapInfo" hidden>Draw your trips between two stations along one railway, tram or metro line of your station packs, to clean up their paths. Tap the two stations on the map, pick the way, and choose how closely a trip has to follow it.</p>
       <button type="button" class="btn" id="snapNewBtn"><span data-icon="TRAIN"></span>New map snap</button>
     </div>
   </div>
@@ -1730,9 +1751,9 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
   </div>
 </aside>
 <aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
-    <p class="fine">What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
+    <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
     <div id="mrBody"></div>
   </div>
 </aside>
@@ -1745,8 +1766,9 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
   </div>
 </dialog>
 <dialog class="mr-dlg" id="mrDlg" aria-labelledby="mrDlgTitle">
-  <h2 id="mrDlgTitle"></h2>
+  <div class="info-head"><h2 id="mrDlgTitle"></h2><button type="button" id="mrDlgInfoBtn" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrDlgInfo" aria-label="More about this" title="More about this"><span data-icon="info"></span></button></div>
   <p id="mrDlgText"></p>
+  <p class="fine info-box" id="mrDlgInfo" hidden></p>
   <div id="mrDlgExtra"></div>
   <div class="mr-dlg-btns" id="mrDlgBtns"></div>
   <p class="fine" id="mrDlgNote"></p>
@@ -1762,15 +1784,15 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
       <p class="fine" id="unitNote"></p>
     </div>
     <div class="sec">
-      <h3>Date and time</h3>
+      <div class="info-head"><h3>Date and time</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="dtNote" aria-label="About dates and times" title="About dates and times"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="dtNote" hidden></p>
       <div class="field"><label for="dateFmt">Dates</label><select id="dateFmt"></select></div>
       <div class="field"><label for="timeFmt">Times</label><select id="timeFmt"></select></div>
-      <p class="fine" id="dtNote"></p>
     </div>
     <div class="sec" id="hrSec" hidden>
-      <h3>Heart rate</h3>
+      <div class="info-head"><h3>Heart rate</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="maxHrNote" aria-label="About heart rate zones" title="About heart rate zones"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="maxHrNote" hidden></p>
       <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>
-      <p class="fine" id="maxHrNote"></p>
     </div>
     <div class="sec">
       <h3>Appearance</h3>
@@ -1781,27 +1803,30 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
       <p class="fine" id="homeNote"></p>
     </div>
     <div class="sec" id="splitSec">
-      <h3>Trips Timeline merged</h3>
-      <p class="fine">Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line.</p>
+      <div class="info-head"><h3>Trips Timeline merged</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="splitInfo" aria-label="About splitting trips" title="About splitting trips"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="splitInfo" hidden>Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line. Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds. Only suggest marks such trips Split? in their details.</p>
       <div class="seg" role="group" aria-label="Split trips Timeline merged" id="tripSplitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
       <p class="fine" id="splitNote"></p>
     </div>
     <div class="sec" id="netSec">
       <h3>GPS cleanup</h3>
-      <label class="toggle-row"><span class="lbl" style="display:block">Leave out cell-tower fixes<small class="fine" style="display:block">Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</small></span><input type="checkbox" class="switch" id="netFix" checked></label>
+      <label class="toggle-row"><span class="lbl">Leave out cell-tower fixes<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="netFixInfo" aria-label="About leave out cell-tower fixes" title="About leave out cell-tower fixes"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="netFix" checked></label>
+      <p class="fine info-box" id="netFixInfo" hidden>Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</p>
       <p class="fine" id="netNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
-      <h3>Station packs</h3>
-      <p class="fine">A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <div class="info-head"><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="packInfo" hidden>A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine's line along the railway without going online. A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
       <ul class="file-list pack-list" id="packList" hidden></ul>
       <p class="fine" id="packNote"></p>
       <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
       <div class="dl-bar" id="packBar" hidden><i></i></div>
       <p class="fine" id="packMsg" aria-live="polite"></p>
-      <label class="toggle-row"><span class="lbl" style="display:block">Snap train trips to the tracks<small class="fine" style="display:block">Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="trackSnap"></label>
+      <label class="toggle-row"><span class="lbl">Snap train trips to the tracks<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="trackSnapInfo" aria-label="About snap train trips to the tracks" title="About snap train trips to the tracks"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="trackSnap"></label>
+      <p class="fine info-box" id="trackSnapInfo" hidden>Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</p>
       <p class="fine" id="trackNote" aria-live="polite"></p>
-      <label class="toggle-row"><span class="lbl" style="display:block">Snap car trips to roads<small class="fine" style="display:block">Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</p>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
       <p class="fine" id="roadNote" aria-live="polite"></p>
       <button type="button" class="link-btn" id="roadDel" hidden>Remove road packs from this device</button>
@@ -4669,6 +4694,29 @@ function fillIcons(root) {
   });
 }
 
+// ---------- (i) buttons ----------
+// Long explanations sit behind a small (i) button so the UI stays clean: the short label stays in
+// view and the button opens the rest under it. infoBtn is the button, infoBox the text it opens
+// (hidden until then), infoMore a short text with its button and the rest; the click handler in
+// data.js opens and closes the box named by the button's aria-controls.
+var INFO_N = 0;
+function infoId() { return 'info' + (++INFO_N); }
+function infoBtn(id, label, cls) {
+  label = label || 'More about this';
+  return '<button type="button" class="icon-btn info-btn' + (cls ? ' ' + cls : '') + '" aria-expanded="false" aria-controls="' + id + '" aria-label="' + label + '" title="' + label + '">' + icon('info') + '</button>';
+}
+function infoBox(id, html, tag) { tag = tag || 'p'; return '<' + tag + ' class="fine info-box" id="' + id + '" hidden>' + html + '</' + tag + '>'; }
+function infoMore(short, more, label) {
+  if (!more) return short;
+  var id = infoId();
+  return '<span class="info-line">' + short + infoBtn(id, label, 'sm') + '</span>' + infoBox(id, more, 'span');
+}
+// A heading with its (i) button and the explanation under it.
+function infoHead(tag, cls, title, more, label) {
+  var id = infoId();
+  return '<div class="info-head"><' + tag + (cls ? ' class="' + cls + '"' : '') + '>' + title + '</' + tag + '>' + infoBtn(id, label) + '</div>' + infoBox(id, more);
+}
+
 // ---------- transport modes ----------
 var LABEL = { WALKING: 'Walking', RUNNING: 'Running', CYCLING: 'Cycling', CAR: 'Car', MOTORCYCLE: 'Motorbike', BUS: 'Bus',
   TRAIN: 'Train', VEHICLE: 'Vehicle', TAXI: 'Taxi', OTHER: 'Other', TRAM: 'Tram', SUBWAY: 'Metro', FERRY: 'Ferry', BOAT: 'Boat', FLYING: 'Flight', SKIING: 'Snow sports',
@@ -5924,8 +5972,11 @@ $('layersBtn').addEventListener('click', function () { toggleSheet('layersSheet'
 document.addEventListener('click', function (ev) {
   var info = ev.target.closest('.info-btn');
   if (info) {
-    var head = info.closest('.card-head'), op = !head.classList.contains('info-open');
-    head.classList.toggle('info-open', op);
+    // Opens the box its aria-controls names (Settings, the map panel, dialogs), else its card's explanation.
+    var box = info.getAttribute('aria-controls') && $(info.getAttribute('aria-controls')), op;
+    ev.preventDefault();
+    if (box) { op = box.hidden; box.hidden = !op; }
+    else { var head = info.closest('.card-head'); if (!head) return; op = !head.classList.contains('info-open'); head.classList.toggle('info-open', op); }
     info.setAttribute('aria-expanded', op ? 'true' : 'false');
   } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
   else if (ev.target.closest('[data-open-settings]')) { if (openId === 'settingsSheet') closeSheets(); else { renderSettings(); openSheet('settingsSheet'); } }
@@ -7748,7 +7799,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + r.notes.join(' ') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
     (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
     (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
@@ -7845,7 +7896,7 @@ function syncExport() {
   var n = sel.length, nv = selV.length;
   var what = [n ? tripsText(n) : '', nv ? fmt(nv) + ' stay' + (nv === 1 ? '' : 's') : ''].filter(Boolean).join(' and ');
   $('exportText').textContent = n || nv ? 'Download the ' + what +
-    ' that match these filters (' + filterText() + '). The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip.' : 'No trips match these filters.';
+    ' that match these filters (' + filterText() + ').' : 'No trips match these filters.';
   $('exportJson').disabled = $('exportCsv').disabled = !n && !nv;
   $('exportCsv').disabled = !n;
 }
@@ -8863,8 +8914,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('speedNote').hidden = !PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('hrNote').hidden = !PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('squaresNote').hidden = !PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
-  $('pinNote').hidden = !PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
   $('map').hidden = PREFS.proj !== 'merc';
@@ -12124,6 +12174,9 @@ function mrAsk(o) {
   MR_SIDE = side;
   $('mrDlgTitle').textContent = o.title;
   $('mrDlgText').innerHTML = o.text;
+  // o.info: the longer explanation, behind the (i) next to the title.
+  $('mrDlgInfo').innerHTML = o.info || ''; $('mrDlgInfo').hidden = true;
+  $('mrDlgInfoBtn').hidden = !o.info; $('mrDlgInfoBtn').setAttribute('aria-expanded', 'false');
   $('mrDlgExtra').innerHTML = o.extra || '';
   $('mrDlgExtra').oninput = $('mrDlgExtra').onchange = null;
   $('mrDlgNote').textContent = o.note || '';
@@ -12195,7 +12248,7 @@ function renderMyRules() {
   var el = $('mrCard');
   if (!el) return;
   if (!MR) {
-    el.innerHTML = '<p class="fine">Add what only you know, like which bike you rode when or where home was. BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.</p>';
+    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
     return;
   }
   var nGear = 0, nEd = 0, n = MR.changes.length;
@@ -12241,9 +12294,9 @@ function mrRenderRules() {
   // Switched off, no rule changes anything: say so where the rules are, with the switch at hand.
   // Off: the counts, left-out trips and lines the rules would have.
   var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
-  if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off, so none of these rules change your trips. Routines and corrections show how many trips they would change. <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
+  if (!MR.on) h += '<p class="fine mr-warn">' + infoMore('MyRules are switched off.', 'None of these rules change your trips. Routines and corrections show how many trips they would change.', 'About switched-off rules') + ' <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (D && MR.on) h += mrCleanBar();
-  if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
+  if (MR_AMB) h += '<p class="fine mr-warn">' + infoMore(tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear.', 'Narrow one of the periods (a shorter period, or a distance limit) to pick one.') + '</p>';
   var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
     var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
@@ -12486,7 +12539,7 @@ function mrCleanBar() {
   if (MR_CLEAN && MR.doc.about && MR.doc.about.updated === MR_CLEAN.stamp) return '<p class="fine mr-warn">' + esc(MR_CLEAN.text) + '. <button type="button" class="link-btn" id="mrCleanUndo">Undo</button></p>';
   var plan = mrCleanPlan(), n = plan.items.length;
   if (!n) return '';
-  return '<p class="fine mr-warn mr-clean-bar">Some of your corrections can be written more simply, without changing your trips. <button type="button" class="link-btn" id="mrCleanBtn">Clean up rules</button></p>';
+  return '<p class="fine mr-warn mr-clean-bar">' + infoMore('Some corrections can be written more simply.', 'Cleaning up joins several edits on one trip, turns a type your files already had into Type checked, and deletes edits on trips not in your data. Your trips stay the same, and you can undo it.', 'About Clean up rules') + ' <button type="button" class="link-btn" id="mrCleanBtn">Clean up rules</button></p>';
 }
 $('mrBody').addEventListener('click', function (ev) {
   var cs = ev.target.closest('[data-cor-sort]');
@@ -12589,13 +12642,13 @@ function mrTripBlock(i) {
     else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
     else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail of 5 or more points to take it from. Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
     else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over 1 km from the line, so it can\'t be drawn along it.');
-    h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">It matches by place and time, but everything a routine sets (type, gear, line) applies together or not at all. ' + why + '</div></div>';
+    h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">' + infoMore('It matches by place and time, but not everything the routine sets fits.', 'Everything a routine sets (type, gear, line) applies together or not at all. ' + why, 'Why it is not in the routine') + '</div></div>';
   }
   var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
-  if (msr && sn) h += '<div class="mr-chg"><b>Map snap:</b> ' + esc(msr.name || msr.id) + way(msn.dir) + '<div class="fine">Drawn ' + esc(msr.line && msr.line.name ? msr.line.name.charAt(0).toLowerCase() + msr.line.name.slice(1) : 'along its line') + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). It follows the line for ' + sn.score + '% of its GPS points.</div></div>';
+  if (msr && sn) h += '<div class="mr-chg"><b>Map snap:</b> ' + esc(msr.name || msr.id) + way(msn.dir) + '<div class="fine">Drawn ' + esc(msr.line && msr.line.name ? msr.line.name.charAt(0).toLowerCase() + msr.line.name.slice(1) : 'along its line') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. It follows the line for ' + sn.score + '% of its GPS points.') + '</div></div>';
   var tk = D.mrTrack && D.mrTrack[i];
-  if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). ' + tk.score + '% of its GPS points are near it. Turn it off in Settings, Station packs.</div></div>';
-  if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">Drawn along the motorways and main roads of your road pack where its GPS points stay close to them (' + D.snap[i].cov + '% of the way), and along its own GPS points elsewhere: ' + dist(D.snap[i].km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). Turn it off in Settings, Station packs.</div></div>';
+  if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. ' + tk.score + '% of them are near the line. Turn it off in Settings, Station packs.') + '</div></div>';
+  if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">' + infoMore('Drawn along main roads for ' + D.snap[i].cov + '% of the way: ' + dist(D.snap[i].km) + '.', 'It follows the motorways and main roads of your road pack where its GPS points stay close to them, and its own GPS points elsewhere. Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. Turn it off in Settings, Station packs.') + '</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   // Edit trip is at the top of the details, under the trip's icon (mrEditTop).
   var btns = '';
@@ -12631,7 +12684,7 @@ function mrCheckBlock(i) {
   if (w.kind === 'speed') why = 'Your files say ' + lab(m) + ', but it averaged ' + speed(w.avg) + ', faster than a bike ride.';
   else if (w.kind === 'history') why = 'Your files say ' + lab(m) + ', but ' + fmt(w.n) + ' of your trips between these places at a like speed were mostly by ' + lab(alt) + '.';
   else why = 'BT•DT guessed ' + lab(m) + ' but isn\'t sure. It may have been ' + lab(alt) + '.';
-  return '<div class="mr-check"><h4 class="place-h">Is this the right type?</h4><p class="fine">' + why + ' Your answer is saved in MyRules and teaches BT•DT for trips like it.</p>' +
+  return '<div class="mr-check"><h4 class="place-h">Is this the right type?</h4><p class="fine">' + infoMore(why, 'Your answer is saved in MyRules and teaches BT•DT for trips like it.') + '</p>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' +
     '<button type="button" class="btn primary" data-mr-act="type" data-m="' + m + '" data-t="' + i + '">' + esc(LABEL[m] || m) + ' is right</button>' +
     '<button type="button" class="btn" data-mr-act="type" data-m="' + alt + '" data-t="' + i + '">It was ' + lab(alt) + '</button>' +
@@ -12982,9 +13035,10 @@ function mrRoutineDialog(r, isNew) {
   mrAsk({
     side: true,
     title: isNew ? 'Trips like this one' : 'Edit routine',
-    text: (isNew ? (t.snap ? 'Your trips between the same two ends, any day and any time, that follow this trip\'s line closely enough. Set how closely below, then save them as a routine.' :
-      'Your trips between the same two ends, any day and any time. This trip has too few GPS points to be a line, so they go by their ends: set how close below, then save them as a routine.') : 'Trips between its two ends in this period get what you set here.') +
+    text: (isNew ? 'Your trips between the same two ends, any day and any time.' : 'Trips between its two ends in this period get what you set here.') +
       (MR && !MR.on ? '<b class="mr-off-warn">MyRules are switched off, so this routine won\'t change any trips until you switch them on.</b>' : ''),
+    info: isNew ? (t.snap ? 'Only those that follow this trip\'s line closely enough: set how closely below, then save them as a routine.' :
+      'This trip has too few GPS points to be a line, so they go by their ends: set how close below, then save them as a routine.') : '',
     extra: '<div class="mr-form"><label class="field"><span>Name</span><input type="text" id="mrRName" value="' + esc(r.name || '') + '" placeholder="e.g. Train to work"></label>' +
       '<label class="field"><span>Type</span><select id="mrRMode"><option value="">Leave the type as it is</option>' + MODES.filter(function (m) { return m !== 'UNKNOWN'; }).map(function (m) {
         return '<option value="' + m + '"' + (m === t.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>';
@@ -12997,7 +13051,8 @@ function mrRoutineDialog(r, isNew) {
       }).join('') +
       '<label class="toggle-row"><span class="lbl">Both ways<small class="fine" style="display:block">Also the trips back.</small></span><input type="checkbox" class="switch" id="mrRBoth"' + (r.both_ways ? ' checked' : '') + '></label>' +
       '<div class="field" id="mrWBackRow"' + (r.both_ways ? '' : ' hidden') + '><span>Back between</span><span class="mr-dates"><input type="time" id="mrWB0" value="' + esc(rt[0] || '') + '" aria-label="Earliest return"> and <input type="time" id="mrWB1" value="' + esc(rt[1] || '') + '" aria-label="Latest return"><small class="fine">Empty: the same times as there.</small></span></div>' +
-      '<label class="toggle-row"><span class="lbl">Always<small class="fine" style="display:block">Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
+      '<label class="toggle-row"><span class="lbl">Always' + infoBtn('mrRForceInfo', 'About Always') + '</span><input type="checkbox" class="switch" id="mrRForce"' + (r.force ? ' checked' : '') + '></label>' +
+      infoBox('mrRForceInfo', 'Replace the type your files have, not only a missing, generic (Vehicle) or guessed one. Without it, trips your files give another type stay out of the routine.') +
       '<label class="toggle-row"><span class="lbl">Draw them along one line<small class="fine" style="display:block">Trips that don\'t follow it closely enough stay out of the routine.</small></span><input type="checkbox" class="switch" id="mrRSnap"' + (t.snap ? ' checked' : '') + '></label>' + mrGhostHtml() + '</div>',
     buttons: [[isNew ? 'Save as routine' : 'Save', 'primary', function () {
       var d = mrGhostSnap(form(true));
@@ -13924,9 +13979,9 @@ function mvSpotHtml(key) {
   var on = MR && MR.on, auto = vs.filter(mvAuto), R = mvRulesFor(ids), keep = R.filter(function (r) { return r.keep && r.enabled !== false; })[0], h = '';
   if (auto.length) {
     var phone = D.base.vll, d = km(mvGoogle(auto[0]), [phone[2 * auto[0]], phone[2 * auto[0] + 1]]);
-    if (keep && on) h += '<p class="fine">Shown at Google\'s location for this place, as you chose. During ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + ') your phone was ' + dist(d) + ' away.</p>' +
+    if (keep && on) h += '<p class="fine">' + infoMore('Shown at Google\'s location for this place, as you chose.', 'During ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + ') your phone was ' + dist(d) + ' away.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-unkeep="' + esc(keep.id) + '" data-key="' + esc(key) + '">' + icon('pin') + 'Show where my phone was</button></div>';
-    else h += '<p class="fine">Google now puts this place ' + dist(d) + ' from where your phone was during ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + '). It most likely moved and kept its Google place ID, so those stays and the trips to and from them are shown where your phone was.</p>' +
+    else h += '<p class="fine">' + infoMore('Google now puts this place ' + dist(d) + ' from where your phone was.', 'That was during ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + '). It most likely moved and kept its Google place ID, so those stays and the trips to and from them are shown where your phone was.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn quiet" data-mv-keep="' + esc(key) + '">Use Google\'s location</button></div>';
   }
   R.filter(function (r) { return !r.keep; }).forEach(function (r) {
@@ -13936,7 +13991,9 @@ function mvSpotHtml(key) {
       (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but MyRules are switched off.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-edit="' + esc(r.id) + '" data-key="' + esc(key) + '">' + icon('edit') + 'Edit where it was</button></div>';
   });
-  if (!h) h = '<p class="fine">If this place moved and your old visits show at its new address, say where it was then.</p>';
+  // Nothing to say yet: the explanation sits behind the (i) next to the heading.
+  if (!h) return infoHead('h4', 'place-h', 'Where it was', 'If this place moved and your old visits show at its new address, say where it was then.', 'About Where it was') +
+    (R.some(function (r) { return !r.keep; }) ? '' : '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>');
   if (!R.some(function (r) { return !r.keep; })) h += '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>';
   return '<h4 class="place-h">Where it was</h4>' + h;
 }
@@ -13980,7 +14037,8 @@ function mvDialog(key, r) {
   var w = r && r.when || {}, nm = r && r.name || mvName(key);
   mrAsk({
     title: 'This place moved',
-    text: 'Google keeps one location per place: today\'s. Put the pin where this place was when you went there, and your stays here in those dates, with the trips to and from them, move there.',
+    text: 'Put the pin where this place was when you went there.',
+    info: 'Google keeps one location per place: today\'s. Your stays here in those dates, with the trips to and from them, move to where you put the pin.',
     extra: '<div class="mr-form"><div class="field"><span>When it was there</span><span class="mr-dates">From <input type="date" id="mvFrom" value="' + esc(w.from || '') + '" aria-label="From"> until <input type="date" id="mvTo" value="' + esc(w.to || (r ? '' : isFinite(last) ? isoDay(last) : '')) + '" aria-label="Until"></span>' +
       '<small class="fine">Leave a date empty for no limit on that side.</small></div>' +
       '<label class="field"><span>Where it was</span><input type="text" id="mvAt" placeholder="52.0786, 4.3358 · 38HP+C8 · a Google Maps link" autocomplete="off" spellcheck="false"></label>' +
@@ -14447,7 +14505,7 @@ function renderPacks() {
   }).join('');
   box.hidden = !ccs.length;
   trackSettings();
-  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet. A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine\'s line along the railway without going online.';
+  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet.';
 }
 function packOptions(sel, have) {
   return packList().then(function (L) {
@@ -14772,7 +14830,8 @@ function snapPanel() {
       '<label class="field mr-match"><span>Within <b class="num" id="snapRaV"></b> of ' + esc(SN.a.name) + '</span><input type="range" id="snapRa" min="100" max="2000" step="50" value="' + SN.ra + '"></label>' +
       '<label class="field mr-match"><span>Within <b class="num" id="snapRbV"></b> of ' + esc(SN.b.name) + '</span><input type="range" id="snapRb" min="100" max="2000" step="50" value="' + SN.rb + '"></label>' +
       '<label class="field mr-match"><span>Follow the line for at least <b class="num" id="snapMatchV"></b></span><input type="range" id="snapMatch" min="10" max="100" step="5" value="' + SN.match + '"></label>' +
-      '<label class="toggle-row"><span class="lbl">Other types too<small class="fine" style="display:block">Also trips your files give another type (a bus, a car), which then become ' + esc((LABEL[SN.mode] || 'this type').toLowerCase()) + '. Without it, only trips of this type, with no type, Vehicle or a guessed one.</small></span><input type="checkbox" class="switch" id="snapOther"' + (SN.other ? ' checked' : '') + '></label>' +
+      '<label class="toggle-row"><span class="lbl">Other types too' + infoBtn('snapOtherInfo', 'About other types') + '</span><input type="checkbox" class="switch" id="snapOther"' + (SN.other ? ' checked' : '') + '></label>' +
+      infoBox('snapOtherInfo', 'Also trips your files give another type (a bus, a car), which then become ' + esc((LABEL[SN.mode] || 'this type').toLowerCase()) + '. Without it, only trips of this type, with no type, Vehicle or a guessed one.') +
       '<small class="fine" id="snapTxt" aria-live="polite"></small>' +
       '<button type="button" class="btn quiet" id="snapRepick">' + icon('pin') + 'Pick other ends</button></div>',
     buttons: [[r ? 'Save' : 'Save map snap', 'primary', snapSave], ['Cancel', 'quiet', null]],
@@ -15592,14 +15651,14 @@ function splitBlock(i) {
     }
     var w = l.was;
     return '<div class="split-box"><div class="sb-head"><b>' + (l.n === 1 ? 'Split' : l.n + ' legs of one Timeline trip') + '</b></div>' +
-      '<p class="fine">Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '. ' + (l.hand >= l.n - 1 ? 'You split it into legs' : l.hand ? 'Its GPS points show ' + (l.n - 1 - l.hand === 1 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', and you split it further, into legs' : 'Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs') + ', each with its own type and line. The distance is shared by the legs, so totals stay the same.</p>' +
+      '<p class="fine">' + infoMore('Timeline kept this as one ' + esc((LABEL[w.mode] || w.mode).toLowerCase()) + ' trip of ' + dist(w.km) + ', ' + clock(w.start, D.off[i]) + '–' + clock(w.end, D.off[i]) + '.', (l.hand >= l.n - 1 ? 'You split it into legs' : l.hand ? 'Its GPS points show ' + (l.n - 1 - l.hand === 1 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', and you split it further, into legs' : 'Its GPS points show ' + (l.n === 2 ? 'a stop or a change of speed' : 'stops or changes of speed') + ', so BT•DT splits it into legs') + ', each with its own type and line. The distance is shared by the legs, so totals stay the same.') + '</p>' +
       '<div class="list-rows split-legs">' + rows + '</div>' +
       '<div class="sb-acts"><button type="button" class="btn" data-split-act="keep" data-key="' + l.key + '" data-ms="' + w.start + '">' + icon('undo') + 'Keep as one trip</button></div></div>';
   }
   if (f && splitSetting() !== 'off') {
     var p = f.plan, s = p.map(function (c) { return (c.kind === 'speed' ? 'the speed changing from about ' + speed(c.vin) + ' to ' + speed(c.vout) : 'a stop ' + (c.st ? 'at ' + esc(packStopName(c.st)) : 'of a few minutes') + ' between ' + speed(c.vin) + ' and ' + speed(c.vout)); });
     return '<div class="split-box offer"><div class="sb-head"><b>' + (f.kept ? 'Kept as one trip' : 'Looks like ' + (p.length + 1) + ' trips') + '</b></div>' +
-      '<p class="fine">' + (f.kept ? 'You chose to keep this as one trip. ' : '') + 'Its GPS points show ' + s.join(', then ') + '. Timeline may have merged ' + (p.length === 1 ? 'two trips' : 'several trips') + ' here' + (packCodes().length ? '' : '; a station pack in Settings would show where the stops were') + '.</p>' +
+      '<p class="fine">' + infoMore((f.kept ? 'You chose to keep this as one trip. ' : '') + 'Timeline may have merged ' + (p.length === 1 ? 'two trips' : 'several trips') + ' here.', 'Its GPS points show ' + s.join(', then ') + '.' + (packCodes().length ? '' : ' A station pack in Settings would show where the stops were.')) + '</p>' +
       '<div class="sb-acts"><button type="button" class="btn" data-split-act="split" data-key="' + f.key + '" data-ms="' + D.start[i] + '">' + icon('split') + 'Split into ' + (p.length + 1) + ' trips</button></div></div>';
   }
   return '';
@@ -15636,8 +15695,7 @@ function renderSplitSettings() {
   var n = D.splitN || 0, o = 0;
   if (D.offer) D.offer.forEach(function (f) { if (f && !f.kept) o++; });
   note.textContent = (s === 'off' ? 'Trips are shown as Timeline recorded them.' :
-    (n ? fmt(n) + ' trip' + (n === 1 ? ' is' : 's are') + ' split into legs' : 'No trips are split') + (o ? ', and ' + fmt(o) + ' more look merged (marked Split? in their details).' : '.')) +
-    (s === 'auto' ? ' Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds.' : '');
+    (n ? fmt(n) + ' trip' + (n === 1 ? ' is' : 's are') + ' split into legs' : 'No trips are split') + (o ? ', and ' + fmt(o) + ' more look merged.' : '.'));
 }
 $('tripSplitSeg').addEventListener('click', function (ev) {
   var b = ev.target.closest('button[data-s]');

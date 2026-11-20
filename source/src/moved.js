@@ -146,9 +146,9 @@ function mvSpotHtml(key) {
   var on = MR && MR.on, auto = vs.filter(mvAuto), R = mvRulesFor(ids), keep = R.filter(function (r) { return r.keep && r.enabled !== false; })[0], h = '';
   if (auto.length) {
     var phone = D.base.vll, d = km(mvGoogle(auto[0]), [phone[2 * auto[0]], phone[2 * auto[0] + 1]]);
-    if (keep && on) h += '<p class="fine">Shown at Google\'s location for this place, as you chose. During ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + ') your phone was ' + dist(d) + ' away.</p>' +
+    if (keep && on) h += '<p class="fine">' + infoMore('Shown at Google\'s location for this place, as you chose.', 'During ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + ') your phone was ' + dist(d) + ' away.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-unkeep="' + esc(keep.id) + '" data-key="' + esc(key) + '">' + icon('pin') + 'Show where my phone was</button></div>';
-    else h += '<p class="fine">Google now puts this place ' + dist(d) + ' from where your phone was during ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + '). It most likely moved and kept its Google place ID, so those stays and the trips to and from them are shown where your phone was.</p>' +
+    else h += '<p class="fine">' + infoMore('Google now puts this place ' + dist(d) + ' from where your phone was.', 'That was during ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + '). It most likely moved and kept its Google place ID, so those stays and the trips to and from them are shown where your phone was.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn quiet" data-mv-keep="' + esc(key) + '">Use Google\'s location</button></div>';
   }
   R.filter(function (r) { return !r.keep; }).forEach(function (r) {
@@ -158,7 +158,9 @@ function mvSpotHtml(key) {
       (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but MyRules are switched off.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-edit="' + esc(r.id) + '" data-key="' + esc(key) + '">' + icon('edit') + 'Edit where it was</button></div>';
   });
-  if (!h) h = '<p class="fine">If this place moved and your old visits show at its new address, say where it was then.</p>';
+  // Nothing to say yet: the explanation sits behind the (i) next to the heading.
+  if (!h) return infoHead('h4', 'place-h', 'Where it was', 'If this place moved and your old visits show at its new address, say where it was then.', 'About Where it was') +
+    (R.some(function (r) { return !r.keep; }) ? '' : '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>');
   if (!R.some(function (r) { return !r.keep; })) h += '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>';
   return '<h4 class="place-h">Where it was</h4>' + h;
 }
@@ -202,7 +204,8 @@ function mvDialog(key, r) {
   var w = r && r.when || {}, nm = r && r.name || mvName(key);
   mrAsk({
     title: 'This place moved',
-    text: 'Google keeps one location per place: today\'s. Put the pin where this place was when you went there, and your stays here in those dates, with the trips to and from them, move there.',
+    text: 'Put the pin where this place was when you went there.',
+    info: 'Google keeps one location per place: today\'s. Your stays here in those dates, with the trips to and from them, move to where you put the pin.',
     extra: '<div class="mr-form"><div class="field"><span>When it was there</span><span class="mr-dates">From <input type="date" id="mvFrom" value="' + esc(w.from || '') + '" aria-label="From"> until <input type="date" id="mvTo" value="' + esc(w.to || (r ? '' : isFinite(last) ? isoDay(last) : '')) + '" aria-label="Until"></span>' +
       '<small class="fine">Leave a date empty for no limit on that side.</small></div>' +
       '<label class="field"><span>Where it was</span><input type="text" id="mvAt" placeholder="52.0786, 4.3358 · 38HP+C8 · a Google Maps link" autocomplete="off" spellcheck="false"></label>' +
