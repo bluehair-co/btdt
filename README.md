@@ -58,6 +58,7 @@ There is no server. Your files are read by JavaScript in your browser and saved 
 
 - The files at the top of this repository are the published app (`index.html`, the manifest, the service worker, icons, the share image, `robots.txt` and `sitemap.xml`), served by GitHub Pages.
 - `source/` holds the source and the build script: `python3 source/build.py` rebuilds into `source/dist/`, which is then copied to the top level. Bump `VERSION` in `sw.js` whenever a deployed file changes so installed copies update.
+- `CLAUDE.md` is the developer guide (architecture, build, deploy, testing), `docs/design-rules.md` the UI rules, and `docs/history.md` how the project got here.
 - `source/README.md` explains how the data is read and cleaned: bad GPS jumps, trips that disagree with their stays, places Google moved, Records.json under Timeline, time zones and countries.
 
 ## License
