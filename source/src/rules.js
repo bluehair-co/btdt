@@ -233,7 +233,7 @@ function mrApplyGear(byName, addGear) {
 }
 // Rule applied (inferred): gear a gear period filled in, a type or line a routine or map snap set. Edited: anything a correction set.
 function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road); }
-function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor)); }
+function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor || D.mrDrop && D.mrDrop[i])); }
 // A trip a map snap took says so; anything else a rule filled in is "Rule applied".
 function mrSnapped(i) { return !!(D.mrSnap && D.mrSnap[i] && D.snap && D.snap[i]); }
 function mrRoaded(i) { return !!(D.mrRoad && D.mrRoad[i] && D.snap && D.snap[i] === D.mrRoad[i]); }
@@ -267,6 +267,7 @@ function* mrCorrectSteps(dry) {
   function copy(a) { return a ? a.slice() : a; }
   function reset() {
     D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
+    D.pathPts = b.pathPts; D.pathT = b.pathT; D.pathOff = b.pathOff; D.from = b.from; D.to = b.to; D.mrDrop = [];
     D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
     MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
   }
@@ -278,6 +279,9 @@ function* mrCorrectSteps(dry) {
     reset();
   }
   if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
+  // GPS points you said to ignore go first, so routines, lines and distances all go without them.
+  mrApplyDrops();
+  yield;
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
   yield;
@@ -311,6 +315,73 @@ function* mrCorrectSteps(dry) {
   mrApplyRoads();
   yield;
   yield* mrLearnSteps();
+}
+
+// ---------- GPS points you ignore ----------
+// Ignore GPS points… in the trip details (ignore.js) saves the times of the points to leave out in
+// the trip's own correction (then.ignore_points: ISO times, to the second). They are left out of D's
+// copy of the trail (D.base keeps the one loaded), so the trip's line, its distance, its speed chart,
+// its playback and the heatmap all go without them. A trip keeps at least two points. Its distance
+// loses what the left-out points added to its trail, but is never shorter than the trail that's left.
+// D.mrDrop[i]: { rule, n (points left out), of (points it had), km (distance before), gaps } where
+// gaps are the stretches (seconds from the start) the left-out points were in, for a recorded
+// activity's speed series, which comes from its file rather than from the trail.
+function mrIgnoreKey(ms) { return Math.round(ms / 1000); }
+function mrIgnoreIso(sec) { return new Date(sec * 1000).toISOString().replace(/\.\d{3}Z$/, 'Z'); }
+function mrIgnoreSet(list) {
+  var set = {};
+  (Array.isArray(list) ? list : []).forEach(function (v) { var t = Date.parse(v); if (isFinite(t)) set[mrIgnoreKey(t)] = 1; });
+  return set;
+}
+// The trip's points as loaded (D.base): [{ ll, t (seconds since 1970), s (seconds from its start) }].
+function mrBasePoints(i) {
+  var b = D.base || D, out = [];
+  for (var q = b.pathOff[i]; q < b.pathOff[i + 1]; q++) out.push({ ll: [b.pathPts[2 * q], b.pathPts[2 * q + 1]], s: b.pathT[q], t: mrIgnoreKey(D.start[i] + b.pathT[q] * 1000) });
+  return out;
+}
+function mrApplyDrops() {
+  var b = D.base, by = {};
+  mrCorrections().forEach(function (x) {
+    var ig = x.c.then.ignore_points;
+    if (!x.one || x.trips.length !== 1 || !Array.isArray(ig) || !ig.length) return;
+    var i = x.trips[0], set = mrIgnoreSet(ig), pts = mrBasePoints(i), keep = [];
+    if (MODES[b.mode[i]] === 'FLYING') return;
+    pts.forEach(function (p, k) { if (!set[p.t]) keep.push(k); });
+    if (keep.length === pts.length || keep.length < 2) return;
+    by[i] = { rule: x.c.id, keep: keep, pts: pts };
+    MR_COUNT[x.c.id] = 1;
+  });
+  var list = Object.keys(by).map(Number);
+  if (!list.length) return;
+  var n = D.start.length, np = b.pathT.length, i, q, w = 0;
+  list.forEach(function (j) { np -= by[j].pts.length - by[j].keep.length; });
+  var P = new Float32Array(2 * np), T = new Float32Array(np), O = new Uint32Array(n + 1);
+  D.from = Float32Array.from(b.from); D.to = Float32Array.from(b.to);
+  for (i = 0; i < n; i++) {
+    O[i] = w;
+    var x = by[i];
+    if (!x) { for (q = b.pathOff[i]; q < b.pathOff[i + 1]; q++, w++) { P[2 * w] = b.pathPts[2 * q]; P[2 * w + 1] = b.pathPts[2 * q + 1]; T[w] = b.pathT[q]; } continue; }
+    var kept = x.keep.map(function (k) { return x.pts[k]; }), gaps = [];
+    kept.forEach(function (p) { P[2 * w] = p.ll[0]; P[2 * w + 1] = p.ll[1]; T[w] = p.s; w++; });
+    // Its ends move to the first and last points it keeps.
+    if (x.keep[0] > 0) { D.from[2 * i] = kept[0].ll[0]; D.from[2 * i + 1] = kept[0].ll[1]; }
+    if (x.keep[x.keep.length - 1] < x.pts.length - 1) { var e = kept[kept.length - 1]; D.to[2 * i] = e.ll[0]; D.to[2 * i + 1] = e.ll[1]; }
+    // Where the left-out points were: from the point kept before to the one kept after, at most 30 s around them.
+    var on = {};
+    x.keep.forEach(function (k) { on[k] = 1; });
+    x.pts.forEach(function (p, k) {
+      if (on[k]) return;
+      var a = k - 1, c = k + 1;
+      while (a >= 0 && !on[a]) a--;
+      while (c < x.pts.length && !on[c]) c++;
+      gaps.push([Math.max(a >= 0 ? x.pts[a].s : -Infinity, p.s - 30), Math.min(c < x.pts.length ? x.pts[c].s : Infinity, p.s + 30)]);
+    });
+    var before = pathKm(x.pts.map(function (p) { return p.ll; })), after = pathKm(kept.map(function (p) { return p.ll; }));
+    D.mrDrop[i] = { rule: x.rule, n: x.pts.length - kept.length, of: x.pts.length, km: b.km[i], gaps: gaps };
+    if (before > 0) D.km[i] = Math.max(after, b.km[i] - (before - after));
+  }
+  O[n] = w;
+  D.pathPts = P; D.pathT = T; D.pathOff = O;
 }
 
 // ---------- learning from your fixes, and trips to check ----------
@@ -1005,10 +1076,12 @@ function mrRenderRules() {
     if (g) bits.push('Gear: ' + esc(gr ? gr.name || gr.id : g));
     if (th.hide === true) bits.push('Hidden');
     if (th.hide === false) bits.push('Shown again');
+    var ign = Array.isArray(th.ignore_points) ? th.ignore_points.length : 0;
+    if (ign) bits.push(fmt(ign) + ' GPS point' + (ign === 1 ? '' : 's') + ' ignored');
     if (th.replace) bits.push('Replace: not applied in this version of BT•DT');
     var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
-    var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : 'info');
-    var applied = th.mode || th.name || g || th.hide != null;
+    var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : ign ? 'pinOff' : 'info');
+    var applied = th.mode || th.name || g || th.hide != null || ign;
     return gh + mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
@@ -1052,7 +1125,7 @@ function mrCorTime(c) {
 // What sort of change it makes, to sort and group by: the type it sets, else what else it does.
 function mrCorGroup(c) {
   var th = c.then || {};
-  return th.mode ? LABEL[th.mode] || th.mode : th.hide === true ? 'Hidden' : th.gear ? 'Gear' : th.name ? 'Titles' : th.checked ? 'Type checked' : 'Other';
+  return th.mode ? LABEL[th.mode] || th.mode : th.hide === true ? 'Hidden' : th.gear ? 'Gear' : th.name ? 'Titles' : th.checked ? 'Type checked' : Array.isArray(th.ignore_points) && th.ignore_points.length ? 'Ignored GPS points' : 'Other';
 }
 $('mrBody').addEventListener('click', function (ev) {
   var cs = ev.target.closest('[data-cor-sort]');
@@ -1130,6 +1203,8 @@ function mrTripBlock(i) {
   if (md) h += '<div class="mr-chg"><b>Type:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' <span class="fine">(was ' + esc((LABEL[md.was] || md.was).toLowerCase()) + (md.guessed ? ', guessed' : '') + ')</span>' + src(md.rule, md.inf ? '' : 'mode') + '</div>';
   if (nm) h += '<div class="mr-chg"><b>Title:</b> ' + esc(nm.name) + (recName(i) ? ' <span class="fine">(was “' + esc(recName(i)) + '”)</span>' : '') + src(nm.rule, 'name') + '</div>';
   if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
+  var dr = D.mrDrop && D.mrDrop[i];
+  if (dr) h += '<div class="mr-chg"><b>GPS points ignored:</b> ' + fmt(dr.n) + ' of ' + fmt(dr.of) + (Math.abs(dr.km - D.km[i]) >= 0.01 ? ' <span class="fine">(' + dist(dr.km) + ' with them)</span>' : '') + src(dr.rule, 'ignore_points') + '</div>';
   var rt = D.mrRoute && D.mrRoute[i], rr = rt && mrById(rt.rule), sn = D.snap && D.snap[i], ln = rr && D.mrLine[rr.id];
   var ms = !rr && D.mrMiss && D.mrMiss[i], mr = ms && mrById(ms.rule), mln = mr && D.mrLine[mr.id];
   function way(d) { return ' <span class="fine">· the way ' + (d > 0 ? 'there' : 'back') + '</span>'; }
@@ -1159,7 +1234,8 @@ function mrTripBlock(i) {
   if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + dist(sn.km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). ' + tk.score + '% of its GPS points are near it. Turn it off in Settings, Station packs.</div></div>';
   if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">Drawn along the motorways and main roads of your road pack where its GPS points stay close to them (' + D.snap[i].cov + '% of the way), and along its own GPS points elsewhere: ' + dist(D.snap[i].km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). Turn it off in Settings, Station packs.</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
-  var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
+  // Edit trip is at the top of the details, under the trip's icon (mrEditTop).
+  var btns = '';
   // Remove edit: every correction that changed this trip lets go of it (mrRemoveEdits).
   var eds = mrTripEdits(i);
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
@@ -1174,8 +1250,15 @@ function mrTripBlock(i) {
   var lr = rr || ms && (ms.why === 'noline' || ms.why === 'fit') && mr, lln = lr && D.mrLine[lr.id];
   if (lr && lr.then && lr.then.snap && mrLearned(lr.then.snap) && !(lln && lln.from === i) && D.pathOff[i + 1] - D.pathOff[i] >= 5) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(lr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
   if (splitHandOk(i)) btns += '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>';
+  if (ignOk(i)) btns += '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>';
   if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
-  return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div></div>';
+  if (!h && !btns) return mrCheckBlock(i);
+  return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
+}
+// Edit trip, at the top of the trip details right under the trip's icon.
+function mrEditTop(i) {
+  if (!D || isDup(i)) return '';
+  return '<div class="trip-edit"><button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button></div>';
 }
 // Is this the right type? For a trip in the check list: why, and one tap to keep or change its type.
 function mrCheckBlock(i) {
@@ -1242,6 +1325,7 @@ function mrRemoveEdits(i) {
     if (t.gear) b.push('gear');
     if (t.hide === true) b.push('hidden');
     if (t.checked === true) b.push('type checked');
+    if (Array.isArray(t.ignore_points) && t.ignore_points.length) b.push(fmt(t.ignore_points.length) + ' GPS point' + (t.ignore_points.length === 1 ? '' : 's') + ' ignored');
     return b.join(', ');
   }
   var lines = eds.map(function (c) {
@@ -1270,7 +1354,7 @@ function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
-var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked' };
+var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked', ignore_points: 'Ignored GPS points' };
 $('tripBody').addEventListener('click', function (ev) {
   var lt = ev.target.closest('[data-mr-trips]');
   if (lt) { mrBulkList(lt.dataset.mrTrips); return; }
