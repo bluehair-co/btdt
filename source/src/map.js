@@ -732,11 +732,6 @@ function fitAll(all) {
   allView = trim ? null : { c: t.center, z: t.zoom };
   syncAllDot();
 }
-$('fitBtn').addEventListener('click', function () {
-  if (PREFS.proj !== 'merc') { if (P) { P.fitted = false; drawProj(); } }
-  else fitAll();
-  if (!wide()) closeSheets();
-});
 
 // ---------- zoom to all, and beacons on trips too small to see ----------
 // The zoom to all button sits under the zoom buttons (a round button above the layers button on
@@ -753,12 +748,22 @@ function addZoomAll(bar) {
   a.innerHTML = icon('fit') + '<i class="dot" hidden></i>';
   L.DomEvent.disableClickPropagation(a);
   L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomAll(); });
-  var s = L.DomUtil.create('a', 'sel-btn', bar);
-  s.href = '#'; s.setAttribute('role', 'button'); s.title = 'Select trips on the map'; s.setAttribute('aria-label', 'Select trips on the map');
-  s.innerHTML = icon('select');
-  L.DomEvent.disableClickPropagation(s);
-  L.DomEvent.on(s, 'click', function (e) { L.DomEvent.preventDefault(e); if (SEL) selEnd(); else selStart(); });
 }
+// Map tools: a round button above the layers button with a small menu of what you can do on the
+// map (Select trips on the map, New map snap); each item closes the menu and starts its tool.
+function toolsMenu(open) {
+  var menu = $('toolsMenu'), r = $('toolsBtn').getBoundingClientRect();
+  menu.hidden = !open;
+  $('toolsBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (!open) return;
+  // Above the button, lined up with its right edge, and never off the screen.
+  menu.style.bottom = Math.max(8, innerHeight - r.top + 8) + 'px';
+  menu.style.right = Math.max(8, Math.min(innerWidth - menu.offsetWidth - 8, innerWidth - r.right)) + 'px';
+}
+$('toolsBtn').addEventListener('click', function (ev) { ev.stopPropagation(); toolsMenu($('toolsMenu').hidden); });
+$('toolsMenu').addEventListener('click', function () { toolsMenu(false); });
+document.addEventListener('click', function (ev) { if (!$('toolsMenu').hidden && !ev.target.closest('#toolsMenu')) toolsMenu(false); });
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') toolsMenu(false); });
 $('fitAllBtn').addEventListener('click', zoomAll);
 // Whether some of the trips in the filters (their stays when there are none) are out of view.
 function outOfView() {
@@ -2356,6 +2361,7 @@ function syncLayersUI() {
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
   $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  setPressed('#linesSeg button', function (b) { return b.dataset.lines === linesMode(); });
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
   $('map').hidden = PREFS.proj !== 'merc';
@@ -2379,6 +2385,21 @@ function colouredPaths(key, on) {
   if (hlTrip != null) highlight(hlTrip);
 }
 $('laySpeed').addEventListener('change', function () { colouredPaths('speedPaths', this.checked); });
+// Colour lines by: one choice for the three ways of drawing the lines (or none).
+function linesMode() { return PREFS.hrPaths ? 'hr' : PREFS.speedPaths ? 'speed' : PREFS.paths ? 'paths' : 'off'; }
+$('linesSeg').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-lines]');
+  if (!b || b.dataset.lines === linesMode()) return;
+  var v = b.dataset.lines;
+  if (v === 'speed') colouredPaths('speedPaths', true);
+  else if (v === 'hr') colouredPaths('hrPaths', true);
+  else {
+    PREFS.speedPaths = PREFS.hrPaths = false; PREFS.paths = v === 'paths';
+    if (v === 'off') { setHovered([]); hideTip(); }
+    layersChanged();
+    if (hlTrip != null) highlight(hlTrip);
+  }
+});
 $('layHr').addEventListener('change', function () { colouredPaths('hrPaths', this.checked); });
 $('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });

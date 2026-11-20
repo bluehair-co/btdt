@@ -1204,6 +1204,20 @@ details.when-more[open] > summary::after { transform: rotate(-135deg); top: 24px
 .when-more-t { font-weight: 600; font-size: 14px; }
 details.when-more > summary small { font-size: 12.5px; color: var(--muted); }
 details.when-more > .sec:last-child { border-bottom: 0; }
+
+/* ---------- Map tools: a small round button above the layers button, with its menu ---------- */
+.fab.tools-fab { width: 44px; height: 44px; transform: translate(-4px, -58px); }
+.fab.tools-fab svg { width: 20px; height: 20px; }
+.fab.tools-fab[aria-expanded="true"] { color: var(--accent); background: var(--chip-on-bg); }
+@media (min-width: 960px) { .fab.tools-fab { transform: translate(60px, -4px); } }
+@media (pointer: coarse) { .fab.tools-fab { transform: translate(-4px, -110px); } }
+.tools-menu { position: fixed; z-index: 25; width: min(300px, calc(100vw - 100px)); padding: 6px; border-radius: 16px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
+.tools-menu button { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; text-align: left; cursor: pointer; }
+.tools-menu button:hover, .tools-menu button:focus-visible { background: var(--chip); }
+.tools-menu button > .ic { flex: none; width: 22px; height: 22px; fill: var(--accent); }
+.tools-menu small { white-space: normal; }
+.lines-info { display: flex; flex-direction: column; gap: 8px; }
+.lines-info p { margin: 0; }
 </style>
 </head>
 <body>
@@ -1443,6 +1457,11 @@ details.when-more > .sec:last-child { border-bottom: 0; }
     <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
     <button type="button" class="fab right fit-all" id="fitAllBtn" aria-label="Zoom to all trips" title="Zoom to all trips"><span data-icon="fit"></span><i class="dot" hidden></i></button>
+    <button type="button" class="fab right tools-fab" id="toolsBtn" aria-label="Map tools" title="Map tools" aria-haspopup="menu" aria-expanded="false" aria-controls="toolsMenu"><span data-icon="edit"></span></button>
+    <div class="tools-menu" id="toolsMenu" role="menu" aria-label="Map tools" hidden>
+      <button type="button" role="menuitem" id="selNewBtn"><span data-icon="select"></span><span class="data-row-txt"><b>Select trips on the map</b><small>Draw around trips to change their type at once</small></span></button>
+      <button type="button" role="menuitem" id="snapNewBtn"><span data-icon="TRAIN"></span><span class="data-row-txt"><b>New map snap</b><small>Draw trips along one line between two stations</small></span></button>
+    </div>
   </section>
 
   <!-- Insights -->
@@ -1666,7 +1685,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 
 
 <!-- Views and layers -->
-<aside class="sheet right" id="layersSheet" aria-label="Views and layers" role="dialog">
+<aside class="sheet right" id="layersSheet" aria-label="Map" role="dialog">
   <div class="sheet-head"><h2>Map</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <div class="sec">
@@ -1675,17 +1694,15 @@ details.when-more > .sec:last-child { border-bottom: 0; }
         <button type="button" data-proj="merc" aria-pressed="true">Mercator</button><button type="button" data-proj="ee" aria-pressed="false">Equal Earth</button><button type="button" data-proj="globe" aria-pressed="false">Globe</button>
       </div>
     </div>
+    <div class="sec">
+      <div class="info-head"><h3>Colour lines by</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="linesInfo" aria-label="About the lines" title="About the lines"><span data-icon="info"></span></button></div>
+      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
+      <div class="seg full" role="group" aria-label="Colour lines by" id="linesSeg"><button type="button" data-lines="paths" aria-pressed="true">Transport</button><button type="button" data-lines="speed" aria-pressed="false">Speed</button><button type="button" data-lines="hr" aria-pressed="false">Heart rate</button><button type="button" data-lines="off" aria-pressed="false">Off</button></div>
+      <input type="checkbox" id="layPaths" hidden><input type="checkbox" id="laySpeed" hidden><input type="checkbox" id="layHr" hidden>
+    </div>
     <div class="sec" style="gap:0">
-      <h3 style="margin-bottom:4px">Layers</h3>
-      <label class="toggle-row"><span class="lbl">Paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mapNote" aria-label="About paths" title="About paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPaths" checked></label>
-      <p class="fine info-box" id="mapNote" hidden></p>
-      <label class="toggle-row"><span class="lbl">Speed paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="speedNote" aria-label="About speed paths" title="About speed paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySpeed"></label>
-      <p class="fine info-box" id="speedNote" hidden>The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Heart rate paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="hrNote" aria-label="About heart rate paths" title="About heart rate paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHr"></label>
-      <p class="fine info-box" id="hrNote" hidden>Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
-      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
-      <label class="toggle-row"><span class="lbl">Heatmap<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="heatNote" aria-label="About the heatmap" title="About the heatmap"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHeat"></label>
+      <h3 style="margin-bottom:4px">Heatmap</h3>
+      <label class="toggle-row"><span class="lbl">Show the heatmap<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="heatNote" aria-label="About the heatmap" title="About the heatmap"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHeat"></label>
       <p class="fine info-box" id="heatNote" hidden></p>
       <div id="heatOpts" hidden style="display:flex;flex-direction:column;gap:12px;padding:4px 0 12px">
         <div class="seg full" role="group" aria-label="Heatmap shows" id="heatSrc">
@@ -1697,22 +1714,14 @@ details.when-more > .sec:last-child { border-bottom: 0; }
         <div class="slider-row"><label for="heatSize">Dot size</label><input type="range" id="heatSize" min="4" max="40" step="1" value="14"></div>
         <div class="slider-row"><label for="heatGain">Intensity</label><input type="range" id="heatGain" min="0" max="100" step="1" value="50"></div>
       </div>
+    </div>
+    <div class="sec" style="gap:0">
+      <h3 style="margin-bottom:4px">On top</h3>
       <label class="toggle-row"><span class="lbl">Countries visited</span><input type="checkbox" class="switch" id="layCC"></label>
       <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
       <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
-    </div>
-    <div class="sec">
-      <button type="button" class="btn" id="fitBtn"><span data-icon="fit"></span>Zoom to my trips</button>
-    </div>
-    <div class="sec">
-      <div class="info-head"><h3>Select trips</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="selInfo" aria-label="About Select trips" title="About Select trips"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="selInfo" hidden>Draw around an area to pick every trip on the map that passes through it, then change their type at once. Filter first to narrow down what can be picked, such as In vehicle only.</p>
-      <button type="button" class="btn" id="selNewBtn"><span data-icon="select"></span>Select trips on the map</button>
-    </div>
-    <div class="sec">
-      <div class="info-head"><h3>Map snaps</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="snapInfo" aria-label="About map snaps" title="About map snaps"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="snapInfo" hidden>Draw your trips between two stations along one railway, tram or metro line of your station packs, to clean up their paths. Tap the two stations on the map, pick the way, and choose how closely a trip has to follow it.</p>
-      <button type="button" class="btn" id="snapNewBtn"><span data-icon="TRAIN"></span>New map snap</button>
+      <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
+      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
     </div>
   </div>
 </aside>
@@ -7459,11 +7468,6 @@ function fitAll(all) {
   allView = trim ? null : { c: t.center, z: t.zoom };
   syncAllDot();
 }
-$('fitBtn').addEventListener('click', function () {
-  if (PREFS.proj !== 'merc') { if (P) { P.fitted = false; drawProj(); } }
-  else fitAll();
-  if (!wide()) closeSheets();
-});
 
 // ---------- zoom to all, and beacons on trips too small to see ----------
 // The zoom to all button sits under the zoom buttons (a round button above the layers button on
@@ -7480,12 +7484,22 @@ function addZoomAll(bar) {
   a.innerHTML = icon('fit') + '<i class="dot" hidden></i>';
   L.DomEvent.disableClickPropagation(a);
   L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomAll(); });
-  var s = L.DomUtil.create('a', 'sel-btn', bar);
-  s.href = '#'; s.setAttribute('role', 'button'); s.title = 'Select trips on the map'; s.setAttribute('aria-label', 'Select trips on the map');
-  s.innerHTML = icon('select');
-  L.DomEvent.disableClickPropagation(s);
-  L.DomEvent.on(s, 'click', function (e) { L.DomEvent.preventDefault(e); if (SEL) selEnd(); else selStart(); });
 }
+// Map tools: a round button above the layers button with a small menu of what you can do on the
+// map (Select trips on the map, New map snap); each item closes the menu and starts its tool.
+function toolsMenu(open) {
+  var menu = $('toolsMenu'), r = $('toolsBtn').getBoundingClientRect();
+  menu.hidden = !open;
+  $('toolsBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (!open) return;
+  // Above the button, lined up with its right edge, and never off the screen.
+  menu.style.bottom = Math.max(8, innerHeight - r.top + 8) + 'px';
+  menu.style.right = Math.max(8, Math.min(innerWidth - menu.offsetWidth - 8, innerWidth - r.right)) + 'px';
+}
+$('toolsBtn').addEventListener('click', function (ev) { ev.stopPropagation(); toolsMenu($('toolsMenu').hidden); });
+$('toolsMenu').addEventListener('click', function () { toolsMenu(false); });
+document.addEventListener('click', function (ev) { if (!$('toolsMenu').hidden && !ev.target.closest('#toolsMenu')) toolsMenu(false); });
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') toolsMenu(false); });
 $('fitAllBtn').addEventListener('click', zoomAll);
 // Whether some of the trips in the filters (their stays when there are none) are out of view.
 function outOfView() {
@@ -9083,6 +9097,7 @@ function syncLayersUI() {
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
   $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  setPressed('#linesSeg button', function (b) { return b.dataset.lines === linesMode(); });
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
   $('map').hidden = PREFS.proj !== 'merc';
@@ -9106,6 +9121,21 @@ function colouredPaths(key, on) {
   if (hlTrip != null) highlight(hlTrip);
 }
 $('laySpeed').addEventListener('change', function () { colouredPaths('speedPaths', this.checked); });
+// Colour lines by: one choice for the three ways of drawing the lines (or none).
+function linesMode() { return PREFS.hrPaths ? 'hr' : PREFS.speedPaths ? 'speed' : PREFS.paths ? 'paths' : 'off'; }
+$('linesSeg').addEventListener('click', function (ev) {
+  var b = ev.target.closest('button[data-lines]');
+  if (!b || b.dataset.lines === linesMode()) return;
+  var v = b.dataset.lines;
+  if (v === 'speed') colouredPaths('speedPaths', true);
+  else if (v === 'hr') colouredPaths('hrPaths', true);
+  else {
+    PREFS.speedPaths = PREFS.hrPaths = false; PREFS.paths = v === 'paths';
+    if (v === 'off') { setHovered([]); hideTip(); }
+    layersChanged();
+    if (hlTrip != null) highlight(hlTrip);
+  }
+});
 $('layHr').addEventListener('change', function () { colouredPaths('hrPaths', this.checked); });
 $('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
