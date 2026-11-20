@@ -554,7 +554,7 @@ function syncFilterUI() {
   mrCheckUI();
   setPressed('#srcSeg button', function (b) { return b.dataset.src === F.src; });
   $('oneField').hidden = F.dm !== 'one';
-  setPressed('#dayMode button', function (b) { return b.dataset.dm === 'nav' ? F.dm === 'one' && F.unit !== 'day' : b.dataset.dm === 'one' ? F.dm === 'one' && F.unit === 'day' : b.dataset.dm === F.dm; });
+  setPressed('#dayMode button', function (b) { return b.dataset.dm === 'nav' ? F.dm === 'one' : b.dataset.dm === F.dm; });
   $('oneLabel').textContent = F.unit === 'day' ? 'Day' : 'Any day in the ' + F.unit;
   setPressed('[data-pn="step"] button', function (b) { return b.dataset.step === F.unit; });
   $('rangeFields').hidden = F.dm !== 'range';
@@ -564,9 +564,53 @@ function syncFilterUI() {
   $('h0').value = F.h0; $('h1').value = F.h1;
   var k = activeFilters();
   $('filterBadge').hidden = !k; $('filterBadge').textContent = k;
+  renderActiveChips();
   syncExport();
 }
 
+// The filters in use, as chips at the top of Filters, each with ✕ to put that filter back to everything.
+// The period isn't one: the navigator and When show it.
+function listText(xs, max, many) { return xs.length <= max ? xs.join(', ') : many(xs.length); }
+function activeChips() {
+  var out = [], i;
+  if (ymFilters() && F.years.size !== M.years.length) out.push(['years', F.years.size ? listText(M.years.filter(function (y) { return F.years.has(y); }), 3, function (n) { return n + ' years'; }) : 'No years']);
+  if (ymFilters() && F.months.size !== 12) out.push(['months', F.months.size ? listText(MONTHS.filter(function (m, k) { return F.months.has(k); }), 3, function (n) { return n + ' months'; }) : 'No months']);
+  if (calFilters() && F.dows.size !== 7) {
+    var wd = F.dows.size === 5 && [1, 2, 3, 4, 5].every(function (d) { return F.dows.has(d); }), we = F.dows.size === 2 && F.dows.has(0) && F.dows.has(6);
+    out.push(['dows', wd ? 'Weekdays' : we ? 'Weekend' : F.dows.size ? listText(DOW_ORDER.filter(function (d) { return F.dows.has(d); }).map(function (d) { return DOW[d]; }), 3, function (n) { return n + ' days a week'; }) : 'No days']);
+  }
+  if (F.h0 !== 0 || F.h1 !== 24) out.push(['hours', fmtHour(F.h0) + '–' + fmtHour(F.h1)]);
+  if (F.modes.size !== M.modes.length || F.sports.size !== M.sports.length || F.gear.size !== gearIds().length) {
+    var on = M.modes.filter(function (m) { return modeState(m) !== 'false'; });
+    out.push(['modes', on.length ? listText(on.map(function (m) { return LABEL[m] || m; }), 2, function (n) { return n + ' types'; }) + (on.some(function (m) { return modeState(m) === 'mixed'; }) ? ' (part)' : '') : 'No transport']);
+  }
+  if (F.countries.size !== M.countries.length) out.push(['countries', F.countries.size ? listText(M.countries.filter(function (k) { return F.countries.has(k); }).map(function (k) { return ccName(D.ccList[k]); }), 2, function (n) { return n + ' countries'; }) : 'No countries']);
+  if (F.guess !== 'all') out.push(['guess', F.guess === 'check' ? 'Trips to check' : F.guess === 'only' ? 'Only guessed types' : 'No guessed types']);
+  if (F.src !== 'all') out.push(['src', F.src === 'timeline' ? 'Timeline only' : actsLabel(D.stravaStats) + ' only']);
+  return out;
+}
+function renderActiveChips() {
+  var box = $('activeChips'), list = activeChips();
+  box.hidden = !list.length;
+  box.innerHTML = list.map(function (c) { return '<button type="button" class="chip on-chip" data-clear="' + c[0] + '" aria-label="Clear ' + esc(c[1]) + '">' + esc(c[1]) + '<span aria-hidden="true">✕</span></button>'; }).join('');
+  // More about when: closed unless one of its filters is in use (and then it opens once).
+  var when = list.filter(function (c) { return /^(years|months|dows|hours)$/.test(c[0]); });
+  $('whenMoreSub').textContent = when.length ? when.map(function (c) { return c[1]; }).join(' · ') : ymFilters() ? 'Years, months, days of the week, time of day' : calFilters() ? 'Days of the week, time of day' : 'Time of day';
+  if (when.length && !renderActiveChips.opened) { $('whenMore').open = true; renderActiveChips.opened = true; }
+  if (!when.length) renderActiveChips.opened = false;
+}
+function clearFilter(k) {
+  if (k === 'years') F.years = new Set(M.years);
+  else if (k === 'months') F.months = new Set([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  else if (k === 'dows') F.dows = new Set([0, 1, 2, 3, 4, 5, 6]);
+  else if (k === 'hours') { F.h0 = 0; F.h1 = 24; }
+  else if (k === 'modes') { F.modes = new Set(M.modes); F.sports = new Set(M.sports); F.gear = new Set(gearIds()); }
+  else if (k === 'countries') F.countries = new Set(M.countries);
+  else if (k === 'guess') F.guess = 'all';
+  else if (k === 'src') F.src = 'all';
+  syncFilterUI();
+  changed();
+}
 $('filtersSheet').addEventListener('click', function (ev) {
   var b = ev.target.closest('button');
   if (!b) return;
@@ -653,7 +697,7 @@ function setTab(t) {
   $('timelinePage').hidden = t !== 'timeline';
   document.querySelectorAll('.dock button').forEach(function (b) { if (b.dataset.tab === t) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   hideTip();
-  if (openId && openId !== 'settingsSheet' && openId !== 'filtersSheet' && openId !== 'importsSheet' && openId !== 'mrHereSheet') closeSheets();
+  if (openId && openId !== 'filtersSheet' && !menuSheet(openId)) closeSheets();
   var fresh = t === 'insights' && dirty.insights;
   renderTab();
   // Opening Insights plays the score showing (a fresh render plays it already).
@@ -669,6 +713,14 @@ document.querySelector('.dock').addEventListener('click', function (ev) { var b 
 
 // ---------- sheets ----------
 var openId = null;
+// The Menu (the gear) and the pages it opens, each with a back arrow to it.
+var MENU_SHEETS = ['settingsSheet', 'importsSheet', 'mrSheet', 'mrHereSheet', 'prefsSheet', 'cleanupSheet'];
+function menuSheet(id) { return MENU_SHEETS.indexOf(id) >= 0; }
+function openMenuPage(id) {
+  renderSettings();
+  if (id === 'mrSheet') mrRenderRules();
+  openSheet(id);
+}
 function openSheet(id) {
   if (openId && openId !== id) closeSheets(true);
   openId = id;
@@ -676,7 +728,7 @@ function openSheet(id) {
   // On a wide screen the side panels sit next to the map, so it stays usable.
   $('scrim').hidden = wide();
   $('filtersBtn').setAttribute('aria-expanded', id === 'filtersSheet' ? 'true' : 'false');
-  document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', id === 'settingsSheet' ? 'true' : 'false'); });
+  document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', menuSheet(id) ? 'true' : 'false'); });
   $('layersBtn').setAttribute('aria-expanded', id === 'layersSheet' ? 'true' : 'false');
 }
 function closeSheets(quiet) {
@@ -696,20 +748,20 @@ $('layersBtn').addEventListener('click', function () { toggleSheet('layersSheet'
 document.addEventListener('click', function (ev) {
   var info = ev.target.closest('.info-btn');
   if (info) {
-    // Opens the box its aria-controls names (Settings, the map panel, dialogs), else its card's explanation.
+    // Opens the box its aria-controls names (the Menu pages, the map panel, dialogs), else its card's explanation.
     var box = info.getAttribute('aria-controls') && $(info.getAttribute('aria-controls')), op;
     ev.preventDefault();
     if (box) { op = box.hidden; box.hidden = !op; }
     else { var head = info.closest('.card-head'); if (!head) return; op = !head.classList.contains('info-open'); head.classList.toggle('info-open', op); }
     info.setAttribute('aria-expanded', op ? 'true' : 'false');
   } else if (ev.target.closest('[data-open-filters]')) openSheet('filtersSheet');
-  else if (ev.target.closest('[data-open-settings]')) { if (openId === 'settingsSheet') closeSheets(); else { renderSettings(); openSheet('settingsSheet'); } }
+  else if (ev.target.closest('[data-open-settings]')) { if (menuSheet(openId)) closeSheets(); else openMenuPage('settingsSheet'); }
+  else if (ev.target.closest('[data-menu]')) openMenuPage(ev.target.closest('[data-menu]').dataset.menu);
+  else if (ev.target.closest('[data-back]')) openMenuPage('settingsSheet');
+  else if (ev.target.closest('[data-clear]')) clearFilter(ev.target.closest('[data-clear]').dataset.clear);
   else if (ev.target.closest('[data-close]')) closeSheets();
 });
 $('scrim').addEventListener('click', function () { closeSheets(); });
-// Imported data opens in the filters panel's place, and its back button returns to the filters.
-$('openImports').addEventListener('click', function () { renderImports(); openSheet('importsSheet'); });
-$('importsBack').addEventListener('click', function () { openSheet('filtersSheet'); });
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { closeSheets(); hideTip(); } });
 
 // ---------- tooltips (mouse only; taps open sheets instead) ----------

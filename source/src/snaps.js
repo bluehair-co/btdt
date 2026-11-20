@@ -85,7 +85,7 @@ function snapRuleRow(s) {
 var SN = null;
 function snapStart(r) {
   if (!D) { toast('Load your Timeline file first'); return; }
-  if (!packCodes().length) { toast('Map snaps follow the lines of a station pack: add one in Settings first'); return; }
+  if (!packCodes().length) { toast('Map snaps follow the lines of a station pack: add one in Menu › Trip cleanup first'); return; }
   closeSheets(true);
   if (PREFS.proj !== 'merc') setProj('merc');
   setTab('map');
@@ -298,7 +298,7 @@ function snapEnd() {
 $('snapNewBtn').addEventListener('click', function () { snapStart(); });
 
 // ---------- train trips along the tracks ----------
-// With "Snap train trips to the tracks" on (Settings, Station packs), every train trip that no
+// With "Snap train trips to the tracks" on (Menu › Trip cleanup), every train trip that no
 // routine, map snap or correction drew is drawn along the railway of the installed packs: from the
 // railway station nearest its start (within TRACK_END_KM) to the one nearest its end, along whichever
 // of packLines' ways its GPS points follow best. A train's ends and points are often off by some way

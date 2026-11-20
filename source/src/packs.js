@@ -484,7 +484,7 @@ $('packOfferYes').addEventListener('click', function () {
   packDownload(ccs, function (t, f) { dlShow($('packOfferBar'), $('packOfferMsg'), t, f); }).then(function (r) {
     btn.disabled = false;
     packOfferClose();
-    toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Settings.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');
+    toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Menu › Trip cleanup.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');
   });
 });
 

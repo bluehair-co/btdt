@@ -69,7 +69,7 @@
           <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station packs you choose. Add the app to your home screen and it opens offline.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
           <li><b>Public transport lines</b> for a routine come only from your station packs when you have one for that country (never online there). Elsewhere, and for buses and ferries, they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
-          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) are downloaded from GitHub only when you choose a country, after an import or in Settings. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
+          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) are downloaded from GitHub only when you choose a country, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
           <li><b>Trips Timeline merged</b>, such as a train ride and the tram after it kept as one trip, are split into their legs where the GPS points show a stop or a change of speed. Each leg shows the trip it came from, and <i>Keep as one trip</i> undoes it.</li>
         </ul>
       </details>
@@ -213,7 +213,7 @@
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
-          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
       </div>
@@ -248,7 +248,7 @@
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
-            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -312,7 +312,7 @@
         <section class="card wide" id="hrCard" hidden>
           <div class="card-head"><div class="card-title"><h2>Heart rate</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div>
             <div class="seg" role="group" aria-label="Sport" id="hrSportSeg"></div>
-            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Settings.</span></div>
+            <span class="fine info-text">From the activities in the filters that recorded heart rate. Fitness: your heart rate each month while going at about the same speed (within 8% of it), leaving out each activity's first 5 minutes while your heart rate settles. The same speed at a lower heart rate means you got fitter; heat, hills, wind and tiredness push it up too, so look at the trend over several months. Zones are shares of your maximum heart rate, which you can set in Menu › Preferences.</span></div>
           <div class="hr-cols">
             <div><h3 class="hr-sub" id="hrFitTitle">Fitness</h3><div class="chart" id="hrFitChart"></div><p class="fine" id="hrFitNote" style="margin:6px 0 0"></p></div>
             <div><h3 class="hr-sub">Time in each zone</h3><div id="hrZoneTotals"></div></div>
@@ -334,7 +334,7 @@
           <div class="list-rows" id="ccList"></div>
         </section>
         <section class="card">
-          <div class="card-head"><div class="card-title"><h2>CO₂ from travel</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Estimated from average emissions per km. Change the factors in Settings.</span></div>
+          <div class="card-head"><div class="card-title"><h2>CO₂ from travel</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">Estimated from average emissions per km. Change the factors in Menu › Preferences.</span></div>
           <div id="co2Card"></div>
         </section>
       </div>
@@ -353,7 +353,7 @@
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
-            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Settings" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -394,11 +394,11 @@
     </div>
   </div>
   <div class="sheet-body">
-    <button type="button" class="data-row" id="openImports" aria-controls="importsSheet"><span data-icon="folder"></span><span class="data-row-txt"><b>Imported data</b><small id="dataRowSub"></small></span><span data-icon="right"></span></button>
+    <div class="active-chips" id="activeChips" hidden aria-label="Filters in use"></div>
     <div class="sec">
-      <h3>Days</h3>
+      <h3>When</h3>
       <div class="seg full" role="group" aria-label="Which days" id="dayMode">
-        <button type="button" data-dm="nav" aria-pressed="true">Navigator</button><button type="button" data-dm="all" aria-pressed="false">All</button><button type="button" data-dm="one" aria-pressed="false">Single day</button><button type="button" data-dm="range" aria-pressed="false">Date range</button>
+        <button type="button" data-dm="nav" aria-pressed="true">Navigator</button><button type="button" data-dm="all" aria-pressed="false">All</button><button type="button" data-dm="range" aria-pressed="false">Date range</button>
       </div>
       <div class="field" id="oneField" hidden><div class="field-head"><label for="oneDay" id="oneLabel">Day</label><button type="button" class="link-btn" id="oneToday">Today</button></div><input type="date" id="oneDay"></div>
       <div class="grid2" id="rangeFields" hidden>
@@ -406,25 +406,28 @@
         <div class="field"><label for="to">To</label><input type="date" id="to"></div>
       </div>
     </div>
-    <div class="sec" id="yearsSec">
-      <div class="sec-head"><h3>Years</h3><div class="quick"><button type="button" data-q="years" data-all="1">All</button><button type="button" data-q="years" data-all="0">None</button></div></div>
-      <div class="chips" id="years"></div>
-    </div>
-    <div class="sec" id="monthsSec">
-      <div class="sec-head"><h3>Months</h3><div class="quick"><button type="button" data-q="months" data-all="1">All</button><button type="button" data-q="months" data-all="0">None</button></div></div>
-      <div class="chips" id="months"></div>
-    </div>
-    <div class="sec" id="dowsSec">
-      <div class="sec-head"><h3>Days of the week</h3><div class="quick"><button type="button" id="dowWeekdays">Weekdays</button><button type="button" id="dowWeekend">Weekend</button><button type="button" data-q="dows" data-all="1">All</button></div></div>
-      <div class="chips" id="dows"></div>
-    </div>
-    <div class="sec">
-      <div class="sec-head"><h3>Time of day</h3><div class="quick"><button type="button" id="hoursAll">Any time</button></div></div>
-      <div class="grid2">
-        <div class="field"><label for="h0">Starting from</label><select id="h0"></select></div>
-        <div class="field"><label for="h1">Until</label><select id="h1"></select></div>
+    <details class="when-more" id="whenMore">
+      <summary><span class="when-more-t">More about when</span><small id="whenMoreSub"></small></summary>
+      <div class="sec" id="yearsSec">
+        <div class="sec-head"><h3>Years</h3><div class="quick"><button type="button" data-q="years" data-all="1">All</button><button type="button" data-q="years" data-all="0">None</button></div></div>
+        <div class="chips" id="years"></div>
       </div>
-    </div>
+      <div class="sec" id="monthsSec">
+        <div class="sec-head"><h3>Months</h3><div class="quick"><button type="button" data-q="months" data-all="1">All</button><button type="button" data-q="months" data-all="0">None</button></div></div>
+        <div class="chips" id="months"></div>
+      </div>
+      <div class="sec" id="dowsSec">
+        <div class="sec-head"><h3>Days of the week</h3><div class="quick"><button type="button" id="dowWeekdays">Weekdays</button><button type="button" id="dowWeekend">Weekend</button><button type="button" data-q="dows" data-all="1">All</button></div></div>
+        <div class="chips" id="dows"></div>
+      </div>
+      <div class="sec">
+        <div class="sec-head"><h3>Time of day</h3><div class="quick"><button type="button" id="hoursAll">Any time</button></div></div>
+        <div class="grid2">
+          <div class="field"><label for="h0">Starting from</label><select id="h0"></select></div>
+          <div class="field"><label for="h1">Until</label><select id="h1"></select></div>
+        </div>
+      </div>
+    </details>
     <div class="sec">
       <div class="sec-head"><h3>Transport</h3><div class="quick"><button type="button" data-q="modes" data-all="1">All</button><button type="button" data-q="modes" data-all="0">None</button></div></div>
       <div class="mode-tree" id="modeTree"></div>
@@ -437,33 +440,21 @@
         <button type="button" class="btn check-btn" id="checkBtn" data-g="check" aria-pressed="false" hidden></button>
       </div>
     </div>
-    <div class="sec" id="srcWrap" hidden>
-      <h3>Source</h3>
-      <div class="seg full" role="group" aria-label="Where trips come from" id="srcSeg">
-        <button type="button" data-src="all" aria-pressed="true">All</button><button type="button" data-src="strava" aria-pressed="false" id="srcActs">Strava</button><button type="button" data-src="timeline" aria-pressed="false">Timeline</button>
-      </div>
-    </div>
     <div class="sec">
       <div class="sec-head"><div class="info-head"><h3>Countries</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="ccInfo" aria-label="About countries" title="About countries"><span data-icon="info"></span></button></div><div class="quick"><button type="button" data-q="countries" data-all="1">All</button><button type="button" data-q="countries" data-all="0">None</button></div></div>
       <p class="fine info-box" id="ccInfo" hidden>A trip counts when it starts or ends in a selected country.</p>
       <input type="search" id="ccSearch" placeholder="Search countries" hidden>
       <div class="chips" id="countries"></div>
     </div>
-    <div class="sec" id="exportSec">
-      <div class="info-head"><h3>Export</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="exportInfo" aria-label="About the export" title="About the export"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="exportInfo" hidden>The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip. The time slider only plays the trips back, so it doesn't narrow the export.</p>
-      <p class="fine" id="exportText"></p>
-      <div style="display:flex;flex-wrap:wrap;gap:8px">
-        <button type="button" class="btn" id="exportJson">{ } Raw data (JSON)</button>
-        <button type="button" class="btn" id="exportCsv">Table (CSV)</button>
+    <div class="sec" id="srcWrap" hidden>
+      <h3>Source</h3>
+      <div class="seg full" role="group" aria-label="Where trips come from" id="srcSeg">
+        <button type="button" data-src="all" aria-pressed="true">All</button><button type="button" data-src="strava" aria-pressed="false" id="srcActs">Strava</button><button type="button" data-src="timeline" aria-pressed="false">Timeline</button>
       </div>
-    </div>
-    <div class="sec" id="mrHereSec" hidden>
-      <h3>MyRules</h3>
-      <div class="mr-here-line"><p class="fine" id="mrHereTxt"></p><button type="button" class="btn" id="mrHereBtn" aria-controls="mrHereSheet">Show rules</button></div>
     </div>
   </div>
 </aside>
+
 
 <!-- Views and layers -->
 <aside class="sheet right" id="layersSheet" aria-label="Views and layers" role="dialog">
@@ -482,7 +473,7 @@
       <label class="toggle-row"><span class="lbl">Speed paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="speedNote" aria-label="About speed paths" title="About speed paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySpeed"></label>
       <p class="fine info-box" id="speedNote" hidden>The average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heart rate paths<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="hrNote" aria-label="About heart rate paths" title="About heart rate paths"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHr"></label>
-      <p class="fine info-box" id="hrNote" hidden>Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Settings. Shows on the Mercator view.</p>
+      <p class="fine info-box" id="hrNote" hidden>Your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
       <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Heatmap<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="heatNote" aria-label="About the heatmap" title="About the heatmap"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layHeat"></label>
@@ -517,9 +508,9 @@
   </div>
 </aside>
 
-<!-- Imported data: opens from the top of the filters, in the same place -->
-<aside class="sheet" id="importsSheet" aria-label="Imported data" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="importsBack" aria-label="Back to filters"><span data-icon="left"></span></button><h2>Imported data</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+<!-- Your data: files, export and Home, from the Menu -->
+<aside class="sheet right" id="importsSheet" aria-label="Your data" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>Your data</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <div class="sec">
       <h3>Summary</h3>
@@ -534,37 +525,40 @@
       <h3 id="filesHead">Files</h3>
       <ul class="file-list" id="fileList" aria-labelledby="filesHead"></ul>
     </div>
-    <div class="sec">
-      <h3>MyRules</h3>
-      <div id="mrCard"></div>
+    <div class="sec" id="homeSec">
+      <h3>Home</h3>
+      <div class="mr-here-line"><p class="fine" id="homeNote"></p><button type="button" class="btn" id="homeEdit" hidden>Edit</button></div>
     </div>
-    <div class="sec">
-      <details class="help">
-        <summary>Sharper rides and runs from Strava, Garmin and other apps</summary>
-        <p class="fine">Recorded activities replace the Timeline trips at the same time, so rides, runs and walks follow the activity's GPS track. Activities Timeline missed are added too.</p>
-        <ol class="fine">
-          <li><b>Strava:</b> on strava.com open <b>Settings → My Account → Download or Delete Your Account</b> and tap <b>Request your archive</b>. Load the ZIP it emails you as it is with <b>Import more files</b>.</li>
-          <li><b>Garmin Connect:</b> request your data under <b>Account → Data Management → Export Your Data</b>, and load the ZIP as it is.</li>
-          <li>Single <b>.fit</b>, <b>.gpx</b>, <b>.tcx</b>, <b>.kml</b> or <b>.geojson</b> files from any app work too.</li>
-        </ol>
-      </details>
+    <div class="sec" id="exportSec">
+      <div class="info-head"><h3>Export</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="exportInfo" aria-label="About the export" title="About the export"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="exportInfo" hidden>The JSON has each trip as in its Raw data, GPS points included; the CSV has a row per trip. The time slider only plays the trips back, so it doesn't narrow the export.</p>
+      <p class="fine" id="exportText"></p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px">
+        <button type="button" class="btn" id="exportJson">{ } Trips (JSON)</button>
+        <button type="button" class="btn" id="exportCsv">Trips (CSV)</button>
+        <button type="button" class="btn" id="mrExportData" hidden>MyRules file</button>
+      </div>
     </div>
   </div>
 </aside>
 
-<!-- MyRules: the rules from your .myrules.json and the ones made in the app, opened from Imported data -->
-<aside class="sheet" id="mrHereSheet" aria-label="Rules in these trips" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrHereBack" aria-label="Back to filters"><span data-icon="left"></span></button><h2>Rules in these trips</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+<!-- Rules in these filters: opened from MyRules -->
+<aside class="sheet right" id="mrHereSheet" aria-label="Rules in these filters" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrHereBack" aria-label="Back to MyRules"><span data-icon="left"></span></button><h2>Rules in these filters</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <p class="fine" id="mrHereLead"></p>
     <div class="sec" id="mrHereList"></div>
-    <button type="button" class="link-btn" id="mrHereAll">All MyRules</button>
   </div>
 </aside>
-<aside class="sheet" id="mrSheet" aria-label="MyRules" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrBack" aria-label="Back to Imported data"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+<aside class="sheet right" id="mrSheet" aria-label="MyRules" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
+    <div id="mrCard"></div>
+    <div class="sec mr-here-sec" id="mrHereSec" hidden>
+      <h3>In these filters</h3>
+      <div class="mr-here-line"><p class="fine" id="mrHereTxt"></p><button type="button" class="btn" id="mrHereBtn" aria-controls="mrHereSheet">Show them</button></div>
+    </div>
     <div id="mrBody"></div>
   </div>
 </aside>
@@ -585,9 +579,26 @@
   <p class="fine" id="mrDlgNote"></p>
 </dialog>
 
-<!-- Settings -->
-<aside class="sheet right" id="settingsSheet" aria-label="Settings" role="dialog">
-  <div class="sheet-head"><h2>Settings</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+
+<!-- Menu: the gear opens it; each row opens a page with a back arrow -->
+<aside class="sheet right" id="settingsSheet" aria-label="Menu" role="dialog">
+  <div class="sheet-head"><h2>Menu</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body menu-body">
+    <button type="button" class="data-row" data-menu="importsSheet"><span data-icon="folder"></span><span class="data-row-txt"><b>Your data</b><small id="menuSub-importsSheet"></small></span><span data-icon="right"></span></button>
+    <button type="button" class="data-row" data-menu="mrSheet"><span data-icon="flag"></span><span class="data-row-txt"><b>MyRules</b><small id="menuSub-mrSheet"></small></span><span data-icon="right"></span></button>
+    <button type="button" class="data-row" data-menu="cleanupSheet"><span data-icon="bolt"></span><span class="data-row-txt"><b>Trip cleanup</b><small id="menuSub-cleanupSheet"></small></span><span data-icon="right"></span></button>
+    <button type="button" class="data-row" data-menu="prefsSheet"><span data-icon="gear"></span><span class="data-row-txt"><b>Preferences</b><small id="menuSub-prefsSheet"></small></span><span data-icon="right"></span></button>
+    <button type="button" class="data-row" id="settingsAbout" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span><span class="data-row-txt"><b>About BT•DT</b><small>How it works, getting your files, credits</small></span><span data-icon="right"></span></button>
+    <div class="sec">
+      <h3>Theme</h3>
+      <div class="seg" role="group" aria-label="Theme" id="themeSeg"><button type="button" data-t="system" aria-pressed="true">System</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></div>
+    </div>
+  </div>
+</aside>
+
+<!-- Preferences -->
+<aside class="sheet right" id="prefsSheet" aria-label="Preferences" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>Preferences</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <div class="sec">
       <h3>Units</h3>
@@ -606,13 +617,21 @@
       <div class="slider-row"><label for="maxHr">Maximum heart rate (bpm)</label><input type="number" id="maxHr" min="100" max="230" step="1" inputmode="numeric" style="width:90px"></div>
     </div>
     <div class="sec">
-      <h3>Appearance</h3>
-      <div class="seg" role="group" aria-label="Theme" id="themeSeg"><button type="button" data-t="system" aria-pressed="true">System</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></div>
+      <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
+      <div class="field"><label for="carType">Your car</label>
+        <select id="carType"><option value="petrol">Petrol</option><option value="diesel">Diesel</option><option value="hybrid">Hybrid</option><option value="ev">Electric</option><option value="custom">Custom (set below)</option></select>
+      </div>
+      <div class="field"><label for="occ">People sharing the car, on average</label><input type="number" id="occ" min="1" max="8" step="0.1" value="1"></div>
+      <label class="toggle-row"><span class="lbl">Count extra warming from flights at altitude</span><input type="checkbox" class="switch" id="rf" checked></label>
+      <details class="help"><summary>Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
     </div>
-    <div class="sec" id="homeSec">
-      <h3>Home</h3>
-      <p class="fine" id="homeNote"></p>
-    </div>
+  </div>
+</aside>
+
+<!-- Trip cleanup: every switch that changes how trips are split or drawn -->
+<aside class="sheet right" id="cleanupSheet" aria-label="Trip cleanup" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>Trip cleanup</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-body">
     <div class="sec" id="splitSec">
       <div class="info-head"><h3>Trips Timeline merged</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="splitInfo" aria-label="About splitting trips" title="About splitting trips"><span data-icon="info"></span></button></div>
       <p class="fine info-box" id="splitInfo" hidden>Timeline sometimes keeps a train ride, the wait at the station and the tram after it as one trip. BT•DT can split such trips into their legs, each with its own type and line. Automatic splits where the GPS points are clear: a stop at a station, or a stop between very different speeds. Only suggest marks such trips Split? in their details.</p>
@@ -636,28 +655,18 @@
       <label class="toggle-row"><span class="lbl">Snap train trips to the tracks<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="trackSnapInfo" aria-label="About snap train trips to the tracks" title="About snap train trips to the tracks"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="trackSnap"></label>
       <p class="fine info-box" id="trackSnapInfo" hidden>Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</p>
       <p class="fine" id="trackNote" aria-live="polite"></p>
+    </div>
+    <div class="sec" id="roadSec">
+      <h3>Roads</h3>
       <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
       <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</p>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
       <p class="fine" id="roadNote" aria-live="polite"></p>
       <button type="button" class="link-btn" id="roadDel" hidden>Remove road packs from this device</button>
     </div>
-    <div class="sec">
-      <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
-      <div class="field"><label for="carType">Your car</label>
-        <select id="carType"><option value="petrol">Petrol</option><option value="diesel">Diesel</option><option value="hybrid">Hybrid</option><option value="ev">Electric</option><option value="custom">Custom (set below)</option></select>
-      </div>
-      <div class="field"><label for="occ">People sharing the car, on average</label><input type="number" id="occ" min="1" max="8" step="0.1" value="1"></div>
-      <label class="toggle-row"><span class="lbl">Count extra warming from flights at altitude</span><input type="checkbox" class="switch" id="rf" checked></label>
-      <details class="help"><summary>Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
-    </div>
-    <div class="sec">
-      <h3>About</h3>
-      <p class="fine">BT•DT (Been There · Done That) 2.0, a hobby project by BlueHair. How it works, credits and the license are in About.</p>
-      <button type="button" class="btn" id="settingsAbout" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span>About BT•DT</button>
-    </div>
   </div>
 </aside>
+
 
 <!-- Trip details -->
 <aside class="sheet right" id="tripSheet" aria-label="Trip" role="dialog">

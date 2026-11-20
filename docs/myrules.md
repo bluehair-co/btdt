@@ -104,7 +104,7 @@ A gear period applies across its whole time frame, which often catches trips it 
 - A trip matches an entry when it fits **every** part the entry has, and the rule skips it when it matches **any** entry, like a trip in `except`.
 - Unlike `except`, it follows the data: trips loaded later that match are left alone too.
 
-**In BT•DT.** The last section of Filters, *MyRules*, says how many gear periods and routines changed the trips shown ("2 rules changed 408 of the trips shown"). *Show rules* lists them, each with how many of those trips it changed and **Turn off for these trips**. That offers:
+**In BT•DT.** In *Menu › MyRules*, the *In these filters* line says how many gear periods and routines changed the trips shown ("2 rules changed 408 of the trips shown"). *Show them* lists them, each with how many of those trips it changed and **Turn off for these trips**. That offers:
 
 - **Trips like these** (the default): the date, year, month, day of the week, time of day and country filters that are on become one `unless` entry. Transport, gear, source and *Guessed* filters aren't part of it, since a rule only touches its own type, and the gear filter is often how its trips were found. When none of those filters is on, only the next choice is offered.
 - **Just these trips**: each trip shown is added to the rule's `except`, so nothing else changes.
@@ -316,7 +316,7 @@ The app already shows two kinds of uncertainty: *type guessed from speed* and *S
 - **Trip details.** A "From MyRules" section lists each change, like "Gear: Strida EVO (was none), from *Strida EVO, Mar 2021 to Aug 2023*". Each line has **Not this trip**, which adds the trip to the rule's `except`.
 - **Snapped lines** are drawn solid, with the original GPS points dashed and faded under them in the trip details only.
 - **Filters.** The existing *Guessed types* control becomes *Guessed and inferred*: All, Leave out, Only these. A gear period's gear gets a chip under its type like Strava gear, and when it has a `strava_name`, it shares the chip.
-- **One switch for all.** Settings → MyRules has a master switch. Off shows the data exactly as the files had it, which is handy for checking a rule.
+- **One switch for all.** *Menu › MyRules* has a master switch. Off shows the data exactly as the files had it, which is handy for checking a rule.
 
 ---
 
@@ -324,7 +324,7 @@ The app already shows two kinds of uncertainty: *type guessed from speed* and *S
 
 **Loading.** The file goes through the same *Load location files* button (or with a folder or ZIP). It is saved in the browser with the rest of the import, never uploaded. Loading a second MyRules file asks whether to **merge** (rules with the same `id` are replaced) or **replace**.
 
-**Where it lives in the UI.** A *MyRules* card in **Imported data**, under the location files, showing the rule count and how many trips it changed, with *Open*. Opening it lists the rules by section, each with its own switch, the number of trips it changed, and a tap-through to those trips in the Timeline.
+**Where it lives in the UI.** *Menu › MyRules*, with a card at the top showing the rule count and how many trips it changed. Below it, the rules by section, each with its own switch, the number of trips it changed, and a tap-through to those trips in the Timeline.
 
 **Editing in the app writes rules.**
 
@@ -343,7 +343,7 @@ On the map, every stay within a named place's radius counts as that one place: p
 | Set a trip's type | correction with `start` |
 | *Same every weekday?* after correcting a commute (offered when 5+ similar trips exist) | routine |
 | *Not this trip* on an inferred value | entry in that rule's `except` |
-| *Turn off for these trips* in Filters → *Show rules*, *Trips like these* | the filters as an entry in that rule's `unless` |
+| *Turn off for these trips* in *Menu › MyRules* → *Show them*, *Trips like these* | the filters as an entry in that rule's `unless` |
 | *Turn off for these trips*, *Just these trips* | an entry per trip in that rule's `except` |
 
 The app never asks someone to type JSON. People who like files can still edit it and load it again.
@@ -367,7 +367,7 @@ Your trips come out exactly as before: it only changes how the edits are written
 The browser copy is often the only copy of rules made in the app, so the app has to keep track of what hasn't been saved anywhere else.
 
 - **What counts as a change.** Any rule written, edited, switched on or off, or deleted in the app, and any *Not this trip*, since the file was last loaded or exported. The app keeps a counter and the time of the last export, next to the saved rules. Loading the same file again doesn't count as a change.
-- **Showing it.** While there are changes, the MyRules card in Imported data says *5 changes not exported* with a dot on *Export*. Exporting clears it.
+- **Showing it.** While there are changes, the MyRules card says *5 changes not exported* with a dot on *Export*. Exporting clears it.
 - **Remove from this device.** When there are changes, tapping *Remove from this device* first shows a step about MyRules:
   1. "Your MyRules have 5 changes that are only on this device", with only the count. A **See the 5 changes** link opens the full list in its own sheet ("Strida EVO period added", "Not this trip on 14 Sep 2021"…), newest first, so a long list never crowds the dialog.
   2. **Download MyRules** (the main button) exports the file. Once the download has started, the dialog moves on to the usual removal confirmation.

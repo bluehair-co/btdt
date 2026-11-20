@@ -8,7 +8,18 @@ The rules David has set for how BT•DT looks and behaves, collected from the pr
 - **Show only the filters that matter.** Years and Months only show for *All*; Days of the week only for *All* and *Date range*. Choices that already pin the days hide the rest.
 - **Less prominent by default.** Secondary features (for example the MyRules summary in Filters) sit in a small section at the bottom with a count and a button, not as a big block at the top.
 - **The landing page stays short:** the picture, the tagline, *Load location files*, *Try the demo*, the supported services as small tags below the separator, and the *About* (i) and *How to get your files* (?) entry points. Longer text belongs in those two modals.
-- **Fixed places for fixed controls.** The filter button is at the left of the top bar and the Settings gear at its right, the same on every tab and screen size. Playback (bottom left) and Views and layers (bottom right) sit beside the dock-like tab bar on desktop and never inside it. Calendars and pickers keep the same size so buttons don't move.
+- **Fixed places for fixed controls.** The filter button is at the left of the top bar and the gear, which opens the *Menu*, at its right, the same on every tab and screen size. Playback (bottom left) and Views and layers (bottom right) sit beside the dock-like tab bar on desktop and never inside it. Calendars and pickers keep the same size so buttons don't move.
+
+## One home per job (UX clean-up, Nov 2026)
+
+Every place in the app answers one question, and a new feature goes where its question is answered. This came out of the UX audit of 20 Nov 2026; the app before it is kept on the `v1.0` branch.
+
+- **Filters**: what am I looking at? Only filters: *When* (Navigator, All, Date range), *More about when* (years, months, days of the week, time of day, closed unless one is in use), transport, countries, source. Filters in use show as chips at the top, each with ✕.
+- **Menu** (the gear): my data and the app. *Your data* (files, import, export, Home, remove), *MyRules*, *Trip cleanup* (every switch that changes how trips are split or drawn, and the packs they need), *Preferences* (units, dates, theme, heart rate, CO₂), *About*. Each page has a back arrow to the Menu, and each Menu row shows what is on right now.
+- **One door per thing.** A feature has one entry point and one name. Don't add a second button for something that already has one.
+- **Importance sets depth.** What drives the app sits shallow; rarely changed settings can sit a level deeper.
+- **A choice of one is a segmented control**, never switches that turn each other off.
+- **One main action per sheet**, at most one outline button beside it, the rest grouped or in a ⋯ menu (the button version of the (i) rule).
 
 ## Feedback while the app works
 
@@ -34,9 +45,9 @@ The rules David has set for how BT•DT looks and behaves, collected from the pr
 - Fonts: Bricolage Grotesque (titles, tagline in a thin weight) and IBM Plex Sans / Mono.
 - Icons: Google Material Icons, filled; the generic cycling icon is Material's pedal bike, with custom icons for specific gear (Strida, Halfbike, cargo bike) drawn to match it.
 - Each transport kind has its own colour token (`--m-road`, `--m-transit`, `--m-bike`, `--m-foot`, `--m-air`, `--m-water`) used everywhere: lines, icons, legends, filters.
-- Light and dark themes (Settings, or the system's). Check both.
+- Light and dark themes (*Menu › Preferences*, or the system's). Check both.
 - Phone first, desktop too: sheets slide up from the bottom on a phone and open as side panels on desktop. Every touch interaction (lasso, one-finger zoom, sliders) must work with a finger.
-- Units, dates and times follow the device's region by default and can be changed in Settings; nothing is hard-coded to km or to one date format.
+- Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*; nothing is hard-coded to km or to one date format.
 
 ## Process
 

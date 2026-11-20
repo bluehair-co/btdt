@@ -1140,3 +1140,23 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 .mr-dlg .info-head { margin-bottom: 8px; }
 .mr-dlg .info-head h2 { margin: 0; }
 .mr-dlg #mrDlgInfo { margin: -4px 0 10px; }
+
+/* ---------- Menu (the gear) and its pages ---------- */
+.menu-body .data-row { margin: 8px 0 0; }
+.menu-body .data-row:first-child { margin-top: 12px; }
+.menu-body .sec { border-bottom: 0; margin-top: 8px; }
+.sec.mr-here-sec { border-bottom: 1px solid var(--grid); }
+#mrCard:not(:empty) { padding: 12px 0 4px; }
+
+/* ---------- Filters: chips for what's in use, and More about when ---------- */
+.active-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 12px 0 2px; }
+.active-chips .on-chip { background: var(--chip-on-bg); color: var(--chip-on-fg); border-color: transparent; }
+.active-chips .on-chip span { font-size: 11px; opacity: .7; }
+details.when-more { border-bottom: 1px solid var(--grid); }
+details.when-more > summary { list-style: none; cursor: pointer; display: flex; flex-direction: column; gap: 2px; padding: 14px 28px 14px 0; position: relative; }
+details.when-more > summary::-webkit-details-marker { display: none; }
+details.when-more > summary::after { content: ""; position: absolute; right: 6px; top: 20px; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .15s; }
+details.when-more[open] > summary::after { transform: rotate(-135deg); top: 24px; }
+.when-more-t { font-weight: 600; font-size: 14px; }
+details.when-more > summary small { font-size: 12.5px; color: var(--muted); }
+details.when-more > .sec:last-child { border-bottom: 0; }
