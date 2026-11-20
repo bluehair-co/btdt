@@ -1089,6 +1089,7 @@ div.hit-row:hover { background: none; }
 .sel-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: 8px; margin: 4px 0 12px; }
 .sel-types button { display: flex; align-items: center; gap: 8px; min-height: 48px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--fg); font: inherit; font-size: 14px; cursor: pointer; text-align: left; }
 .sel-types button[aria-checked="true"] { border: 2px solid var(--accent); background: var(--chip-on-bg); color: var(--chip-on-fg); font-weight: 600; }
+.sel-types button[data-m="UNKNOWN"] { grid-column: span 2; }
 #map .leaflet-control-zoom a.sel-btn { display: flex; align-items: center; justify-content: center; border-top: 1px solid #ccc; }
 #map .leaflet-control-zoom a.sel-btn svg { width: 18px; height: 18px; fill: currentColor; }
 .sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
