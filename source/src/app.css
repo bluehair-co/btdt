@@ -383,6 +383,11 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-dlg > p { margin: 0 0 10px; }
 .mr-off-warn { display: block; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: color-mix(in srgb, var(--accent) 14%, transparent); font-weight: 600; }
 .mr-dlg-btns { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 6px; }
+.mr-clean-g { border-top: 1px solid var(--grid); padding: 2px 0 8px; }
+.mr-clean-g:first-child { border-top: 0; }
+.mr-clean-g .toggle-row { padding: 8px 0 4px; }
+.mr-clean-g .lbl { display: block; }
+.mr-clean-g summary { cursor: pointer; }
 .mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .mr-form { display: flex; flex-direction: column; gap: 10px; }
 .mr-form select, .mr-form input[type=text], .mr-form input[type=date], .mr-form input[type=number] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }

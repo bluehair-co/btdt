@@ -728,14 +728,14 @@ function tagPlaces() {
   D.places = []; D.pa = new Int32Array(n); D.pb = new Int32Array(n); D.pv = new Int32Array(nv);
   // A place you named in MyRules is a place of its own, made of exactly what is within its radius:
   // it takes nothing from the 300 m grouping around it, and gives nothing to it.
-  var byRule = {}, rules = mrActive('places').some(function (r) { return Array.isArray(r.at); });
+  var byRule = {}, pf = mrPlaceFinder(), rules = pf.n > 0;
   function ruled(r, name) {
     if (byRule[r.id] == null) { byRule[r.id] = D.places.length; D.places.push({ lat: r.at[0], lng: r.at[1], ap: null, name: name || '', mr: r.id }); }
     return byRule[r.id];
   }
   function place(lat, lng, flight, name, r) {
     if (!isFinite(lat)) return -1;
-    if (rules && !flight) { if (r === undefined) r = mrPlaceAt(lat, lng); if (r) return ruled(r, name); }
+    if (rules && !flight) { if (r === undefined) r = pf.at(lat, lng); if (r) return ruled(r, name); }
     if (flight) {
       var ap = nearestAirport(lat, lng);
       if (ap) {
@@ -757,7 +757,7 @@ function tagPlaces() {
     return id;
   }
   // Stays first, so their names label the places trips start and end at.
-  for (var v = 0; v < nv; v++) D.pv[v] = place(D.vll[2 * v], D.vll[2 * v + 1], false, D.vname[v], rules ? mrStayPlace(v) : null);
+  for (var v = 0; v < nv; v++) D.pv[v] = place(D.vll[2 * v], D.vll[2 * v + 1], false, D.vname[v], rules ? pf.stay(v) : null);
   for (var i = 0; i < n; i++) {
     var fl = MODES[D.mode[i]] === 'FLYING';
     D.pa[i] = place(D.from[2 * i], D.from[2 * i + 1], fl);

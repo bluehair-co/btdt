@@ -675,9 +675,9 @@ function renderKinds() {
   var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard'), stops = stopSpots();
   el.hidden = rules.length + stops < MIN_KINDS;
   if (el.hidden) return;
-  var by = {}, other = 0, all = 0, n = {};
+  var by = {}, other = 0, all = 0, n = {}, pf = mrPlaceFinder();
   for (var j = 0; j < selV.length; j++) {
-    var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = mrStayPlace(v), st = !r && D.pv[v] >= 0 && spotStopKey(spotKey(v));
+    var v = selV[j], h = (D.ve[v] - D.vs[v]) / 36e5, r = pf.stay(v), st = !r && D.pv[v] >= 0 && spotStopKey(spotKey(v));
     all += h;
     if (r && r.role) { by[r.role] = (by[r.role] || 0) + h; (n[r.role] || (n[r.role] = {}))[r.id] = 1; }
     // Stops from the station packs count as Transport stops, airports as Airports.
@@ -1371,9 +1371,10 @@ function buildSpotKeys() {
   for (v = 0; v < n; v++) keys[v] = root(keys[v]);
   // A place you named in MyRules is one spot: every original place within its radius (see mrUnits),
   // whatever the grouping above did with it.
-  if (mrActive('places').length) for (v = 0; v < n; v++) {
+  var pf = mrPlaceFinder();
+  if (pf.n) for (v = 0; v < n; v++) {
     if (D.pv[v] < 0) continue;
-    var r = mrStayPlace(v);
+    var r = pf.stay(v);
     if (r) keys[v] = 'mr:' + r.id;
   }
   D.skey = keys;
