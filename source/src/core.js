@@ -107,7 +107,8 @@ var ICONS = {
   sunset: 'M2 17h20v2H2zm6-1a4 4 0 0 1 8 0zm3-13v3.2L9.4 4.6 8 6l4 4 4-4-1.4-1.4L13 6.2V3z',
   sun: 'M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z',
   night: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
-  UNKNOWN: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z'
+  // Unclassified: Material's question_mark.
+  UNKNOWN: 'M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15 1.11 3.3.03 4.9-1.2 1.77-2.35 2.31-2.97 3.45-.25.46-.35.76-.35 2.24h-2.89c-.01-.78-.13-2.05.48-3.15zM14 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z'
 };
 ICONS.VEHICLE = ICONS.CAR;
 // Gear icons drawn with lines rather than one filled path: the halfbike (a standing bike with a big
@@ -139,11 +140,13 @@ var GROUPS = [
   { key: 'foot', label: 'On foot', v: '--m-foot', modes: ['WALKING', 'RUNNING'] },
   { key: 'bike', label: 'Cycling', v: '--m-bike', modes: ['CYCLING'] },
   { key: 'water', label: 'Water', v: '--m-water', modes: ['FERRY', 'BOAT'] },
-  { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER', 'UNKNOWN'] }
+  { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER'] },
+  // Trips with no type, or set to Unclassified in Edit trip when they look wrong: a kind of their own.
+  { key: 'unknown', label: 'Unclassified', v: '--m-unknown', modes: ['UNKNOWN'] }
 ];
 var GROUP_OF = {};
 GROUPS.forEach(function (g) { g.color = 'var(' + g.v + ')'; g.modes.forEach(function (m) { GROUP_OF[m] = g; }); });
-function groupOf(m) { return GROUP_OF[m] || GROUPS[GROUPS.length - 1]; }
+function groupOf(m) { return GROUP_OF[m] || GROUP_OF.OTHER; }
 function modeColor(m) { return groupOf(m).color; }
 function modeOf(i) { return MODES[D.mode[i]]; }
 // A trip's name: its Strava sport (Kayaking, Mountain bike…) when it has one, else its mode.

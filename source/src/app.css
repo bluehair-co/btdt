@@ -18,6 +18,7 @@
   --m-bike: #6250d6;
   --m-water: #e87ba4;
   --m-other: #9aa49d;
+  --m-unknown: #6e7491;
   --cc-air: #2a78d6; --cc1: #2a78d6; --cc2: #eb6834; --cc3: #1baf7a; --cc4: #eda100; --cc5: #e87ba4; --cc6: #008300; --cc7: #6250d6; --cc8: #e34948;
   --dot: #d0342c;
   --pos-still: #8a918c;
@@ -35,7 +36,7 @@
   :root:not([data-theme="light"]) {
     --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f;
     --chip: #2a2552; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a;
-    --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
+    --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; --m-unknown: #8e93ae;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
     --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(5, 3, 20, .55);
     color-scheme: dark;
@@ -44,7 +45,7 @@
 :root[data-theme="dark"] {
   --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f;
   --chip: #2a2552; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a;
-  --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
+  --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; --m-unknown: #8e93ae;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
   --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(5, 3, 20, .55);
   color-scheme: dark;
@@ -222,9 +223,9 @@ body:has(#playBar:not([hidden])) .map-legend { bottom: calc(var(--dock-h) + var(
 .leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
 /* During a day's playback the paths and the position marker take the transport colours of
    the tiles under them: by day the light theme's (the same values as at the top)... */
-#map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; }
+#map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; --m-unknown: #6e7491; }
 /* At night (when the map shows the dark tiles), the dark theme's colours. */
-#map.sun-dark { --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; }
+#map.sun-dark { --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; --m-unknown: #8e93ae; }
 /* Map panes inside a wrapper that can take a mask (see wrapPane in map.js). */
 .pane-wrap { position: absolute; pointer-events: none; }
 

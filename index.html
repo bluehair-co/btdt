@@ -62,6 +62,7 @@
   --m-bike: #6250d6;
   --m-water: #e87ba4;
   --m-other: #9aa49d;
+  --m-unknown: #6e7491;
   --cc-air: #2a78d6; --cc1: #2a78d6; --cc2: #eb6834; --cc3: #1baf7a; --cc4: #eda100; --cc5: #e87ba4; --cc6: #008300; --cc7: #6250d6; --cc8: #e34948;
   --dot: #d0342c;
   --pos-still: #8a918c;
@@ -79,7 +80,7 @@
   :root:not([data-theme="light"]) {
     --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f;
     --chip: #2a2552; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a;
-    --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
+    --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; --m-unknown: #8e93ae;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
     --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(5, 3, 20, .55);
     color-scheme: dark;
@@ -88,7 +89,7 @@
 :root[data-theme="dark"] {
   --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f;
   --chip: #2a2552; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a;
-  --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961;
+  --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; --m-unknown: #8e93ae;
     --cc-air: #3987e5; --cc1: #3987e5; --cc2: #d95926; --cc3: #199e70; --cc4: #c98500; --cc5: #d55181; --cc6: #008300; --cc7: #9085e9; --cc8: #e66767;
   --pos-still: #8f9893; --dot: #ff6b5e; --shadow: 0 8px 28px rgba(5, 3, 20, .55);
   color-scheme: dark;
@@ -266,9 +267,9 @@ body:has(#playBar:not([hidden])) .map-legend { bottom: calc(var(--dock-h) + var(
 .leaflet-sky-pane canvas { position: absolute; left: 0; top: 0; }
 /* During a day's playback the paths and the position marker take the transport colours of
    the tiles under them: by day the light theme's (the same values as at the top)... */
-#map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; }
+#map.sun-light { --m-road: #2a78d6; --m-air: #eb6834; --m-transit: #1baf7a; --m-foot: #eda100; --m-bike: #6250d6; --m-water: #e87ba4; --m-other: #9aa49d; --m-unknown: #6e7491; }
 /* At night (when the map shows the dark tiles), the dark theme's colours. */
-#map.sun-dark { --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; }
+#map.sun-dark { --m-road: #3987e5; --m-air: #d95926; --m-transit: #199e70; --m-foot: #c98500; --m-bike: #9085e9; --m-water: #d55181; --m-other: #5d6961; --m-unknown: #8e93ae; }
 /* Map panes inside a wrapper that can take a mask (see wrapPane in map.js). */
 .pane-wrap { position: absolute; pointer-events: none; }
 
@@ -4526,7 +4527,8 @@ var ICONS = {
   sunset: 'M2 17h20v2H2zm6-1a4 4 0 0 1 8 0zm3-13v3.2L9.4 4.6 8 6l4 4 4-4-1.4-1.4L13 6.2V3z',
   sun: 'M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0s.39-1.03 0-1.41L5.99 4.58zm12.37 12.37c-.39-.39-1.03-.39-1.41 0-.39.39-.39 1.03 0 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .39-.39.39-1.03 0-1.41l-1.06-1.06zm1.06-10.96c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06zM7.05 18.36c.39-.39.39-1.03 0-1.41-.39-.39-1.03-.39-1.41 0l-1.06 1.06c-.39.39-.39 1.03 0 1.41s1.03.39 1.41 0l1.06-1.06z',
   night: 'M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z',
-  UNKNOWN: 'M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10z'
+  // Unclassified: Material's question_mark.
+  UNKNOWN: 'M11.07 12.85c.77-1.39 2.25-2.21 3.11-3.44.91-1.29.4-3.7-2.18-3.7-1.69 0-2.52 1.28-2.87 2.34L6.54 6.96C7.25 4.83 9.18 3 11.99 3c2.35 0 3.96 1.07 4.78 2.41.7 1.15 1.11 3.3.03 4.9-1.2 1.77-2.35 2.31-2.97 3.45-.25.46-.35.76-.35 2.24h-2.89c-.01-.78-.13-2.05.48-3.15zM14 20c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z'
 };
 ICONS.VEHICLE = ICONS.CAR;
 // Gear icons drawn with lines rather than one filled path: the halfbike (a standing bike with a big
@@ -4558,11 +4560,13 @@ var GROUPS = [
   { key: 'foot', label: 'On foot', v: '--m-foot', modes: ['WALKING', 'RUNNING'] },
   { key: 'bike', label: 'Cycling', v: '--m-bike', modes: ['CYCLING'] },
   { key: 'water', label: 'Water', v: '--m-water', modes: ['FERRY', 'BOAT'] },
-  { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER', 'UNKNOWN'] }
+  { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER'] },
+  // Trips with no type, or set to Unclassified in Edit trip when they look wrong: a kind of their own.
+  { key: 'unknown', label: 'Unclassified', v: '--m-unknown', modes: ['UNKNOWN'] }
 ];
 var GROUP_OF = {};
 GROUPS.forEach(function (g) { g.color = 'var(' + g.v + ')'; g.modes.forEach(function (m) { GROUP_OF[m] = g; }); });
-function groupOf(m) { return GROUP_OF[m] || GROUPS[GROUPS.length - 1]; }
+function groupOf(m) { return GROUP_OF[m] || GROUP_OF.OTHER; }
 function modeColor(m) { return groupOf(m).color; }
 function modeOf(i) { return MODES[D.mode[i]]; }
 // A trip's name: its Strava sport (Kayaking, Mountain bike…) when it has one, else its mode.
@@ -12130,6 +12134,9 @@ function mrTripBlock(i) {
   if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">Drawn along the motorways and main roads of your road pack where its GPS points stay close to them (' + D.snap[i].cov + '% of the way), and along its own GPS points elsewhere: ' + dist(D.snap[i].km) + ' (its own GPS points, dashed: ' + dist(D.base.km[i]) + '). Turn it off in Settings, Station packs.</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
   var btns = '<button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('info') + 'Edit trip</button>';
+  // Remove edit: every correction that changed this trip lets go of it (mrRemoveEdits).
+  var eds = mrTripEdits(i);
+  if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
   // Find similar trips: a new routine with this trip as its line, matched by route, not by time.
@@ -12195,6 +12202,44 @@ function mrDetach(c, i) {
   c.trip.trips = c.trip.trips.filter(function (r) { return mrRefTrips(r).indexOf(i) < 0; });
   if (!c.trip.trips.length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
+// The corrections (edits) that apply to trip i: its own, bulk edits listing it, days and spans.
+function mrTripEdits(i) { return mrCorrections().filter(function (x) { return x.trips.indexOf(i) >= 0; }).map(function (x) { return x.c; }); }
+// Remove edit: an edit on this trip alone is deleted, a bulk edit lets go of it (mrDetach), and a
+// correction on a day or span leaves it out (its except). Asks first, saying what each one does.
+function mrRemoveEdits(i) {
+  var eds = mrTripEdits(i);
+  if (!eds.length) return;
+  function what(c) {
+    var t = c.then || {}, b = [];
+    if (t.mode) b.push('type ' + (LABEL[t.mode] || t.mode).toLowerCase());
+    if (t.name) b.push('title “' + t.name + '”');
+    if (t.gear) b.push('gear');
+    if (t.hide === true) b.push('hidden');
+    if (t.checked === true) b.push('type checked');
+    return b.join(', ');
+  }
+  var lines = eds.map(function (c) {
+    var w = what(c), nm = esc(c.name || c.id);
+    if (c.trip.start) return '<li>This trip\'s own edit' + (w ? ' (' + esc(w) + ')' : '') + ' is deleted.</li>';
+    if (Array.isArray(c.trip.trips)) return '<li>The trip is detached from the bulk edit <i>' + nm + '</i>' + (w ? ' (' + esc(w) + ')' : '') + (c.trip.trips.length > 1 ? '; its other trips keep it.' : ', which goes with it.') + '</li>';
+    return '<li>The trip is left out of the correction for ' + esc(c.trip.day || (c.trip.span || []).join(' – ')) + (w ? ' (' + esc(w) + ')' : '') + '; its other trips keep it.</li>';
+  }).join('');
+  mrAsk({
+    title: eds.length > 1 ? 'Remove the edits on this trip?' : 'Remove the edit on this trip?',
+    text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + '<ul class="fine" style="margin:8px 0 0;padding-left:18px">' + lines + '</ul>',
+    buttons: [['Remove', 'danger', function () {
+      eds.forEach(function (c) {
+        if (c.trip.start) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+        else if (Array.isArray(c.trip.trips)) mrDetach(c, i);
+        else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
+      });
+      mrChange('Edit removed: the trip on ' + mrWhere(i));
+      toast(eds.length > 1 ? 'Edits removed.' : 'Edit removed.');
+      openTrip(i);
+    }], ['Cancel', 'quiet', null]],
+    note: 'It goes back to what your files say. Rules like routines and gear periods still apply.'
+  });
+}
 function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
@@ -12247,6 +12292,7 @@ $('tripBody').addEventListener('click', function (ev) {
   else if (act === 'type') mrQuickType(i, b.dataset.m);
   else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
+  else if (act === 'remove') mrRemoveEdits(i);
 });
 // The correction for this one trip that Edit trip changes: the last one pointing at it by its start.
 function mrTripCorrection(i) {
@@ -12257,12 +12303,13 @@ function mrTripCorrection(i) {
 // survives loading the files again.
 function mrEditDialog(i) {
   var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]], hidden = !!D.mrHide[i];
-  var modes = MODES.filter(function (m) { return m !== 'UNKNOWN' || cur === 'UNKNOWN'; });
+  // Unclassified last: for a trip that looks wrong (a GPS glitch?) when you aren't sure what it was.
+  var modes = MODES.filter(function (m) { return m !== 'UNKNOWN'; }).concat(['UNKNOWN']);
   mrAsk({
     title: 'Edit trip',
     text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Type</span><select id="mrEType">' + modes.map(function (m) {
-      return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
+      return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === 'UNKNOWN' && m !== was ? ' (not sure what it was)' : '') + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
     }).join('') + '</select></label>' +
       '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
       '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
@@ -12291,7 +12338,7 @@ function mrSaveEdit(i) {
   mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
   if (openId === 'mrSheet') return;
   if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
-  else { openTrip(i); if (type !== oldMode) setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
+  else { openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
 }
 
 // Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
