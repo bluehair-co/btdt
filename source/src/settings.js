@@ -8,12 +8,34 @@ function renderSettings() {
   renderHrSettings();
   renderImports();
   renderSplitSettings();
+  netSettings();
   renderPacks();
   $('homeSec').hidden = !D || !!DEMO;
   if (!D || DEMO) { $('homeNote').textContent = ''; return; }
   var h = findHome();
   $('homeNote').textContent = h >= 0 ? 'Home is ' + describeHome(h) + ', judging by ' + D.homeHow + '. BT•DT labels it Home in lists.' : 'BT•DT couldn\'t tell where home is from this data.';
 }
+// Leave out cell-tower fixes (see mrApplyDrops): the switch, and how many points and trips it takes.
+function netSettings() {
+  var el = $('netFix');
+  el.checked = netFixOn();
+  var note = '';
+  if (D && D.base) {
+    var pts = 0, trips = 0;
+    if (netFixOn()) (D.netDrop || []).forEach(function (x) { if (x) { pts += x.n; trips++; } });
+    else { var net = mrNetFixes(); Object.keys(net).forEach(function (k) { trips++; pts += (D.base.pathOff[+k + 1] - D.base.pathOff[+k]) - net[k].length; }); }
+    note = !trips ? 'None of your trips has any.' : (netFixOn() ? fmt(pts) + ' GPS point' + (pts === 1 ? '' : 's') + ' left out of ' : 'Would leave out ' + fmt(pts) + ' GPS point' + (pts === 1 ? '' : 's') + ' from ') + tripsText(trips) + '.';
+  }
+  $('netNote').textContent = note;
+}
+$('netFix').addEventListener('change', function () {
+  var on = this.checked;
+  working(on ? 'Leaving out cell-tower fixes…' : 'Bringing cell-tower fixes back…', function () {
+    PREFS.netFix = on; savePrefs();
+    mrReapply();
+    netSettings();
+  });
+});
 // The files behind D, one row each: a file read as two kinds (a ZIP with a Timeline and activities) is one row.
 function importedFiles() {
   var by = {}, out = [];

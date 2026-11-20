@@ -616,6 +616,11 @@
       <div class="seg" role="group" aria-label="Split trips Timeline merged" id="tripSplitSeg"><button type="button" data-s="auto" aria-pressed="true">Automatic</button><button type="button" data-s="ask" aria-pressed="false">Only suggest</button><button type="button" data-s="off" aria-pressed="false">Off</button></div>
       <p class="fine" id="splitNote"></p>
     </div>
+    <div class="sec" id="netSec">
+      <h3>GPS cleanup</h3>
+      <label class="toggle-row"><span class="lbl" style="display:block">Leave out cell-tower fixes<small class="fine" style="display:block">Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</small></span><input type="checkbox" class="switch" id="netFix" checked></label>
+      <p class="fine" id="netNote" aria-live="polite"></p>
+    </div>
     <div class="sec" id="packSec">
       <h3>Station packs</h3>
       <p class="fine">A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>

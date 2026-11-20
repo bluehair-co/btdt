@@ -279,7 +279,8 @@ function* mrCorrectSteps(dry) {
     try { mrApplyCorrections(true); MR_WOULD = { count: MR_COUNT, left: MR_LEFT, line: D.mrLine }; } finally { MR.on = false; }
     reset();
   }
-  if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
+  // With MyRules off, cell-tower fixes still go (a setting of their own).
+  if (!MR || !MR.on) { mrApplyDrops(true); yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
   // GPS points you said to ignore go first, so routines, lines and distances all go without them.
   mrApplyDrops();
   // Places that moved (moved.js): stays and the ends of trips to and from them, before routines look at the ends.
@@ -342,9 +343,20 @@ function mrBasePoints(i) {
   for (var q = b.pathOff[i]; q < b.pathOff[i + 1]; q++) out.push({ ll: [b.pathPts[2 * q], b.pathPts[2 * q + 1]], s: b.pathT[q], t: mrIgnoreKey(D.start[i] + b.pathT[q] * 1000) });
   return out;
 }
-function mrApplyDrops() {
-  var b = D.base, by = {};
-  mrCorrections().forEach(function (x) {
+// Cell-tower and Wi-Fi fixes (netFixes in parser.js) are left out the same way, for every trip, while
+// Leave out cell-tower fixes is on in Settings (PREFS.netFix, on unless switched off). D.netDrop[i]:
+// { n (points left out), of, km (distance before) }; worked out once for the trips as loaded (D.base.net).
+function netFixOn() { return PREFS.netFix !== false; }
+function mrNetFixes() {
+  var b = D.base;
+  if (!b.net) b.net = netFixes(b === D ? D : Object.assign({}, D, b), D.order);
+  return b.net;
+}
+// netOnly: with MyRules off, only the network fixes.
+function mrApplyDrops(netOnly) {
+  var b = D.base, by = {}, net = netFixOn() ? mrNetFixes() : {};
+  D.netDrop = [];
+  if (!netOnly) mrCorrections().forEach(function (x) {
     var ig = x.c.then.ignore_points;
     if (!x.one || x.trips.length !== 1 || !Array.isArray(ig) || !ig.length) return;
     var i = x.trips[0], set = mrIgnoreSet(ig), pts = mrBasePoints(i), keep = [];
@@ -353,6 +365,15 @@ function mrApplyDrops() {
     if (keep.length === pts.length || keep.length < 2) return;
     by[i] = { rule: x.c.id, keep: keep, pts: pts };
     MR_COUNT[x.c.id] = 1;
+  });
+  // The network fixes go too: on their own, or on top of the points you ignored (still keeping two).
+  Object.keys(net).forEach(function (k) {
+    var i = +k, nk = net[k], x = by[i];
+    if (!x) { x = by[i] = { keep: nk, pts: mrBasePoints(i) }; x.net = x.pts.length - nk.length; return; }
+    var on = {};
+    nk.forEach(function (q) { on[q] = 1; });
+    var both = x.keep.filter(function (q) { return on[q]; });
+    if (both.length >= 2 && both.length < x.keep.length) { x.net = x.keep.length - both.length; x.userKeep = x.keep.length; x.keep = both; }
   });
   var list = Object.keys(by).map(Number);
   if (!list.length) return;
@@ -380,8 +401,10 @@ function mrApplyDrops() {
       gaps.push([Math.max(a >= 0 ? x.pts[a].s : -Infinity, p.s - 30), Math.min(c < x.pts.length ? x.pts[c].s : Infinity, p.s + 30)]);
     });
     var before = pathKm(x.pts.map(function (p) { return p.ll; })), after = pathKm(kept.map(function (p) { return p.ll; }));
-    D.mrDrop[i] = { rule: x.rule, n: x.pts.length - kept.length, of: x.pts.length, km: b.km[i], gaps: gaps };
-    if (before > 0) D.km[i] = Math.max(after, b.km[i] - (before - after));
+    if (x.rule) D.mrDrop[i] = { rule: x.rule, n: (x.userKeep ? x.pts.length - x.userKeep : x.pts.length - kept.length), of: x.pts.length, km: b.km[i], gaps: gaps };
+    if (x.net) D.netDrop[i] = { n: x.net, of: x.pts.length, km: b.km[i] };
+    // Never longer than before, nor shorter than the trail that's left.
+    if (before > 0) D.km[i] = Math.min(b.km[i], Math.max(after, b.km[i] - (before - after)));
   }
   O[n] = w;
   D.pathPts = P; D.pathT = T; D.pathOff = O;
