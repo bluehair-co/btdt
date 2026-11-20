@@ -1480,6 +1480,21 @@ function homeSpot() {
   return best;
 }
 // Spots among the stays vs, most time first.
+// Where a spot's pin goes: the middle (median) of all its stays, so one stay somewhere else (the
+// first one of a place Google moved, before its old building was worked out) doesn't pull the pin.
+// Worked out once per D.skey.
+function spotPos(key) {
+  if (!D.skey || D.skey.length !== D.vs.length) buildSpotKeys();
+  if (D.spotPosFor !== D.skey) {
+    var by = {};
+    for (var v = 0; v < D.vs.length; v++) { var k = D.skey[v], o = by[k] || (by[k] = [[], []]); o[0].push(D.vll[2 * v]); o[1].push(D.vll[2 * v + 1]); }
+    var med = function (a) { a.sort(function (x, y) { return x - y; }); return a[a.length >> 1]; };
+    D.spotPosC = {};
+    for (var k2 in by) D.spotPosC[k2] = [med(by[k2][0]), med(by[k2][1])];
+    D.spotPosFor = D.skey;
+  }
+  return D.spotPosC[key];
+}
 function spotsOf(vs) {
   var by = {}, order = [];
   vs.forEach(function (v) {
@@ -1487,7 +1502,8 @@ function spotsOf(vs) {
     if (!s) {
       s = by[key] = { key: key, pid: key.slice(0, 3) === 'id:' ? key.slice(3) : D.vpid && D.vpid[v] || '', lat: D.vll[2 * v], lng: D.vll[2 * v + 1], p: D.pv[v], n: 0, h: 0, last: 0, lv: v, name: '', home: false };
       // A named place's spot sits at the place's own centre.
-      var r = key.slice(0, 3) === 'mr:' && mrById(key.slice(3));
+      var r = key.slice(0, 3) === 'mr:' && mrById(key.slice(3)), c = spotPos(key);
+      if (c) { s.lat = c[0]; s.lng = c[1]; }
       if (r && Array.isArray(r.at)) { s.lat = r.at[0]; s.lng = r.at[1]; s.pid = ''; }
       order.push(s);
     }
