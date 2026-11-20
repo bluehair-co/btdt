@@ -625,9 +625,10 @@
       <p class="fine" id="packMsg" aria-live="polite"></p>
       <label class="toggle-row"><span class="lbl" style="display:block">Snap train trips to the tracks<small class="fine" style="display:block">Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="trackSnap"></label>
       <p class="fine" id="trackNote" aria-live="polite"></p>
-      <label class="toggle-row"><span class="lbl" style="display:block">Snap car trips to roads<small class="fine" style="display:block">Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device; turning it off removes it. Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <label class="toggle-row"><span class="lbl" style="display:block">Snap car trips to roads<small class="fine" style="display:block">Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</small></span><input type="checkbox" class="switch" id="roadSnap"></label>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
       <p class="fine" id="roadNote" aria-live="polite"></p>
+      <button type="button" class="link-btn" id="roadDel" hidden>Remove road packs from this device</button>
     </div>
     <div class="sec">
       <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
