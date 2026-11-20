@@ -14,7 +14,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'src')
 DIST = os.path.join(HERE, 'dist')
 V1 = os.path.join(HERE, 'place-data.html')
-JS = ['core.js', 'data.js', 'map.js', 'insights.js', 'timeline.js', 'rules.js', 'packs.js', 'snaps.js','roads.js', 'split.js', 'select.js', 'ignore.js', 'settings.js']
+JS = ['core.js', 'data.js', 'map.js', 'insights.js', 'timeline.js', 'rules.js', 'moved.js', 'packs.js', 'snaps.js','roads.js', 'split.js', 'select.js', 'ignore.js', 'settings.js']
 LEAFLET = 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/'
 
 

@@ -1158,6 +1158,8 @@ body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
 body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 .bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .bg-spin { animation-duration: 2s; } }
+.mv-map { height: 240px; border-radius: 10px; border: 1px solid var(--line); }
+.mv-acts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -1253,6 +1255,7 @@ body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
           <li>Country borders from <a href="https://www.naturalearthdata.com" target="_blank" rel="noopener">Natural Earth</a> <small>Public domain</small></li>
           <li>Towns and cities from <a href="https://www.geonames.org" target="_blank" rel="noopener">GeoNames</a> <small>CC BY 4.0</small></li>
           <li>Airports from <a href="https://ourairports.com" target="_blank" rel="noopener">OurAirports</a> <small>Public domain</small></li>
+          <li>Plus codes read with the <a href="https://github.com/google/open-location-code" target="_blank" rel="noopener">Open Location Code</a> algorithm <small>Apache License 2.0</small></li>
           <li>Sunrise and sunset worked out with the formulas of <a href="https://github.com/mourner/suncalc" target="_blank" rel="noopener">SunCalc</a> <small>BSD 2-Clause</small></li>
           <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
           <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
@@ -1944,7 +1947,7 @@ function dayOf(t) {
 function Collector() {
   this.start = []; this.end = []; this.day = []; this.mode = []; this.km = []; this.est = []; this.off = []; this.orig = []; this.from = []; this.to = [];
   this.pathPts = []; this.pathT = []; this.pathOff = [0];
-  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = []; this.vpid = [];
+  this.vs = []; this.ve = []; this.vday = []; this.voff = []; this.vll = []; this.vtype = []; this.vname = []; this.vpid = []; this.vgoog = [];
 }
 // Trips Timeline couldn't classify get a mode guessed from their average speed,
 // marked with the GUESSED bit in est.
@@ -2047,12 +2050,15 @@ function fillTimes(pts, t, dur) {
 }
 // Google's home and work tags (semanticType) are left out: they often don't match what you
 // labelled yourself. vtype stays in the data (always 0) so saved data keeps its shape.
-Collector.prototype.visit = function (st, et, ll, type, name, pid) {
+// goog: Google's location for the place, when the stay was moved off it to where your GPS was (see
+// movedPlaces); kept so the app can put it back (vgoog, NaN for every other stay).
+Collector.prototype.visit = function (st, et, ll, type, name, pid, goog) {
   if (!st || !et || !ll || !(et.ms > st.ms)) return;
   var d = dayOf(st);
   if (d == null || !isFinite(d)) return;
   this.vs.push(st.ms); this.ve.push(et.ms); this.vday.push(d); this.voff.push(st.off != null ? st.off : NO_OFF);
   this.vll.push(ll[0], ll[1]); this.vtype.push(0); this.vname.push(name || ''); this.vpid.push(pid ? String(pid) : '');
+  this.vgoog.push(goog ? goog[0] : NaN, goog ? goog[1] : NaN);
 };
 function pathKm(pts) {
   var t = 0;
@@ -2816,16 +2822,31 @@ function badPoint(ms, ll) {
 }
 // Timeline keeps a stay as a place and that place's location today, not where it was when you were
 // there: when a business moves, every old stay there moves with it (years of office days showing up
-// across town), along with the ends of the trips to and from them. The GPS points recorded during a
-// stay say where you really were. A stay's GPS spot is the middle of its points when none of them is
-// within MOVED_KM of the place and most are within 500 m of that middle; a stay with no points of its
-// own uses the last point before it and the first after it (each within 10 minutes, within 500 m of
-// each other). A place is moved when at least 3 of its stays have a GPS spot over MOVED_KM from it and
-// within 500 m of the middle of those spots: those stays take that middle, and the trips ending or
-// starting within 10 minutes of them at the place's location follow. Stays whose GPS agrees with the
-// place (such as later visits to the new building) are left alone, as is a place that is off only once.
+// across town, or a few streets away), along with the ends of the trips to and from them. The GPS
+// points recorded during a stay say where you really were. A stay's GPS spot is the middle of its
+// points when most of them are within SPOT_KM of that middle; a stay with no points of its own uses
+// the last point before it and the first after it (each within 10 minutes, within 500 m of each
+// other). A place moved when, of its stays whose spot is over MOVED_KM from it, at least 3 and
+// MOVED_SHARE of them are within SPOT_KM of the middle of those spots (one spot, not GPS spread
+// around), and in time they come before or after the stays whose spot agrees with the place, give or
+// take MOVED_OFF of them (the old building, then the new one; GPS that is off now and then is mixed in
+// time). The stays from the first to the last of them take that middle, except those whose spot
+// agrees with the place (indoors, GPS is often too scattered to give a spot at all), and the trips
+// ending or starting within 10 minutes of them at the place's location follow. Later visits to the
+// new building are left alone, as is a place that is off only once or twice.
+// Airports are left alone: they are big, and Google's pin is often far from the terminal or station
+// where your phone was, on every visit, which looks just like a place that moved. A place within
+// MOVED_AIRPORT_KM of an airport with scheduled flights is one (the app's airport list: sent to the
+// worker as MOVED_AIRPORTS, or nearestAirport when this runs on the main thread).
 // V: [{st, et, ll, pid}] (ms); paths: [[ms, ll], …] by time. Sets fix on the moved stays.
-var MOVED_KM = 2;
+var MOVED_AIRPORTS = null, MOVED_AIRPORT_KM = 4;
+function nearAirport(ll) {
+  var L = MOVED_AIRPORTS, i;
+  if (L) { for (i = 0; i < L.length; i++) if (Math.abs(L[i][0] - ll[0]) < 0.1 && km(ll, L[i]) < MOVED_AIRPORT_KM) return true; return false; }
+  var a = typeof nearestAirport === 'function' ? nearestAirport(ll[0], ll[1]) : null;
+  return !!a && km(ll, [a.lat, a.lng]) < MOVED_AIRPORT_KM;
+}
+var MOVED_KM = 0.6, SPOT_KM = 0.5, MOVED_SHARE = 0.6, MOVED_OFF = 0.1;
 function movedPlaces(V, paths) {
   function mid(L) {
     var a = L.map(function (x) { return x[0]; }).sort(function (x, y) { return x - y; }), b = L.map(function (x) { return x[1]; }).sort(function (x, y) { return x - y; });
@@ -2840,25 +2861,40 @@ function movedPlaces(V, paths) {
     var i = at(v.st), pts = [], k;
     for (k = i; k < paths.length && paths[k][0] <= v.et; k++) pts.push(paths[k][1]);
     if (pts.length) {
-      for (k = 0; k < pts.length; k++) if (km(pts[k], v.ll) <= MOVED_KM) return null;
       var g = mid(pts), n = 0;
-      for (k = 0; k < pts.length; k++) if (km(pts[k], g) < 0.5) n++;
-      return 2 * n >= pts.length && km(g, v.ll) > MOVED_KM ? g : null;
+      for (k = 0; k < pts.length; k++) if (km(pts[k], g) < SPOT_KM) n++;
+      return 2 * n >= pts.length ? g : null;
     }
     var p = paths[i - 1], q = paths[i];
     if (!p || !q || v.st - p[0] > 6e5 || q[0] - v.et > 6e5 || km(p[1], q[1]) > 0.5) return null;
-    return km(p[1], v.ll) > MOVED_KM && km(q[1], v.ll) > MOVED_KM ? [(p[1][0] + q[1][0]) / 2, (p[1][1] + q[1][1]) / 2] : null;
+    return [(p[1][0] + q[1][0]) / 2, (p[1][1] + q[1][1]) / 2];
+  }
+  // The fewest stays that would have to go for all of a's to come before all of b's, or after.
+  function handover(a, b) {
+    var ev = a.map(function (t) { return [t, 0]; }).concat(b.map(function (t) { return [t, 1]; })).sort(function (x, y) { return x[0] - y[0]; });
+    var best = Infinity;
+    [0, 1].forEach(function (first) {
+      var after = ev.filter(function (e) { return e[1] === first; }).length, before = 0;
+      best = Math.min(best, after);
+      ev.forEach(function (e) { if (e[1] === first) after--; else before++; best = Math.min(best, after + before); });
+    });
+    return best;
   }
   var by = {};
   V.forEach(function (v) {
-    var g = v.ll && v.et > v.st && spot(v);
-    if (g) (by[v.pid || v.ll.join()] = by[v.pid || v.ll.join()] || []).push({ v: v, g: g });
+    if (!v.ll || !(v.et > v.st)) return;
+    var k = v.pid || v.ll.join();
+    (by[k] = by[k] || []).push({ v: v, g: spot(v) });
   });
   Object.keys(by).forEach(function (k) {
-    var L = by[k];
-    if (L.length < 3) return;
-    var c = mid(L.map(function (x) { return x.g; })), near = L.filter(function (x) { return km(x.g, c) < 0.5; });
-    if (near.length >= 3) near.forEach(function (x) { x.v.fix = c; });
+    var A = by[k], ll = A[0].v.ll, L = A.filter(function (x) { return x.g; }), far = L.filter(function (x) { return km(x.g, ll) > MOVED_KM; });
+    if (far.length < 3) return;
+    var c = mid(far.map(function (x) { return x.g; })), near = far.filter(function (x) { return km(x.g, c) < SPOT_KM; });
+    if (near.length < 3 || near.length < MOVED_SHARE * far.length || km(c, ll) <= MOVED_KM || nearAirport(ll)) return;
+    var here = L.filter(function (x) { return km(x.g, ll) <= MOVED_KM; }).map(function (x) { return x.v.st; });
+    if (handover(near.map(function (x) { return x.v.st; }), here) > Math.floor(MOVED_OFF * near.length)) return;
+    var t0 = Math.min.apply(null, near.map(function (x) { return x.v.st; })), t1 = Math.max.apply(null, near.map(function (x) { return x.v.st; }));
+    A.forEach(function (x) { if (x.v.st >= t0 && x.v.st <= t1 && !(x.g && km(x.g, x.v.ll) <= MOVED_KM) && km(c, x.v.ll) > MOVED_KM) x.v.fix = c; });
   });
 }
 // The stays among Timeline's segments (or iOS items), in order: {st, et, ll, type, pid}.
@@ -2914,7 +2950,7 @@ function parseAndroid(o, c) {
     var st = parseTime(s.startTime), et = parseTime(s.endTime);
     if (s.visit) {
       var v = V[vi++];
-      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid);
+      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid, v.fix && v.ll);
     }
     if (!s.activity) continue;
     var a = s.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -3025,7 +3061,7 @@ function parseIos(arr, c) {
     var st = parseTime(it.startTime), et = parseTime(it.endTime);
     if (it.visit) {
       var v = V[vi++];
-      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid);
+      c.visit(st, et, v.fix || v.ll, v.type, '', v.pid, v.fix && v.ll);
     }
     if (!it.activity) continue;
     var a = it.activity, p = split(st && et ? between(paths, st.ms, et.ms) : null);
@@ -3260,7 +3296,7 @@ function dropDuplicateFlights(c) {
   }
   if (!any) return c;
   var o = new Collector();
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid'].forEach(function (k) { o[k] = c[k]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vgoog'].forEach(function (k) { o[k] = c[k]; });
   for (i = 0; i < c.mode.length; i++) {
     if (drop[i]) continue;
     o.start.push(c.start[i]); o.end.push(c.end[i]); o.day.push(c.day[i]); o.mode.push(c.mode[i]); o.km.push(c.km[i]); o.est.push(c.est[i]); o.off.push(c.off[i]); o.orig.push(c.orig[i]);
@@ -3280,7 +3316,8 @@ function finish(c, src) {
     from: Float32Array.from(c.from), to: Float32Array.from(c.to),
     pathPts: Float32Array.from(c.pathPts), pathT: Float32Array.from(c.pathT), pathOff: Uint32Array.from(c.pathOff),
     vs: Float64Array.from(c.vs), ve: Float64Array.from(c.ve), vday: Int32Array.from(c.vday), voff: Int16Array.from(c.voff),
-    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid
+    vll: Float32Array.from(c.vll), vtype: Uint8Array.from(c.vtype), vname: c.vname, vpid: c.vpid,
+    vgoog: c.vgoog.some(isFinite) ? Float32Array.from(c.vgoog) : null
   };
 }
 var NOT_TIMELINE = "This file doesn't look like location data BT•DT can read. Pick Timeline.json from your phone, Records.json or Semantic Location History from Google Takeout, a Dawarich or Strava export, or GPX, KML, GeoJSON, TCX or FIT files.";
@@ -4400,6 +4437,7 @@ function splitPlan(run, near) {
 if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScope) {
   self.onmessage = function (e) {
     var files = e.data.files;
+    if (e.data.airports) MOVED_AIRPORTS = e.data.airports;
     (function next(i) {
       if (i >= files.length) { self.postMessage({ type: 'done' }); return; }
       var f = files[i], label = files.length > 1 ? ' (' + (i + 1) + ' of ' + files.length + ')' : '';
@@ -4417,7 +4455,7 @@ if (typeof WorkerGlobalScope !== 'undefined' && self instanceof WorkerGlobalScop
     })(0);
   };
 }
-if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm };
+if (typeof module !== 'undefined') module.exports = { TripIndex: TripIndex, VOTE_GROUP: VOTE_GROUP, GUESSED: GUESSED, CHECK_CONF: CHECK_CONF, profileMode: profileMode, PATH_TRIP: PATH_TRIP, JUMPS: JUMPS, cleanJumps: cleanJumps, jumpKeep: jumpKeep, parseTimeline: parseTimeline, withTrack: withTrack, mergeTracks: mergeTracks, RECORDS_GPS: RECORDS_GPS, MODES: MODES, normMode: normMode, km: km, SRC: SRC, NO_OFF: NO_OFF, parseFile: parseFile, dwBuild: dwBuild, LocFiles: LocFiles, gpxTracks: gpxTracks, readKml: readKml, geoFeature: geoFeature, readFit: readFit, isActivityTrack: isActivityTrack, appOf: appOf, DwPoints: DwPoints, dwPoint: dwPoint, STRAVA: STRAVA, SPORTS: SPORTS, stravaSport: stravaSport, splitPlan: splitPlan, retypeGuessed: retypeGuessed, pathKm: pathKm, setMovedAirports: function (L) { MOVED_AIRPORTS = L; } };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
@@ -5276,7 +5314,7 @@ function* setDataSteps(R) {
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
-  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to };
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to, vll: D.vll };
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {
@@ -6051,12 +6089,16 @@ function merge(base, parts) {
   var nv = vout.length;
   var R = gather(all, out, src);
   R.vs = new Float64Array(nv); R.ve = new Float64Array(nv); R.vday = new Int32Array(nv); R.voff = new Int16Array(nv); R.vll = new Float32Array(2 * nv); R.vtype = new Uint8Array(nv); R.vname = []; R.vpid = []; R.vsrcs = new Uint8Array(nv);
+  // Google's location for stays moved to where your GPS was (see movedPlaces), NaN for the rest.
+  var anyG = all.some(function (p) { return p.vgoog; });
+  R.vgoog = anyG ? new Float32Array(2 * nv).fill(NaN) : null;
   R.files = (base ? base.files || [] : []).concat(parts.concat(sv).map(function (p) { return { name: p.name, kind: p.kind, n: p.start.length }; }));
   vout.forEach(function (x, j) {
     var p = all[x[0]], i = x[1];
     R.vs[j] = x[2]; R.ve[j] = x[3]; R.voff[j] = p.voff[i];
     R.vday[j] = x[2] === p.vs[i] ? p.vday[i] : dayOf({ ms: x[2], off: p.voff[i] === NO_OFF ? null : p.voff[i] });
     R.vll[2 * j] = p.vll[2 * i]; R.vll[2 * j + 1] = p.vll[2 * i + 1]; R.vtype[j] = p.vtype[i]; R.vname.push(p.vname[i] || ''); R.vpid.push(p.vpid && p.vpid[i] || ''); R.vsrcs[j] = vsrc(p, i);
+    if (anyG && p.vgoog) { R.vgoog[2 * j] = p.vgoog[2 * i]; R.vgoog[2 * j + 1] = p.vgoog[2 * i + 1]; }
   });
   // Records.json and Dawarich points give the Timeline trips their full GPS trail (see withTrack).
   var track = mergeTracks(all.map(function (p) { return p.track; }));
@@ -6165,7 +6207,7 @@ function withStrava(R) {
     O.est[j] |= STRAVA;
     if (off[k_] !== NO_OFF) { O.off[j] = off[k_]; O.day[j] = Math.floor((S.start[k_] + off[k_] * 60000) / 864e5); }
   });
-  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
+  ['vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vgoog', 'vsrcs', 'files', 'strava', 'track'].forEach(function (key) { O[key] = R[key]; });
   var apps = {};
   for (k = 0; k < m; k++) { var sm = S.smeta && S.smeta[k], a = sm && sm.app != null ? sm.app : 'Strava'; apps[a] = (apps[a] || 0) + 1; }
   O.stravaStats = { acts: m, matched: matched, replaced: replaced, added: m - matched, apps: apps };
@@ -6191,7 +6233,9 @@ function runParser(files) {
         else if (m.type === 'done') { worker.terminate(); done(); }
       };
       worker.onerror = function () { worker.terminate(); mainThread(); };
-      worker.postMessage({ files: files });
+      // The airports, for the check on places Google moved (see movedPlaces).
+      if (!AP) buildAirports();
+      worker.postMessage({ files: files, airports: AP.all.map(function (a) { return [a.lat, a.lng]; }) });
     } else mainThread();
     function mainThread() {
       results = []; errors = []; skipped = 0;
@@ -6357,7 +6401,7 @@ function saveData(R) {
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { /* ignore */ }
   var keep = {};
   ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'pathPts', 'pathT', 'pathOff',
-    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
+    'vs', 've', 'vday', 'voff', 'vll', 'vtype', 'vname', 'vpid', 'vgoog', 'vsrcs', 'files', 'strava', 'track'].forEach(function (k) { keep[k] = R[k]; });
   return withStore('btdt', 'readwrite', function (s) { return s.put(keep, 'trips'); }).catch(function () { /* this visit still works */ });
 }
 function loadSaved() {
@@ -10741,7 +10785,7 @@ function placePage(o, keepScroll) {
         '<span class="spot-acts"><button type="button" class="btn quiet" data-pmap="' + s.lat + ',' + s.lng + '">Map</button>' +
         '<a class="btn quiet" href="' + esc(mapsUrl(s.lat, s.lng, s.pid)) + '" target="_blank" rel="noopener noreferrer">Google Maps</a></span></div>';
     }).join('') + '</div>' + (spots.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '');
-  if (o.spot) html += mrSpotHtml(o.spot) + mergeHtml(o.spot);
+  if (o.spot) html += mrSpotHtml(o.spot) + mvSpotHtml(o.spot) + mergeHtml(o.spot);
   html += '<h4 class="place-h">Visits</h4><div class="list-rows" id="placeVisits">' + placeVisits.slice(0, 20).map(visitRow).join('') + '</div>' +
     (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
@@ -10998,7 +11042,7 @@ $('tlSearchClear').addEventListener('click', function () { clearTimeout(tlQT); t
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
 var MR = null;
-var MR_SECTIONS = ['places', 'gear', 'routines', 'snaps', 'corrections'];
+var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes', other: 'Other' };
 var MR_COUNT = {};   // trips (gear) or stays (places) each rule changed, by id
@@ -11257,6 +11301,7 @@ function* mrCorrectSteps(dry) {
   function reset() {
     D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
     D.pathPts = b.pathPts; D.pathT = b.pathT; D.pathOff = b.pathOff; D.from = b.from; D.to = b.to; D.mrDrop = [];
+    if (b.vll) D.vll = b.vll; D.mvStay = {};
     D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
     MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
   }
@@ -11270,6 +11315,8 @@ function* mrCorrectSteps(dry) {
   if (!MR || !MR.on) { yield* mrTrackSteps(); mrApplyRoads(); yield; yield* mrLearnSteps(); return; }
   // GPS points you said to ignore go first, so routines, lines and distances all go without them.
   mrApplyDrops();
+  // Places that moved (moved.js): stays and the ends of trips to and from them, before routines look at the ends.
+  mrApplyMoves();
   yield;
   // Routines first, so a correction on the same trip wins over them.
   mrApplyRoutines();
@@ -12039,7 +12086,7 @@ function mrRenderRules() {
   var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
   if (!MR.on) h += '<p class="fine mr-warn">MyRules are switched off, so none of these rules change your trips. Routines and corrections show how many trips they would change. <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (MR_AMB) h += '<p class="fine mr-warn">' + tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear. Narrow one of the periods (a shorter period, or a distance limit) to pick one.</p>';
-  var gear = mrList('gear'), places = mrList('places'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
+  var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
     var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
@@ -12048,10 +12095,13 @@ function mrRenderRules() {
     var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR.on ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
-  if (places.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
+  if (places.length || moves.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
-  }).join('') + '</div>';
+  }).join('') + (moves.length ? '<h4 class="place-h mr-grp">Places that moved</h4>' + moves.map(function (r) {
+    var sub = (r.keep ? 'Google\'s location kept' : 'Where it was ' + mvWhen(r.when)) + ' · ' + mvStays(MR.on ? MR_COUNT[r.id] || 0 : 0);
+    return mrRuleRow('moves', r, r.name || r.id, sub, 'pin', r.keep ? '#9aa49d' : '#0f7c8c', null);
+  }).join('') : '') + '</div>';
   // Corrections by date (newest first) or by type (then newest first), with a heading per type.
   var csort = PREFS.corSort === 'type' ? 'type' : 'date', cgrp = null;
   cor = cor.slice().sort(function (a, b) { return csort === 'type' && mrCorGroup(a).localeCompare(mrCorGroup(b)) || mrCorTime(b) - mrCorTime(a); });
@@ -12092,7 +12142,7 @@ function mrRenderRules() {
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
   if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
+  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
   if (tabs.length > 1) {
     if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
     h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
@@ -12520,6 +12570,7 @@ function mrEditRule(ref) {
   if (sec === 'routines') { mrRoutineDialog(r); return; }
   if (sec === 'snaps') { closeSheets(true); snapStart(r); return; }
   if (!D) { toast('Load your Timeline file to edit this'); return; }
+  if (sec === 'moves') { mvEditRule(r); return; }
   if (sec === 'places') {
     if (!Array.isArray(r.at)) { toast('This place has no position to edit'); return; }
     needPlaces(); mrPlaceDialog('mr:' + r.id); return;
@@ -13395,6 +13446,272 @@ function mrTurnOffHere(id) {
 function mrUseV2() {
   var v = String(MR.doc.myrules || '0.1').split('.');
   if (v[0] === '0' && +v[1] < 2) { MR.doc.myrules = MR_VER; if (!MR.doc.$schema || /myrules-0\.1\.json$/.test(MR.doc.$schema)) MR.doc.$schema = MR_SCHEMA; }
+}
+
+// ---------- places Google moved ----------
+// Timeline keeps one location per place, today's. When a place moves (an employer relocating) and
+// Google keeps its place ID, every old stay there shows at the new address. When a file is read,
+// movedPlaces (parser.js) puts those stays back where your phone's GPS was, when that is clear, and
+// keeps Google's location in vgoog. On top of that, MyRules moves (MR.doc.moves, one rule per place
+// that moved, by Google's place IDs):
+// - { google_place_ids, at, when: { from, to } }: you say where the place was then (This place
+//   moved… on its page). Its stays in those dates go to at.
+// - { google_place_ids, keep: true }: Use Google's location: the stays BT•DT moved go back.
+// A stay's move takes the ends of the trips arriving within MV_END_MS before it starts, or leaving
+// within MV_END_MS after it ends, that are within MV_END_KM of where the stay was, along with the
+// first or last point of their trail there; their distance changes by what the end moved.
+// D.mvStay[v]: { rule, keep } for each stay a rule moved. MR_COUNT counts them by rule.
+var MV_END_MS = 6e5, MV_END_KM = 0.2;
+function mvRules() {
+  return mrActive('moves').filter(function (r) {
+    return Array.isArray(r.google_place_ids) && r.google_place_ids.length && (r.keep === true || Array.isArray(r.at) && isFinite(+r.at[0]) && isFinite(+r.at[1]));
+  });
+}
+function mvWhenOk(r, v) {
+  var w = r.when || {}, f = mrDayNum(w.from), t = mrDayNum(w.to), d = D.vday[v];
+  return (f == null || d >= f) && (t == null || d <= t);
+}
+// Google's location for a stay: where Timeline put it, before BT•DT moved it.
+function mvGoogle(v) {
+  var g = D.vgoog, b = D.base && D.base.vll || D.vll;
+  return g && isFinite(g[2 * v]) ? [g[2 * v], g[2 * v + 1]] : [b[2 * v], b[2 * v + 1]];
+}
+function mvAuto(v) { return !!(D.vgoog && isFinite(D.vgoog[2 * v])); }
+function mrApplyMoves() {
+  D.mvStay = {};
+  var L = mvRules(), b = D.base, by = {}, moved = [], v;
+  L.forEach(function (r) { MR_COUNT[r.id] = 0; r.google_place_ids.forEach(function (id) { (by[id] = by[id] || []).push(r); }); });
+  if (!L.length) return;
+  for (v = 0; v < D.vs.length; v++) {
+    var R = D.vpid[v] && by[D.vpid[v]];
+    if (!R) continue;
+    // Where you said it was wins over keeping Google's location; of those, the later rule.
+    var pick = null;
+    R.forEach(function (r) { if (!r.keep && mvWhenOk(r, v)) pick = r; });
+    if (!pick && mvAuto(v)) R.forEach(function (r) { if (r.keep) pick = r; });
+    if (!pick) continue;
+    var to = pick.keep ? mvGoogle(v) : [+pick.at[0], +pick.at[1]], from = [D.vll[2 * v], D.vll[2 * v + 1]];
+    D.mvStay[v] = { rule: pick.id, keep: !!pick.keep };
+    MR_COUNT[pick.id]++;
+    if (km(to, from) > 0.001) moved.push({ v: v, to: to, from: from });
+  }
+  if (!moved.length) return;
+  D.vll = Float32Array.from(D.vll);
+  moved.forEach(function (x) { D.vll[2 * x.v] = x.to[0]; D.vll[2 * x.v + 1] = x.to[1]; });
+  // The trips to and from them.
+  if (D.from === b.from) D.from = Float32Array.from(b.from);
+  if (D.to === b.to) D.to = Float32Array.from(b.to);
+  if (D.pathPts === b.pathPts) D.pathPts = Float32Array.from(b.pathPts);
+  var S = moved.slice().sort(function (p, q) { return D.vs[p.v] - D.vs[q.v]; }), E = moved.slice().sort(function (p, q) { return D.ve[p.v] - D.ve[q.v]; });
+  function near(list, key, t) {
+    var lo = 0, hi = list.length;
+    while (lo < hi) { var m = (lo + hi) >> 1; if (key[list[m].v] < t - MV_END_MS) lo = m + 1; else hi = m; }
+    var out = [];
+    for (; lo < list.length && key[list[lo].v] <= t + MV_END_MS; lo++) out.push(list[lo]);
+    return out;
+  }
+  function moveEnd(i, end, x) {
+    var o = end ? D.to : D.from, old = [o[2 * i], o[2 * i + 1]];
+    if (!isFinite(old[0]) || km(old, x.from) > MV_END_KM) return false;
+    o[2 * i] = x.to[0]; o[2 * i + 1] = x.to[1];
+    var a = D.pathOff[i], z = D.pathOff[i + 1] - 1, q = end ? z : a, nb;
+    if (z >= a && km([D.pathPts[2 * q], D.pathPts[2 * q + 1]], old) < 0.05) { D.pathPts[2 * q] = x.to[0]; D.pathPts[2 * q + 1] = x.to[1]; }
+    var q2 = end ? z - 1 : a + 1;
+    nb = z > a ? [D.pathPts[2 * q2], D.pathPts[2 * q2 + 1]] : end ? [D.from[2 * i], D.from[2 * i + 1]] : [D.to[2 * i], D.to[2 * i + 1]];
+    if (isFinite(nb[0])) D.km[i] = Math.max(0, D.km[i] + km(x.to, nb) - km(old, nb));
+    return true;
+  }
+  for (var i = 0; i < D.start.length; i++) {
+    near(S, D.vs, D.end[i]).some(function (x) { return D.vs[x.v] >= D.end[i] - MV_END_MS && moveEnd(i, 1, x); });
+    near(E, D.ve, D.start[i]).some(function (x) { return moveEnd(i, 0, x); });
+  }
+}
+
+// ---------- reading where a place was ----------
+// "52.0786, 4.3358", a Google Maps link (its !3d…!4d… pin, else its @lat,lng view), or a plus code:
+// full (9F4638HP+C8) or short (38HP+C8, The Hague), the short one recovered near ref as Open Location
+// Code says (the town after it isn't looked up: the place is near ref anyway).
+var OLC = '23456789CFGHJMPQRVWX';
+function olcDecode(code) {
+  var c = code.toUpperCase().replace('+', '').replace(/0+$/, ''), lat = -90, lng = -180, r = 20, la = 0, lo = 0, i, a, b;
+  if (c.length < 2 || c.length % 2 && c.length < 10) return null;
+  for (i = 0; i < c.length && i < 10; i += 2) {
+    a = OLC.indexOf(c[i]); b = OLC.indexOf(c[i + 1]);
+    if (a < 0 || b < 0) return null;
+    lat += a * r; lng += b * r; la = lo = r; r /= 20;
+  }
+  for (i = 10; i < c.length; i++) {
+    a = OLC.indexOf(c[i]);
+    if (a < 0) return null;
+    la /= 5; lo /= 4; lat += Math.floor(a / 4) * la; lng += (a % 4) * lo;
+  }
+  return [lat + la / 2, lng + lo / 2];
+}
+function olcEncode8(lat, lng) {
+  var y = Math.min(Math.max(lat + 90, 0), 179.9999999), x = ((lng + 180) % 360 + 360) % 360, r = 20, out = '';
+  for (var k = 0; k < 4; k++) { var a = Math.floor(y / r), b = Math.floor(x / r); y -= a * r; x -= b * r; out += OLC[a] + OLC[b]; r /= 20; }
+  return out;
+}
+function olcRecover(code, ref) {
+  var s = code.toUpperCase(), sep = s.indexOf('+');
+  if (sep >= 8) return olcDecode(s);
+  if (sep < 2 || sep % 2 || !ref) return null;
+  var pad = 8 - sep, res = Math.pow(20, 2 - pad / 2), half = res / 2, c = olcDecode(olcEncode8(ref[0], ref[1]).slice(0, pad) + s);
+  if (!c) return null;
+  if (ref[0] + half < c[0] && c[0] - res >= -90) c[0] -= res; else if (ref[0] - half > c[0] && c[0] + res <= 90) c[0] += res;
+  if (ref[1] + half < c[1]) c[1] -= res; else if (ref[1] - half > c[1]) c[1] += res;
+  return c;
+}
+function mvParseAt(text, ref) {
+  var t = String(text || '').trim(), m, ok = function (p) { return p && Math.abs(p[0]) <= 90 && Math.abs(p[1]) <= 180 ? [+p[0].toFixed(6), +p[1].toFixed(6)] : null; };
+  if ((m = /!3d(-?\d+(?:\.\d+)?)!4d(-?\d+(?:\.\d+)?)/.exec(t))) return ok([+m[1], +m[2]]);
+  if ((m = /@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/.exec(t))) return ok([+m[1], +m[2]]);
+  if ((m = /^(-?\d+(?:\.\d+)?)\s*[,; ]\s*(-?\d+(?:\.\d+)?)$/.exec(t))) return ok([+m[1], +m[2]]);
+  if ((m = /([23456789CFGHJMPQRVWX0]{2,8}\+[23456789CFGHJMPQRVWX]{0,7})/i.exec(t))) return ok(olcRecover(m[1], ref));
+  return null;
+}
+
+// ---------- on a place's page ----------
+function mvRulesFor(ids) {
+  return mrList('moves').filter(function (r) { return Array.isArray(r.google_place_ids) && r.google_place_ids.some(function (id) { return ids.indexOf(id) >= 0; }); });
+}
+function mvPids(vs) {
+  var seen = {}, out = [];
+  vs.forEach(function (v) { var p = D.vpid[v]; if (p && !seen[p]) { seen[p] = 1; out.push(p); } });
+  return out;
+}
+function mvSpan(vs) {
+  var a = Infinity, z = -Infinity;
+  vs.forEach(function (v) { a = Math.min(a, D.vday[v]); z = Math.max(z, D.vday[v]); });
+  return a === z ? 'on ' + niceDate(a) : niceDate(a) + ' – ' + niceDate(z);
+}
+function mvWhen(w) {
+  var f = mrDayNum(w && w.from), t = mrDayNum(w && w.to);
+  return f != null && t != null ? 'from ' + niceDate(f) + ' to ' + niceDate(t) : t != null ? 'until ' + niceDate(t) : f != null ? 'since ' + niceDate(f) : 'on all your visits';
+}
+function mvStays(n) { return fmt(n) + ' stay' + (n === 1 ? '' : 's'); }
+function mvSpotHtml(key) {
+  var vs = spotStays(key), ids = mvPids(vs);
+  if (!ids.length) return '';
+  var on = MR && MR.on, auto = vs.filter(mvAuto), R = mvRulesFor(ids), keep = R.filter(function (r) { return r.keep && r.enabled !== false; })[0], h = '';
+  if (auto.length) {
+    var phone = D.base.vll, d = km(mvGoogle(auto[0]), [phone[2 * auto[0]], phone[2 * auto[0] + 1]]);
+    if (keep && on) h += '<p class="fine">Shown at Google\'s location for this place, as you chose. During ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + ') your phone was ' + dist(d) + ' away.</p>' +
+      '<div class="mv-acts"><button type="button" class="btn" data-mv-unkeep="' + esc(keep.id) + '" data-key="' + esc(key) + '">' + icon('pin') + 'Show where my phone was</button></div>';
+    else h += '<p class="fine">Google now puts this place ' + dist(d) + ' from where your phone was during ' + mvStays(auto.length) + ' here (' + mvSpan(auto) + '). It most likely moved and kept its Google place ID, so those stays and the trips to and from them are shown where your phone was.</p>' +
+      '<div class="mv-acts"><button type="button" class="btn quiet" data-mv-keep="' + esc(key) + '">Use Google\'s location</button></div>';
+  }
+  R.filter(function (r) { return !r.keep; }).forEach(function (r) {
+    var n = vs.filter(function (v) { return D.mvStay && D.mvStay[v] && D.mvStay[v].rule === r.id; }).length;
+    var g = mvGoogle(vs[0]), d = Array.isArray(r.at) ? km(g, r.at) : 0;
+    h += '<p class="fine">You said this place was ' + dist(d) + ' from Google\'s location ' + mvWhen(r.when) +
+      (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but MyRules are switched off.') + '</p>' +
+      '<div class="mv-acts"><button type="button" class="btn" data-mv-edit="' + esc(r.id) + '" data-key="' + esc(key) + '">' + icon('edit') + 'Edit where it was</button></div>';
+  });
+  if (!h) h = '<p class="fine">If this place moved and your old visits show at its new address, say where it was then.</p>';
+  if (!R.some(function (r) { return !r.keep; })) h += '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>';
+  return '<h4 class="place-h">Where it was</h4>' + h;
+}
+function mvName(key) {
+  var s = spotsOf(spotStays(key))[0];
+  return s ? spotName(s, 0) : 'this place';
+}
+function mvSave(r, isNew, text, key) {
+  if (isNew) (MR.doc.moves || (MR.doc.moves = [])).push(r);
+  mrUseV2();
+  var vs = spotStays(key);
+  placeLast = null;
+  mrChange(text);
+  if (openId !== 'mrSheet') mrReopenSpot(vs);
+}
+// Use Google's location: a keep rule for the spot's place IDs.
+function mvKeep(key) {
+  var ids = mvPids(spotStays(key)), nm = mvName(key);
+  mrEnsure();
+  var r = mvRulesFor(ids).filter(function (x) { return x.keep; })[0], isNew = !r;
+  if (isNew) r = { id: mrNewId('google ' + nm), name: nm, google_place_ids: ids, keep: true };
+  delete r.enabled;
+  mvSave(r, isNew, 'Google\'s location kept: ' + nm, key);
+}
+function mvUnkeep(id, key) {
+  var r = mrById(id);
+  if (!r) return;
+  MR.doc.moves = mrList('moves').filter(function (x) { return x !== r; });
+  mvSave(r, false, 'Where your phone was, again: ' + (r.name || r.id), key);
+}
+var MV_MAP = null;
+function mvDialog(key, r) {
+  if (!window.L) { toast('The map couldn\'t load. Check your internet connection.'); return; }
+  var vs = spotStays(key), ids = r ? r.google_place_ids : mvPids(vs);
+  if (!ids || !ids.length) { toast('Load your Timeline file again: this place has no Google place ID yet'); return; }
+  var g = mvGoogle(vs[0]), auto = vs.filter(mvAuto), base = D.base.vll;
+  // The pin starts where it was (your rule), else where your phone was, else at Google's location.
+  var pin = r && Array.isArray(r.at) ? [+r.at[0], +r.at[1]] : auto.length ? [base[2 * auto[0]], base[2 * auto[0] + 1]] : g.slice();
+  var last = -Infinity;
+  vs.forEach(function (v) { last = Math.max(last, D.vday[v]); });
+  var w = r && r.when || {}, nm = r && r.name || mvName(key);
+  mrAsk({
+    title: 'This place moved',
+    text: 'Google keeps one location per place: today\'s. Put the pin where this place was when you went there, and your stays here in those dates, with the trips to and from them, move there.',
+    extra: '<div class="mr-form"><div class="field"><span>When it was there</span><span class="mr-dates">From <input type="date" id="mvFrom" value="' + esc(w.from || '') + '" aria-label="From"> until <input type="date" id="mvTo" value="' + esc(w.to || (r ? '' : isFinite(last) ? isoDay(last) : '')) + '" aria-label="Until"></span>' +
+      '<small class="fine">Leave a date empty for no limit on that side.</small></div>' +
+      '<label class="field"><span>Where it was</span><input type="text" id="mvAt" placeholder="52.0786, 4.3358 · 38HP+C8 · a Google Maps link" autocomplete="off" spellcheck="false"></label>' +
+      '<div id="mvMap" class="mv-map" role="application" aria-label="Map: tap where the place was"></div>' +
+      '<p class="fine" id="mvInfo" aria-live="polite"></p></div>',
+    buttons: [['Save', 'primary', function () {
+      var f = $('mvFrom').value, t = $('mvTo').value;
+      if (f && t && f > t) { toast('From is after Until'); return; }
+      mrEnsure();
+      var isNew = !r;
+      if (isNew) r = { id: mrNewId('moved ' + nm), name: nm, google_place_ids: ids };
+      r.at = [+pin[0].toFixed(6), +pin[1].toFixed(6)];
+      delete r.keep;
+      var wh = Object.assign({}, r.when);
+      if (f) wh.from = f; else delete wh.from;
+      if (t) wh.to = t; else delete wh.to;
+      if (Object.keys(wh).length) r.when = wh; else delete r.when;
+      mvSave(r, isNew, (isNew ? 'Place moved: ' : 'Place moved, changed: ') + nm + ' (' + mvWhen(r.when) + ')', key);
+    }]].concat(r ? [['Remove', 'danger', function () {
+      MR.doc.moves = mrList('moves').filter(function (x) { return x !== r; });
+      mvSave(r, false, 'Place moved, removed: ' + nm, key);
+    }]] : []).concat([['Cancel', 'quiet', null]]),
+    after: function () {
+      if (MV_MAP) { MV_MAP.remove(); MV_MAP = null; }
+      var m = MV_MAP = L.map('mvMap', { zoomControl: false, attributionControl: true, preferCanvas: true });
+      L.control.zoom({ position: 'topright' }).addTo(m);
+      m.setView(pin, 15, { animate: false });
+      addTiles(m);
+      L.circleMarker(g, { radius: 6, color: '#fff', weight: 2, fillColor: '#8a918c', fillOpacity: 1 }).addTo(m).bindTooltip('Google\'s location now');
+      var mk = L.circleMarker(pin, { radius: 9, color: '#fff', weight: 3, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(m);
+      function count() {
+        var f = mrDayNum($('mvFrom').value), t = mrDayNum($('mvTo').value), n = 0;
+        vs.forEach(function (v) { if ((f == null || D.vday[v] >= f) && (t == null || D.vday[v] <= t)) n++; });
+        $('mvInfo').textContent = mvStays(n) + ' here in those dates · ' + dist(km(g, pin)) + ' from Google\'s location. Tap the map to move the pin.';
+      }
+      function put(p, pan) { pin = p; mk.setLatLng(p); if (pan) m.setView(p, Math.max(m.getZoom(), 16)); count(); }
+      m.on('click', function (e) { put([+e.latlng.lat.toFixed(6), +e.latlng.lng.toFixed(6)]); $('mvAt').value = pin[0] + ', ' + pin[1]; });
+      $('mvAt').addEventListener('input', function () { var p = mvParseAt(this.value, g); if (p) put(p, true); });
+      $('mvFrom').addEventListener('input', count);
+      $('mvTo').addEventListener('input', count);
+      setTimeout(function () { m.invalidateSize(); m.fitBounds(L.latLngBounds([g, pin]).pad(0.3), { maxZoom: 16, animate: false }); }, 0);
+      count();
+    }
+  });
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-mv-new],[data-mv-edit],[data-mv-keep],[data-mv-unkeep]');
+  if (!b) return;
+  if (b.dataset.mvNew) mvDialog(b.dataset.mvNew, null);
+  else if (b.dataset.mvEdit) mvDialog(b.dataset.key, mrById(b.dataset.mvEdit));
+  else if (b.dataset.mvKeep) mvKeep(b.dataset.mvKeep);
+  else mvUnkeep(b.dataset.mvUnkeep, b.dataset.key);
+});
+// From the rules sheet: the dialog on the place's spot, found by its first place ID.
+function mvEditRule(r) {
+  if (r.keep) { toast('Switch it off or delete it to show where your phone was again'); return; }
+  var ids = r.google_place_ids || [];
+  for (var v = 0; v < D.vs.length; v++) if (ids.indexOf(D.vpid[v]) >= 0) { needPlaces(); mvDialog(spotKey(v), r); return; }
+  toast('This place isn\'t in the data you loaded');
 }
 
 // ---------- station packs ----------
