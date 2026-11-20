@@ -65,7 +65,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 - **Inputs:** see `source/README.md` (one section per format, with the cleaning steps). Old Takeout and new on-device Timeline files can be loaded together; Records.json fills gaps under Timeline. A Timeline-format file with `"simulated": true` at the top holds trips rebuilt from bookings and wins where it clashes with the export.
 - **Internal:** parsed trips and stays are column arrays (`start`, `end`, `mode`, `km`, `from`, `to`, `pathOff` + flat points, `off` = UTC offset in minutes, `vs/ve/vll` for stays, flags as bits such as `GUESSED`, `FIXED`, `JUMPS`). Saved in IndexedDB, never uploaded.
 - **MyRules (`*.myrules.json`, v0.2):** sections `places`, `moves`, `gear`, `routines`, `snaps`, `corrections`. Every rule has `id`, optional `name`, `when` (from/to/days/times), `enabled`, `except` (trip refs), `unless` (conditions), `note`. Trips are referenced by local start time with UTC offset and mode, never by index. Spec: `docs/myrules.md`; JSON Schema: `schema/myrules-0.2.json` (keep `source/static/schema/` in sync). Rules apply fully or not at all: a routine sets type, line and gear together. Values a rule fills in are tagged *Rule applied* (or *Map snap*), user fixes *Edited*, and both can be undone per trip or per rule. Unknown keys round-trip on export.
-- **Export:** *Export* in Filters writes the filtered trips as JSON (same shape as a trip's *{ } Raw data*, with GPS points) or CSV.
+- **Export:** *Export trips* in *Menu › Your data* writes the filtered trips as JSON (same shape as a trip's *{ } Raw data*, with GPS points) or CSV.
 
 ## Station and road packs
 

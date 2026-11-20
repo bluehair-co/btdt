@@ -352,7 +352,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-rule .file-txt { flex: 1; }
 .mr-edit { cursor: pointer; border-radius: 8px; min-width: 0; }
 .mr-edit:hover b, .mr-edit:focus-visible b { color: var(--accent); }
-.mr-edit .mr-chev { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; color: var(--muted); }
+.mr-edit .mr-chev { display: inline-block; width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; color: var(--muted); }
 .mr-rule.off .file-txt, .mr-rule.off .mode-badge { opacity: .5; }
 .mr-here-line { display: flex; align-items: center; gap: 12px; }
 .mr-here-line p { margin: 0; flex: 1; }
@@ -1174,3 +1174,14 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .tools-menu small { white-space: normal; }
 .lines-info { display: flex; flex-direction: column; gap: 8px; }
 .lines-info p { margin: 0; }
+
+/* ⋯ menus (moreMenu in core.js) and the action row at the top of trip and place pages */
+.trip-edit { flex-wrap: wrap; gap: 8px; align-items: center; }
+.more-wrap { position: relative; display: inline-flex; }
+.more-btn { padding: 9px 10px; }
+.more-btn .ic { width: 20px; height: 20px; }
+.more-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 230px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
+.more-menu[hidden] { display: none; }
+.more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
+.more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }

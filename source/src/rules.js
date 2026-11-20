@@ -1099,9 +1099,16 @@ function mrWhenText(w) {
   return s;
 }
 function mrRuleRow(sec, r, title, sub, ic, color, count) {
-  var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
+  var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length, note = r.note ? esc(r.note) : '';
+  // A list of facts: the first two on the row, the rest (and the note) behind its (i).
+  if (Array.isArray(sub)) {
+    var rest = sub.slice(2);
+    if (note) rest.push(note);
+    sub = infoMore(sub.slice(0, 2).join(' · '), rest.map(function (t) { return t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? '' : '.'); }).join(' '), 'More about ' + esc(title));
+    note = '';
+  }
   return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt mr-edit" role="button" tabindex="0" data-mr-edit="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Edit ' + esc(title) + '"><b>' + esc(title) + icon('right', 'mr-chev') + '</b><small>' + sub +
-    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + mrUnlessTags(r) + '</small></span>' +
+    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (note ? '<br>' + note : '') + mrUnlessTags(r) + '</small></span>' +
     (count != null && MR.on ? '<span class="num fine">' + fmt(count) + '</span>' : count != null ? '<span class="num fine mr-would" title="Trips it would change with MyRules on">' + fmt(count) + '</span>' : '') +
     '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
     '<button type="button" class="icon-btn" data-mr-del="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Delete ' + esc(title) + '">' + icon('close') + '</button></div>';
@@ -1172,10 +1179,10 @@ function mrRenderRules() {
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
-    return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
+    return mrRuleRow('routines', r, r.name || r.id, bits, t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
   }).join('') + '</div>';
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
-  if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
+  if (!h) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one.</p>';
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
   var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
   if (tabs.length > 1) {
@@ -1405,7 +1412,7 @@ $('mrBody').addEventListener('click', function (ev) {
   if (o) { openTrip(+o.dataset.mrTrip); return; }
   var ol = ev.target.closest('[data-mr-trips]');
   if (ol) { mrBulkList(ol.dataset.mrTrips); return; }
-  var ed = ev.target.closest('[data-mr-edit]');
+  var ed = !ev.target.closest('.info-btn, .info-box') && ev.target.closest('[data-mr-edit]');
   if (ed) { mrEditRule(ed.dataset.mrEdit); return; }
   var b = ev.target.closest('[data-mr-del]');
   if (!b) return;
@@ -1481,25 +1488,41 @@ function mrTripBlock(i) {
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
-  // Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
-  // its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
-  if (!rr && !mr && MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1) btns += '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>';
+  // Find similar trips sits at the top, next to Edit trip (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
   // A trip of your own as the line: one in the routine, or one left out for want of a line or for going another way.
   var lr = rr || ms && (ms.why === 'noline' || ms.why === 'fit') && mr, lln = lr && D.mrLine[lr.id];
   if (lr && lr.then && lr.then.snap && mrLearned(lr.then.snap) && !(lln && lln.from === i) && D.pathOff[i + 1] - D.pathOff[i] >= 5) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(lr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
-  if (splitHandOk(i)) btns += '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>';
-  if (ignOk(i)) btns += '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>';
-  if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
   if (!h && !btns) return mrCheckBlock(i);
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
 }
-// Edit trip, at the top of the trip details right under the trip's icon.
+// The top of the trip details, under the trip's icon: Edit trip (gear included), Find similar trips,
+// and ⋯ with Show this day on the map, Open in Timeline and Raw data.
 function mrEditTop(i) {
+  if (!D) return '';
+  var more = [];
+  if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
+  if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
+  more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
+  return '<div class="trip-edit">' + (isDup(i) ? '' : '<button type="button" class="btn primary" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button>') +
+    (mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>' : '') + moreMenu(more, 'More for this trip') + '</div>';
+}
+// Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
+// its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
+// Not for a trip a routine already has or left out, nor for flights or trips under 1 km end to end.
+function mrSimilarOk(i) {
+  if (isDup(i) || D.mrRoute && D.mrRoute[i] && mrById(D.mrRoute[i].rule) || D.mrMiss && D.mrMiss[i] && mrById(D.mrMiss[i].rule)) return false;
+  return MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1;
+}
+// Fix the GPS: the two tools that work on a trip's GPS points, together near the end of the details.
+function mrFixGps(i) {
   if (!D || isDup(i)) return '';
-  return '<div class="trip-edit"><button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button></div>';
+  var b = (splitHandOk(i) ? '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>' : '') +
+    (ignOk(i) ? '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>' : '');
+  return b ? '<div class="mr-trip">' + infoHead('h4', 'place-h', 'Fix the GPS', 'Split trip… cuts a trip Timeline joined into its legs. Ignore GPS points… leaves out points that jumped away, so the line, distance and speed go without them.', 'About Fix the GPS') +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + b + '</div></div>' : '';
 }
 // Is this the right type? For a trip in the check list: why, and one tap to keep or change its type.
 function mrCheckBlock(i) {
@@ -1663,10 +1686,20 @@ function mrEditDialog(i) {
       return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === 'UNKNOWN' && m !== was ? ' (not sure what it was)' : '') + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
     }).join('') + '</select></label>' +
       '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
+      mrGearField(i) +
       '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
     buttons: [['Save', 'primary', function () { mrSaveEdit(i); }], ['Cancel', 'quiet', null]],
-    note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.'
+    note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.',
+    after: function () { var gb = $('mrEGear'); if (gb) gb.addEventListener('click', function () { $('mrDlg').close(); mrGearDialog(i); }); }
   });
+}
+// Gear in Edit trip, for rides, runs and walks: what it has, and Set gear… unless an activity file
+// recorded it (recorded gear is never replaced).
+function mrGearField(i) {
+  var m = MODES[D.mode[i]], g = D.mrGear && D.mrGear[i], has = D.gear[i], rec = has && !g;
+  if (!MR_GEAR_MODES[m]) return '';
+  return '<div class="field"><span>Gear</span><div class="mr-rad-row"><span>' + (has ? '<b>' + esc(gearName(has)) + '</b>' + (rec ? ' <small class="fine">recorded by your activity</small>' : '') : '<span class="fine">None</span>') + '</span>' +
+    (rec ? '' : '<button type="button" class="btn" id="mrEGear">' + icon('gear') + (has ? 'Change gear…' : 'Set gear…') + '</button>') + '</div></div>';
 }
 function mrSaveEdit(i) {
   var type = $('mrEType').value, name = $('mrEName').value.trim(), hide = $('mrEHide').checked;
@@ -1970,8 +2003,7 @@ function mrSpotRule(key) {
 }
 function mrSpotHtml(key) {
   var r = mrSpotRule(key), st = !r && spotStop((spotsOf(spotStays(key))[0]) || null);
-  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + (st.airport ? 'Within ' + dist(Math.max(st.d, 0.1)) + ' of <b>' + esc(st.name) + '</b> (from OurAirports), so it counts as an airport.' : esc(st.kind) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop.') + ' Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>')) +
-    '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit this place' : 'Name this place') + '</button></div>';
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + (st.airport ? 'Within ' + dist(Math.max(st.d, 0.1)) + ' of <b>' + esc(st.name) + '</b> (from OurAirports), so it counts as an airport.' : esc(st.kind) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop.') + ' Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name with <i>Name this place</i>, and choose how far around it counts as this place.</p>'));
 }
 function mrPlaceDialog(key) {
   var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0] || {};

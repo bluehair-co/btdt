@@ -10,6 +10,8 @@ var NO_OFF = 32767;
 
 // Icons: 24×24 filled paths.
 var ICONS = {
+  // Material Icons: more_horiz.
+  more: 'M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
   // Material Icons: call_split and undo.
   split: 'M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4h-6zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3L10 4z',
   select: 'M17 5h-2V3h2v2zm-2 16h2v-2.59L19.59 21 21 19.59 18.41 17H21v-2h-6v6zm4-12h2V7h-2v2zm0 4h2v-2h-2v2zm-8 8h2v-2h-2v2zM7 5h2V3H7v2zM3 17h2v-2H3v2zm2 4v-2H3c0 1.1.9 2 2 2zM19 3v2h2c0-1.1-.9-2-2-2zm-8 2h2V3h-2v2zM3 9h2V7H3v2zm4 12h2v-2H7v2zm-4-8h2v-2H3v2zm0-8h2V3c-1.1 0-2 .9-2 2z',
@@ -137,6 +139,35 @@ function fillIcons(root) {
 // (hidden until then), infoMore a short text with its button and the rest; the click handler in
 // data.js opens and closes the box named by the button's aria-controls.
 var INFO_N = 0;
+// The ⋯ button: the less-used actions of a sheet in a short menu, so each sheet has one main
+// action (see docs/design-rules.md). Items are buttons or links with role="menuitem" (moreItem); a
+// tap anywhere, an item included, closes it, and the item's own click handler still runs.
+function moreMenu(items, label) {
+  if (!items.length) return '';
+  label = label || 'More';
+  return '<span class="more-wrap"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon('more') + '</button>' +
+    '<span class="more-menu" role="menu" hidden>' + items.join('') + '</span></span>';
+}
+function moreItem(attrs, ic, text) { return '<button type="button" role="menuitem" ' + attrs + '>' + (ic ? icon(ic) : '') + '<span>' + text + '</span></button>'; }
+function moreClose(keep) {
+  document.querySelectorAll('.more-menu:not([hidden])').forEach(function (m) {
+    if (m === keep) return;
+    m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', function (ev) {
+  var b = ev.target.closest && ev.target.closest('.more-btn'), m = b && b.nextElementSibling;
+  moreClose(m);
+  if (!m) return;
+  m.hidden = !m.hidden; b.setAttribute('aria-expanded', m.hidden ? 'false' : 'true');
+  // Opens from the button's left edge, moved left as far as it needs to stay inside its sheet.
+  m.style.left = '';
+  if (m.hidden) return;
+  var box = (b.closest('.sheet, dialog') || document.body).getBoundingClientRect(), r = m.getBoundingClientRect();
+  var over = r.right - Math.min(box.right, innerWidth) + 8;
+  if (over > 0) m.style.left = -Math.min(over, r.left - Math.max(box.left, 0) - 8) + 'px';
+}, true);
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') moreClose(null); });
 function infoId() { return 'info' + (++INFO_N); }
 function infoBtn(id, label, cls) {
   label = label || 'More about this';

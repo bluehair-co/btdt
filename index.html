@@ -396,7 +396,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-rule .file-txt { flex: 1; }
 .mr-edit { cursor: pointer; border-radius: 8px; min-width: 0; }
 .mr-edit:hover b, .mr-edit:focus-visible b { color: var(--accent); }
-.mr-edit .mr-chev { width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; color: var(--muted); }
+.mr-edit .mr-chev { display: inline-block; width: 16px; height: 16px; vertical-align: -3px; margin-left: 2px; color: var(--muted); }
 .mr-rule.off .file-txt, .mr-rule.off .mode-badge { opacity: .5; }
 .mr-here-line { display: flex; align-items: center; gap: 12px; }
 .mr-here-line p { margin: 0; flex: 1; }
@@ -1218,6 +1218,17 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .tools-menu small { white-space: normal; }
 .lines-info { display: flex; flex-direction: column; gap: 8px; }
 .lines-info p { margin: 0; }
+
+/* ⋯ menus (moreMenu in core.js) and the action row at the top of trip and place pages */
+.trip-edit { flex-wrap: wrap; gap: 8px; align-items: center; }
+.more-wrap { position: relative; display: inline-flex; }
+.more-btn { padding: 9px 10px; }
+.more-btn .ic { width: 20px; height: 20px; }
+.more-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 230px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
+.more-menu[hidden] { display: none; }
+.more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
+.more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }
 </style>
 </head>
 <body>
@@ -4611,6 +4622,8 @@ var NO_OFF = 32767;
 
 // Icons: 24×24 filled paths.
 var ICONS = {
+  // Material Icons: more_horiz.
+  more: 'M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',
   // Material Icons: call_split and undo.
   split: 'M14 4l2.29 2.29-2.88 2.88 1.42 1.42 2.88-2.88L20 10V4h-6zm-4 0H4v6l2.29-2.29 4.71 4.7V20h2v-8.41l-5.29-5.3L10 4z',
   select: 'M17 5h-2V3h2v2zm-2 16h2v-2.59L19.59 21 21 19.59 18.41 17H21v-2h-6v6zm4-12h2V7h-2v2zm0 4h2v-2h-2v2zm-8 8h2v-2h-2v2zM7 5h2V3H7v2zM3 17h2v-2H3v2zm2 4v-2H3c0 1.1.9 2 2 2zM19 3v2h2c0-1.1-.9-2-2-2zm-8 2h2V3h-2v2zM3 9h2V7H3v2zm4 12h2v-2H7v2zm-4-8h2v-2H3v2zm0-8h2V3c-1.1 0-2 .9-2 2z',
@@ -4738,6 +4751,35 @@ function fillIcons(root) {
 // (hidden until then), infoMore a short text with its button and the rest; the click handler in
 // data.js opens and closes the box named by the button's aria-controls.
 var INFO_N = 0;
+// The ⋯ button: the less-used actions of a sheet in a short menu, so each sheet has one main
+// action (see docs/design-rules.md). Items are buttons or links with role="menuitem" (moreItem); a
+// tap anywhere, an item included, closes it, and the item's own click handler still runs.
+function moreMenu(items, label) {
+  if (!items.length) return '';
+  label = label || 'More';
+  return '<span class="more-wrap"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon('more') + '</button>' +
+    '<span class="more-menu" role="menu" hidden>' + items.join('') + '</span></span>';
+}
+function moreItem(attrs, ic, text) { return '<button type="button" role="menuitem" ' + attrs + '>' + (ic ? icon(ic) : '') + '<span>' + text + '</span></button>'; }
+function moreClose(keep) {
+  document.querySelectorAll('.more-menu:not([hidden])').forEach(function (m) {
+    if (m === keep) return;
+    m.hidden = true; m.previousElementSibling.setAttribute('aria-expanded', 'false');
+  });
+}
+document.addEventListener('click', function (ev) {
+  var b = ev.target.closest && ev.target.closest('.more-btn'), m = b && b.nextElementSibling;
+  moreClose(m);
+  if (!m) return;
+  m.hidden = !m.hidden; b.setAttribute('aria-expanded', m.hidden ? 'false' : 'true');
+  // Opens from the button's left edge, moved left as far as it needs to stay inside its sheet.
+  m.style.left = '';
+  if (m.hidden) return;
+  var box = (b.closest('.sheet, dialog') || document.body).getBoundingClientRect(), r = m.getBoundingClientRect();
+  var over = r.right - Math.min(box.right, innerWidth) + 8;
+  if (over > 0) m.style.left = -Math.min(over, r.left - Math.max(box.left, 0) - 8) + 'px';
+}, true);
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') moreClose(null); });
 function infoId() { return 'info' + (++INFO_N); }
 function infoBtn(id, label, cls) {
   label = label || 'More about this';
@@ -7981,11 +8023,7 @@ function openTrip(i, fromList) {
   $('tripBack').hidden = !fromList;
   $('tripBody').innerHTML = tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px">' +
-    (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map' ? '<button type="button" class="btn" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day on the map</button>' : '') +
-    (tab !== 'timeline' ? '<button type="button" class="btn" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>' : '') +
-    '<button type="button" class="btn" data-act="raw" data-i="' + i + '" aria-expanded="false">{ } Raw data</button></div>' +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) + mrFixGps(i) +
     '<div id="rawWrap" hidden><div style="display:flex;gap:8px;margin:12px 0 8px"><button type="button" class="btn" data-act="copy" data-i="' + i + '">Copy</button>' +
     '<button type="button" class="btn" data-act="save" data-i="' + i + '">Download</button></div><pre class="raw" id="rawPre"></pre></div>';
   $('tripSheetTitle').textContent = 'Trip';
@@ -8182,7 +8220,7 @@ $('tripBody').addEventListener('click', function (ev) {
     var open = $('rawWrap').hidden;
     if (open) $('rawPre').textContent = rawText(i);
     $('rawWrap').hidden = !open; b.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) $('rawWrap').scrollIntoView({ block: 'nearest' });
+    if (open) $('rawWrap').scrollIntoView({ block: 'start', behavior: 'smooth' });
   } else if (b.dataset.act === 'copy') {
     var txt = rawText(i);
     (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(function () { toast('Trip data copied'); }, function () {
@@ -11077,6 +11115,16 @@ function scopeSeg(nAll, nF) {
     '<button type="button" data-pscope="all" aria-pressed="' + !f + '">All history · ' + fmt(nAll) + '</button>' +
     '<button type="button" data-pscope="filters" aria-pressed="' + f + '">These filters · ' + fmt(nF) + '</button></div>';
 }
+// The top of a place page: Edit (or Name) this place on a spot, Show on the map, and ⋯ with Google
+// Maps, the whole town and This place moved….
+function placeActs(o, lat, lng, pid) {
+  var more = [];
+  more.push('<a role="menuitem" href="' + esc(mapsUrl(lat, lng, pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + '<span>Open in Google Maps</span></a>');
+  if (o.town != null) more.push(moreItem('data-ptown="' + o.town + '"', 'pin', 'All of ' + esc(placeLabel(o.town))));
+  if (o.spot && mvCanNew(o.spot)) more.push(moreItem('data-mv-new="' + esc(o.spot) + '"', 'pin', 'This place moved…'));
+  return '<div class="trip-edit">' + (o.spot ? '<button type="button" class="btn primary" data-mr-place="' + esc(o.spot) + '">' + icon('edit') + (mrSpotRule(o.spot) ? 'Edit this place' : 'Name this place') + '</button>' : '') +
+    '<button type="button" class="btn' + (o.spot ? '' : ' primary') + '" data-pmap="' + (o.ll ? o.ll.join(',') : lat + ',' + lng) + '">' + icon('fit') + 'Show on the map</button>' + moreMenu(more, 'More for this place') + '</div>';
+}
 function placePage(o, keepScroll) {
   placeLast = o;
   setPinOn(spotsOf(o.vs).map(function (x) { return x.key; }));
@@ -11087,7 +11135,7 @@ function placePage(o, keepScroll) {
   if (scoped && !inF.length) {
     var s0 = spotsOf(o.vs)[0], c0 = countryAt(s0.lat, s0.lng);
     showPlaceHtml('<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
-      esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + seg +
+      esc(o.sub ? o.sub + ' · ' : '') + (flag(c0) ? flag(c0) + ' ' : '') + esc(ccName(c0)) + '</p></div></div>' + placeActs(o, s0.lat, s0.lng, s0.pid) + seg +
       '<p class="empty" style="margin-top:14px">No visits here in ' + scopeTxt + '. Change the filters or choose All history.</p>', keepScroll);
     return;
   }
@@ -11112,7 +11160,7 @@ function placePage(o, keepScroll) {
   var withIds = spots.filter(function (s) { return s.pid; }).length;
   placeVisits = vs.slice().sort(function (a, b) { return D.vs[b] - D.vs[a]; });
   var html = '<div class="trip-head">' + lookBadge(o.look || mrLook(null, o.home)) + '<div><h3>' + esc(o.title) + '</h3><p>' +
-    esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + seg +
+    esc(o.sub ? o.sub + ' · ' : '') + (flag(cc) ? flag(cc) + ' ' : '') + esc(ccName(cc)) + ' · ' + scopeTxt + '</p></div></div>' + placeActs(o, top.lat, top.lng, top.pid) + seg +
     '<dl class="kv" style="margin-top:12px">' + [
       ['Visits', fmt(n)], ['How often', oftenTxt],
       ['Time there', hoursLabel(h).replace(/ \d+ min$/, '')], ['Average stay', hoursLabel(h / n)],
@@ -11130,9 +11178,7 @@ function placePage(o, keepScroll) {
     }).join('') + '</div>' + (spots.length > 15 ? '<p class="fine">Showing the 15 where you spent most time.</p>' : '');
   if (o.spot) html += mrSpotHtml(o.spot) + mvSpotHtml(o.spot) + mergeHtml(o.spot);
   html += '<h4 class="place-h">Visits</h4><div class="list-rows" id="placeVisits">' + placeVisits.slice(0, 20).map(visitRow).join('') + '</div>' +
-    (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '') +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><button type="button" class="btn" data-pmap="' + (o.ll ? o.ll.join(',') : top.lat + ',' + top.lng) + '">' + icon('fit') + 'Show on the map</button>' +
-    mapsLink(top.lat, top.lng, top.pid) + (o.town != null ? '<button type="button" class="btn" data-ptown="' + o.town + '">' + icon('pin') + 'All of ' + esc(placeLabel(o.town)) + '</button>' : '') + '</div>';
+    (n > 20 ? '<button type="button" class="btn quiet" data-pall>Show all ' + fmt(n) + ' visits</button>' : '');
   showPlaceHtml(html, keepScroll);
 }
 function showPlaceHtml(html, keepScroll) {
@@ -12475,9 +12521,16 @@ function mrWhenText(w) {
   return s;
 }
 function mrRuleRow(sec, r, title, sub, ic, color, count) {
-  var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length;
+  var on = r.enabled !== false, ex = Array.isArray(r.except) && r.except.length, note = r.note ? esc(r.note) : '';
+  // A list of facts: the first two on the row, the rest (and the note) behind its (i).
+  if (Array.isArray(sub)) {
+    var rest = sub.slice(2);
+    if (note) rest.push(note);
+    sub = infoMore(sub.slice(0, 2).join(' · '), rest.map(function (t) { return t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? '' : '.'); }).join(' '), 'More about ' + esc(title));
+    note = '';
+  }
   return '<div class="mr-rule' + (on ? '' : ' off') + '"><span class="mode-badge sm" style="background:' + color + '">' + icon(ic) + '</span><span class="file-txt mr-edit" role="button" tabindex="0" data-mr-edit="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Edit ' + esc(title) + '"><b>' + esc(title) + icon('right', 'mr-chev') + '</b><small>' + sub +
-    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (r.note ? '<br>' + esc(r.note) : '') + mrUnlessTags(r) + '</small></span>' +
+    (ex ? ' · ' + ex + ' exception' + (ex === 1 ? '' : 's') : '') + (note ? '<br>' + note : '') + mrUnlessTags(r) + '</small></span>' +
     (count != null && MR.on ? '<span class="num fine">' + fmt(count) + '</span>' : count != null ? '<span class="num fine mr-would" title="Trips it would change with MyRules on">' + fmt(count) + '</span>' : '') +
     '<input type="checkbox" class="switch" data-mr-on="' + esc(r.id) + '" aria-label="Apply ' + esc(title) + '"' + (on ? ' checked' : '') + '>' +
     '<button type="button" class="icon-btn" data-mr-del="' + esc(sec) + ':' + esc(r.id) + '" aria-label="Delete ' + esc(title) + '">' + icon('close') + '</button></div>';
@@ -12548,10 +12601,10 @@ function mrRenderRules() {
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
-    return mrRuleRow('routines', r, r.name || r.id, bits.join(' · '), t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
+    return mrRuleRow('routines', r, r.name || r.id, bits, t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
   }).join('') + '</div>';
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
-  if (!h) h = '<p class="fine">No rules yet. Set a ride\'s gear or edit a trip in its trip details to make one.</p>';
+  if (!h) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one.</p>';
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
   var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
   if (tabs.length > 1) {
@@ -12781,7 +12834,7 @@ $('mrBody').addEventListener('click', function (ev) {
   if (o) { openTrip(+o.dataset.mrTrip); return; }
   var ol = ev.target.closest('[data-mr-trips]');
   if (ol) { mrBulkList(ol.dataset.mrTrips); return; }
-  var ed = ev.target.closest('[data-mr-edit]');
+  var ed = !ev.target.closest('.info-btn, .info-box') && ev.target.closest('[data-mr-edit]');
   if (ed) { mrEditRule(ed.dataset.mrEdit); return; }
   var b = ev.target.closest('[data-mr-del]');
   if (!b) return;
@@ -12857,25 +12910,41 @@ function mrTripBlock(i) {
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
-  // Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
-  // its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
-  if (!rr && !mr && MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1) btns += '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>';
+  // Find similar trips sits at the top, next to Edit trip (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
   // A trip of your own as the line: one in the routine, or one left out for want of a line or for going another way.
   var lr = rr || ms && (ms.why === 'noline' || ms.why === 'fit') && mr, lln = lr && D.mrLine[lr.id];
   if (lr && lr.then && lr.then.snap && mrLearned(lr.then.snap) && !(lln && lln.from === i) && D.pathOff[i + 1] - D.pathOff[i] >= 5) btns += '<button type="button" class="btn" data-mr-act="line" data-r="' + esc(lr.id) + '" data-t="' + i + '">Use this trip\'s line</button>';
-  if (splitHandOk(i)) btns += '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>';
-  if (ignOk(i)) btns += '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>';
-  if (MR_GEAR_MODES[MODES[D.mode[i]]] && !(D.gear[i] && !g)) btns += '<button type="button" class="btn" data-mr-act="gear" data-t="' + i + '">' + icon('gear') + (D.gear[i] ? 'Change gear' : 'Set gear') + '</button>';
   if (!h && !btns) return mrCheckBlock(i);
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
 }
-// Edit trip, at the top of the trip details right under the trip's icon.
+// The top of the trip details, under the trip's icon: Edit trip (gear included), Find similar trips,
+// and ⋯ with Show this day on the map, Open in Timeline and Raw data.
 function mrEditTop(i) {
+  if (!D) return '';
+  var more = [];
+  if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
+  if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
+  more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
+  return '<div class="trip-edit">' + (isDup(i) ? '' : '<button type="button" class="btn primary" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button>') +
+    (mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>' : '') + moreMenu(more, 'More for this trip') + '</div>';
+}
+// Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
+// its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
+// Not for a trip a routine already has or left out, nor for flights or trips under 1 km end to end.
+function mrSimilarOk(i) {
+  if (isDup(i) || D.mrRoute && D.mrRoute[i] && mrById(D.mrRoute[i].rule) || D.mrMiss && D.mrMiss[i] && mrById(D.mrMiss[i].rule)) return false;
+  return MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1;
+}
+// Fix the GPS: the two tools that work on a trip's GPS points, together near the end of the details.
+function mrFixGps(i) {
   if (!D || isDup(i)) return '';
-  return '<div class="trip-edit"><button type="button" class="btn" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button></div>';
+  var b = (splitHandOk(i) ? '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>' : '') +
+    (ignOk(i) ? '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>' : '');
+  return b ? '<div class="mr-trip">' + infoHead('h4', 'place-h', 'Fix the GPS', 'Split trip… cuts a trip Timeline joined into its legs. Ignore GPS points… leaves out points that jumped away, so the line, distance and speed go without them.', 'About Fix the GPS') +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + b + '</div></div>' : '';
 }
 // Is this the right type? For a trip in the check list: why, and one tap to keep or change its type.
 function mrCheckBlock(i) {
@@ -13039,10 +13108,20 @@ function mrEditDialog(i) {
       return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === 'UNKNOWN' && m !== was ? ' (not sure what it was)' : '') + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
     }).join('') + '</select></label>' +
       '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
+      mrGearField(i) +
       '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
     buttons: [['Save', 'primary', function () { mrSaveEdit(i); }], ['Cancel', 'quiet', null]],
-    note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.'
+    note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.',
+    after: function () { var gb = $('mrEGear'); if (gb) gb.addEventListener('click', function () { $('mrDlg').close(); mrGearDialog(i); }); }
   });
+}
+// Gear in Edit trip, for rides, runs and walks: what it has, and Set gear… unless an activity file
+// recorded it (recorded gear is never replaced).
+function mrGearField(i) {
+  var m = MODES[D.mode[i]], g = D.mrGear && D.mrGear[i], has = D.gear[i], rec = has && !g;
+  if (!MR_GEAR_MODES[m]) return '';
+  return '<div class="field"><span>Gear</span><div class="mr-rad-row"><span>' + (has ? '<b>' + esc(gearName(has)) + '</b>' + (rec ? ' <small class="fine">recorded by your activity</small>' : '') : '<span class="fine">None</span>') + '</span>' +
+    (rec ? '' : '<button type="button" class="btn" id="mrEGear">' + icon('gear') + (has ? 'Change gear…' : 'Set gear…') + '</button>') + '</div></div>';
 }
 function mrSaveEdit(i) {
   var type = $('mrEType').value, name = $('mrEName').value.trim(), hide = $('mrEHide').checked;
@@ -13346,8 +13425,7 @@ function mrSpotRule(key) {
 }
 function mrSpotHtml(key) {
   var r = mrSpotRule(key), st = !r && spotStop((spotsOf(spotStays(key))[0]) || null);
-  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + (st.airport ? 'Within ' + dist(Math.max(st.d, 0.1)) + ' of <b>' + esc(st.name) + '</b> (from OurAirports), so it counts as an airport.' : esc(st.kind) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop.') + ' Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name, and choose how far around it counts as this place.</p>')) +
-    '<div style="display:flex;gap:8px;margin-top:8px"><button type="button" class="btn" data-mr-place="' + esc(key) + '">' + icon('pin') + (r ? 'Edit this place' : 'Name this place') + '</button></div>';
+  return '<h4 class="place-h">Name</h4>' + (r ? '<p class="fine">Named <b>' + esc(r.name || r.role) + '</b> in MyRules: everything within ' + fmt(+r.radius_m || 100) + ' m' + (r.role ? ', as ' + (MR_LIFE[r.role] ? (mrIsPast(r) ? 'past ' : 'current ') : '') + esc(mrKindName(r.role).toLowerCase()) + (mrIsPast(r) ? ' until ' + niceDate(mrDayNum(r.when.to)) : '') : '') + (r.hide ? ', hidden from the map' : '') + (r.enabled === false ? ' (switched off)' : '') + '.</p>' : (st ? '<p class="fine">' + (st.airport ? 'Within ' + dist(Math.max(st.d, 0.1)) + ' of <b>' + esc(st.name) + '</b> (from OurAirports), so it counts as an airport.' : esc(st.kind) + ' <b>' + esc(st.name) + '</b> in your station packs (OpenStreetMap), so it counts as a transport stop.') + ' Name it yourself to change that.</p>' : '<p class="fine">Give this place your own name with <i>Name this place</i>, and choose how far around it counts as this place.</p>'));
 }
 function mrPlaceDialog(key) {
   var r = mrSpotRule(key), c = r ? r.at : mrSpotCentre(key), s = spotsOf(spotStays(key))[0] || {};
@@ -14172,6 +14250,11 @@ function mvWhen(w) {
   return f != null && t != null ? 'from ' + niceDate(f) + ' to ' + niceDate(t) : t != null ? 'until ' + niceDate(t) : f != null ? 'since ' + niceDate(f) : 'on all your visits';
 }
 function mvStays(n) { return fmt(n) + ' stay' + (n === 1 ? '' : 's'); }
+// This place moved… is offered for a spot with Google place IDs that has no move rule yet.
+function mvCanNew(key) {
+  var ids = mvPids(spotStays(key));
+  return ids.length > 0 && !mvRulesFor(ids).some(function (r) { return !r.keep; });
+}
 function mvSpotHtml(key) {
   var vs = spotStays(key), ids = mvPids(vs);
   if (!ids.length) return '';
@@ -14190,11 +14273,8 @@ function mvSpotHtml(key) {
       (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but MyRules are switched off.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-edit="' + esc(r.id) + '" data-key="' + esc(key) + '">' + icon('edit') + 'Edit where it was</button></div>';
   });
-  // Nothing to say yet: the explanation sits behind the (i) next to the heading.
-  if (!h) return infoHead('h4', 'place-h', 'Where it was', 'If this place moved and your old visits show at its new address, say where it was then.', 'About Where it was') +
-    (R.some(function (r) { return !r.keep; }) ? '' : '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>');
-  if (!R.some(function (r) { return !r.keep; })) h += '<div class="mv-acts"><button type="button" class="btn" data-mv-new="' + esc(key) + '">' + icon('pin') + 'This place moved…</button></div>';
-  return '<h4 class="place-h">Where it was</h4>' + h;
+  // Nothing to say: This place moved… is in the page's ⋯ menu (placeActs, mvCanNew).
+  return h ? '<h4 class="place-h">Where it was</h4>' + h : '';
 }
 function mvName(key) {
   var s = spotsOf(spotStays(key))[0];
@@ -14934,7 +15014,7 @@ function snapRuleRow(s) {
   bits.push('trips that follow it for ' + mrMatchMin(s) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : ''));
   if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type (turn on Other types to take them)');
   if (!snapOk(s)) bits.push('It has no line or ends, so it takes no trips');
-  return mrRuleRow('snaps', s, s.name || s.id, bits.join(' · '), s.mode || 'OTHER', s.mode ? modeColor(s.mode) : '#9aa49d', D ? MR_COUNT[s.id] || 0 : null);
+  return mrRuleRow('snaps', s, s.name || s.id, bits, s.mode || 'OTHER', s.mode ? modeColor(s.mode) : '#9aa49d', D ? MR_COUNT[s.id] || 0 : null);
 }
 
 // ---------- making one ----------
