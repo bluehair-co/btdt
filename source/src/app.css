@@ -1107,3 +1107,5 @@ div.hit-row:hover { background: none; }
 body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .snap-bar:not(.sel-top), body.sel-mode #roadPill { display: none !important; }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
 body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
+.bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .bg-spin { animation-duration: 2s; } }
