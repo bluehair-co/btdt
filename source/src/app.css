@@ -775,7 +775,10 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* Working on it: a clear veil that takes taps while a slow change runs, and a pill with a spinner. */
 .working { position: fixed; inset: 0; z-index: 1000; cursor: progress; }
 .working[hidden] { display: none; }
-.working .working-pill { z-index: 1001; display: flex; align-items: center; gap: 10px; animation: working-in .2s .15s ease both; }
+/* In the top layer (popover), above an open dialog; none of the popover's own box. */
+.working[popover] { width: auto; height: auto; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; overflow: visible; }
+.working[popover]::backdrop { display: none; }
+.working .working-pill { z-index: 1001; display: flex; align-items: center; gap: 10px; animation: working-in .15s ease both; }
 .working-spin { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--bg) 35%, transparent); border-top-color: var(--bg); animation: working-spin .8s linear infinite; will-change: transform; }
 @keyframes working-spin { to { transform: rotate(360deg); } }
 @keyframes working-in { from { opacity: 0; } }
