@@ -362,6 +362,15 @@
             "cargo",
             "ebike",
             "shoe",
+            "car",
+            "motorbike",
+            "scooter",
+            "boat",
+            "sailboat",
+            "kayak",
+            "sup",
+            "skis",
+            "snowboard",
             "other"
           ],
           "default": "other"
