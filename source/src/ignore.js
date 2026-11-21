@@ -1,5 +1,5 @@
 // ---------- ignoring GPS points of a trip ----------
-// Ignore GPS points… in the trip details: the trip alone on the map with each of its GPS points.
+// Ignore GPS points in the trip details: the trip alone on the map with each of its GPS points.
 // Drawing around points (a lasso or a rectangle, as in Select trips) ignores them; drawing around
 // points that are all ignored brings them back; a tap on a point does either for that one. Save
 // writes their times into the trip's own correction (then.ignore_points, see mrApplyDrops), so the

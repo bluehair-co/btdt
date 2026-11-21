@@ -359,7 +359,7 @@ function* mrCorrectSteps(dry) {
 }
 
 // ---------- GPS points you ignore ----------
-// Ignore GPS points… in the trip details (ignore.js) saves the times of the points to leave out in
+// Ignore GPS points in the trip details (ignore.js) saves the times of the points to leave out in
 // the trip's own correction (then.ignore_points: ISO times, to the second). They are left out of D's
 // copy of the trail (D.base keeps the one loaded), so the trip's line, its distance, its speed chart,
 // its playback and the heatmap all go without them. A trip keeps at least two points. Its distance
@@ -1503,20 +1503,20 @@ function mrTripBlock(i) {
 function mrEditTop(i) {
   if (!D) return '';
   var more = [];
-  if (mrSimilarOk(i)) more.push(moreItem('data-mr-act="similar" data-t="' + i + '"', 'flag', 'Group with similar trips'));
+  if (mrSimilarOk(i)) more.push(moreItem('data-mr-act="similar" data-t="' + i + '"', 'groupWork', 'Group with similar trips'));
   if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
   if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
   more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
   return moreMenu(more, 'More for this trip', 'more', 'end');
 }
 // The pencil at the right of the trip's header, before ⋯: everything you can change about this one trip.
-// Trip info (type, title, gear), Split trip…, Ignore GPS points…, and Hide this trip.
+// Trip info (type, title, gear), Split trip, Ignore GPS points, and Hide this trip.
 function mrEditMenu(i) {
   if (!D || isDup(i)) return '';
   var it = [moreItem('data-mr-act="edit" data-t="' + i + '"', 'edit', 'Trip info')];
-  if (splitHandOk(i)) it.push(moreItem('data-split-hand="' + i + '"', 'split', 'Split trip…'));
-  if (ignOk(i)) it.push(moreItem('data-ign="' + i + '"', 'pinOff', 'Ignore GPS points…'));
-  it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'close', 'Hide this trip'));
+  if (splitHandOk(i)) it.push(moreItem('data-split-hand="' + i + '"', 'split', 'Split trip'));
+  if (ignOk(i)) it.push(moreItem('data-ign="' + i + '"', 'pinOff', 'Ignore GPS points'));
+  it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'hide', 'Hide this trip'));
   return moreMenu(it, 'Edit this trip', 'edit', 'end');
 }
 // Group with similar trips: a new routine between this trip's ends, matched by route, not by time (along

@@ -282,7 +282,7 @@ $('tripSplitSeg').addEventListener('click', function (ev) {
 });
 
 // ---------- split by hand ----------
-// Split trip… in the trip details: the trip alone on the map, you tap its path where each leg
+// Split trip in the trip details: the trip alone on the map, you tap its path where each leg
 // should end (as often as you like), then Split. Saved in PREFS.splitAt by the time of the GPS point
 // nearest each tap, for the Timeline trip it came from (a leg adds to the cuts of its trip).
 var SPL = null, SPLIT_TAP_PX = 36;

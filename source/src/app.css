@@ -1126,6 +1126,8 @@ body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mod
 body.snap-mode .dock, body.snap-mode .topbar, body.snap-mode .playbar, body.snap-mode #mapPage .fab, body.snap-mode .map-legend, body.snap-mode #map .leaflet-top, body.snap-mode #roadPill, body.snap-mode .tools-menu { display: none !important; }
 body.snap-mode #snapBar { top: calc(12px + var(--safe-t)); width: max-content; box-sizing: border-box; }
 body.snap-mode #snapBar .snap-bar-t { flex: 1 1 auto; min-width: 0; }
+/* On a phone the bar spans the screen, with a small margin each side. */
+@media (max-width: 600px) { body.snap-mode #snapBar { left: 12px; right: 12px; width: auto; max-width: none; transform: none; justify-content: space-between; } }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
 body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 .bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
