@@ -7,6 +7,8 @@ BT•DT (Been There · Done That) is a browser app (installable PWA) that reads 
 - User-facing overview: `README.md`. How the data is read and cleaned, in depth: `source/README.md`. MyRules format: `docs/myrules.md`.
 - Design and UX rules: `docs/design-rules.md`. Read it before any UI change.
 - How the project got here: `docs/history.md`.
+- Rollback point: the `v1.0` branch holds the app as it was before the UX overhaul of 20–21 Nov 2026 (PRs #222–#225). To roll back, restore `main`'s published files from that branch in a PR; only do this when David asks.
+- Where things live in the UI (Filters, *Menu*, map sheet, *Map tools*, trip and place pages): the *One home per job* section and the patterns table in `docs/design-rules.md`. Put new features where that table says.
 
 ## Standing rules from David
 
