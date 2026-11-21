@@ -1472,7 +1472,7 @@ function mrTripBlock(i) {
     else if (ms.why === 'gear') why = 'It was recorded with ' + esc(mrRecGear(i)) + ', and the routine sets ' + esc(mrGearName(mr.then.gear)) + '. Recorded gear is never replaced by a routine.';
     else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
     else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail of 5 or more points to take it from. Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
-    else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over 1 km from the line, so it can\'t be drawn along it.');
+    else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over ' + dist(1) + ' from the line, so it can\'t be drawn along it.');
     h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">' + infoMore('It matches by place and time, but not everything the routine sets fits.', 'Everything a routine sets (type, gear, line) applies together or not at all. ' + why, 'Why it is not in the routine') + '</div></div>';
   }
   var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
@@ -1757,7 +1757,7 @@ function mrGearDialog(i) {
       '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
       // The period's details show once this option is picked.
       '<span class="mr-opt-more" id="mrPeriodMore" hidden><span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
-      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="1" style="width:5em" aria-label="Maximum distance"> km (optional)</span>' +
+      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="any" style="width:5em" aria-label="Maximum distance in ' + distUnit() + '"> ' + distUnit() + ' (optional)</span>' +
       '<small class="fine" id="mrCountTxt"></small><small class="fine">Gear recorded by Strava or another activity file is never replaced by a period.</small></span></span></label></div>',
     buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
     after: function () {
@@ -1770,7 +1770,7 @@ function mrGearDialog(i) {
         count();
       }
       function count() {
-        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = parseFloat($('mrMax').value), c = 0;
+        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = distSave(parseFloat($('mrMax').value)), c = 0;
         for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
         $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
       }
@@ -1797,7 +1797,7 @@ function mrSaveGear(i) {
     else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
     mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]));
   } else {
-    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = parseFloat($('mrMax').value);
+    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = distSave(parseFloat($('mrMax').value));
     if (f) w.from = f;
     if (t) w.to = t;
     var r = { id: mrNewId(name), name: name, kind: kind === 'shoe' || MR_KINDS[kind] ? kind : 'other', mode: mode };
@@ -1877,9 +1877,9 @@ function mrGearRuleDialog(r) {
     extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '"></label>' +
       '<label class="field"><span>Kind</span><select id="mrGKind">' + kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === r.kind ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('') + '</select></label></div>' +
       mrDateRow(r.when) +
-      '<label class="field"><span>Only trips under (km, optional)</span><input type="number" id="mrGMax" min="0" step="1" value="' + (mx != null ? mx : '') + '"></label></div>',
+      '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div>',
     buttons: [['Save', 'primary', function () {
-      var name = $('mrGName').value.trim(), m = parseFloat($('mrGMax').value);
+      var name = $('mrGName').value.trim(), m = distSave(parseFloat($('mrGMax').value), mx);
       if (!name) { toast('Give the gear a name'); return; }
       if (!mrDatesInto(r)) return;
       r.name = name; r.kind = $('mrGKind').value;
@@ -2518,7 +2518,7 @@ function mrGhostStart(draft) {
     // where you have no pack, or for buses and ferries, which packs don't have.
     var lab = (LABEL[m] || m).toLowerCase(), packed = PACK_MODE_BITS[m] && [a.at, b.at].some(function (p) { return !!PACKS[countryAt(p[0], p[1])]; });
     var local = PACK_MODE_BITS[m] ? packLines(m, a.at, b.at) : [];
-    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within 2 km of both ends. Move an end closer to a station.'; return; }
+    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within ' + dist(2) + ' of both ends. Move an end closer to a station.'; return; }
     btn.disabled = true;
     if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + lab + ' lines between the two ends…';
     (local.length ? Promise.resolve(local) : mrOsmLines(m, a.at, b.at)).then(function (list) {

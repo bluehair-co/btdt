@@ -1568,7 +1568,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <div id="kindRows"></div>
         </section>
         <section class="card" id="sqCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about 1.5 km (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
           <div class="stats" id="sqStats"></div>
           <div class="bars" id="sqYears" style="margin-top:14px"></div>
         </section>
@@ -1736,7 +1736,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
     </div>
     <div class="sec">
       <div class="info-head"><h3>Colour lines by</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="linesInfo" aria-label="About the lines" title="About the lines"><span data-icon="info"></span></button></div>
-      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
+      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. from an easy ride to a fast one for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
       <div class="seg full" role="group" aria-label="Colour lines by" id="linesSeg"><button type="button" data-lines="paths" aria-pressed="true">Transport</button><button type="button" data-lines="speed" aria-pressed="false">Speed</button><button type="button" data-lines="hr" aria-pressed="false">Heart rate</button><button type="button" data-lines="off" aria-pressed="false">Off</button></div>
       <input type="checkbox" id="layPaths" hidden><input type="checkbox" id="laySpeed" hidden><input type="checkbox" id="layHr" hidden>
     </div>
@@ -1761,7 +1761,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
       <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
-      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
+      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
     </div>
   </div>
 </aside>
@@ -1881,7 +1881,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       </div>
       <div class="field"><label for="occ">People sharing the car, on average</label><input type="number" id="occ" min="1" max="8" step="0.1" value="1"></div>
       <label class="toggle-row"><span class="lbl">Count extra warming from flights at altitude</span><input type="checkbox" class="switch" id="rf" checked></label>
-      <details class="help"><summary>Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
+      <details class="help"><summary id="factorsSum">Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
     </div>
   </div>
 </aside>
@@ -4928,6 +4928,19 @@ var MI = 0.621371;
 function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
 function distVal(kmv) { return PREFS.unit === 'mi' ? kmv * MI : kmv; }
 function distUnit() { return PREFS.unit === 'mi' ? 'mi' : 'km'; }
+// A short distance given in metres (a radius, a grouping): metres, or feet in miles up to a tenth of a
+// mile (25 m reads 80 ft, 100 m 330 ft), then the usual distance.
+function distShort(m) {
+  if (PREFS.unit === 'mi') { var ft = m * 3.28084; return ft < 528 ? fmt(ft < 100 ? Math.round(ft / 5) * 5 : Math.round(ft / 10) * 10) + ' ft' : dist(m / 1000); }
+  return m < 1000 ? fmt(m) + ' m' : dist(m / 1000);
+}
+// Fixed distances in the page's own text (data-dist-km="1.5"), in the units of Settings.
+function fillDists() { document.querySelectorAll('[data-dist-km]').forEach(function (el) { el.textContent = dist(+el.getAttribute('data-dist-km')); }); }
+// A distance typed in a form, in the units of Settings, and back to km for saving. distField shows a
+// stored km value rounded to 0.1; distSave keeps the stored km when that shown value wasn't changed,
+// so opening and saving a rule doesn't nudge it by the rounding.
+function distField(kmv) { return kmv != null && isFinite(kmv) ? Math.round(distVal(kmv) * 10) / 10 : ''; }
+function distSave(v, kmv) { if (!(v > 0)) return null; if (kmv != null && v === distField(kmv)) return kmv; return PREFS.unit === 'mi' ? v / MI : v; }
 function dist(kmv) { var v = distVal(kmv); return fmt(v, v < 10 && v > 0 ? 1 : 0) + ' ' + distUnit(); }
 function distParts(kmv) { var v = distVal(kmv); return { v: fmt(v, v < 10 && v > 0 ? 1 : 0), u: distUnit() }; }
 function speed(kmh) { return fmt(distVal(kmh)) + (PREFS.unit === 'mi' ? ' mph' : ' km/h'); }
@@ -10318,7 +10331,7 @@ function renderSquares() {
   $('sqCard').hidden = !E.sq.size;
   if (!E.sq.size) return;
   E.sq.forEach(function (o) { var y = D.year[o.i]; years[y] = (years[y] || 0) + 1; });
-  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about 1.5 km across') +
+  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about ' + dist(1.5) + ' across') +
     stat('Biggest cluster', fmt(E.cluster.size), '', 'squares with all four neighbours visited') +
     stat('Max square', E.max + '×' + E.max, '', fmt(E.max * E.max) + ' squares, all visited');
   var ys = Object.keys(years).map(Number).sort(), mx = Math.max.apply(null, ys.map(function (y) { return years[y]; }));
@@ -10636,7 +10649,7 @@ function renderCountries() {
   renderCcTimeline(list, perDay, visits);
   var many = list.length > 1;
   var passed = list.filter(function (c) { return c.kind; }).length;
-  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over 5 km from the airport).' : '';
+  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over ' + dist(5) + ' from the airport).' : '';
   var max = list.length ? list[0].n : 1;
   $('ccList').innerHTML = list.length ? list.map(function (c) {   // always every country, never cut short
     return '<div class="hit-row" style="cursor:default"><span class="flag" aria-hidden="true" style="font-size:22px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
@@ -11241,7 +11254,7 @@ function placePage(o, keepScroll) {
       ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
     ].concat(o.spots ? [['Spots', fmt(spots.length)]] : []).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + fmtHour(bh) + '.</p>' + presenceGrid(presence(vs));
-  if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
+  if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (' + distShort(300) + '). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {
       return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) + '<span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
@@ -11279,7 +11292,7 @@ function openPlace(p) {
 function mergeHtml(key) {
   var parts = spotParts(key), me = spotsOf(spotStays(key))[0], html = '';
   if (parts.length > 1) html += '<h4 class="place-h">Merged spot</h4><p class="fine">' + fmt(parts.length) + ' Google place IDs are counted as this one place' +
-    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within 25 m and your visits moved from one to the other)' : '') + '.</p>' +
+    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within ' + distShort(25) + ' and your visits moved from one to the other)' : '') + '.</p>' +
     (parts.some(function (x) { return x.manual; }) || Object.keys(PREFS.spotMerge || {}).some(function (k) { return PREFS.spotMerge[k] === key; }) ? '<button type="button" class="btn quiet" data-punmerge="' + esc(key) + '">Undo the merges you made</button>' : '');
   if (key.slice(0, 3) !== 'id:' || !me) return html;
   var near = [], seen = {};
@@ -12961,7 +12974,7 @@ function mrTripBlock(i) {
     else if (ms.why === 'gear') why = 'It was recorded with ' + esc(mrRecGear(i)) + ', and the routine sets ' + esc(mrGearName(mr.then.gear)) + '. Recorded gear is never replaced by a routine.';
     else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
     else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail of 5 or more points to take it from. Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
-    else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over 1 km from the line, so it can\'t be drawn along it.');
+    else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over ' + dist(1) + ' from the line, so it can\'t be drawn along it.');
     h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">' + infoMore('It matches by place and time, but not everything the routine sets fits.', 'Everything a routine sets (type, gear, line) applies together or not at all. ' + why, 'Why it is not in the routine') + '</div></div>';
   }
   var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
@@ -13246,7 +13259,7 @@ function mrGearDialog(i) {
       '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
       // The period's details show once this option is picked.
       '<span class="mr-opt-more" id="mrPeriodMore" hidden><span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
-      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="1" style="width:5em" aria-label="Maximum distance"> km (optional)</span>' +
+      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="any" style="width:5em" aria-label="Maximum distance in ' + distUnit() + '"> ' + distUnit() + ' (optional)</span>' +
       '<small class="fine" id="mrCountTxt"></small><small class="fine">Gear recorded by Strava or another activity file is never replaced by a period.</small></span></span></label></div>',
     buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
     after: function () {
@@ -13259,7 +13272,7 @@ function mrGearDialog(i) {
         count();
       }
       function count() {
-        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = parseFloat($('mrMax').value), c = 0;
+        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = distSave(parseFloat($('mrMax').value)), c = 0;
         for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
         $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
       }
@@ -13286,7 +13299,7 @@ function mrSaveGear(i) {
     else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
     mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]));
   } else {
-    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = parseFloat($('mrMax').value);
+    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = distSave(parseFloat($('mrMax').value));
     if (f) w.from = f;
     if (t) w.to = t;
     var r = { id: mrNewId(name), name: name, kind: kind === 'shoe' || MR_KINDS[kind] ? kind : 'other', mode: mode };
@@ -13366,9 +13379,9 @@ function mrGearRuleDialog(r) {
     extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '"></label>' +
       '<label class="field"><span>Kind</span><select id="mrGKind">' + kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === r.kind ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('') + '</select></label></div>' +
       mrDateRow(r.when) +
-      '<label class="field"><span>Only trips under (km, optional)</span><input type="number" id="mrGMax" min="0" step="1" value="' + (mx != null ? mx : '') + '"></label></div>',
+      '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div>',
     buttons: [['Save', 'primary', function () {
-      var name = $('mrGName').value.trim(), m = parseFloat($('mrGMax').value);
+      var name = $('mrGName').value.trim(), m = distSave(parseFloat($('mrGMax').value), mx);
       if (!name) { toast('Give the gear a name'); return; }
       if (!mrDatesInto(r)) return;
       r.name = name; r.kind = $('mrGKind').value;
@@ -14007,7 +14020,7 @@ function mrGhostStart(draft) {
     // where you have no pack, or for buses and ferries, which packs don't have.
     var lab = (LABEL[m] || m).toLowerCase(), packed = PACK_MODE_BITS[m] && [a.at, b.at].some(function (p) { return !!PACKS[countryAt(p[0], p[1])]; });
     var local = PACK_MODE_BITS[m] ? packLines(m, a.at, b.at) : [];
-    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within 2 km of both ends. Move an end closer to a station.'; return; }
+    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within ' + dist(2) + ' of both ends. Move an end closer to a station.'; return; }
     btn.disabled = true;
     if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + lab + ' lines between the two ends…';
     (local.length ? Promise.resolve(local) : mrOsmLines(m, a.at, b.at)).then(function (list) {
@@ -16625,7 +16638,7 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   renderDateTimeSettings();
   $('unitNote').textContent = 'Automatic uses ' + (LOCALE_FMT.unit === 'mi' ? 'miles' : 'kilometres') + ', from this device\'s region.';
-  buildFactors();
+  buildFactors(); fillDists();
   renderHrSettings();
   renderImports();
   renderSplitSettings();
@@ -16788,10 +16801,12 @@ function buildFactors() {
   rows.forEach(function (r) {
     var id = 'g_' + r[0], l = document.createElement('label'), inp = document.createElement('input');
     l.htmlFor = id; l.textContent = r[1];
-    inp.type = 'number'; inp.id = id; inp.min = 0; inp.step = 1; inp.value = A.g[r[0]];
+    // Typed per km or per mile, as in Settings; kept per km. Only a field you change is converted back.
+    var per = PREFS.unit === 'mi' ? 1 / MI : 1;
+    inp.type = 'number'; inp.id = id; inp.min = 0; inp.step = 'any'; inp.value = Math.round(A.g[r[0]] * per);
     inp.addEventListener('input', function () {
       var v = parseFloat(inp.value); if (!isFinite(v) || v < 0) return;
-      A.g[r[0]] = v;
+      A.g[r[0]] = v / per;
       if (r[0] === 'CAR') { A.car = 'custom'; $('carType').value = 'custom'; }
       saveFactors(); co2Changed();
     });
@@ -16799,7 +16814,9 @@ function buildFactors() {
   });
   var note = document.createElement('p');
   note.className = 'fine'; note.style.gridColumn = '1 / -1';
-  note.textContent = 'Flights, per passenger by distance: under 500 km ' + A.fly.dom[A.rf ? 0 : 1] + ' g, 500–3,700 km ' + A.fly.short[A.rf ? 0 : 1] + ' g, longer ' + A.fly.long[A.rf ? 0 : 1] + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
+  $('factorsSum').textContent = 'Grams of CO₂e per ' + (PREFS.unit === 'mi' ? 'mile' : 'km');
+  var fp = PREFS.unit === 'mi' ? 1 / MI : 1, fg = function (x) { return fmt(Math.round(x * fp)); };
+  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }
@@ -16813,7 +16830,7 @@ $('rf').addEventListener('change', function () { A.rf = this.checked; saveFactor
 $('resetFactors').addEventListener('click', function () { A = JSON.parse(JSON.stringify(DEFAULTS)); saveFactors(); buildFactors(); co2Changed(); });
 
 // ---------- start ----------
-fillIcons();
+fillIcons(); fillDists();
 applyTheme();
 syncLayersUI();
 renderSettings();

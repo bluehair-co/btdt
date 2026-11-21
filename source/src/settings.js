@@ -4,7 +4,7 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   renderDateTimeSettings();
   $('unitNote').textContent = 'Automatic uses ' + (LOCALE_FMT.unit === 'mi' ? 'miles' : 'kilometres') + ', from this device\'s region.';
-  buildFactors();
+  buildFactors(); fillDists();
   renderHrSettings();
   renderImports();
   renderSplitSettings();
@@ -167,10 +167,12 @@ function buildFactors() {
   rows.forEach(function (r) {
     var id = 'g_' + r[0], l = document.createElement('label'), inp = document.createElement('input');
     l.htmlFor = id; l.textContent = r[1];
-    inp.type = 'number'; inp.id = id; inp.min = 0; inp.step = 1; inp.value = A.g[r[0]];
+    // Typed per km or per mile, as in Settings; kept per km. Only a field you change is converted back.
+    var per = PREFS.unit === 'mi' ? 1 / MI : 1;
+    inp.type = 'number'; inp.id = id; inp.min = 0; inp.step = 'any'; inp.value = Math.round(A.g[r[0]] * per);
     inp.addEventListener('input', function () {
       var v = parseFloat(inp.value); if (!isFinite(v) || v < 0) return;
-      A.g[r[0]] = v;
+      A.g[r[0]] = v / per;
       if (r[0] === 'CAR') { A.car = 'custom'; $('carType').value = 'custom'; }
       saveFactors(); co2Changed();
     });
@@ -178,7 +180,9 @@ function buildFactors() {
   });
   var note = document.createElement('p');
   note.className = 'fine'; note.style.gridColumn = '1 / -1';
-  note.textContent = 'Flights, per passenger by distance: under 500 km ' + A.fly.dom[A.rf ? 0 : 1] + ' g, 500–3,700 km ' + A.fly.short[A.rf ? 0 : 1] + ' g, longer ' + A.fly.long[A.rf ? 0 : 1] + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
+  $('factorsSum').textContent = 'Grams of CO₂e per ' + (PREFS.unit === 'mi' ? 'mile' : 'km');
+  var fp = PREFS.unit === 'mi' ? 1 / MI : 1, fg = function (x) { return fmt(Math.round(x * fp)); };
+  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }
@@ -192,7 +196,7 @@ $('rf').addEventListener('change', function () { A.rf = this.checked; saveFactor
 $('resetFactors').addEventListener('click', function () { A = JSON.parse(JSON.stringify(DEFAULTS)); saveFactors(); buildFactors(); co2Changed(); });
 
 // ---------- start ----------
-fillIcons();
+fillIcons(); fillDists();
 applyTheme();
 syncLayersUI();
 renderSettings();

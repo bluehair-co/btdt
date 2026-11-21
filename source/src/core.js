@@ -287,6 +287,19 @@ var MI = 0.621371;
 function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
 function distVal(kmv) { return PREFS.unit === 'mi' ? kmv * MI : kmv; }
 function distUnit() { return PREFS.unit === 'mi' ? 'mi' : 'km'; }
+// A short distance given in metres (a radius, a grouping): metres, or feet in miles up to a tenth of a
+// mile (25 m reads 80 ft, 100 m 330 ft), then the usual distance.
+function distShort(m) {
+  if (PREFS.unit === 'mi') { var ft = m * 3.28084; return ft < 528 ? fmt(ft < 100 ? Math.round(ft / 5) * 5 : Math.round(ft / 10) * 10) + ' ft' : dist(m / 1000); }
+  return m < 1000 ? fmt(m) + ' m' : dist(m / 1000);
+}
+// Fixed distances in the page's own text (data-dist-km="1.5"), in the units of Settings.
+function fillDists() { document.querySelectorAll('[data-dist-km]').forEach(function (el) { el.textContent = dist(+el.getAttribute('data-dist-km')); }); }
+// A distance typed in a form, in the units of Settings, and back to km for saving. distField shows a
+// stored km value rounded to 0.1; distSave keeps the stored km when that shown value wasn't changed,
+// so opening and saving a rule doesn't nudge it by the rounding.
+function distField(kmv) { return kmv != null && isFinite(kmv) ? Math.round(distVal(kmv) * 10) / 10 : ''; }
+function distSave(v, kmv) { if (!(v > 0)) return null; if (kmv != null && v === distField(kmv)) return kmv; return PREFS.unit === 'mi' ? v / MI : v; }
 function dist(kmv) { var v = distVal(kmv); return fmt(v, v < 10 && v > 0 ? 1 : 0) + ' ' + distUnit(); }
 function distParts(kmv) { var v = distVal(kmv); return { v: fmt(v, v < 10 && v > 0 ? 1 : 0), u: distUnit() }; }
 function speed(kmh) { return fmt(distVal(kmh)) + (PREFS.unit === 'mi' ? ' mph' : ' km/h'); }

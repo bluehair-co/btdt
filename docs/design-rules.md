@@ -64,7 +64,7 @@ Every place in the app answers one question, and a new feature goes where its qu
 - Each transport kind has its own colour token (`--m-road`, `--m-transit`, `--m-bike`, `--m-foot`, `--m-air`, `--m-water`) used everywhere: lines, icons, legends, filters.
 - Light and dark themes (*Menu › Preferences*, or the system's). Check both.
 - Phone first, desktop too: sheets slide up from the bottom on a phone and open as side panels on desktop. Every touch interaction (lasso, one-finger zoom, sliders) must work with a finger.
-- Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*; nothing is hard-coded to km or to one date format.
+- **Local settings everywhere.** Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*. Every label follows them: distances, speeds and per-distance figures (km or miles), short distances (m or ft), date order and 12/24-hour time, in results and also in form fields, their labels, info texts and examples. Nothing is hard-coded to km or to one date format. Check new UI in both kilometres and miles.
 
 ## Process
 
