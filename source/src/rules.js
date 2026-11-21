@@ -299,6 +299,24 @@ function mrCorrections() {
 // trips left out, lines), for the rules sheet. Worked out by applying them once and starting again.
 var MR_WOULD = null;
 function mrApplyCorrections(dry) { runAll(mrCorrectSteps(dry)); }
+// One correction on one trip: its type, checked mark, title and hiding. True when it changed something.
+function mrCorrectOne(x, i) {
+  var t = x.c.then, b = D.base, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = false;
+  if (mi != null) {
+    D.mode[i] = mi;
+    // A correction isn't a guess. A Strava sport of another type no longer fits the trip.
+    D.est[i] &= ~GUESSED;
+    if (D.sport[i] && SPORTS[D.sport[i]][2] !== t.mode) D.sport[i] = 0;
+    if (D.stype) D.stype[i] = '';
+    D.mrMode[i] = { rule: x.c.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED) };
+    hit = true;
+  }
+  if (t.checked === true && mi == null) { D.mrOk[i] = 1; hit = true; }
+  if (typeof t.name === 'string' && t.name.trim()) { D.mrName[i] = { rule: x.c.id, name: t.name.trim() }; hit = true; }
+  if (t.hide === true) { D.mrHide[i] = 1; hit = true; }
+  else if (t.hide === false && D.mrHide[i]) { D.mrHide[i] = 0; hit = true; }
+  return hit;
+}
 function* mrCorrectSteps(dry) {
   var b = D.base, n = D.day.length;
   function copy(a) { return a ? a.slice() : a; }
@@ -307,7 +325,7 @@ function* mrCorrectSteps(dry) {
     D.pathPts = b.pathPts; D.pathT = b.pathT; D.pathOff = b.pathOff; D.from = b.from; D.to = b.to; D.mrDrop = [];
     if (b.vll) D.vll = b.vll; D.mvStay = {};
     D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
-    MR_COUNT = {}; MR_COR = null; MR_LEFT = {};
+    MR_COUNT = {}; MR_COR = null; MR_LEFT = {}; D.preCor = null;
   }
   reset();
   if (!dry) MR_WOULD = null;
@@ -328,23 +346,11 @@ function* mrCorrectSteps(dry) {
   yield;
   mrApplySnaps();
   yield;
+  // How every trip is before the corrections: mrReapplyTrip starts one trip again from here.
+  if (!dry) D.preCor = { n: n, mode: copy(D.mode), est: copy(D.est), sport: copy(D.sport), stype: copy(D.stype), km: copy(D.km), snap: D.snap.slice(), mrMode: D.mrMode.slice() };
   mrCorrections().forEach(function (x) {
-    var t = x.c.then, mi = t.mode != null ? MODE_IDX[t.mode] : null, hit = 0;
-    x.trips.forEach(function (i) {
-      if (mi != null) {
-        D.mode[i] = mi;
-        // A correction isn't a guess. A Strava sport of another type no longer fits the trip.
-        D.est[i] &= ~GUESSED;
-        if (D.sport[i] && SPORTS[D.sport[i]][2] !== t.mode) D.sport[i] = 0;
-        if (D.stype) D.stype[i] = '';
-        D.mrMode[i] = { rule: x.c.id, was: MODES[b.mode[i]], guessed: !!(b.est[i] & GUESSED) };
-        hit = 1;
-      }
-      if (t.checked === true && mi == null) { D.mrOk[i] = 1; hit = 1; }
-      if (typeof t.name === 'string' && t.name.trim()) { D.mrName[i] = { rule: x.c.id, name: t.name.trim() }; hit = 1; }
-      if (t.hide === true) { D.mrHide[i] = 1; hit = 1; }
-      else if (t.hide === false && D.mrHide[i]) { D.mrHide[i] = 0; hit = 1; }
-    });
+    var hit = 0;
+    x.trips.forEach(function (i) { if (mrCorrectOne(x, i)) hit = 1; });
     if (hit) MR_COUNT[x.c.id] = x.trips.length;
   });
   // A trip a correction made a flight isn't drawn along a routine's line.
@@ -465,33 +471,41 @@ var DOUBT_GROUPS = { CYCLING: 1, CAR: 1, BUS: 1, TRAM: 1, TRAIN: 1, SUBWAY: 1 };
 function* mrLearnSteps() {
   var n = D.day.length, i, fly = MODE_IDX.FLYING;
   D.chk = new Int8Array(n).fill(-1); D.chkWhy = []; D.learn = []; D.conf = new Uint8Array(n);
-  function fixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
-  var idx = new TripIndex(D, function (j) {
-    if (isDup(j) || D.mrHide[j] || D.est[j] & GUESSED || D.mode[j] === fly) return 0;
-    if (fixed(j)) return VOTE_FIX;
-    return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
-  });
+  // Kept on D, so mrReapplyTrip can change one trip's vote and decide its like trips again.
+  var idx = D.tidx = new TripIndex(D, mrLearnWeight);
   for (i = 0; i < n; i++) {
     if (!(i & 127)) yield;
-    if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || fixed(i)) continue;
-    var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
-    if (D.est[i] & GUESSED) {
-      if (D.est[i] & STRAVA) continue;
-      var conf = D.gconf ? D.gconf[i] : 0;
-      v = idx.decide(i, avg);
-      if (v && VOTE_GROUP[v.mode] !== VOTE_GROUP[m]) { D.learn[i] = { was: m, n: v.trips }; D.mode[i] = MODE_IDX[v.mode]; m = v.mode; conf = v.conf; }
-      else if (v) conf = Math.max(conf, v.conf);
-      D.conf[i] = conf;
-      if (conf && conf < CHECK_CONF) { D.chk[i] = MODE_IDX[mrAltMode(i, m, avg, v || idx.votes(i, avg))]; D.chkWhy[i] = { kind: 'guess' }; }
-      continue;
-    }
-    if (D.est[i] & STRAVA || !DOUBT_GROUPS[VOTE_GROUP[m]]) continue;
-    if (VOTE_GROUP[m] === 'CYCLING' && avg > VOTE_KMH.CYCLING[1]) { D.chk[i] = MODE_IDX[avg > 90 ? 'TRAIN' : 'CAR']; D.chkWhy[i] = { kind: 'speed', avg: avg }; continue; }
-    v = idx.votes(i, avg);
-    var r = v && VOTE_KMH[v.group];
-    if (v && v.group !== VOTE_GROUP[m] && DOUBT_GROUPS[v.group] && v.n >= DOUBT_MIN && v.share >= DOUBT_SHARE && (v.by[VOTE_GROUP[m]] || 0) <= DOUBT_OWN * v.tot && avg >= r[0] && avg <= r[1]) {
-      D.chk[i] = MODE_IDX[v.mode]; D.chkWhy[i] = { kind: 'history', n: v.trips, share: v.share };
-    }
+    mrLearnOne(idx, i);
+  }
+}
+function mrLearnFixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
+// A trip's vote for its like trips (0: none).
+function mrLearnWeight(j) {
+  if (isDup(j) || D.mrHide[j] || D.est[j] & GUESSED || D.mode[j] === MODE_IDX.FLYING) return 0;
+  if (mrLearnFixed(j)) return VOTE_FIX;
+  return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
+}
+// One trip's guess and check, from the votes of its like trips.
+function mrLearnOne(idx, i) {
+  var fly = MODE_IDX.FLYING;
+  if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || mrLearnFixed(i)) return;
+  var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
+  if (D.est[i] & GUESSED) {
+    if (D.est[i] & STRAVA) return;
+    var conf = D.gconf ? D.gconf[i] : 0;
+    v = idx.decide(i, avg);
+    if (v && VOTE_GROUP[v.mode] !== VOTE_GROUP[m]) { D.learn[i] = { was: m, n: v.trips }; D.mode[i] = MODE_IDX[v.mode]; m = v.mode; conf = v.conf; }
+    else if (v) conf = Math.max(conf, v.conf);
+    D.conf[i] = conf;
+    if (conf && conf < CHECK_CONF) { D.chk[i] = MODE_IDX[mrAltMode(i, m, avg, v || idx.votes(i, avg))]; D.chkWhy[i] = { kind: 'guess' }; }
+    return;
+  }
+  if (D.est[i] & STRAVA || !DOUBT_GROUPS[VOTE_GROUP[m]]) return;
+  if (VOTE_GROUP[m] === 'CYCLING' && avg > VOTE_KMH.CYCLING[1]) { D.chk[i] = MODE_IDX[avg > 90 ? 'TRAIN' : 'CAR']; D.chkWhy[i] = { kind: 'speed', avg: avg }; return; }
+  v = idx.votes(i, avg);
+  var r = v && VOTE_KMH[v.group];
+  if (v && v.group !== VOTE_GROUP[m] && DOUBT_GROUPS[v.group] && v.n >= DOUBT_MIN && v.share >= DOUBT_SHARE && (v.by[VOTE_GROUP[m]] || 0) <= DOUBT_OWN * v.tot && avg >= r[0] && avg <= r[1]) {
+    D.chk[i] = MODE_IDX[v.mode]; D.chkWhy[i] = { kind: 'history', n: v.trips, share: v.share };
   }
 }
 // The likeliest other type for a guess worth checking: what your like trips mostly were, else the
@@ -878,11 +892,97 @@ function mrLoad() {
   }).catch(function () {});
 }
 // Something changed in the app: kept with a short description, until the next export.
-function mrChange(text) {
+// trip: the one trip a change is about, when it only touches that trip's own corrections (its type,
+// checked mark, title, hiding or gear): then only that trip and its like trips are worked out again.
+function mrChange(text, trip) {
   MR.changes.push({ t: Date.now(), text: text });
   MR.doc.about = Object.assign({}, MR.doc.about, { updated: new Date().toISOString(), generator: 'BT•DT' });
   mrSave();
+  if (trip != null && mrReapplyTrip(trip)) { mrReapplied(); return; }
   mrReapply();
+}
+// The fast way after a change to one trip's own corrections, with the same result as mrReapply:
+// 1. the trip goes back to how it was before the corrections (D.preCor, kept by mrCorrectSteps),
+// 2. its corrections are applied again, in the same order,
+// 3. it is drawn along the tracks or roads, when that's on and its new type calls for it,
+// 4. its vote changes in the like-trips index (D.tidx), and the guesses and checks of the trips
+//    between the same two places are decided again. Only trips with a vote can sway others, and
+//    deciding only ever changes guesses, so nothing further down can change.
+// False when it can't (MyRules off, trips still being set up or snapped, no snapshot): then mrReapply.
+var MR_FAST = { n: 0, ms: 0 };
+function mrReapplyTrip(i) {
+  var P = D && D.preCor, idx = D && D.tidx, n = D ? D.day.length : 0;
+  if (!P || !idx || P.n !== n || !MR || !MR.on || BUILDING || ROAD_RUN || roadOn() && !RG || !(i >= 0 && i < n)) return false;
+  var t0 = performance.now(), b = D.base, oldCor = (MR_COR || []).filter(function (x) { return x.trips.indexOf(i) >= 0; });
+  // 1.
+  D.mode[i] = P.mode[i]; D.est[i] = P.est[i]; D.sport[i] = P.sport[i]; if (D.stype) D.stype[i] = P.stype[i];
+  D.km[i] = P.km[i]; D.snap[i] = P.snap[i];
+  if (P.mrMode[i]) D.mrMode[i] = P.mrMode[i]; else delete D.mrMode[i];
+  delete D.mrName[i]; D.mrHide[i] = 0; D.mrOk[i] = 0;
+  if (D.mrTrack) delete D.mrTrack[i];
+  if (D.mrRoad) delete D.mrRoad[i];
+  // 2. (The list is made again: the change may have added, changed or removed a correction.)
+  MR_COR = null;
+  var now = mrCorrections().filter(function (x) { return x.trips.indexOf(i) >= 0; });
+  oldCor.forEach(function (x) { if (now.every(function (y) { return y.c !== x.c; })) mrCorCount(x.c); });
+  now.forEach(function (x) { if (mrCorrectOne(x, i)) MR_COUNT[x.c.id] = x.trips.length; else mrCorCount(x.c); });
+  if (D.snap[i] && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; }
+  // 3.
+  if (D.mrTrack && trackOn() && trackCan(i)) mrTrackOne(i);
+  if (D.mrRoad && roadOn() && RG && roadCan(i)) {
+    var rk = roadKey(i), sn = ROAD_CACHE.get(rk);
+    if (sn === undefined) { sn = roadTrip(RG, i); ROAD_CACHE.set(rk, sn); }
+    if (sn) { D.snap[i] = sn; D.km[i] = sn.km; D.mrRoad[i] = sn; }
+  }
+  // 4.
+  idx.avg[i] = tripAvg(D, i);
+  mrIdxSet(idx, i, mrLearnWeight(i));
+  var A = [D.from[2 * i], D.from[2 * i + 1]], Z = [D.to[2 * i], D.to[2 * i + 1]], like = [i];
+  if (isFinite(A[0]) && isFinite(Z[0])) for (var j = 0; j < n; j++) {
+    if (j === i || !isFinite(D.from[2 * j]) || !isFinite(D.to[2 * j])) continue;
+    // A quick no: its start is nowhere near either end in latitude (0.01° is over 1 km).
+    var la = D.from[2 * j];
+    if (Math.abs(la - A[0]) > 0.01 && Math.abs(la - Z[0]) > 0.01) continue;
+    var a = [la, D.from[2 * j + 1]], z = [D.to[2 * j], D.to[2 * j + 1]];
+    // A little wider than the index's own END_KM, so no trip that counts is missed.
+    if (km(A, a) <= 2 * END_KM && km(Z, z) <= 2 * END_KM || km(A, z) <= 2 * END_KM && km(Z, a) <= 2 * END_KM) like.push(j);
+  }
+  like.forEach(function (j) {
+    if (j !== i && D.learn[j]) D.mode[j] = MODE_IDX[D.learn[j].was];
+    delete D.learn[j]; D.chk[j] = -1; delete D.chkWhy[j]; D.conf[j] = 0;
+    mrLearnOne(idx, j);
+  });
+  trackSettings(); roadSettings();
+  MR_FAST.n++; MR_FAST.ms = Math.round(performance.now() - t0); MR_FAST.like = like.length;
+  return true;
+}
+// A correction's count when it no longer changes a given trip: as mrCorrectSteps counts it.
+function mrCorCount(c) {
+  var x = mrCorrections().filter(function (y) { return y.c === c; })[0], hit = false;
+  if (x) x.trips.forEach(function (j) {
+    var t = c.then;
+    if (t.mode != null && MODE_IDX[t.mode] != null || t.checked === true && t.mode == null || typeof t.name === 'string' && t.name.trim() || t.hide === true || t.hide === false && D.mrHide[j]) hit = true;
+  });
+  if (hit) MR_COUNT[c.id] = x.trips.length; else delete MR_COUNT[c.id];
+}
+// A trip's vote in the like-trips index: in its place among the trips with the same ends (kept in
+// the order TripIndex adds them, so ties come out the same), or out when it has none.
+function mrIdxSet(idx, i, w) {
+  var R = idx.R, la = R.from[2 * i], lb = R.to[2 * i];
+  if (!isFinite(la) || !isFinite(lb)) { idx.w[i] = 0; return; }
+  var k = endKey(Math.floor(la / END_LAT), Math.floor(R.from[2 * i + 1] / END_LNG), Math.floor(lb / END_LAT), Math.floor(R.to[2 * i + 1] / END_LNG));
+  var L = idx.m.get(k), at = L ? L.indexOf(i) : -1;
+  if (w > 0 && VOTE_GROUP[MODES[R.mode[i]]]) {
+    idx.w[i] = w;
+    if (at >= 0) return;
+    if (!L) { idx.m.set(k, [i]); return; }
+    var p = 0;
+    while (p < L.length && L[p] < i) p++;
+    L.splice(p, 0, i);
+  } else {
+    idx.w[i] = 0;
+    if (at >= 0) L.splice(at, 1);
+  }
 }
 function mrEnsure() {
   if (!MR) MR = { doc: { $schema: 'https://bluehair-co.github.io/btdt/schema/myrules-0.1.json', myrules: '0.1', about: { generator: 'BT•DT' } }, name: 'my.myrules.json', on: true, changes: [], exported: 0 };
@@ -1555,7 +1655,7 @@ function mrQuickType(i, type) {
   if (!c) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   var t = c.then || (c.then = {});
   if (type !== was || D.base.est[i] & GUESSED) { t.mode = type; delete t.checked; } else { delete t.mode; t.checked = true; }
-  mrChange('Trip on ' + mrWhere(i) + ': ' + (type === cur ? 'type checked, ' : 'type ') + (LABEL[type] || type).toLowerCase());
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (type === cur ? 'type checked, ' : 'type ') + (LABEL[type] || type).toLowerCase(), i);
   var next = mrNextCheck(i);
   toast(type === cur ? 'Kept as ' + (LABEL[type] || type).toLowerCase() + '.' : 'Changed to ' + (LABEL[type] || type).toLowerCase() + '.');
   if (type !== cur) { openTrip(i); setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
@@ -1616,7 +1716,7 @@ function mrRemoveEdits(i) {
         else if (Array.isArray(c.trip.trips)) mrDetach(c, i);
         else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
       });
-      mrChange('Edit removed: the trip on ' + mrWhere(i));
+      mrChange('Edit removed: the trip on ' + mrWhere(i), eds.some(function (c) { return c.then && c.then.ignore_points; }) ? null : i);
       toast(eds.length > 1 ? 'Edits removed.' : 'Edit removed.');
       openTrip(i);
     }], ['Cancel', 'quiet', null]],
@@ -1659,13 +1759,14 @@ function mrTripAct(b, i, act) {
     if (c.trip && c.trip.start) mrDropAction(c, f);
     // A correction on a day or span: this trip is left out of it.
     else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
-    mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i));
+    // Ignored GPS points change the trip's line before anything else: those need everything again.
+    mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i), f === 'ignore_points' ? null : i);
     openTrip(i);
   } else if (act === 'detach') {
     var bc = mrById(b.dataset.r);
     if (!bc || !bc.trip || !Array.isArray(bc.trip.trips)) return;
     mrDetach(bc, i);
-    mrChange('Detached from ' + (bc.name || bc.id) + ': the trip on ' + mrWhere(i));
+    mrChange('Detached from ' + (bc.name || bc.id) + ': the trip on ' + mrWhere(i), bc.then && bc.then.ignore_points ? null : i);
     openTrip(i);
   } else if (act === 'rule') mrEditRule('routines:' + b.dataset.r);
   else if (act === 'snaprule') mrEditRule('snaps:' + b.dataset.r);
@@ -1731,7 +1832,7 @@ function mrSaveEdit(i) {
   if (!what.length && !(isNew && Object.keys(t).length)) return;
   if (isNew) { if (!Object.keys(t).length) return; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   else if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
-  mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'), i);
   if (openId === 'mrSheet') return;
   openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0);
 }
@@ -1744,7 +1845,7 @@ function mrHideTrip(i, on) {
   var t = c.then || (c.then = {});
   if (on) t.hide = true; else delete t.hide;
   if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
-  mrChange('Trip on ' + mrWhere(i) + ': ' + (on ? 'hidden' : 'shown again'));
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (on ? 'hidden' : 'shown again'), i);
   if (openId === 'mrSheet') return;
   if (on) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
   else openTrip(i);
@@ -1807,7 +1908,7 @@ function mrSaveGear(i) {
     var c = mrTripCorrection(i), gv = existing ? '@' + existing.id : name;
     if (c) c.then.gear = gv;
     else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
-    mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]));
+    mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]), i);
   } else {
     var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = distSave(parseFloat($('mrMax').value));
     if (f) w.from = f;
