@@ -328,31 +328,35 @@ function* mrTrackSteps() {
   trackSettings();
 }
 function* mrTrackTrips() {
-  var n = D.day.length, T = MODE_IDX.TRAIN;
-  for (var i = 0; i < n; i++) {
-    if (D.mode[i] !== T || D.snap[i] || isDup(i) || D.mrHide && D.mrHide[i] || D.pathOff[i + 1] - D.pathOff[i] < 3) continue;
+  for (var i = 0, n = D.day.length; i < n; i++) {
+    if (!trackCan(i)) continue;
     // A train trip can take a while (the ways between two new stations), so the loader gets a turn.
     yield;
-    var a = [D.from[2 * i], D.from[2 * i + 1]], z = [D.to[2 * i], D.to[2 * i + 1]];
-    if (!isFinite(a[0]) || !isFinite(z[0]) || km(a, z) < 2) continue;
-    var sa = packStation(a[0], a[1], TRACK_END_KM, 1 | 8), sb = sa && packStation(z[0], z[1], TRACK_END_KM, 1 | 8);
-    if (!sb || km([sa.lat, sa.lng], [sb.lat, sb.lng]) < 1) continue;
-    var ways = trackWays(sa, sb), best = null, bsc = -1, hk = D.start[i] + ',' + D.end[i] + ',' + sa.name + ',' + sb.name, P = packIndex(), th = P.th || (P.th = new Map()), hit = th.get(hk);
-    if (hit) { best = ways[hit[0]]; bsc = hit[1]; }
-    else {
-      for (var k = 0; k < ways.length; k++) {
-        var sc = trackScore(i, ways[k].pts);
-        if (sc > bsc || sc === bsc && ways[k].km < best.km) { bsc = sc; best = ways[k]; }
-      }
-      th.set(hk, [ways.indexOf(best), bsc]);
-    }
-    if (!best || bsc < TRACK_MIN) continue;
-    var sn = mrSnapTrip(i, best.pts, TRACK_END_KM);
-    if (!sn) continue;
-    sn.track = true; sn.score = bsc;
-    D.snap[i] = sn; D.km[i] = sn.km;
-    D.mrTrack[i] = { name: best.name.replace(/ \([^)]*station packs?\)$/, ''), from: sa.name, to: sb.name, score: bsc, packs: best.packs };
+    mrTrackOne(i);
   }
+}
+function trackCan(i) { return D.mode[i] === MODE_IDX.TRAIN && !D.snap[i] && !isDup(i) && !(D.mrHide && D.mrHide[i]) && D.pathOff[i + 1] - D.pathOff[i] >= 3; }
+// One train trip along the tracks, when its ends are near stations and its GPS points follow a railway.
+function mrTrackOne(i) {
+  var a = [D.from[2 * i], D.from[2 * i + 1]], z = [D.to[2 * i], D.to[2 * i + 1]];
+  if (!isFinite(a[0]) || !isFinite(z[0]) || km(a, z) < 2) return;
+  var sa = packStation(a[0], a[1], TRACK_END_KM, 1 | 8), sb = sa && packStation(z[0], z[1], TRACK_END_KM, 1 | 8);
+  if (!sb || km([sa.lat, sa.lng], [sb.lat, sb.lng]) < 1) return;
+  var ways = trackWays(sa, sb), best = null, bsc = -1, hk = D.start[i] + ',' + D.end[i] + ',' + sa.name + ',' + sb.name, P = packIndex(), th = P.th || (P.th = new Map()), hit = th.get(hk);
+  if (hit) { best = ways[hit[0]]; bsc = hit[1]; }
+  else {
+    for (var k = 0; k < ways.length; k++) {
+      var sc = trackScore(i, ways[k].pts);
+      if (sc > bsc || sc === bsc && ways[k].km < best.km) { bsc = sc; best = ways[k]; }
+    }
+    th.set(hk, [ways.indexOf(best), bsc]);
+  }
+  if (!best || bsc < TRACK_MIN) return;
+  var sn = mrSnapTrip(i, best.pts, TRACK_END_KM);
+  if (!sn) return;
+  sn.track = true; sn.score = bsc;
+  D.snap[i] = sn; D.km[i] = sn.km;
+  D.mrTrack[i] = { name: best.name.replace(/ \([^)]*station packs?\)$/, ''), from: sa.name, to: sb.name, score: bsc, packs: best.packs };
 }
 function trackSettings() {
   var el = $('trackSnap');
