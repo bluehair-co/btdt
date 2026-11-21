@@ -189,8 +189,8 @@ A move with `at` wins over `keep` on the stays in its dates; of two moves, the l
 
 | Field | Meaning |
 |---|---|
-| `kind` | `bike`, `strida`, `halfbike`, `cargo`, `ebike`, `shoe`, `other`. Picks the icon, as the app already does for Strava gear. |
-| `mode` | The transport type it applies to: `CYCLING`, `RUNNING`, `WALKING`… (the app's own type names). |
+| `kind` | Bikes: `bike`, `strida`, `halfbike`, `cargo`, `ebike`. Runs and walks: `shoe`. Cars: `car`. Motorbikes: `motorbike`, `scooter`. Boats (not ferries): `boat`, `sailboat`, `kayak`, `sup` (paddleboard). Snow sports: `skis`, `snowboard`. Any type: `other`. Picks the icon and the label in *Your gear*, as the app already does for Strava gear. |
+| `mode` | The transport type it applies to (the app's own type names). The app offers gear for `CYCLING`, `RUNNING`, `WALKING`, `CAR`, `MOTORCYCLE`, `BOAT` and `SKIING`. |
 | `match` | Optional narrowing: `min_km`, `max_km`, `sports` (e.g. `["Mountain bike"]`), `from`/`to` (place ids: only rides starting or ending there), `weekdays_only`. |
 | `strava_name` | Optional. The name this gear has in your Strava export, so a gear period and recorded Strava gear show as **one** chip in Filters instead of two. |
 

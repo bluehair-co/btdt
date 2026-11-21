@@ -746,7 +746,7 @@ function renderSquares() {
     return '<div class="bar-row"><span class="num" style="font-size:12px">' + y + '</span><div><div class="track"><i style="width:' + (years[y] / mx * 100).toFixed(1) + '%;background:var(--accent)"></i></div></div><div class="val">+' + fmt(years[y]) + '</div></div>';
   }).join('') : '';
 }
-// Each bike and pair of shoes in the trips shown: distance, activities and when it was used.
+// Each bike, pair of shoes and other gear (car, boat, skis…) in the trips shown: distance, activities and when it was used.
 function renderGear() {
   var by = {}, j, i;
   for (j = 0; j < sel.length; j++) {
@@ -763,7 +763,7 @@ function renderGear() {
   $('gearList').innerHTML = list.map(function (x) {
     var G = M.gear[x.g], d = distParts(x.km);
     return '<button type="button" class="hit-row gear-row" data-gear="' + x.g + '"><span class="mode-badge sm" style="background:' + modeColor(G.mode) + '">' + icon(gearIcon(x.g)) + '</span>' +
-      '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + ' activit' + (x.n === 1 ? 'y' : 'ies') + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
+      '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + (BIKE_KIND[G.kind] || G.kind === 'shoe' ? ' activit' + (x.n === 1 ? 'y' : 'ies') : ' trip' + (x.n === 1 ? '' : 's')) + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
       '<i class="gear-bar"><i style="width:' + (x.km / max * 100).toFixed(1) + '%;background:' + modeColor(G.mode) + '"></i></i></span>' +
       '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
   }).join('');

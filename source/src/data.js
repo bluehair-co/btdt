@@ -238,6 +238,10 @@ var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiani
 var HALFBIKE_RE = /half ?bike|kolelinia/i;
 var STRIDA_RE = /strida/i;
 var GEAR = [{ name: 'No gear', n: 0 }];
+// Kinds that are bikes (their gear counts as cycling), and the kind gear gets from its type when
+// nothing names one.
+var BIKE_KIND = { bike: 1, strida: 1, halfbike: 1, cargo: 1 };
+var GEAR_MODE_KIND = { CAR: 'car', MOTORCYCLE: 'motorbike', BOAT: 'boat', SKIING: 'skis' };
 // D.gear numbers each trip's gear (0 = none). A gear's kind comes from bikes.csv and shoes.csv when
 // the export had them, else from what it was used for; its mode is the one it was used for most.
 function buildGear() {
@@ -275,12 +279,14 @@ function buildGear() {
     if (!best) best = x_.ruleMode || 'CYCLING';
     x_.mode = best;
     var words = x_.name + ' ' + (x_.info ? x_.info.brand + ' ' + x_.info.model : ''), kind = x_.ruleKind || x_.info && x_.info.kind;
-    if (kind !== 'shoe' && HALFBIKE_RE.test(words)) kind = 'halfbike';
-    else if (kind !== 'shoe' && STRIDA_RE.test(words)) kind = 'strida';
-    else if (kind !== 'shoe' && CARGO_RE.test(words)) kind = 'cargo';
-    else if (!kind) kind = groupOf(best).key === 'bike' ? 'bike' : groupOf(best).key === 'foot' ? 'shoe' : 'other';
+    // Bike names only on bikes: a car called "Cargo" stays a car.
+    var bikeish = kind === 'bike' || !kind && best === 'CYCLING';
+    if (bikeish && HALFBIKE_RE.test(words)) kind = 'halfbike';
+    else if (bikeish && STRIDA_RE.test(words)) kind = 'strida';
+    else if (bikeish && CARGO_RE.test(words)) kind = 'cargo';
+    else if (!kind) kind = groupOf(best).key === 'bike' ? 'bike' : groupOf(best).key === 'foot' ? 'shoe' : GEAR_MODE_KIND[best] || 'other';
     x_.kind = kind;
-    if (kind !== 'shoe' && kind !== 'other') x_.mode = 'CYCLING';
+    if (BIKE_KIND[kind]) x_.mode = 'CYCLING';
   }
   // Each type's gear, most used first: their chips sit under the type in Filters.
   GEAR_MODE = {};
@@ -340,7 +346,8 @@ function gearIcon(g) {
   var x = GEAR[g];
   return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'strida' ? 'strida' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
 }
-var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes' };
+var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes', car: 'Car', motorbike: 'Motorbike',
+  scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard', skis: 'Skis', snowboard: 'Snowboard' };
 function gearKind(g) { var x = GEAR[g]; return GEAR_KIND[x.kind] || LABEL[x.mode] || 'Gear'; }
 
 // ---------- filters ----------

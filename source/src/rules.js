@@ -11,7 +11,14 @@
 var MR = null;
 var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes', other: 'Other' };
+var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes',
+  car: 'Car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
+  skis: 'Skis', snowboard: 'Snowboard', other: 'Other' };
+// The kinds of gear each type can have (Other last), and an example name for new gear.
+var MR_GEAR_KINDS = { CYCLING: ['bike', 'strida', 'halfbike', 'cargo', 'ebike'], RUNNING: ['shoe'], WALKING: ['shoe'], CAR: ['car'],
+  MOTORCYCLE: ['motorbike', 'scooter'], BOAT: ['boat', 'sailboat', 'kayak', 'sup'], SKIING: ['skis', 'snowboard'] };
+var MR_GEAR_EG = { CYCLING: 'Strida EVO', RUNNING: 'Trail shoes', WALKING: 'Hiking boots', CAR: 'Blue Volvo', MOTORCYCLE: 'Vespa', BOAT: 'Sea kayak', SKIING: 'Powder skis' };
+function mrKindsFor(m) { return (MR_GEAR_KINDS[m || 'CYCLING'] || []).concat(['other']); }
 var MR_COUNT = {};   // trips (gear) or stays (places) each rule changed, by id
 var MR_AMB = 0;      // trips more than one gear period fits equally well, which get none
 
@@ -1537,8 +1544,9 @@ $('mrExportData').addEventListener('click', mrExport);
 
 // ---------- trip details ----------
 // What MyRules did to a trip, each with Undo (a correction) or Not this trip (a gear period); Edit
-// trip (type, title, hide) for every trip, and Set gear for rides, runs and walks.
-var MR_GEAR_MODES = { CYCLING: 1, RUNNING: 1, WALKING: 1 };
+// trip (type, title, hide) for every trip, and Set gear for the types that have gear (MR_GEAR_KINDS):
+// rides, runs, walks, car and motorbike trips, boat trips (not ferries) and snow sports.
+var MR_GEAR_MODES = MR_GEAR_KINDS;
 function mrWhere(i) { return niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]); }
 function mrTripBlock(i) {
   if (!D || isDup(i)) return '';
@@ -1808,7 +1816,7 @@ function mrEditDialog(i) {
     after: function () { var gb = $('mrEGear'); if (gb) gb.addEventListener('click', function () { $('mrDlg').close(); mrGearDialog(i); }); }
   });
 }
-// Gear in Trip info, for rides, runs and walks: what it has, and Set gear… unless an activity file
+// Gear in Trip info, for the types that have gear: what it has, and Set gear… unless an activity file
 // recorded it (recorded gear is never replaced).
 function mrGearField(i) {
   var m = MODES[D.mode[i]], g = D.mrGear && D.mrGear[i], has = D.gear[i], rec = has && !g;
@@ -1860,12 +1868,12 @@ function mrGearDialog(i) {
     for (var j = 0; j < D.day.length; j++) if (D.gear[j] === g) { a = Math.min(a, D.day[j]); b = Math.max(b, D.day[j]); }
     return isFinite(a) ? [a, b] : [D.day[i], D.day[i]];
   }
-  var kinds = mode === 'CYCLING' ? ['bike', 'strida', 'halfbike', 'cargo', 'ebike', 'other'] : ['shoe', 'other'];
+  var kinds = mrKindsFor(mode);
   mrAsk({
     title: 'Set gear',
     text: esc(tripRoute(i)) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Gear</span><select id="mrG">' + opts.map(function (g) { return '<option value="' + g + '">' + esc(GEAR[g].name) + '</option>'; }).join('') + '<option value="new">New gear…</option></select></label>' +
-      '<div id="mrNew" hidden class="grid2"><label class="field"><span>Name</span><input type="text" id="mrName" placeholder="e.g. Strida EVO"></label><label class="field"><span>Kind</span><select id="mrKind">' + kinds.map(function (k) { return '<option value="' + k + '">' + MR_KINDS[k] + '</option>'; }).join('') + '</select></label></div>' +
+      '<div id="mrNew" hidden class="grid2"><label class="field"><span>Name</span><input type="text" id="mrName" placeholder="e.g. ' + esc(MR_GEAR_EG[mode] || 'My gear') + '"></label><label class="field"><span>Kind</span><select id="mrKind">' + kinds.map(function (k) { return '<option value="' + k + '">' + MR_KINDS[k] + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="mr-opt"><input type="radio" name="mrScope" value="one" checked><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
       '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
       // The period's details show once this option is picked.
@@ -1981,7 +1989,7 @@ function mrDatesInto(r) {
   return true;
 }
 function mrGearRuleDialog(r) {
-  var kinds = r.mode === 'CYCLING' || !r.mode ? ['bike', 'strida', 'halfbike', 'cargo', 'ebike', 'other'] : ['shoe', 'other'];
+  var kinds = mrKindsFor(r.mode);
   if (r.kind && kinds.indexOf(r.kind) < 0) kinds.push(r.kind);
   var mx = r.match && r.match.max_km;
   mrAsk({
