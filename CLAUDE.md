@@ -53,15 +53,15 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 | `map.js` | Leaflet map, paths, heatmap, speed and heart-rate paths, explorer squares, countries, regular-place pins, playback (sun/night, speed pill), beacons, zoom to all, one-finger zoom. |
 | `insights.js` | Insights cards: summary, how you travel, weekly rhythm, over time, top routes/places, records, countries over time, CO₂, scores (Magellan/Marco Polo, Armstrong, Musk, Voyager, Merckx), heart rate, gear. |
 | `timeline.js` | The virtualised trip list and its search (`tlMatch`). |
-| `rules.js` | **MyRules**: loading/saving the rules document (`MR`), applying gear periods, places, routines (type, gear, line snapping, both-ways, radius per end), corrections (type, title, gear, hide, Unclassified, ignored GPS points, bulk edits), `unless` exceptions, the rules sheet with tabs, *Find similar trips*, *Clean up rules*. |
+| `rules.js` | **MyRules**: loading/saving the rules document (`MR`), applying gear periods, places, routines (type, gear, line snapping, both-ways, radius per end), corrections (type, title, gear, hide, Unclassified, ignored GPS points, bulk edits), `unless` exceptions, the rules sheet with tabs, *Group with similar trips*, *Clean up rules*. |
 | `moved.js` | Places Google moved: MyRules `moves`, *This place moved…*, *Use Google's location*. |
 | `packs.js` | Station packs: download, IndexedDB `btdt-packs`, station lookup, routing network across installed packs, *Snap train trips to the tracks*. |
 | `snaps.js` | Map snaps (two stations, one line, saved in MyRules `snaps`). |
 | `roads.js` | Road packs and *Snap car trips to roads* (IndexedDB `btdt-roads`). |
-| `split.js` | Trips Timeline merged: automatic/suggested splits, *Keep as one trip*, *Split trip…* by hand. |
+| `split.js` | Trips Timeline merged: automatic/suggested splits, *Keep as one trip*, *Split trip* by hand. |
 | `select.js` | *Select trips* on the map (lasso/rectangle, touch too) and bulk *Change type…*. |
-| `ignore.js` | *Ignore GPS points…* of one trip. |
-| `settings.js` | The *Menu* (the gear) and its pages: *Your data*, *Trip cleanup* (merged trips, cell-tower fixes, packs, snapping) and *Preferences* (units, theme, date/time format, CO₂ factors, heart rate). |
+| `ignore.js` | *Ignore GPS points* of one trip. |
+| `settings.js` | The *Menu* (the three-line button) and its pages: *Your data*, *Trip cleanup* (merged trips, cell-tower fixes, packs, snapping) and *Preferences* (units, theme, date/time format, CO₂ factors, heart rate). |
 
 ## Data formats
 
@@ -109,4 +109,4 @@ There is no unit-test suite; each change is tested by running the built `index.h
 
 ## Writing style (UI text and replies)
 
-Plain, friendly English in full sentences. Name things the way the UI names them (*Edit trip*, *Find similar trips*, *Station packs*), in italics in docs. No jargon in the UI (say "GPS points", not "fixes", in labels). British spelling in the app (kilometres, colour), and units follow Settings.
+Plain, friendly English in full sentences. Name things the way the UI names them (*Trip info*, *Group with similar trips*, *Station packs*), in italics in docs. No jargon in the UI (say "GPS points", not "fixes", in labels). British spelling in the app (kilometres, colour), and units follow Settings.
