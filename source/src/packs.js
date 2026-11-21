@@ -442,49 +442,72 @@ $('packList').addEventListener('click', function (ev) {
 });
 
 // ---------- offered after an import ----------
-// The countries your trips are in that have a pack you don't have yet, most trips first, ticked
-// when they hold a twentieth of your trips or more. Each country is offered once.
+// The station and road packs for where your trips are that you don't have yet, most trips first,
+// ticked when they hold a twentieth of your trips (car trips, for roads) or more. Each is offered once.
 function packOffer() {
   if (!D || DEMO || !navigator.onLine) return;
-  var asked = PREFS.packAsked || [], count = {}, tot = 0;
+  var asked = PREFS.packAsked || [], rAsked = PREFS.roadAsked || [], count = {}, tot = 0, cars = [];
   for (var i = 0; i < D.day.length; i++) {
     if (isDup(i) || MODES[D.mode[i]] === 'FLYING') continue;
     var a = D.ccList[D.cs[i]], b = D.ccList[D.ce[i]];
     if (a) count[a] = (count[a] || 0) + 1;
     if (b && b !== a) count[b] = (count[b] || 0) + 1;
     tot++;
+    if (ROAD_MODES[MODES[D.mode[i]]]) cars.push(i);
   }
   packList().then(function (L) {
     var ccs = Object.keys(count).filter(function (cc) { return L.packs[cc] && !PACKS[cc] && asked.indexOf(cc) < 0 && count[cc] >= 3; })
       .sort(function (a, b) { return count[b] - count[a]; }).slice(0, 12);
-    if (!ccs.length) return;
-    $('packOfferList').innerHTML = ccs.map(function (cc) {
-      var on = count[cc] >= tot / 20;
-      return '<label class="toggle-row"><span class="lbl">' + flag(cc) + ' ' + esc(L.packs[cc].name) + ' <span class="fine">' + tripsText(count[cc]) + ' · ' + packSize(L.packs[cc].bytes) + '</span></span><input type="checkbox" class="switch" value="' + cc + '"' + (on ? ' checked' : '') + '></label>';
-    }).join('');
+    // Road packs: a country's by its car trips, a state's or province's by car trips starting or ending in its box.
+    var av = roadAvail(), rc = {};
+    Object.keys(av).forEach(function (key) {
+      if (ROAD_KEPT[key] || rAsked.indexOf(key) >= 0) return;
+      var x = av[key], n = 0;
+      cars.forEach(function (i) {
+        if (!x.cc) { if (D.ccList[D.cs[i]] === key || D.ccList[D.ce[i]] === key) n++; return; }
+        var bb = x.bbox;
+        if (!bb) return;
+        for (var e = 0; e < 2; e++) { var la = e ? D.to[2 * i] : D.from[2 * i], lo = e ? D.to[2 * i + 1] : D.from[2 * i + 1]; if (la >= bb[0] && la <= bb[2] && lo >= bb[1] && lo <= bb[3]) { n++; return; } }
+      });
+      if (n >= 3) rc[key] = n;
+    });
+    var rks = Object.keys(rc).sort(function (a, b) { return rc[b] - rc[a]; }).slice(0, 12);
+    if (!ccs.length && !rks.length) return;
+    function row(v, label, n, bytes, on) { return '<label class="toggle-row"><span class="lbl">' + label + ' <span class="fine">' + tripsText(n) + ' · ' + packSize(bytes) + '</span></span><input type="checkbox" class="switch" value="' + v + '"' + (on ? ' checked' : '') + '></label>'; }
+    var both = ccs.length && rks.length;
+    $('packOfferList').innerHTML =
+      (ccs.length ? (both ? '<h4 class="pack-offer-h">Station packs</h4>' : '') + ccs.map(function (cc) { return row('s:' + cc, flag(cc) + ' ' + esc(L.packs[cc].name), count[cc], L.packs[cc].bytes, count[cc] >= tot / 20); }).join('') : '') +
+      (rks.length ? (both ? '<h4 class="pack-offer-h">Road packs</h4>' : '') + rks.map(function (k) { return row('r:' + k, roadFlag(k) + ' ' + esc(roadLabel(k)), rc[k], av[k].bytes, rc[k] >= cars.length / 20); }).join('') : '');
+    $('packDlgTitle').textContent = both ? 'Download packs for your trips?' : ccs.length ? 'Download station packs?' : 'Download road packs?';
     $('packOfferMsg').textContent = '';
     var dlg = $('packDlg');
-    dlg.dataset.ccs = ccs.join(',');
+    dlg.dataset.ccs = ccs.join(','); dlg.dataset.rks = rks.join(',');
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }).catch(function () { /* offline: offered next time */ });
 }
 function packOfferClose() {
   var dlg = $('packDlg');
   PREFS.packAsked = (PREFS.packAsked || []).concat((dlg.dataset.ccs || '').split(',').filter(Boolean));
+  PREFS.roadAsked = (PREFS.roadAsked || []).concat((dlg.dataset.rks || '').split(',').filter(Boolean));
   savePrefs();
   if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
 }
 $('packOfferNo').addEventListener('click', packOfferClose);
 $('packDlg').querySelector('.about-close').addEventListener('click', packOfferClose);
 $('packOfferYes').addEventListener('click', function () {
-  var ccs = Array.prototype.filter.call($('packOfferList').querySelectorAll('input:checked'), function () { return true; }).map(function (x) { return x.value; });
-  if (!ccs.length) { packOfferClose(); return; }
-  var btn = this;
+  var on = Array.prototype.map.call($('packOfferList').querySelectorAll('input:checked'), function (x) { return x.value; });
+  var ccs = on.filter(function (v) { return v[0] === 's'; }).map(function (v) { return v.slice(2); }), rks = on.filter(function (v) { return v[0] === 'r'; }).map(function (v) { return v.slice(2); });
+  if (!on.length) { packOfferClose(); return; }
+  var btn = this, note = function (t, f) { dlShow($('packOfferBar'), $('packOfferMsg'), t, f); }, failed = 0;
   btn.disabled = true;
-  packDownload(ccs, function (t, f) { dlShow($('packOfferBar'), $('packOfferMsg'), t, f); }).then(function (r) {
+  (ccs.length ? packDownload(ccs, note) : Promise.resolve({ failed: [] })).then(function (r) {
+    failed += r.failed.length;
+    return rks.length ? roadDownload(rks, note).then(function (q) { failed += q.failed.length; }) : null;
+  }).then(function () {
     btn.disabled = false;
     packOfferClose();
-    toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Menu › Trip cleanup.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');
+    var n = on.length;
+    toast(failed ? 'Downloaded ' + (n - failed) + ' of ' + n + ' packs. Try the others from Menu › Trip cleanup.' : n === 1 ? (ccs.length ? 'Station pack ready' : 'Road pack ready') : n + ' packs ready');
   });
 });
 

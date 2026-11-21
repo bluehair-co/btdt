@@ -1064,6 +1064,8 @@ div.hit-row:hover { background: none; }
 .pack-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pack-add select { max-width: 100%; }
 .pack-offer { margin: 4px 0 6px; }
+.pack-offer-h { margin: 10px 0 2px; font: 600 13px var(--font); color: rgba(255, 255, 255, .85); }
+.pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: 4px; }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
 .pack-offer .lbl { flex-wrap: wrap; gap: 4px 8px; color: #fff; }
 .pack-offer .fine { color: rgba(255, 255, 255, .7); }

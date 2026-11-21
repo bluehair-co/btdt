@@ -470,6 +470,9 @@ function working(text, fn) {
   // A page in the background doesn't paint, so the work doesn't wait for a frame there.
   setTimeout(go, 200);
 }
+// Anything that saves: the same pill, so a tap that saves never looks like nothing happened
+// while the trips are worked out again (David's rule: a spinner on every action that saves).
+function saving(fn, text) { working(text || 'Saving…', fn); }
 // The loading screen: a donut that fills with the reading progress (when the text ends in
 // "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
 // and world landmarks, each in its own colour, which the ring takes on too.

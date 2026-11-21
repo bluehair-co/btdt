@@ -66,10 +66,10 @@
           <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
           <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
           <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station packs you choose. Add the app to your home screen and it opens offline.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station and road packs you choose. Add the app to your home screen and it opens offline.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
           <li><b>Public transport lines</b> for a routine come only from your station packs when you have one for that country (never online there). Elsewhere, and for buses and ferries, they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
-          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) are downloaded from GitHub only when you choose a country, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
+          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) and <b>road packs</b> (motorways and main roads, per country, or per state or province in the United States and Canada) are downloaded from GitHub only when you choose one, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
           <li><b>Trips Timeline merged</b>, such as a train ride and the tram after it kept as one trip, are split into their legs where the GPS points show a stop or a change of speed. Each leg shows the trip it came from, and <i>Keep as one trip</i> undoes it.</li>
         </ul>
       </details>
@@ -114,11 +114,12 @@
   </dialog>
   <dialog class="about pack-dlg" id="packDlg" aria-labelledby="packDlgTitle">
     <div class="about-head">
-      <h2 id="packDlgTitle">Download station packs?</h2>
+      <h2 id="packDlgTitle">Download packs for your trips?</h2>
       <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
     </div>
     <div class="about-body">
-      <p class="about-lead">A station pack holds a country's railway stations, tram and metro stops and lines, from OpenStreetMap. With it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at and the stations and stops among your regular places, and draw a routine's line along the railway, all offline. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Settings any time.</p>
+      <p class="about-lead" id="packOfferLead">Packs of OpenStreetMap data for where your trips are, kept on this device so they work offline.<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packOfferInfo" aria-label="About packs" title="About packs"><span data-icon="info"></span></button></p>
+      <p class="fine info-box" id="packOfferInfo" hidden>A station pack holds a country's railway stations, tram and metro stops and lines: with it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at, and draw lines along the railway. A road pack holds a country's motorways and main roads (a state's or province's in the United States and Canada): with it, car trips can be drawn along the roads they drove. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Menu › Trip cleanup any time.</p>
       <div id="packOfferList" class="pack-offer"></div>
       <div class="dl-bar" id="packOfferBar" hidden><i></i></div>
       <p class="fine" id="packOfferMsg" aria-live="polite"></p>
@@ -665,12 +666,16 @@
       <p class="fine" id="trackNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="roadSec">
-      <h3>Roads</h3>
-      <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
-      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</p>
+      <div class="info-head"><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi and motorcycle trips along the roads they drove, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <ul class="file-list pack-list" id="roadList" hidden></ul>
+      <p class="fine" id="roadPackNote"></p>
+      <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="earth"></span>Add a country</button><select id="roadSel" aria-label="Country, state or province" hidden></select></div>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
+      <p class="fine" id="roadMsg" aria-live="polite"></p>
+      <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Routines, map snaps and your fixes come first.</p>
       <p class="fine" id="roadNote" aria-live="polite"></p>
-      <button type="button" class="link-btn" id="roadDel" hidden>Remove road packs from this device</button>
     </div>
   </div>
 </aside>

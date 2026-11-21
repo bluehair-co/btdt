@@ -1108,6 +1108,8 @@ div.hit-row:hover { background: none; }
 .pack-add { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .pack-add select { max-width: 100%; }
 .pack-offer { margin: 4px 0 6px; }
+.pack-offer-h { margin: 10px 0 2px; font: 600 13px var(--font); color: rgba(255, 255, 255, .85); }
+.pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: 4px; }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
 .pack-offer .lbl { flex-wrap: wrap; gap: 4px 8px; color: #fff; }
 .pack-offer .fine { color: rgba(255, 255, 255, .7); }
@@ -1316,10 +1318,10 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
           <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
           <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station packs you choose. Add the app to your home screen and it opens offline.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station and road packs you choose. Add the app to your home screen and it opens offline.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
           <li><b>Public transport lines</b> for a routine come only from your station packs when you have one for that country (never online there). Elsewhere, and for buses and ferries, they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
-          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) are downloaded from GitHub only when you choose a country, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
+          <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) and <b>road packs</b> (motorways and main roads, per country, or per state or province in the United States and Canada) are downloaded from GitHub only when you choose one, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
           <li><b>Trips Timeline merged</b>, such as a train ride and the tram after it kept as one trip, are split into their legs where the GPS points show a stop or a change of speed. Each leg shows the trip it came from, and <i>Keep as one trip</i> undoes it.</li>
         </ul>
       </details>
@@ -1364,11 +1366,12 @@ details.when-more > .sec:last-child { border-bottom: 0; }
   </dialog>
   <dialog class="about pack-dlg" id="packDlg" aria-labelledby="packDlgTitle">
     <div class="about-head">
-      <h2 id="packDlgTitle">Download station packs?</h2>
+      <h2 id="packDlgTitle">Download packs for your trips?</h2>
       <button type="button" class="about-close" aria-label="Close"><span data-icon="close"></span></button>
     </div>
     <div class="about-body">
-      <p class="about-lead">A station pack holds a country's railway stations, tram and metro stops and lines, from OpenStreetMap. With it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at and the stations and stops among your regular places, and draw a routine's line along the railway, all offline. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Settings any time.</p>
+      <p class="about-lead" id="packOfferLead">Packs of OpenStreetMap data for where your trips are, kept on this device so they work offline.<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packOfferInfo" aria-label="About packs" title="About packs"><span data-icon="info"></span></button></p>
+      <p class="fine info-box" id="packOfferInfo" hidden>A station pack holds a country's railway stations, tram and metro stops and lines: with it, BT•DT can tell where Timeline merged a train ride and the tram after it into one trip, name the station you changed at, and draw lines along the railway. A road pack holds a country's motorways and main roads (a state's or province's in the United States and Canada): with it, car trips can be drawn along the roads they drove. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing about your trips. You can add or remove packs in Menu › Trip cleanup any time.</p>
       <div id="packOfferList" class="pack-offer"></div>
       <div class="dl-bar" id="packOfferBar" hidden><i></i></div>
       <p class="fine" id="packOfferMsg" aria-live="polite"></p>
@@ -1915,12 +1918,16 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       <p class="fine" id="trackNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="roadSec">
-      <h3>Roads</h3>
-      <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
-      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Turning it on the first time downloads a road pack of OpenStreetMap roads for where your trips are (so far the Netherlands, Mexico, and each Canadian province and US state separately), kept on this device: turning it off and on again needs no download (Remove road packs frees the space). Routines, map snaps and your fixes come first.</p>
+      <div class="info-head"><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi and motorcycle trips along the roads they drove, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <ul class="file-list pack-list" id="roadList" hidden></ul>
+      <p class="fine" id="roadPackNote"></p>
+      <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="earth"></span>Add a country</button><select id="roadSel" aria-label="Country, state or province" hidden></select></div>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
+      <p class="fine" id="roadMsg" aria-live="polite"></p>
+      <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
+      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Routines, map snaps and your fixes come first.</p>
       <p class="fine" id="roadNote" aria-live="polite"></p>
-      <button type="button" class="link-btn" id="roadDel" hidden>Remove road packs from this device</button>
     </div>
   </div>
 </aside>
@@ -5111,6 +5118,9 @@ function working(text, fn) {
   // A page in the background doesn't paint, so the work doesn't wait for a frame there.
   setTimeout(go, 200);
 }
+// Anything that saves: the same pill, so a tap that saves never looks like nothing happened
+// while the trips are worked out again (David's rule: a spinner on every action that saves).
+function saving(fn, text) { working(text || 'Saving…', fn); }
 // The loading screen: a donut that fills with the reading progress (when the text ends in
 // "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
 // and world landmarks, each in its own colour, which the ring takes on too.
@@ -11078,13 +11088,15 @@ function respot() {
   if (pinLayer) pinLayer._ver = null;
   if (map && PREFS.pins) layerToggles();
 }
-function mergeSpot(from, into) {
+function mergeSpot(from, into) { saving(function () { mergeSpotNow(from, into); }); }
+function mergeSpotNow(from, into) {
   PREFS.spotMerge = PREFS.spotMerge || {};
   PREFS.spotMerge[from] = into; savePrefs(); respot();
   var pid = into.slice(3);
   for (var v = 0; v < D.vs.length; v++) if (D.vpid[v] === pid) { openSpot(spotKey(v)); return; }
 }
-function unmergeSpot(key) {
+function unmergeSpot(key) { saving(function () { unmergeSpotNow(key); }); }
+function unmergeSpotNow(key) {
   var m = PREFS.spotMerge || {};
   spotParts(key).forEach(function (x) { delete m[x.k]; });
   for (var k in m) if (m[k] === key) delete m[k];
@@ -12449,7 +12461,7 @@ function mrImport(files) {
     var doc = got[0].doc;
     got.slice(1).forEach(function (g) { doc = mrMergeDocs(doc, g.doc); });
     var name = got[got.length - 1].name;
-    if (!MR) { mrUse(doc, name, false); return; }
+    if (!MR) { saving(function () { mrUse(doc, name, false); }, 'Applying MyRules…'); return; }
     mrAsk({
       title: 'Add to your MyRules?',
       text: esc(name) + ' has ' + mrCount(doc) + '. You already have ' + mrCount(MR.doc) + '.',
@@ -12509,7 +12521,12 @@ function mrAsk(o) {
   o.buttons.forEach(function (b) {
     var el = document.createElement('button');
     el.type = 'button'; el.className = 'btn' + (b[1] ? ' ' + b[1] : ''); el.innerHTML = b[0];
-    el.addEventListener('click', function () { if (b[3] !== 'stay') d.close(); if (b[2]) b[2](el); });
+    el.addEventListener('click', function () {
+      function run() { if (b[3] !== 'stay') d.close(); if (b[2]) b[2](el); }
+      // Save, Delete and the like show the pill at once; the dialog closes when the work starts,
+      // in the same order as before (closing first, then the save).
+      if (b[2] && /primary|danger/.test(b[1] || '')) saving(run, /danger/.test(b[1]) ? 'Working on it…' : 'Saving…'); else run();
+    });
     bt.appendChild(el);
   });
   if (!d.open) { if (side) d.show(); else d.showModal(); }
@@ -12905,9 +12922,11 @@ $('mrBody').addEventListener('click', function (ev) {
   if (un) {
     var ur = mrById(un.dataset.mrUnless), uk = +un.dataset.k, u = ur && ur.unless && ur.unless[uk];
     if (!u) return;
-    ur.unless.splice(uk, 1);
-    if (!ur.unless.length) delete ur.unless;
-    mrChange((ur.name || ur.id) + ' on again for ' + mrUnlessText(u));
+    saving(function () {
+      ur.unless.splice(uk, 1);
+      if (!ur.unless.length) delete ur.unless;
+      mrChange((ur.name || ur.id) + ' on again for ' + mrUnlessText(u));
+    });
     return;
   }
   var o = ev.target.closest('[data-mr-trip]');
@@ -13129,6 +13148,11 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
   var i = +b.dataset.t, act = b.dataset.mrAct;
+  if (MR_SAVE_ACTS[act]) saving(function () { mrTripAct(b, i, act); }); else mrTripAct(b, i, act);
+});
+// The trip page's MyRules buttons; the ones that save (MR_SAVE_ACTS) run behind the Working pill.
+var MR_SAVE_ACTS = { line: 1, not: 1, undo: 1, detach: 1, include: 1, type: 1, hide: 1, show: 1 };
+function mrTripAct(b, i, act) {
   if (act === 'line') {
     var lr = mrById(b.dataset.r);
     if (!lr) return;
@@ -13172,7 +13196,7 @@ $('tripBody').addEventListener('click', function (ev) {
   else if (act === 'edit') mrEditDialog(i);
   else if (act === 'hide' || act === 'show') mrHideTrip(i, act === 'hide');
   else if (act === 'remove') mrRemoveEdits(i);
-});
+}
 // The correction for this one trip that Trip info changes: the last one pointing at it by its start.
 function mrTripCorrection(i) {
   return mrCorrections().filter(function (x) { return x.one && x.trips.length === 1 && x.trips[0] === i; }).map(function (x) { return x.c; }).pop() ||
@@ -14464,8 +14488,8 @@ $('tripBody').addEventListener('click', function (ev) {
   if (!b) return;
   if (b.dataset.mvNew) mvDialog(b.dataset.mvNew, null);
   else if (b.dataset.mvEdit) mvDialog(b.dataset.key, mrById(b.dataset.mvEdit));
-  else if (b.dataset.mvKeep) mvKeep(b.dataset.mvKeep);
-  else mvUnkeep(b.dataset.mvUnkeep, b.dataset.key);
+  else if (b.dataset.mvKeep) { var k = b.dataset.mvKeep; saving(function () { mvKeep(k); }); }
+  else { var u = b.dataset.mvUnkeep, uk = b.dataset.key; saving(function () { mvUnkeep(u, uk); }); }
 });
 // From the rules sheet: the dialog on the place's spot, found by its first place ID.
 function mvEditRule(r) {
@@ -14919,49 +14943,72 @@ $('packList').addEventListener('click', function (ev) {
 });
 
 // ---------- offered after an import ----------
-// The countries your trips are in that have a pack you don't have yet, most trips first, ticked
-// when they hold a twentieth of your trips or more. Each country is offered once.
+// The station and road packs for where your trips are that you don't have yet, most trips first,
+// ticked when they hold a twentieth of your trips (car trips, for roads) or more. Each is offered once.
 function packOffer() {
   if (!D || DEMO || !navigator.onLine) return;
-  var asked = PREFS.packAsked || [], count = {}, tot = 0;
+  var asked = PREFS.packAsked || [], rAsked = PREFS.roadAsked || [], count = {}, tot = 0, cars = [];
   for (var i = 0; i < D.day.length; i++) {
     if (isDup(i) || MODES[D.mode[i]] === 'FLYING') continue;
     var a = D.ccList[D.cs[i]], b = D.ccList[D.ce[i]];
     if (a) count[a] = (count[a] || 0) + 1;
     if (b && b !== a) count[b] = (count[b] || 0) + 1;
     tot++;
+    if (ROAD_MODES[MODES[D.mode[i]]]) cars.push(i);
   }
   packList().then(function (L) {
     var ccs = Object.keys(count).filter(function (cc) { return L.packs[cc] && !PACKS[cc] && asked.indexOf(cc) < 0 && count[cc] >= 3; })
       .sort(function (a, b) { return count[b] - count[a]; }).slice(0, 12);
-    if (!ccs.length) return;
-    $('packOfferList').innerHTML = ccs.map(function (cc) {
-      var on = count[cc] >= tot / 20;
-      return '<label class="toggle-row"><span class="lbl">' + flag(cc) + ' ' + esc(L.packs[cc].name) + ' <span class="fine">' + tripsText(count[cc]) + ' · ' + packSize(L.packs[cc].bytes) + '</span></span><input type="checkbox" class="switch" value="' + cc + '"' + (on ? ' checked' : '') + '></label>';
-    }).join('');
+    // Road packs: a country's by its car trips, a state's or province's by car trips starting or ending in its box.
+    var av = roadAvail(), rc = {};
+    Object.keys(av).forEach(function (key) {
+      if (ROAD_KEPT[key] || rAsked.indexOf(key) >= 0) return;
+      var x = av[key], n = 0;
+      cars.forEach(function (i) {
+        if (!x.cc) { if (D.ccList[D.cs[i]] === key || D.ccList[D.ce[i]] === key) n++; return; }
+        var bb = x.bbox;
+        if (!bb) return;
+        for (var e = 0; e < 2; e++) { var la = e ? D.to[2 * i] : D.from[2 * i], lo = e ? D.to[2 * i + 1] : D.from[2 * i + 1]; if (la >= bb[0] && la <= bb[2] && lo >= bb[1] && lo <= bb[3]) { n++; return; } }
+      });
+      if (n >= 3) rc[key] = n;
+    });
+    var rks = Object.keys(rc).sort(function (a, b) { return rc[b] - rc[a]; }).slice(0, 12);
+    if (!ccs.length && !rks.length) return;
+    function row(v, label, n, bytes, on) { return '<label class="toggle-row"><span class="lbl">' + label + ' <span class="fine">' + tripsText(n) + ' · ' + packSize(bytes) + '</span></span><input type="checkbox" class="switch" value="' + v + '"' + (on ? ' checked' : '') + '></label>'; }
+    var both = ccs.length && rks.length;
+    $('packOfferList').innerHTML =
+      (ccs.length ? (both ? '<h4 class="pack-offer-h">Station packs</h4>' : '') + ccs.map(function (cc) { return row('s:' + cc, flag(cc) + ' ' + esc(L.packs[cc].name), count[cc], L.packs[cc].bytes, count[cc] >= tot / 20); }).join('') : '') +
+      (rks.length ? (both ? '<h4 class="pack-offer-h">Road packs</h4>' : '') + rks.map(function (k) { return row('r:' + k, roadFlag(k) + ' ' + esc(roadLabel(k)), rc[k], av[k].bytes, rc[k] >= cars.length / 20); }).join('') : '');
+    $('packDlgTitle').textContent = both ? 'Download packs for your trips?' : ccs.length ? 'Download station packs?' : 'Download road packs?';
     $('packOfferMsg').textContent = '';
     var dlg = $('packDlg');
-    dlg.dataset.ccs = ccs.join(',');
+    dlg.dataset.ccs = ccs.join(','); dlg.dataset.rks = rks.join(',');
     if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
   }).catch(function () { /* offline: offered next time */ });
 }
 function packOfferClose() {
   var dlg = $('packDlg');
   PREFS.packAsked = (PREFS.packAsked || []).concat((dlg.dataset.ccs || '').split(',').filter(Boolean));
+  PREFS.roadAsked = (PREFS.roadAsked || []).concat((dlg.dataset.rks || '').split(',').filter(Boolean));
   savePrefs();
   if (dlg.close) dlg.close(); else dlg.removeAttribute('open');
 }
 $('packOfferNo').addEventListener('click', packOfferClose);
 $('packDlg').querySelector('.about-close').addEventListener('click', packOfferClose);
 $('packOfferYes').addEventListener('click', function () {
-  var ccs = Array.prototype.filter.call($('packOfferList').querySelectorAll('input:checked'), function () { return true; }).map(function (x) { return x.value; });
-  if (!ccs.length) { packOfferClose(); return; }
-  var btn = this;
+  var on = Array.prototype.map.call($('packOfferList').querySelectorAll('input:checked'), function (x) { return x.value; });
+  var ccs = on.filter(function (v) { return v[0] === 's'; }).map(function (v) { return v.slice(2); }), rks = on.filter(function (v) { return v[0] === 'r'; }).map(function (v) { return v.slice(2); });
+  if (!on.length) { packOfferClose(); return; }
+  var btn = this, note = function (t, f) { dlShow($('packOfferBar'), $('packOfferMsg'), t, f); }, failed = 0;
   btn.disabled = true;
-  packDownload(ccs, function (t, f) { dlShow($('packOfferBar'), $('packOfferMsg'), t, f); }).then(function (r) {
+  (ccs.length ? packDownload(ccs, note) : Promise.resolve({ failed: [] })).then(function (r) {
+    failed += r.failed.length;
+    return rks.length ? roadDownload(rks, note).then(function (q) { failed += q.failed.length; }) : null;
+  }).then(function () {
     btn.disabled = false;
     packOfferClose();
-    toast(r.failed.length ? 'Downloaded ' + r.got.length + ' of ' + ccs.length + ' station packs. Try the others from Menu › Trip cleanup.' : ccs.length === 1 ? 'Station pack ready' : ccs.length + ' station packs ready');
+    var n = on.length;
+    toast(failed ? 'Downloaded ' + (n - failed) + ' of ' + n + ' packs. Try the others from Menu › Trip cleanup.' : n === 1 ? (ccs.length ? 'Station pack ready' : 'Road pack ready') : n + ' packs ready');
   });
 });
 
@@ -15409,8 +15456,9 @@ $('trackSnap').addEventListener('change', function () {
 // With "Snap car trips to roads" on (Menu › Trip cleanup), car, taxi and motorcycle trips are
 // drawn along the motorways and main roads of a road pack (roads/NL.json.gz on the packs branch:
 // motorway, trunk and primary roads with their links, from OpenStreetMap, same node and line format
-// as a station pack). The packs are only downloaded when you turn it on, kept in IndexedDB
-// "btdt-roads" and removed when you turn it off; they are only read and turned into a graph while
+// as a station pack). The packs are downloaded like station packs (offered after an import, or Add a
+// country in Menu › Trip cleanup; the first one turns snapping on), kept in IndexedDB
+// "btdt-roads" until you remove them (turning snapping off keeps them); they are only read and turned into a graph while
 // it is on.
 // Each GPS point of a trip (one every ROAD_STEP_KM or more) is put on the nearest road within
 // ROAD_NEAR_KM, found in a grid of the roads' segments. Between two points that are both on a road,
@@ -15685,26 +15733,6 @@ function roadLoadApply() {
 
 // ---------- the switch ----------
 function roadAvail() { return PACK_LIST && PACK_LIST.roads || {}; }
-// The road packs to get: a country's when your trips are in it (or you have its station pack); a
-// region's (CA-ON, with a bbox) when one of your car trips starts or ends in its box.
-function roadWanted() {
-  var have = {}, av = roadAvail(), ccs = {};
-  (D ? D.ccList.filter(function (_, k) { return D.ccCount[k] > 0; }) : []).concat(packCodes()).forEach(function (cc) { ccs[cc] = 1; });
-  Object.keys(av).forEach(function (key) {
-    var x = av[key];
-    if (!x.cc) { if (ccs[key]) have[key] = 1; return; }
-    if (!ccs[x.cc] || !D || !x.bbox) return;
-    var b = x.bbox;
-    for (var i = 0, n = D.day.length; i < n; i++) {
-      if (!ROAD_MODES[MODES[D.mode[i]]]) continue;
-      for (var e = 0; e < 2; e++) {
-        var la = e ? D.to[2 * i] : D.from[2 * i], lo = e ? D.to[2 * i + 1] : D.from[2 * i + 1];
-        if (la >= b[0] && la <= b[2] && lo >= b[1] && lo <= b[3]) { have[key] = 1; return; }
-      }
-    }
-  });
-  return Object.keys(have).sort();
-}
 function roadGet(cc, onBytes) {
   var x = roadAvail()[cc];
   return packFetch('roads/' + cc + '.json.gz', x && x.bytes, onBytes).then(function (buf) {
@@ -15724,56 +15752,43 @@ function roadReapply(text) {
   roadPill(null, null, text);
   setTimeout(function () { try { mrReapply(); } finally { if (!ROAD_RUN) roadPill(); } }, 60);
 }
-function roadTurnOn() {
-  var box = $('roadSnap'), kept = Object.keys(ROAD_KEPT);
-  PREFS.roadSnap = true; savePrefs();
-  // Packs already on this device: on at once, offline, with the spinner; then, quietly, any pack
-  // missing for where your trips are now is downloaded (with the bar).
-  if (kept.length) {
-    if (RG) roadReapply('Drawing car trips along the roads…'); else if (D) roadLoadApply(); else roadsLoad().then(roadSettings);
-    packList().then(function () { var miss = roadWanted().filter(function (cc) { return !ROAD_KEPT[cc]; }); if (miss.length && roadOn()) roadDownload(miss); }, function () {});
-    return;
-  }
-  box.disabled = true;
-  dlShow($('roadBar'), $('roadNote'), 'Getting the list of road packs…', null);
-  packList().then(function () {
-    var ccs = roadWanted(), av = roadAvail();
-    if (!ccs.length) {
-      PREFS.roadSnap = false; savePrefs();
-      box.checked = false; box.disabled = false;
-      dlShow($('roadBar'), $('roadNote'), 'There is no road pack yet for the countries your trips are in.' + (Object.keys(av).length ? ' So far there are road packs for ' + roadNames(Object.keys(av).sort()) + '.' : ''), null);
-      return;
-    }
-    return roadDownload(ccs);
-  }, function () {
-    PREFS.roadSnap = false; savePrefs();
-    box.checked = false; box.disabled = false;
-    dlShow($('roadBar'), $('roadNote'), 'The list of road packs couldn\'t be fetched. Check your connection and try again.', null);
-  });
-}
-// Downloads the road packs in ccs one after the other, with the bar, then loads them all.
-function roadDownload(ccs) {
-  var box = $('roadSnap'), av = roadAvail(), all = ccs.reduce(function (a, cc) { return a + (av[cc].bytes || 0); }, 0), before = 0, failed = [];
-  box.disabled = true;
-  return ccs.reduce(function (p, cc) {
+// The label of a road pack in lists: its name, with the country for a state or province.
+function roadLabel(key) { var c = key.split('-')[0]; return roadName(key) + (key.indexOf('-') > 0 ? ', ' + (country(c) || c) : ''); }
+function roadFlag(key) { return flag(key.split('-')[0]); }
+// Downloads the road packs in keys one after the other. note(text, frac): progress over all of
+// them, by their sizes in index.json, as for station packs. Then the trips are worked out again.
+function roadDownload(keys, note) {
+  var av = roadAvail(), got = [], failed = [], sizes = keys.map(function (k) { return av[k] && av[k].bytes || 0; });
+  var all = sizes.reduce(function (a, b) { return a + b; }, 0), before = 0, first = !Object.keys(ROAD_KEPT).length;
+  return keys.reduce(function (p, key, k) {
     return p.then(function () {
-      return roadGet(cc, function (l, t) {
+      if (note) note('Downloading ' + roadLabel(key) + '…', all ? before / all : 0);
+      return roadGet(key, note ? function (l, t) {
         var tot = all || t, done = before + l;
-        dlShow($('roadBar'), $('roadNote'), dlText('the ' + roadName(cc) + ' road pack', all ? done : l, all ? Math.max(all, done) : t), tot ? Math.min(1, done / tot) : null);
-      }).catch(function () { failed.push(cc); }).then(function () { before += av[cc].bytes || 0; });
+        note(dlText(roadLabel(key) + (keys.length > 1 ? ' (' + (k + 1) + ' of ' + keys.length + ')' : ''), all ? done : l, all ? Math.max(all, done) : t), tot ? (all ? done / Math.max(all, done) : l / tot) : null);
+      } : null).then(function () { got.push(key); }, function () { failed.push(key); }).then(function () { before += sizes[k]; });
     });
   }, Promise.resolve()).then(function () {
-    dlShow($('roadBar'), $('roadNote'), '', null);
-    box.disabled = false;
-    if (!Object.keys(ROAD_KEPT).length) {
-      PREFS.roadSnap = false; savePrefs(); box.checked = false;
-      $('roadNote').textContent = 'The road pack couldn\'t be downloaded. Check your connection and try again.';
-      return;
-    }
-    if (failed.length < ccs.length) { RG = null; ROAD_CACHE = new Map(); }
-    if (!roadOn()) { roadSettings(); return; }
-    if (D) roadLoadApply(); else roadsLoad().then(roadSettings);
+    if (note) note('', null);
+    // The first road pack turns snapping on: that's all a road pack is for. After that, the switch is yours.
+    if (got.length && first) { PREFS.roadSnap = true; savePrefs(); }
+    if (got.length) roadPacksChanged();
+    return { got: got, failed: failed };
   });
+}
+function roadRemovePack(key) {
+  return roadStore('readwrite', function (s) { return s.delete(key); }).catch(function () {}).then(function () {
+    delete ROAD_KEPT[key]; delete ROADS[key];
+    if (!Object.keys(ROAD_KEPT).length) { PREFS.roadSnap = false; savePrefs(); }
+    return roadKeptSave();
+  }).then(roadPacksChanged);
+}
+// A pack came or went: the graph is made again and car trips worked out again (with the pill),
+// when snapping is on; else only the list changes.
+function roadPacksChanged() {
+  RG = null; ROAD_CACHE = new Map();
+  if (roadOn() && D) roadLoadApply(); else if (D && D.mrRoad && D.mrRoad.some(Boolean)) mrReapply();
+  roadSettings();
 }
 // Off: the trips go back to their own paths. The packs stay on this device and the graph and the
 // trips worked out stay in memory, so on again is quick.
@@ -15781,26 +15796,66 @@ function roadTurnOff() {
   PREFS.roadSnap = false; savePrefs();
   roadReapply('Taking car trips off the roads…');
 }
-function roadRemove() {
-  PREFS.roadSnap = false; savePrefs();
-  RG = null; ROADS = {}; ROAD_KEPT = {}; ROAD_CACHE = new Map(); roadPill();
-  roadStore('readwrite', function (s) { return s.clear(); }).catch(function () {}).then(function () { if (D) mrReapply(); else roadSettings(); });
+function roadTurnOn() {
+  PREFS.roadSnap = true; savePrefs();
+  if (RG) roadReapply('Drawing car trips along the roads…'); else if (D) roadLoadApply(); else roadsLoad().then(roadSettings);
 }
+
+// ---------- Settings: road packs, the same as station packs ----------
 function roadSettings() {
-  var el = $('roadSnap');
-  if (!el) return;
-  if (!el.disabled) el.checked = roadOn();
-  if ($('roadBar') && !$('roadBar').hidden) return;
-  var n = 0;
+  var box = $('roadList');
+  if (!box) return;
+  var keys = Object.keys(ROAD_KEPT).sort(function (a, b) { return roadLabel(a).localeCompare(roadLabel(b)); });
+  box.innerHTML = keys.map(function (key) {
+    var p = ROAD_KEPT[key], x = roadAvail()[key], newer = x && x.built && p.built && x.built > p.built, kmv = p.km || x && x.km;
+    return '<li><span class="file-txt"><b>' + roadFlag(key) + ' ' + esc(roadLabel(key)) + '</b><small>' + packSize(p.bytes || 0) + (kmv ? ' · ' + dist(kmv) + ' of main roads' : '') + ' · OpenStreetMap data of ' + esc(p.built || '?') + '</small></span>' +
+      '<span class="pack-acts">' + (newer ? '<button type="button" class="link-btn" data-road-act="update" data-key="' + key + '">Update</button>' : '') + '<button type="button" class="link-btn" data-road-act="remove" data-key="' + key + '">Remove</button></span></li>';
+  }).join('');
+  box.hidden = !keys.length;
+  $('roadPackNote').textContent = keys.length ? 'Kept on this device, so they work offline.' : 'None yet.';
+  // The switch, as Snap train trips to the tracks: off and greyed out until there is a pack.
+  var el = $('roadSnap'), n = 0;
+  el.checked = roadOn() && keys.length > 0;
+  el.disabled = !keys.length;
   if (D && D.mrRoad) D.mrRoad.forEach(function (x) { if (x) n++; });
-  var cc = Object.keys(ROAD_KEPT).sort(), size = cc.reduce(function (a, c) { return a + (ROAD_KEPT[c].bytes || 0); }, 0);
-  if ($('roadDel')) $('roadDel').hidden = !cc.length;
-  $('roadNote').textContent = !roadOn() ? (cc.length ? 'Road pack' + (cc.length > 1 ? 's' : '') + ' of ' + roadNames(cc) + ', ' + packSize(size) + ', kept on this device for when you turn it on again.' : '') : !RG ? (ROAD_LOADING ? 'Loading the road pack…' : '') :
-    (cc.length ? 'Road pack' + (cc.length > 1 ? 's' : '') + ' of ' + roadNames(cc) + ', ' + packSize(size) + ' on this device. ' : '') +
-    (ROAD_RUN ? 'Snapping your car trips…' : D ? tripsText(n) + ' drawn along the roads.' : '');
+  $('roadNote').textContent = !keys.length ? 'Add a country first.' : !roadOn() ? '' : !RG ? (ROAD_LOADING || ROAD_WAIT ? 'Loading the road packs…' : '') :
+    ROAD_RUN ? 'Snapping your car trips…' : D ? tripsText(n) + ' drawn along the roads.' : '';
 }
+function roadOptions(sel) {
+  return packList().then(function () {
+    var av = roadAvail(), rows = Object.keys(av).filter(function (k) { return !ROAD_KEPT[k]; }).sort(function (a, b) { return roadLabel(a).localeCompare(roadLabel(b)); });
+    sel.innerHTML = '<option value="">Choose a country…</option>' + rows.map(function (k) { return '<option value="' + k + '">' + esc(roadLabel(k)) + ' (' + packSize(av[k].bytes) + ')</option>'; }).join('');
+    return rows.length;
+  });
+}
+$('roadAdd').addEventListener('click', function () {
+  var sel = $('roadSel'), btn = this;
+  btn.disabled = true; $('roadMsg').textContent = 'Getting the list of countries…';
+  roadOptions(sel).then(function (n) {
+    btn.disabled = false;
+    $('roadMsg').textContent = n ? '' : 'You have every pack there is.';
+    sel.hidden = !n;
+    if (n) sel.focus();
+    roadSettings();
+  }, function () { btn.disabled = false; $('roadMsg').textContent = 'The list of packs couldn\'t be fetched. Check your connection and try again.'; });
+});
+$('roadSel').addEventListener('change', function () {
+  var key = this.value, sel = this;
+  if (!key) return;
+  sel.disabled = true;
+  roadDownload([key], function (t, f) { dlShow($('roadBar'), $('roadMsg'), t, f); }).then(function (r) {
+    sel.disabled = false; sel.hidden = true; sel.value = '';
+    $('roadMsg').textContent = r.got.length ? roadLabel(key) + ' is ready.' : roadLabel(key) + ' couldn\'t be downloaded. Check your connection and try again.';
+  });
+});
+$('roadList').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-road-act]');
+  if (!b) return;
+  var key = b.dataset.key;
+  if (b.dataset.roadAct === 'remove') roadRemovePack(key).then(function () { $('roadMsg').textContent = roadLabel(key) + ' removed.'; });
+  else roadDownload([key], function (t, f) { dlShow($('roadBar'), $('roadMsg'), t, f); }).then(function (r) { $('roadMsg').textContent = r.got.length ? roadLabel(key) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
+});
 $('roadSnap').addEventListener('change', function () { if (this.checked) roadTurnOn(); else roadTurnOff(); });
-$('roadDel').addEventListener('click', roadRemove);
 roadKeptLoad();
 if (roadOn()) roadsLoad().then(function () { roadSettings(); });
 
@@ -16063,7 +16118,7 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-split-act]');
   if (!b) return;
   ev.stopPropagation();
-  splitChoose(b.dataset.splitAct, b.dataset.key, +b.dataset.ms);
+  saving(function () { splitChoose(b.dataset.splitAct, b.dataset.key, +b.dataset.ms); });
 });
 
 // ---------- Settings ----------
@@ -16156,6 +16211,10 @@ function splitHandTap(pt) {
   return true;
 }
 function splitHandSave() {
+  if (!SPL || !SPL.cuts.length) return;
+  saving(splitHandSaveNow);
+}
+function splitHandSaveNow() {
   if (!SPL || !SPL.cuts.length) return;
   var all = PREFS.splitAt || (PREFS.splitAt = {}), list = (all[SPL.key] || []).slice(), ms = SPL.ms, n = SPL.cuts.length;
   SPL.cuts.forEach(function (k) { if (list.indexOf(SPL.t[k]) < 0) list.push(SPL.t[k]); });

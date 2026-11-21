@@ -258,8 +258,8 @@ $('tripBody').addEventListener('click', function (ev) {
   if (!b) return;
   if (b.dataset.mvNew) mvDialog(b.dataset.mvNew, null);
   else if (b.dataset.mvEdit) mvDialog(b.dataset.key, mrById(b.dataset.mvEdit));
-  else if (b.dataset.mvKeep) mvKeep(b.dataset.mvKeep);
-  else mvUnkeep(b.dataset.mvUnkeep, b.dataset.key);
+  else if (b.dataset.mvKeep) { var k = b.dataset.mvKeep; saving(function () { mvKeep(k); }); }
+  else { var u = b.dataset.mvUnkeep, uk = b.dataset.key; saving(function () { mvUnkeep(u, uk); }); }
 });
 // From the rules sheet: the dialog on the place's spot, found by its first place ID.
 function mvEditRule(r) {
