@@ -40,7 +40,7 @@ Every place in the app answers one question, and a new feature goes where its qu
 
 ## Feedback while the app works
 
-- **Any switch that makes the app work for a while shows the "Working on it…" pill** (`working(text, fn)` in `core.js`): a spinner pill and a veil over the page, fading in after 150 ms so quick changes don't flash. Applying rules, snapping trains to tracks or cars to roads, splitting trips and similar switches all use it.
+- **Every action that saves shows the "Working on it…" pill at once** (`saving(fn)` or `working(text, fn)` in `core.js`): a spinner pill and a veil over the page, fading in after 150 ms so quick changes don't flash. That covers switches (applying rules, snapping trains to tracks or cars to roads, splitting trips) and every tap that saves: *[type] is right*, *Undo*, *Not this trip*, *Hide this trip*, *Keep as one trip*, *Use Google's location*, merging places, and the *Save*, *Delete* and *Remove* buttons of every dialog (`mrAsk` does this for its primary and danger buttons). A tap must never look like nothing happened.
 - **Downloads show a progress bar** (station and road packs). Once a pack is on the device, turning its switch off and on again only shows the spinner; nothing is downloaded twice.
 - **The loading screen** (`busy()` in `core.js`): a donut that fills with progress around an icon that changes between transport types, pins and landmarks. It must keep moving through every step, including *Opening your saved trips*.
 

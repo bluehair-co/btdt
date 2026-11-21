@@ -257,7 +257,7 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-split-act]');
   if (!b) return;
   ev.stopPropagation();
-  splitChoose(b.dataset.splitAct, b.dataset.key, +b.dataset.ms);
+  saving(function () { splitChoose(b.dataset.splitAct, b.dataset.key, +b.dataset.ms); });
 });
 
 // ---------- Settings ----------
@@ -350,6 +350,10 @@ function splitHandTap(pt) {
   return true;
 }
 function splitHandSave() {
+  if (!SPL || !SPL.cuts.length) return;
+  saving(splitHandSaveNow);
+}
+function splitHandSaveNow() {
   if (!SPL || !SPL.cuts.length) return;
   var all = PREFS.splitAt || (PREFS.splitAt = {}), list = (all[SPL.key] || []).slice(), ms = SPL.ms, n = SPL.cuts.length;
   SPL.cuts.forEach(function (k) { if (list.indexOf(SPL.t[k]) < 0) list.push(SPL.t[k]); });

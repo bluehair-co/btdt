@@ -1485,13 +1485,15 @@ function respot() {
   if (pinLayer) pinLayer._ver = null;
   if (map && PREFS.pins) layerToggles();
 }
-function mergeSpot(from, into) {
+function mergeSpot(from, into) { saving(function () { mergeSpotNow(from, into); }); }
+function mergeSpotNow(from, into) {
   PREFS.spotMerge = PREFS.spotMerge || {};
   PREFS.spotMerge[from] = into; savePrefs(); respot();
   var pid = into.slice(3);
   for (var v = 0; v < D.vs.length; v++) if (D.vpid[v] === pid) { openSpot(spotKey(v)); return; }
 }
-function unmergeSpot(key) {
+function unmergeSpot(key) { saving(function () { unmergeSpotNow(key); }); }
+function unmergeSpotNow(key) {
   var m = PREFS.spotMerge || {};
   spotParts(key).forEach(function (x) { delete m[x.k]; });
   for (var k in m) if (m[k] === key) delete m[k];

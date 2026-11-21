@@ -947,7 +947,7 @@ function mrImport(files) {
     var doc = got[0].doc;
     got.slice(1).forEach(function (g) { doc = mrMergeDocs(doc, g.doc); });
     var name = got[got.length - 1].name;
-    if (!MR) { mrUse(doc, name, false); return; }
+    if (!MR) { saving(function () { mrUse(doc, name, false); }, 'Applying MyRules…'); return; }
     mrAsk({
       title: 'Add to your MyRules?',
       text: esc(name) + ' has ' + mrCount(doc) + '. You already have ' + mrCount(MR.doc) + '.',
@@ -1007,7 +1007,12 @@ function mrAsk(o) {
   o.buttons.forEach(function (b) {
     var el = document.createElement('button');
     el.type = 'button'; el.className = 'btn' + (b[1] ? ' ' + b[1] : ''); el.innerHTML = b[0];
-    el.addEventListener('click', function () { if (b[3] !== 'stay') d.close(); if (b[2]) b[2](el); });
+    el.addEventListener('click', function () {
+      function run() { if (b[3] !== 'stay') d.close(); if (b[2]) b[2](el); }
+      // Save, Delete and the like show the pill at once; the dialog closes when the work starts,
+      // in the same order as before (closing first, then the save).
+      if (b[2] && /primary|danger/.test(b[1] || '')) saving(run, /danger/.test(b[1]) ? 'Working on it…' : 'Saving…'); else run();
+    });
     bt.appendChild(el);
   });
   if (!d.open) { if (side) d.show(); else d.showModal(); }
@@ -1403,9 +1408,11 @@ $('mrBody').addEventListener('click', function (ev) {
   if (un) {
     var ur = mrById(un.dataset.mrUnless), uk = +un.dataset.k, u = ur && ur.unless && ur.unless[uk];
     if (!u) return;
-    ur.unless.splice(uk, 1);
-    if (!ur.unless.length) delete ur.unless;
-    mrChange((ur.name || ur.id) + ' on again for ' + mrUnlessText(u));
+    saving(function () {
+      ur.unless.splice(uk, 1);
+      if (!ur.unless.length) delete ur.unless;
+      mrChange((ur.name || ur.id) + ' on again for ' + mrUnlessText(u));
+    });
     return;
   }
   var o = ev.target.closest('[data-mr-trip]');
@@ -1627,6 +1634,11 @@ $('tripBody').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-mr-act]');
   if (!b) return;
   var i = +b.dataset.t, act = b.dataset.mrAct;
+  if (MR_SAVE_ACTS[act]) saving(function () { mrTripAct(b, i, act); }); else mrTripAct(b, i, act);
+});
+// The trip page's MyRules buttons; the ones that save (MR_SAVE_ACTS) run behind the Working pill.
+var MR_SAVE_ACTS = { line: 1, not: 1, undo: 1, detach: 1, include: 1, type: 1, hide: 1, show: 1 };
+function mrTripAct(b, i, act) {
   if (act === 'line') {
     var lr = mrById(b.dataset.r);
     if (!lr) return;
@@ -1670,7 +1682,7 @@ $('tripBody').addEventListener('click', function (ev) {
   else if (act === 'edit') mrEditDialog(i);
   else if (act === 'hide' || act === 'show') mrHideTrip(i, act === 'hide');
   else if (act === 'remove') mrRemoveEdits(i);
-});
+}
 // The correction for this one trip that Trip info changes: the last one pointing at it by its start.
 function mrTripCorrection(i) {
   return mrCorrections().filter(function (x) { return x.one && x.trips.length === 1 && x.trips[0] === i; }).map(function (x) { return x.c; }).pop() ||
