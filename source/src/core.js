@@ -449,21 +449,32 @@ function runSoon(g) {
 }
 // A slow change (a switch that makes every trip be worked out again): the "Working on it" pill and a
 // veil over the page show at once, a frame paints, then the work runs and both go when it's done.
-// The pill fades in only after 150 ms, so quick changes don't flash it; its spinner and fade are
-// transform and opacity animations, which keep running while the work holds the page.
-var WORKING = { n: 0 };
+// The pill stays at least WORKING_MIN ms, so even a quick save is seen (David's rule: a spinner on
+// every save). It sits in the top layer (a popover) so an open dialog can't cover it. Its spinner and
+// fade are transform and opacity animations, which keep running while the work holds the page.
+var WORKING = { n: 0, at: 0 }, WORKING_MIN = 600;
+function workingShow(on) {
+  var el = $('working');
+  el.hidden = !on;
+  if (!el.showPopover) return;
+  try { if (on && !el.matches(':popover-open')) el.showPopover(); else if (!on && el.matches(':popover-open')) el.hidePopover(); } catch (e) { /* no popover support */ }
+}
 function working(text, fn) {
   var el = $('working');
-  WORKING.n++;
+  if (!WORKING.n++) WORKING.at = performance.now();
   $('workingText').textContent = text || 'Working on it…';
-  el.hidden = false;
+  workingShow(true);
   var done = false;
   function go() {
     if (done) return;
     done = true;
     try { fn(); } finally {
       // Taps made while the work ran land on the veil, not on what is under it.
-      setTimeout(function () { if (!--WORKING.n) el.hidden = true; }, 0);
+      setTimeout(function () {
+        if (--WORKING.n) return;
+        var left = WORKING_MIN - (performance.now() - WORKING.at);
+        setTimeout(function () { if (!WORKING.n) workingShow(false); }, Math.max(0, left));
+      }, 0);
     }
   }
   requestAnimationFrame(function () { setTimeout(go, 0); });
