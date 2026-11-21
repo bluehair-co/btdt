@@ -406,6 +406,14 @@
             },
             "weekdays_only": {
               "type": "boolean"
+            },
+            "countries": {
+              "type": "array",
+              "description": "Only trips that start or end in one of these countries (ISO 3166-1 alpha-2 codes)",
+              "items": {
+                "type": "string",
+                "pattern": "^[A-Za-z]{2}$"
+              }
             }
           }
         }
