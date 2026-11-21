@@ -440,6 +440,8 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-opt:has(input:checked) { border-color: var(--accent); }
 .mr-opt input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
 .mr-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mr-opt-more { display: flex; flex-direction: column; gap: 6px; }
+.mr-opt-more[hidden] { display: none; }
 .g-name { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: -4px; }
 .g-out:empty { display: none; }
 .g-out .fine { margin: 0 0 6px; }
@@ -1166,6 +1168,12 @@ div.hit-row:hover { background: none; }
 .bg-pill .dl-bar { width: 80px; margin: 0; }
 /* While selecting trips only the selection's own bars show (the map's attribution stays). */
 body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .snap-bar:not(.sel-top), body.sel-mode #roadPill { display: none !important; }
+/* Making a map snap: the same, with its bar at the top. */
+body.snap-mode .dock, body.snap-mode .topbar, body.snap-mode .playbar, body.snap-mode #mapPage .fab, body.snap-mode .map-legend, body.snap-mode #map .leaflet-top, body.snap-mode #roadPill, body.snap-mode .tools-menu { display: none !important; }
+body.snap-mode #snapBar { top: calc(12px + var(--safe-t)); width: max-content; box-sizing: border-box; }
+body.snap-mode #snapBar .snap-bar-t { flex: 1 1 auto; min-width: 0; }
+/* On a phone the bar spans the screen, with a small margin each side. */
+@media (max-width: 600px) { body.snap-mode #snapBar { left: 12px; right: 12px; width: auto; max-width: none; transform: none; justify-content: space-between; } }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
 body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 .bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
@@ -1219,6 +1227,10 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .more-btn .ic { width: 20px; height: 20px; }
 .more-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 230px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
 .more-menu[hidden] { display: none; }
+.more-wrap.end .more-menu { left: auto; right: 0; }
+/* The pencil (edit menu) and ⋯ at the right of a trip's header. */
+.trip-head > div:not(.ic-badge) { flex: 1 1 auto; min-width: 0; }
+.trip-acts { flex: none; margin-left: auto; align-self: flex-start; display: flex; gap: 8px; }
 .more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
 .more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }
@@ -1451,7 +1463,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
-          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
       </div>
@@ -1491,7 +1503,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
-            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
           <nav class="ins-chips" id="insChips" aria-label="Insights sections"><button type="button" data-ig-go="scores" aria-pressed="true">Scores</button><button type="button" data-ig-go="overview" aria-pressed="false">Overview</button><button type="button" data-ig-go="places" aria-pressed="false">Places</button><button type="button" data-ig-go="countries" aria-pressed="false">Countries</button><button type="button" data-ig-go="fitness" aria-pressed="false">Fitness</button><button type="button" data-ig-go="co2" aria-pressed="false">CO₂</button></nav>
@@ -1556,7 +1568,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
           <div id="kindRows"></div>
         </section>
         <section class="card" id="sqCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about 1.5 km (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
           <div class="stats" id="sqStats"></div>
           <div class="bars" id="sqYears" style="margin-top:14px"></div>
         </section>
@@ -1614,7 +1626,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
-            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -1724,7 +1736,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
     </div>
     <div class="sec">
       <div class="info-head"><h3>Colour lines by</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="linesInfo" aria-label="About the lines" title="About the lines"><span data-icon="info"></span></button></div>
-      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
+      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. from an easy ride to a fast one for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
       <div class="seg full" role="group" aria-label="Colour lines by" id="linesSeg"><button type="button" data-lines="paths" aria-pressed="true">Transport</button><button type="button" data-lines="speed" aria-pressed="false">Speed</button><button type="button" data-lines="hr" aria-pressed="false">Heart rate</button><button type="button" data-lines="off" aria-pressed="false">Off</button></div>
       <input type="checkbox" id="layPaths" hidden><input type="checkbox" id="laySpeed" hidden><input type="checkbox" id="layHr" hidden>
     </div>
@@ -1749,7 +1761,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
       <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
-      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
+      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
     </div>
   </div>
 </aside>
@@ -1799,7 +1811,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 <aside class="sheet right" id="mrSheet" aria-label="MyRules" role="dialog">
   <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
-    <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
+    <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed in Trip info shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
     <div id="mrCard"></div>
     <div class="sec mr-here-sec" id="mrHereSec" hidden>
       <h3>In these filters</h3>
@@ -1869,7 +1881,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       </div>
       <div class="field"><label for="occ">People sharing the car, on average</label><input type="number" id="occ" min="1" max="8" step="0.1" value="1"></div>
       <label class="toggle-row"><span class="lbl">Count extra warming from flights at altitude</span><input type="checkbox" class="switch" id="rf" checked></label>
-      <details class="help"><summary>Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
+      <details class="help"><summary id="factorsSum">Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
     </div>
   </div>
 </aside>
@@ -4648,7 +4660,9 @@ var ICONS = {
   pin: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   chart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
   history: 'M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z',
-  filter: 'M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z',
+  // Material Icons: filter_alt (the Filters button) and menu (the Menu button).
+  filter: 'M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z',
+  menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
   layers: 'M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z',
   gear: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
   expand: 'M21 11V3h-8l3.29 3.29-10 10L3 13v8h8l-3.29-3.29 10-10z',
@@ -4679,6 +4693,9 @@ var ICONS = {
   ruler: 'M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z',
   // Material Icons: edit and location_off.
   edit: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  // Material Icons: visibility_off (Hide this trip) and group_work (Group with similar trips).
+  hide: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z',
+  groupWork: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM8 17.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM9.5 8c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5S9.5 9.38 9.5 8zm6.5 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   pinOff: 'M12 6.5c1.38 0 2.5 1.12 2.5 2.5 0 .74-.33 1.39-.83 1.85l3.63 3.63c.98-1.86 1.7-3.8 1.7-5.48 0-3.87-3.13-7-7-7-1.98 0-3.76.83-5.04 2.15l3.19 3.19c.46-.52 1.11-.84 1.85-.84zm4.37 9.6l-4.63-4.63-.11-.11L3.27 3 2 4.27l3.18 3.18C5.07 7.95 5 8.47 5 9c0 5.25 7 13 7 13s1.67-1.85 3.38-4.35L18.73 21 20 19.73l-3.63-3.63z',
   info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
   help: 'M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z',
@@ -4771,10 +4788,12 @@ var INFO_N = 0;
 // The ⋯ button: the less-used actions of a sheet in a short menu, so each sheet has one main
 // action (see docs/design-rules.md). Items are buttons or links with role="menuitem" (moreItem); a
 // tap anywhere, an item included, closes it, and the item's own click handler still runs.
-function moreMenu(items, label) {
+// ic: the button's icon (⋯ unless given, e.g. the pencil of a trip's edit menu); cls: a class on its
+// wrap ("end" opens the menu from the button's right edge).
+function moreMenu(items, label, ic, cls) {
   if (!items.length) return '';
   label = label || 'More';
-  return '<span class="more-wrap"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon('more') + '</button>' +
+  return '<span class="more-wrap' + (cls ? ' ' + cls : '') + '"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon(ic || 'more') + '</button>' +
     '<span class="more-menu" role="menu" hidden>' + items.join('') + '</span></span>';
 }
 function moreItem(attrs, ic, text) { return '<button type="button" role="menuitem" ' + attrs + '>' + (ic ? icon(ic) : '') + '<span>' + text + '</span></button>'; }
@@ -4827,7 +4846,7 @@ var GROUPS = [
   { key: 'bike', label: 'Cycling', v: '--m-bike', modes: ['CYCLING'] },
   { key: 'water', label: 'Water', v: '--m-water', modes: ['FERRY', 'BOAT'] },
   { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER'] },
-  // Trips with no type, or set to Unclassified in Edit trip when they look wrong: a kind of their own.
+  // Trips with no type, or set to Unclassified in Trip info when they look wrong: a kind of their own.
   { key: 'unknown', label: 'Unclassified', v: '--m-unknown', modes: ['UNKNOWN'] }
 ];
 var GROUP_OF = {};
@@ -4909,6 +4928,19 @@ var MI = 0.621371;
 function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
 function distVal(kmv) { return PREFS.unit === 'mi' ? kmv * MI : kmv; }
 function distUnit() { return PREFS.unit === 'mi' ? 'mi' : 'km'; }
+// A short distance given in metres (a radius, a grouping): metres, or feet in miles up to a tenth of a
+// mile (25 m reads 80 ft, 100 m 330 ft), then the usual distance.
+function distShort(m) {
+  if (PREFS.unit === 'mi') { var ft = m * 3.28084; return ft < 528 ? fmt(ft < 100 ? Math.round(ft / 5) * 5 : Math.round(ft / 10) * 10) + ' ft' : dist(m / 1000); }
+  return m < 1000 ? fmt(m) + ' m' : dist(m / 1000);
+}
+// Fixed distances in the page's own text (data-dist-km="1.5"), in the units of Settings.
+function fillDists() { document.querySelectorAll('[data-dist-km]').forEach(function (el) { el.textContent = dist(+el.getAttribute('data-dist-km')); }); }
+// A distance typed in a form, in the units of Settings, and back to km for saving. distField shows a
+// stored km value rounded to 0.1; distSave keeps the stored km when that shown value wasn't changed,
+// so opening and saving a rule doesn't nudge it by the rounding.
+function distField(kmv) { return kmv != null && isFinite(kmv) ? Math.round(distVal(kmv) * 10) / 10 : ''; }
+function distSave(v, kmv) { if (!(v > 0)) return null; if (kmv != null && v === distField(kmv)) return kmv; return PREFS.unit === 'mi' ? v / MI : v; }
 function dist(kmv) { var v = distVal(kmv); return fmt(v, v < 10 && v > 0 ? 1 : 0) + ' ' + distUnit(); }
 function distParts(kmv) { var v = distVal(kmv); return { v: fmt(v, v < 10 && v > 0 ? 1 : 0), u: distUnit() }; }
 function speed(kmh) { return fmt(distVal(kmh)) + (PREFS.unit === 'mi' ? ' mph' : ' km/h'); }
@@ -8038,9 +8070,9 @@ function openTrip(i, fromList) {
   setPinOn([]); placeLast = null;
   var r = tripRows(i);
   $('tripBack').hidden = !fromList;
-  $('tripBody').innerHTML = (tab !== 'map' ? '<div class="trip-map" id="tripMap" role="img" aria-label="Map of this trip"></div>' : '') + tripHead(i) + mrEditTop(i) + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
+  $('tripBody').innerHTML = (tab !== 'map' ? '<div class="trip-map" id="tripMap" role="img" aria-label="Map of this trip"></div>' : '') + tripHead(i).replace(/<\/div>$/, '<span class="trip-acts">' + mrEditMenu(i) + mrEditTop(i) + '</span></div>') + tripDesc(i) + '<div id="tripChartSlot">' + (chartPanelTrip == null ? tripChart(i, 'sheet', 340, 150) : '') + '</div>' + hrZonesBlock(i) +
     '<dl class="kv" style="margin-top:12px">' + r.rows.map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
-    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) + mrFixGps(i) +
+    (r.notes.length ? '<p class="fine" style="margin-top:10px">' + infoMore('How BT•DT read this trip', r.notes.join(' '), 'How BT•DT read this trip') + '</p>' : '') + splitBlock(i) + mrTripBlock(i) +
     '<div id="rawWrap" hidden><div style="display:flex;gap:8px;margin:12px 0 8px"><button type="button" class="btn" data-act="copy" data-i="' + i + '">Copy</button>' +
     '<button type="button" class="btn" data-act="save" data-i="' + i + '">Download</button></div><pre class="raw" id="rawPre"></pre></div>';
   $('tripSheetTitle').textContent = 'Trip';
@@ -10299,7 +10331,7 @@ function renderSquares() {
   $('sqCard').hidden = !E.sq.size;
   if (!E.sq.size) return;
   E.sq.forEach(function (o) { var y = D.year[o.i]; years[y] = (years[y] || 0) + 1; });
-  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about 1.5 km across') +
+  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about ' + dist(1.5) + ' across') +
     stat('Biggest cluster', fmt(E.cluster.size), '', 'squares with all four neighbours visited') +
     stat('Max square', E.max + '×' + E.max, '', fmt(E.max * E.max) + ' squares, all visited');
   var ys = Object.keys(years).map(Number).sort(), mx = Math.max.apply(null, ys.map(function (y) { return years[y]; }));
@@ -10617,7 +10649,7 @@ function renderCountries() {
   renderCcTimeline(list, perDay, visits);
   var many = list.length > 1;
   var passed = list.filter(function (c) { return c.kind; }).length;
-  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over 5 km from the airport).' : '';
+  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over ' + dist(5) + ' from the airport).' : '';
   var max = list.length ? list[0].n : 1;
   $('ccList').innerHTML = list.length ? list.map(function (c) {   // always every country, never cut short
     return '<div class="hit-row" style="cursor:default"><span class="flag" aria-hidden="true" style="font-size:22px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
@@ -11222,7 +11254,7 @@ function placePage(o, keepScroll) {
       ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
     ].concat(o.spots ? [['Spots', fmt(spots.length)]] : []).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + fmtHour(bh) + '.</p>' + presenceGrid(presence(vs));
-  if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
+  if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (' + distShort(300) + '). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {
       return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) + '<span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
@@ -11260,7 +11292,7 @@ function openPlace(p) {
 function mergeHtml(key) {
   var parts = spotParts(key), me = spotsOf(spotStays(key))[0], html = '';
   if (parts.length > 1) html += '<h4 class="place-h">Merged spot</h4><p class="fine">' + fmt(parts.length) + ' Google place IDs are counted as this one place' +
-    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within 25 m and your visits moved from one to the other)' : '') + '.</p>' +
+    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within ' + distShort(25) + ' and your visits moved from one to the other)' : '') + '.</p>' +
     (parts.some(function (x) { return x.manual; }) || Object.keys(PREFS.spotMerge || {}).some(function (k) { return PREFS.spotMerge[k] === key; }) ? '<button type="button" class="btn quiet" data-punmerge="' + esc(key) + '">Undo the merges you made</button>' : '');
   if (key.slice(0, 3) !== 'id:' || !me) return html;
   var near = [], seen = {};
@@ -11315,7 +11347,7 @@ var TL = { type: [], ref: [], tops: [], total: 0, sel: null, r0: -1, r1: -1, map
 var TL_H = [40, 64, 120];   // day header, trip, end of list
 // Lower case without accents, so "cafe" finds "Café" and "zurich" finds "Zürich".
 function tlNorm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-// What a trip can be found by: its title (Strava, activity file or Edit trip), where it
+// What a trip can be found by: its title (Strava, activity file or Trip info), where it
 // started and ended, and its type or sport.
 function tlHay(i) {
   var h = TL.hay || (TL.hay = {});
@@ -11829,7 +11861,7 @@ function* mrCorrectSteps(dry) {
 }
 
 // ---------- GPS points you ignore ----------
-// Ignore GPS points… in the trip details (ignore.js) saves the times of the points to leave out in
+// Ignore GPS points in the trip details (ignore.js) saves the times of the points to leave out in
 // the trip's own correction (then.ignore_points: ISO times, to the second). They are left out of D's
 // copy of the trail (D.base keeps the one loaded), so the trip's line, its distance, its speed chart,
 // its playback and the heatmap all go without them. A trip keeps at least two points. Its distance
@@ -12545,7 +12577,7 @@ function renderMyRules() {
   $('mrSheetExport').innerHTML = icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '');
   $('mrSheetExport').classList.add('mr-export');
   if (!MR) {
-    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
+    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
     return;
   }
   var nGear = 0, nEd = 0, n = MR.changes.length;
@@ -12942,7 +12974,7 @@ function mrTripBlock(i) {
     else if (ms.why === 'gear') why = 'It was recorded with ' + esc(mrRecGear(i)) + ', and the routine sets ' + esc(mrGearName(mr.then.gear)) + '. Recorded gear is never replaced by a routine.';
     else if (ms.why === 'missing') why = 'Its line, ' + esc(mln && mln.missing || 'a GeoJSON file') + ', isn\'t loaded: load it with your location files.';
     else if (ms.why === 'noline') why = 'It draws its trips along one line, and none of its trips has a GPS trail of 5 or more points to take it from. Turn off Draw them along one line in the routine, or give it a line in your MyRules file.';
-    else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over 1 km from the line, so it can\'t be drawn along it.');
+    else why = 'It follows the routine\'s line for ' + (ms.score || 0) + '% of its GPS points, and the routine takes trips from ' + ms.min + '%.' + (ms.can ? '' : ' Its start or end is over ' + dist(1) + ' from the line, so it can\'t be drawn along it.');
     h += '<div class="mr-chg"><b>Not in routine:</b> ' + esc(mr.name || mr.id) + way(ms.dir) + '<div class="fine">' + infoMore('It matches by place and time, but not everything the routine sets fits.', 'Everything a routine sets (type, gear, line) applies together or not at all. ' + why, 'Why it is not in the routine') + '</div></div>';
   }
   var msn = !rr && D.mrSnap && D.mrSnap[i], msr = msn && mrById(msn.rule);
@@ -12951,14 +12983,14 @@ function mrTripBlock(i) {
   if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. ' + tk.score + '% of them are near the line. Turn it off in Menu › Trip cleanup.') + '</div></div>';
   if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">' + infoMore('Drawn along main roads for ' + D.snap[i].cov + '% of the way: ' + dist(D.snap[i].km) + '.', 'It follows the motorways and main roads of your road pack where its GPS points stay close to them, and its own GPS points elsewhere. Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. Turn it off in Menu › Trip cleanup.') + '</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
-  // Edit trip is at the top of the details, under the trip's icon (mrEditTop).
+  // Trip info is in the pencil menu of the trip's header (mrEditMenu).
   var btns = '';
   // Remove edit: every correction that changed this trip lets go of it (mrRemoveEdits).
   var eds = mrTripEdits(i);
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
-  // Find similar trips sits at the top, next to Edit trip (mrEditTop).
+  // Group with similar trips is in ⋯ in the trip's header (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
@@ -12968,31 +13000,33 @@ function mrTripBlock(i) {
   if (!h && !btns) return mrCheckBlock(i);
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
 }
-// The top of the trip details, under the trip's icon: Edit trip (gear included), Find similar trips,
-// and ⋯ with Show this day on the map, Open in Timeline and Raw data.
+// ⋯ beside the pencil in the trip's header: Group with similar trips, Show this day on the map,
+// Open in Timeline and Raw data.
 function mrEditTop(i) {
   if (!D) return '';
   var more = [];
+  if (mrSimilarOk(i)) more.push(moreItem('data-mr-act="similar" data-t="' + i + '"', 'groupWork', 'Group with similar trips'));
   if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
   if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
   more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
-  return '<div class="trip-edit">' + (isDup(i) ? '' : '<button type="button" class="btn primary" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button>') +
-    (mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>' : '') + moreMenu(more, 'More for this trip') + '</div>';
+  return moreMenu(more, 'More for this trip', 'more', 'end');
 }
-// Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
+// The pencil at the right of the trip's header, before ⋯: everything you can change about this one trip.
+// Trip info (type, title, gear), Split trip, Ignore GPS points, and Hide this trip.
+function mrEditMenu(i) {
+  if (!D || isDup(i)) return '';
+  var it = [moreItem('data-mr-act="edit" data-t="' + i + '"', 'edit', 'Trip info')];
+  if (splitHandOk(i)) it.push(moreItem('data-split-hand="' + i + '"', 'split', 'Split trip'));
+  if (ignOk(i)) it.push(moreItem('data-ign="' + i + '"', 'pinOff', 'Ignore GPS points'));
+  it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'hide', 'Hide this trip'));
+  return moreMenu(it, 'Edit this trip', 'edit', 'end');
+}
+// Group with similar trips: a new routine between this trip's ends, matched by route, not by time (along
 // its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
 // Not for a trip a routine already has or left out, nor for flights or trips under 1 km end to end.
 function mrSimilarOk(i) {
   if (isDup(i) || D.mrRoute && D.mrRoute[i] && mrById(D.mrRoute[i].rule) || D.mrMiss && D.mrMiss[i] && mrById(D.mrMiss[i].rule)) return false;
   return MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1;
-}
-// Fix the GPS: the two tools that work on a trip's GPS points, together near the end of the details.
-function mrFixGps(i) {
-  if (!D || isDup(i)) return '';
-  var b = (splitHandOk(i) ? '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>' : '') +
-    (ignOk(i) ? '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>' : '');
-  return b ? '<div class="mr-trip">' + infoHead('h4', 'place-h', 'Fix the GPS', 'Split trip… cuts a trip Timeline joined into its legs. Ignore GPS points… leaves out points that jumped away, so the line, distance and speed go without them.', 'About Fix the GPS') +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + b + '</div></div>' : '';
 }
 // Is this the right type? For a trip in the check list: why, and one tap to keep or change its type.
 function mrCheckBlock(i) {
@@ -13136,34 +13170,34 @@ $('tripBody').addEventListener('click', function (ev) {
   else if (act === 'type') mrQuickType(i, b.dataset.m);
   else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
+  else if (act === 'hide' || act === 'show') mrHideTrip(i, act === 'hide');
   else if (act === 'remove') mrRemoveEdits(i);
 });
-// The correction for this one trip that Edit trip changes: the last one pointing at it by its start.
+// The correction for this one trip that Trip info changes: the last one pointing at it by its start.
 function mrTripCorrection(i) {
   return mrCorrections().filter(function (x) { return x.one && x.trips.length === 1 && x.trips[0] === i; }).map(function (x) { return x.c; }).pop() ||
     mrList('corrections').filter(function (c) { return c.trip && c.trip.start && c.enabled !== false && mrRefTrips(c.trip)[0] === i; }).pop() || null;
 }
-// Edit trip: its type, its title, and hiding it. Saved as a correction on this trip's start, so it
+// Trip info: its type, its title and its gear. Saved as a correction on this trip's start, so it
 // survives loading the files again.
 function mrEditDialog(i) {
-  var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]], hidden = !!D.mrHide[i];
+  var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]];
   // Unclassified last: for a trip that looks wrong (a GPS glitch?) when you aren't sure what it was.
   var modes = MODES.filter(function (m) { return m !== 'UNKNOWN'; }).concat(['UNKNOWN']);
   mrAsk({
-    title: 'Edit trip',
+    title: 'Trip info',
     text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Type</span><select id="mrEType">' + modes.map(function (m) {
       return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === 'UNKNOWN' && m !== was ? ' (not sure what it was)' : '') + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
     }).join('') + '</select></label>' +
       '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
-      mrGearField(i) +
-      '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
+      mrGearField(i) + '</div>',
     buttons: [['Save', 'primary', function () { mrSaveEdit(i); }], ['Cancel', 'quiet', null]],
     note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.',
     after: function () { var gb = $('mrEGear'); if (gb) gb.addEventListener('click', function () { $('mrDlg').close(); mrGearDialog(i); }); }
   });
 }
-// Gear in Edit trip, for rides, runs and walks: what it has, and Set gear… unless an activity file
+// Gear in Trip info, for rides, runs and walks: what it has, and Set gear… unless an activity file
 // recorded it (recorded gear is never replaced).
 function mrGearField(i) {
   var m = MODES[D.mode[i]], g = D.mrGear && D.mrGear[i], has = D.gear[i], rec = has && !g;
@@ -13172,27 +13206,38 @@ function mrGearField(i) {
     (rec ? '' : '<button type="button" class="btn" id="mrEGear">' + icon('gear') + (has ? 'Change gear…' : 'Set gear…') + '</button>') + '</div></div>';
 }
 function mrSaveEdit(i) {
-  var type = $('mrEType').value, name = $('mrEName').value.trim(), hide = $('mrEHide').checked;
+  var type = $('mrEType').value, name = $('mrEName').value.trim();
   var was = MODES[D.base.mode[i]], rec = recName(i);
   mrEnsure();
   var c = mrTripCorrection(i), isNew = !c, what = [];
   if (isNew) c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} };
   var t = c.then || (c.then = {});
-  var oldMode = t.mode || was, oldName = t.name || rec, oldHide = !!t.hide;
+  var oldMode = t.mode || was, oldName = t.name || rec;
   // A type the files already had and wasn't guessed needs no correction; a guessed one does, to keep it.
   if (type !== was || D.base.est[i] & GUESSED) t.mode = type; else delete t.mode;
   if (name && name !== rec) t.name = name; else delete t.name;
-  if (hide) t.hide = true; else delete t.hide;
   if (type !== oldMode) what.push('type ' + (LABEL[type] || type).toLowerCase());
   if ((name || rec) !== oldName) what.push(name && name !== rec ? 'title “' + name + '”' : 'title reset');
-  if (hide !== oldHide) what.push(hide ? 'hidden' : 'shown again');
   if (!what.length && !(isNew && Object.keys(t).length)) return;
   if (isNew) { if (!Object.keys(t).length) return; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   else if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
   mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
   if (openId === 'mrSheet') return;
-  if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
-  else { openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
+  openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0);
+}
+// Hide this trip (from the pencil menu), or show it again: saved on the same correction as Trip info.
+function mrHideTrip(i, on) {
+  var was = MODES[D.base.mode[i]], c = mrTripCorrection(i);
+  if (!on && !c) return;
+  mrEnsure();
+  if (!c) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
+  var t = c.then || (c.then = {});
+  if (on) t.hide = true; else delete t.hide;
+  if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (on ? 'hidden' : 'shown again'));
+  if (openId === 'mrSheet') return;
+  if (on) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
+  else openTrip(i);
 }
 
 // Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
@@ -13210,13 +13255,13 @@ function mrGearDialog(i) {
     text: esc(tripRoute(i)) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Gear</span><select id="mrG">' + opts.map(function (g) { return '<option value="' + g + '">' + esc(GEAR[g].name) + '</option>'; }).join('') + '<option value="new">New gear…</option></select></label>' +
       '<div id="mrNew" hidden class="grid2"><label class="field"><span>Name</span><input type="text" id="mrName" placeholder="e.g. Strida EVO"></label><label class="field"><span>Kind</span><select id="mrKind">' + kinds.map(function (k) { return '<option value="' + k + '">' + MR_KINDS[k] + '</option>'; }).join('') + '</select></label></div>' +
-      '<label class="mr-opt"><input type="radio" name="mrScope" value="one"><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
-      '<label class="mr-opt"><input type="radio" name="mrScope" value="period" checked><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
-      '<span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
-      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="1" style="width:5em" aria-label="Maximum distance"> km (optional)</span>' +
-      '<small class="fine" id="mrCountTxt"></small></span></label></div>',
+      '<label class="mr-opt"><input type="radio" name="mrScope" value="one" checked><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
+      '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
+      // The period's details show once this option is picked.
+      '<span class="mr-opt-more" id="mrPeriodMore" hidden><span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
+      '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="any" style="width:5em" aria-label="Maximum distance in ' + distUnit() + '"> ' + distUnit() + ' (optional)</span>' +
+      '<small class="fine" id="mrCountTxt"></small><small class="fine">Gear recorded by Strava or another activity file is never replaced by a period.</small></span></span></label></div>',
     buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
-    note: 'Gear recorded by Strava or another activity file is never replaced by a period.',
     after: function () {
       var sel = $('mrG');
       function prefill() {
@@ -13227,11 +13272,14 @@ function mrGearDialog(i) {
         count();
       }
       function count() {
-        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = parseFloat($('mrMax').value), c = 0;
+        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = distSave(parseFloat($('mrMax').value)), c = 0;
         for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
         $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
       }
       sel.addEventListener('change', prefill);
+      document.querySelectorAll('input[name="mrScope"]').forEach(function (r) {
+        r.addEventListener('change', function () { $('mrPeriodMore').hidden = document.querySelector('input[name="mrScope"]:checked').value !== 'period'; });
+      });
       ['mrFrom', 'mrTo', 'mrMax'].forEach(function (id) { $(id).addEventListener('input', count); });
       prefill();
     }
@@ -13251,7 +13299,7 @@ function mrSaveGear(i) {
     else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
     mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]));
   } else {
-    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = parseFloat($('mrMax').value);
+    var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = distSave(parseFloat($('mrMax').value));
     if (f) w.from = f;
     if (t) w.to = t;
     var r = { id: mrNewId(name), name: name, kind: kind === 'shoe' || MR_KINDS[kind] ? kind : 'other', mode: mode };
@@ -13331,9 +13379,9 @@ function mrGearRuleDialog(r) {
     extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '"></label>' +
       '<label class="field"><span>Kind</span><select id="mrGKind">' + kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === r.kind ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('') + '</select></label></div>' +
       mrDateRow(r.when) +
-      '<label class="field"><span>Only trips under (km, optional)</span><input type="number" id="mrGMax" min="0" step="1" value="' + (mx != null ? mx : '') + '"></label></div>',
+      '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div>',
     buttons: [['Save', 'primary', function () {
-      var name = $('mrGName').value.trim(), m = parseFloat($('mrGMax').value);
+      var name = $('mrGName').value.trim(), m = distSave(parseFloat($('mrGMax').value), mx);
       if (!name) { toast('Give the gear a name'); return; }
       if (!mrDatesInto(r)) return;
       r.name = name; r.kind = $('mrGKind').value;
@@ -13356,7 +13404,7 @@ function mrSimilar(i) {
   if (D.pathOff[i + 1] - D.pathOff[i] < 5) delete r.then.snap;
   mrRoutineDialog(r, true);
 }
-// isNew: a routine not saved yet (Find similar trips), added to MyRules on Save.
+// isNew: a routine not saved yet (Group with similar trips), added to MyRules on Save.
 function mrRoutineDialog(r, isNew) {
   var t = r.then || {}, rt = r.return_when && Array.isArray(r.return_when.time) ? r.return_when.time : [];
   mrAsk({
@@ -13972,7 +14020,7 @@ function mrGhostStart(draft) {
     // where you have no pack, or for buses and ferries, which packs don't have.
     var lab = (LABEL[m] || m).toLowerCase(), packed = PACK_MODE_BITS[m] && [a.at, b.at].some(function (p) { return !!PACKS[countryAt(p[0], p[1])]; });
     var local = PACK_MODE_BITS[m] ? packLines(m, a.at, b.at) : [];
-    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within 2 km of both ends. Move an end closer to a station.'; return; }
+    if (packed && !local.length) { $('mrOsmTxt').textContent = 'Your station packs have no ' + lab + ' line within ' + dist(2) + ' of both ends. Move an end closer to a station.'; return; }
     btn.disabled = true;
     if (!local.length) $('mrOsmTxt').textContent = 'Asking OpenStreetMap for ' + lab + ' lines between the two ends…';
     (local.length ? Promise.resolve(local) : mrOsmLines(m, a.at, b.at)).then(function (list) {
@@ -15077,6 +15125,9 @@ function snapStart(r) {
   if (!initMap()) return;
   snapEnd();
   SN = { r: r || null, a: null, b: null, marks: L.layerGroup().addTo(map) };
+  // Only the map, the bar and the snap's own panel while you make it: no top bar, tabs or map buttons.
+  document.body.classList.add('snap-mode');
+  if (typeof chartPanelClose === 'function') chartPanelClose();
   if (r && snapOk(r)) {
     SN.a = { lat: r.from[0], lng: r.from[1], name: r.from_name || 'Start' };
     SN.b = { lat: r.to[0], lng: r.to[1], name: r.to_name || 'End' };
@@ -15273,6 +15324,7 @@ function snapEnd() {
   if (!SN) return;
   var was = SN;
   SN = null;
+  document.body.classList.remove('snap-mode');
   if (was.layer) was.layer.remove();
   if (was.dim) was.dim.remove();
   if (was.marks) was.marks.remove();
@@ -16036,7 +16088,7 @@ $('tripSplitSeg').addEventListener('click', function (ev) {
 });
 
 // ---------- split by hand ----------
-// Split trip… in the trip details: the trip alone on the map, you tap its path where each leg
+// Split trip in the trip details: the trip alone on the map, you tap its path where each leg
 // should end (as often as you like), then Split. Saved in PREFS.splitAt by the time of the GPS point
 // nearest each tap, for the Timeline trip it came from (a leg adds to the cuts of its trip).
 var SPL = null, SPLIT_TAP_PX = 36;
@@ -16383,7 +16435,7 @@ function selEnd() {
 $('selNewBtn').addEventListener('click', function () { selStart(); });
 
 // ---------- ignoring GPS points of a trip ----------
-// Ignore GPS points… in the trip details: the trip alone on the map with each of its GPS points.
+// Ignore GPS points in the trip details: the trip alone on the map with each of its GPS points.
 // Drawing around points (a lasso or a rectangle, as in Select trips) ignores them; drawing around
 // points that are all ignored brings them back; a tap on a point does either for that one. Save
 // writes their times into the trip's own correction (then.ignore_points, see mrApplyDrops), so the
@@ -16586,7 +16638,7 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   renderDateTimeSettings();
   $('unitNote').textContent = 'Automatic uses ' + (LOCALE_FMT.unit === 'mi' ? 'miles' : 'kilometres') + ', from this device\'s region.';
-  buildFactors();
+  buildFactors(); fillDists();
   renderHrSettings();
   renderImports();
   renderSplitSettings();
@@ -16749,10 +16801,12 @@ function buildFactors() {
   rows.forEach(function (r) {
     var id = 'g_' + r[0], l = document.createElement('label'), inp = document.createElement('input');
     l.htmlFor = id; l.textContent = r[1];
-    inp.type = 'number'; inp.id = id; inp.min = 0; inp.step = 1; inp.value = A.g[r[0]];
+    // Typed per km or per mile, as in Settings; kept per km. Only a field you change is converted back.
+    var per = PREFS.unit === 'mi' ? 1 / MI : 1;
+    inp.type = 'number'; inp.id = id; inp.min = 0; inp.step = 'any'; inp.value = Math.round(A.g[r[0]] * per);
     inp.addEventListener('input', function () {
       var v = parseFloat(inp.value); if (!isFinite(v) || v < 0) return;
-      A.g[r[0]] = v;
+      A.g[r[0]] = v / per;
       if (r[0] === 'CAR') { A.car = 'custom'; $('carType').value = 'custom'; }
       saveFactors(); co2Changed();
     });
@@ -16760,7 +16814,9 @@ function buildFactors() {
   });
   var note = document.createElement('p');
   note.className = 'fine'; note.style.gridColumn = '1 / -1';
-  note.textContent = 'Flights, per passenger by distance: under 500 km ' + A.fly.dom[A.rf ? 0 : 1] + ' g, 500–3,700 km ' + A.fly.short[A.rf ? 0 : 1] + ' g, longer ' + A.fly.long[A.rf ? 0 : 1] + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
+  $('factorsSum').textContent = 'Grams of CO₂e per ' + (PREFS.unit === 'mi' ? 'mile' : 'km');
+  var fp = PREFS.unit === 'mi' ? 1 / MI : 1, fg = function (x) { return fmt(Math.round(x * fp)); };
+  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }
@@ -16774,7 +16830,7 @@ $('rf').addEventListener('change', function () { A.rf = this.checked; saveFactor
 $('resetFactors').addEventListener('click', function () { A = JSON.parse(JSON.stringify(DEFAULTS)); saveFactors(); buildFactors(); co2Changed(); });
 
 // ---------- start ----------
-fillIcons();
+fillIcons(); fillDists();
 applyTheme();
 syncLayersUI();
 renderSettings();

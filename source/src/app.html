@@ -213,7 +213,7 @@
           </div>
           <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
           <button type="button" class="icon-btn pnav-filters" id="filtersBtn" aria-label="Filters" aria-controls="filtersSheet" aria-expanded="false"><span data-icon="filter"></span><span class="badge" id="filterBadge" data-pn="badge" hidden></span></button>
-          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+          <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
         </div>
         <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
       </div>
@@ -253,7 +253,7 @@
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
-            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
           <nav class="ins-chips" id="insChips" aria-label="Insights sections"><button type="button" data-ig-go="scores" aria-pressed="true">Scores</button><button type="button" data-ig-go="overview" aria-pressed="false">Overview</button><button type="button" data-ig-go="places" aria-pressed="false">Places</button><button type="button" data-ig-go="countries" aria-pressed="false">Countries</button><button type="button" data-ig-go="fitness" aria-pressed="false">Fitness</button><button type="button" data-ig-go="co2" aria-pressed="false">CO₂</button></nav>
@@ -318,7 +318,7 @@
           <div id="kindRows"></div>
         </section>
         <section class="card" id="sqCard" hidden>
-          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about 1.5 km (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
+          <div class="card-head"><div class="card-title"><h2>Explorer squares</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-label="About this card" title="About this card"><span data-icon="info"></span></button></div><span class="fine info-text">The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles). A square counts once any trip on the ground passed through it. The biggest cluster is the largest connected block of squares whose four neighbours you have all visited; the max square is the biggest all-visited square. Turn on Explorer squares in the map's layers to see them.</span></div>
           <div class="stats" id="sqStats"></div>
           <div class="bars" id="sqYears" style="margin-top:14px"></div>
         </section>
@@ -376,7 +376,7 @@
             </div>
             <button type="button" class="range-label summary-pill" data-pn="range" data-open-filters hidden><b data-pn="rangeMain"></b><small data-pn="rangeSub"></small></button>
             <button type="button" class="icon-btn pnav-filters" data-open-filters aria-label="Filters"><span data-icon="filter"></span><span class="badge" data-pn="badge" hidden></span></button>
-            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="gear"></span></button>
+            <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
         </div>
@@ -486,7 +486,7 @@
     </div>
     <div class="sec">
       <div class="info-head"><h3>Colour lines by</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="linesInfo" aria-label="About the lines" title="About the lines"><span data-icon="info"></span></button></div>
-      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. 6 to 30 km/h for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
+      <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. from an easy ride to a fast one for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
       <div class="seg full" role="group" aria-label="Colour lines by" id="linesSeg"><button type="button" data-lines="paths" aria-pressed="true">Transport</button><button type="button" data-lines="speed" aria-pressed="false">Speed</button><button type="button" data-lines="hr" aria-pressed="false">Heart rate</button><button type="button" data-lines="off" aria-pressed="false">Off</button></div>
       <input type="checkbox" id="layPaths" hidden><input type="checkbox" id="laySpeed" hidden><input type="checkbox" id="layHr" hidden>
     </div>
@@ -511,7 +511,7 @@
       <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
       <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
       <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
-      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about 1.5 km (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
+      <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
     </div>
   </div>
 </aside>
@@ -561,7 +561,7 @@
 <aside class="sheet right" id="mrSheet" aria-label="MyRules" role="dialog">
   <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
-    <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed with Edit trip shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
+    <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed in Trip info shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
     <div id="mrCard"></div>
     <div class="sec mr-here-sec" id="mrHereSec" hidden>
       <h3>In these filters</h3>
@@ -631,7 +631,7 @@
       </div>
       <div class="field"><label for="occ">People sharing the car, on average</label><input type="number" id="occ" min="1" max="8" step="0.1" value="1"></div>
       <label class="toggle-row"><span class="lbl">Count extra warming from flights at altitude</span><input type="checkbox" class="switch" id="rf" checked></label>
-      <details class="help"><summary>Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
+      <details class="help"><summary id="factorsSum">Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
     </div>
   </div>
 </aside>

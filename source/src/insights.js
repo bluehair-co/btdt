@@ -738,7 +738,7 @@ function renderSquares() {
   $('sqCard').hidden = !E.sq.size;
   if (!E.sq.size) return;
   E.sq.forEach(function (o) { var y = D.year[o.i]; years[y] = (years[y] || 0) + 1; });
-  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about 1.5 km across') +
+  $('sqStats').innerHTML = stat('Squares', fmt(E.sq.size), '', 'about ' + dist(1.5) + ' across') +
     stat('Biggest cluster', fmt(E.cluster.size), '', 'squares with all four neighbours visited') +
     stat('Max square', E.max + '×' + E.max, '', fmt(E.max * E.max) + ' squares, all visited');
   var ys = Object.keys(years).map(Number).sort(), mx = Math.max.apply(null, ys.map(function (y) { return years[y]; }));
@@ -1056,7 +1056,7 @@ function renderCountries() {
   renderCcTimeline(list, perDay, visits);
   var many = list.length > 1;
   var passed = list.filter(function (c) { return c.kind; }).length;
-  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over 5 km from the airport).' : '';
+  $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over ' + dist(5) + ' from the airport).' : '';
   var max = list.length ? list[0].n : 1;
   $('ccList').innerHTML = list.length ? list.map(function (c) {   // always every country, never cut short
     return '<div class="hit-row" style="cursor:default"><span class="flag" aria-hidden="true" style="font-size:22px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
@@ -1661,7 +1661,7 @@ function placePage(o, keepScroll) {
       ['First visit', niceDate(D.vday[fv]) + ', ' + clock(D.vs[fv], D.voff[fv])], ['Last visit', niceDate(D.vday[lv]) + ', ' + clock(D.vs[lv], D.voff[lv])]
     ].concat(o.spots ? [['Spots', fmt(spots.length)]] : []).map(function (x) { return '<div><dt>' + x[0] + '</dt><dd>' + x[1] + '</dd></div>'; }).join('') + '</dl>' +
     '<h4 class="place-h">When you\'re there</h4><p class="fine">Most often on ' + DOW_LONG[bd] + 's, arriving around ' + fmtHour(bh) + '.</p>' + presenceGrid(presence(vs));
-  if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (300 m). Load your Timeline file again to group them by the place Google matched each stay to.') +
+  if (o.spots) html += '<h4 class="place-h">Spots here</h4><p class="fine">' + (withIds ? 'Grouped by the place Google matched each stay to, so two spots on one street stay apart.' : 'Grouped by distance (' + distShort(300) + '). Load your Timeline file again to group them by the place Google matched each stay to.') +
     ' Tap one for its own page. Google Maps shows what it is; only that spot is sent to Google, and only when you tap.</p>' +
     '<div class="list-rows">' + spots.slice(0, 15).map(function (s, k) {
       return '<div class="spot-row"><button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) + '<span class="t"><b>' + esc(spotName(s, k)) + '</b><small>' + fmt(s.n) + ' visit' + (s.n > 1 ? 's' : '') + ' · last ' + niceDate(D.vday[s.lv]) + '</small></span>' +
@@ -1699,7 +1699,7 @@ function openPlace(p) {
 function mergeHtml(key) {
   var parts = spotParts(key), me = spotsOf(spotStays(key))[0], html = '';
   if (parts.length > 1) html += '<h4 class="place-h">Merged spot</h4><p class="fine">' + fmt(parts.length) + ' Google place IDs are counted as this one place' +
-    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within 25 m and your visits moved from one to the other)' : '') + '.</p>' +
+    (parts.some(function (x) { return x.auto; }) ? ' (some because Google gave the place a new ID: they are within ' + distShort(25) + ' and your visits moved from one to the other)' : '') + '.</p>' +
     (parts.some(function (x) { return x.manual; }) || Object.keys(PREFS.spotMerge || {}).some(function (k) { return PREFS.spotMerge[k] === key; }) ? '<button type="button" class="btn quiet" data-punmerge="' + esc(key) + '">Undo the merges you made</button>' : '');
   if (key.slice(0, 3) !== 'id:' || !me) return html;
   var near = [], seen = {};

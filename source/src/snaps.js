@@ -92,6 +92,9 @@ function snapStart(r) {
   if (!initMap()) return;
   snapEnd();
   SN = { r: r || null, a: null, b: null, marks: L.layerGroup().addTo(map) };
+  // Only the map, the bar and the snap's own panel while you make it: no top bar, tabs or map buttons.
+  document.body.classList.add('snap-mode');
+  if (typeof chartPanelClose === 'function') chartPanelClose();
   if (r && snapOk(r)) {
     SN.a = { lat: r.from[0], lng: r.from[1], name: r.from_name || 'Start' };
     SN.b = { lat: r.to[0], lng: r.to[1], name: r.to_name || 'End' };
@@ -288,6 +291,7 @@ function snapEnd() {
   if (!SN) return;
   var was = SN;
   SN = null;
+  document.body.classList.remove('snap-mode');
   if (was.layer) was.layer.remove();
   if (was.dim) was.dim.remove();
   if (was.marks) was.marks.remove();

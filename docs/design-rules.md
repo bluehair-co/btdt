@@ -8,17 +8,18 @@ The rules David has set for how BT•DT looks and behaves, collected from the pr
 - **Show only the filters that matter.** Years and Months only show for *All*; Days of the week only for *All* and *Date range*. Choices that already pin the days hide the rest.
 - **Less prominent by default.** Secondary features (for example the MyRules summary in Filters) sit in a small section at the bottom with a count and a button, not as a big block at the top.
 - **The landing page stays short:** the picture, the tagline, *Load location files*, *Try the demo*, the supported services as small tags below the separator, and the *About* (i) and *How to get your files* (?) entry points. Longer text belongs in those two modals.
-- **Fixed places for fixed controls.** The filter button is at the left of the top bar and the gear, which opens the *Menu*, at its right, the same on every tab and screen size. Playback (bottom left) and Views and layers (bottom right) sit beside the dock-like tab bar on desktop and never inside it. Calendars and pickers keep the same size so buttons don't move.
+- **Fixed places for fixed controls.** The Filters button (Material's filter_alt) is at the left of the top bar and the Menu button (Material's menu, three lines) at its right, the same on every tab and screen size. Playback (bottom left) and Views and layers (bottom right) sit beside the dock-like tab bar on desktop and never inside it. Calendars and pickers keep the same size so buttons don't move.
 
 ## One home per job (UX clean-up, Nov 2026)
 
 Every place in the app answers one question, and a new feature goes where its question is answered. This came out of the UX audit of 20 Nov 2026; the app before it is kept on the `v1.0` branch.
 
 - **Filters**: what am I looking at? Only filters: *When* (Navigator, All, Date range), *More about when* (years, months, days of the week, time of day, closed unless one is in use), transport, countries, source. Filters in use show as chips at the top, each with ✕.
-- **Menu** (the gear): my data and the app. *Your data* (files, import, export, Home, remove), *MyRules*, *Trip cleanup* (every switch that changes how trips are split or drawn, and the packs they need), *Preferences* (units, dates, theme, heart rate, CO₂), *About*. Each page has a back arrow to the Menu, and each Menu row shows what is on right now.
+- **Menu** (the three-line button): my data and the app. *Your data* (files, import, export, Home, remove), *MyRules*, *Trip cleanup* (every switch that changes how trips are split or drawn, and the packs they need), *Preferences* (units, dates, theme, heart rate, CO₂), *About*. Each page has a back arrow to the Menu, and each Menu row shows what is on right now.
 - **Map sheet** (the layers button): how the map looks. The view, *Colour lines by* (Transport, Speed, Heart rate, No lines), the heatmap, and what sits on top. Actions on the map are not here.
-- **Map tools** (the pencil button beside layers): things you do on the map, such as *Select trips on the map* and *New map snap*. A new map action goes in this menu, not as another floating button.
-- **Trip and place pages** share one skeleton: the header (icon, title, the facts that matter), then one row with the main action (*Edit trip*, *Edit this place* or *Name this place*; *Show on the map* for a town), at most one outline button beside it (*Find similar trips*, *Show on the map*) and ⋯ (`moreMenu`) for the rest (*Show this day on the map*, *Open in Timeline*, *Raw data*, *Open in Google Maps*, *This place moved…*). Tools that work on GPS points sit together under *Fix the GPS*. Anything you can change about one trip lives in *Edit trip* (gear included).
+- **Map tools** (the pencil button beside layers): things you do on the map, such as *Select trips on the map* and *New map snap*. A new map action goes in this menu, not as another floating button. While one runs (selecting trips, making a map snap, ignoring GPS points), the top bar, tabs and map buttons step aside so only the map, the tool's bar and its own panel show.
+- **Trip pages:** the header (icon, title, the facts that matter) with a pencil at its right. The pencil opens the trip's edit menu: *Trip info* (type, title, gear), *Split trip*, *Ignore GPS points* and *Hide this trip*. Anything you can change about one trip lives in that menu. Beside the pencil, ⋯ (`moreMenu`) holds the rest: *Group with similar trips*, *Show this day on the map*, *Open in Timeline* and *Raw data*. A trip page has no row of buttons under its header.
+- **Place pages:** the header, then one row with the main action (*Edit this place* or *Name this place*; *Show on the map* for a town), at most one outline button beside it (*Show on the map*) and ⋯ (`moreMenu`) for the rest (*Open in Google Maps*, *This place moved…*).
 - **MyRules rows** show the name and two facts; the rest of what a rule does sits behind its (i).
 - **One door per thing.** A feature has one entry point and one name. Don't add a second button for something that already has one.
 - **Importance sets depth.** What drives the app sits shallow; rarely changed settings can sit a level deeper.
@@ -34,7 +35,7 @@ Every place in the app answers one question, and a new feature goes where its qu
 | Switch rows | Label · (i) · switch, with a status line underneath that stays in view |
 | A choice of one | A segmented control, never switches that turn each other off |
 | Names | One name per thing: *Zoom to all trips*, *Export trips*, *Export MyRules file*, *Station packs* |
-| Where it goes | A filter › Filters · how the map looks › map sheet · an action on the map › *Map tools* · a change to how trips are cleaned › *Menu › Trip cleanup* · an action on one trip › *Edit trip* or ⋯ · a new Insights card › one of its groups (Scores, Overview, Places, Countries, Fitness, CO₂) |
+| Where it goes | A filter › Filters · how the map looks › map sheet · an action on the map › *Map tools* · a change to how trips are cleaned › *Menu › Trip cleanup* · an action on one trip › its pencil menu · a new Insights card › one of its groups (Scores, Overview, Places, Countries, Fitness, CO₂) |
 | Lists of trips | One tap opens the trip. Where the main map isn't in view, the sheet shows the trip's own map at the top. |
 
 ## Feedback while the app works
@@ -63,10 +64,10 @@ Every place in the app answers one question, and a new feature goes where its qu
 - Each transport kind has its own colour token (`--m-road`, `--m-transit`, `--m-bike`, `--m-foot`, `--m-air`, `--m-water`) used everywhere: lines, icons, legends, filters.
 - Light and dark themes (*Menu › Preferences*, or the system's). Check both.
 - Phone first, desktop too: sheets slide up from the bottom on a phone and open as side panels on desktop. Every touch interaction (lasso, one-finger zoom, sliders) must work with a finger.
-- Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*; nothing is hard-coded to km or to one date format.
+- **Local settings everywhere.** Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*. Every label follows them: distances, speeds and per-distance figures (km or miles), short distances (m or ft), date order and 12/24-hour time, in results and also in form fields, their labels, info texts and examples. Nothing is hard-coded to km or to one date format. Check new UI in both kilometres and miles.
 
 ## Process
 
 - When David asks for a mockup first, make the mockup (screenshots or a small HTML page), wait for his pick, then build.
 - Show screenshots of new UI on a phone and a desktop viewport.
-- Name things in the UI with plain verbs: *Edit trip*, *Edit this place*, *Find similar trips*, *Turn off for these trips*, *Keep as one trip*.
+- Name things in the UI with plain verbs: *Trip info*, *Edit this place*, *Group with similar trips*, *Turn off for these trips*, *Keep as one trip*.

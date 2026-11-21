@@ -19,7 +19,9 @@ var ICONS = {
   pin: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   chart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
   history: 'M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z',
-  filter: 'M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z',
+  // Material Icons: filter_alt (the Filters button) and menu (the Menu button).
+  filter: 'M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z',
+  menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
   layers: 'M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z',
   gear: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
   expand: 'M21 11V3h-8l3.29 3.29-10 10L3 13v8h8l-3.29-3.29 10-10z',
@@ -50,6 +52,9 @@ var ICONS = {
   ruler: 'M21 6H3c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H3V8h2v4h2V8h2v4h2V8h2v4h2V8h2v4h2V8h2v8z',
   // Material Icons: edit and location_off.
   edit: 'M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z',
+  // Material Icons: visibility_off (Hide this trip) and group_work (Group with similar trips).
+  hide: 'M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z',
+  groupWork: 'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM8 17.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5zM9.5 8c0-1.38 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5S9.5 9.38 9.5 8zm6.5 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   pinOff: 'M12 6.5c1.38 0 2.5 1.12 2.5 2.5 0 .74-.33 1.39-.83 1.85l3.63 3.63c.98-1.86 1.7-3.8 1.7-5.48 0-3.87-3.13-7-7-7-1.98 0-3.76.83-5.04 2.15l3.19 3.19c.46-.52 1.11-.84 1.85-.84zm4.37 9.6l-4.63-4.63-.11-.11L3.27 3 2 4.27l3.18 3.18C5.07 7.95 5 8.47 5 9c0 5.25 7 13 7 13s1.67-1.85 3.38-4.35L18.73 21 20 19.73l-3.63-3.63z',
   info: 'M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z',
   help: 'M11 18h2v-2h-2v2zm1-16C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-14c-2.21 0-4 1.79-4 4h2c0-1.1.9-2 2-2s2 .9 2 2c0 2-3 1.75-3 5h2c0-2.25 3-2.5 3-5 0-2.21-1.79-4-4-4z',
@@ -142,10 +147,12 @@ var INFO_N = 0;
 // The ⋯ button: the less-used actions of a sheet in a short menu, so each sheet has one main
 // action (see docs/design-rules.md). Items are buttons or links with role="menuitem" (moreItem); a
 // tap anywhere, an item included, closes it, and the item's own click handler still runs.
-function moreMenu(items, label) {
+// ic: the button's icon (⋯ unless given, e.g. the pencil of a trip's edit menu); cls: a class on its
+// wrap ("end" opens the menu from the button's right edge).
+function moreMenu(items, label, ic, cls) {
   if (!items.length) return '';
   label = label || 'More';
-  return '<span class="more-wrap"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon('more') + '</button>' +
+  return '<span class="more-wrap' + (cls ? ' ' + cls : '') + '"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon(ic || 'more') + '</button>' +
     '<span class="more-menu" role="menu" hidden>' + items.join('') + '</span></span>';
 }
 function moreItem(attrs, ic, text) { return '<button type="button" role="menuitem" ' + attrs + '>' + (ic ? icon(ic) : '') + '<span>' + text + '</span></button>'; }
@@ -198,7 +205,7 @@ var GROUPS = [
   { key: 'bike', label: 'Cycling', v: '--m-bike', modes: ['CYCLING'] },
   { key: 'water', label: 'Water', v: '--m-water', modes: ['FERRY', 'BOAT'] },
   { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER'] },
-  // Trips with no type, or set to Unclassified in Edit trip when they look wrong: a kind of their own.
+  // Trips with no type, or set to Unclassified in Trip info when they look wrong: a kind of their own.
   { key: 'unknown', label: 'Unclassified', v: '--m-unknown', modes: ['UNKNOWN'] }
 ];
 var GROUP_OF = {};
@@ -280,6 +287,19 @@ var MI = 0.621371;
 function fmt(n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d || 0, minimumFractionDigits: d || 0 }); }
 function distVal(kmv) { return PREFS.unit === 'mi' ? kmv * MI : kmv; }
 function distUnit() { return PREFS.unit === 'mi' ? 'mi' : 'km'; }
+// A short distance given in metres (a radius, a grouping): metres, or feet in miles up to a tenth of a
+// mile (25 m reads 80 ft, 100 m 330 ft), then the usual distance.
+function distShort(m) {
+  if (PREFS.unit === 'mi') { var ft = m * 3.28084; return ft < 528 ? fmt(ft < 100 ? Math.round(ft / 5) * 5 : Math.round(ft / 10) * 10) + ' ft' : dist(m / 1000); }
+  return m < 1000 ? fmt(m) + ' m' : dist(m / 1000);
+}
+// Fixed distances in the page's own text (data-dist-km="1.5"), in the units of Settings.
+function fillDists() { document.querySelectorAll('[data-dist-km]').forEach(function (el) { el.textContent = dist(+el.getAttribute('data-dist-km')); }); }
+// A distance typed in a form, in the units of Settings, and back to km for saving. distField shows a
+// stored km value rounded to 0.1; distSave keeps the stored km when that shown value wasn't changed,
+// so opening and saving a rule doesn't nudge it by the rounding.
+function distField(kmv) { return kmv != null && isFinite(kmv) ? Math.round(distVal(kmv) * 10) / 10 : ''; }
+function distSave(v, kmv) { if (!(v > 0)) return null; if (kmv != null && v === distField(kmv)) return kmv; return PREFS.unit === 'mi' ? v / MI : v; }
 function dist(kmv) { var v = distVal(kmv); return fmt(v, v < 10 && v > 0 ? 1 : 0) + ' ' + distUnit(); }
 function distParts(kmv) { var v = distVal(kmv); return { v: fmt(v, v < 10 && v > 0 ? 1 : 0), u: distUnit() }; }
 function speed(kmh) { return fmt(distVal(kmh)) + (PREFS.unit === 'mi' ? ' mph' : ' km/h'); }
