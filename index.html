@@ -11642,6 +11642,11 @@ function mrUnless(r) {
     return { w: mrWhen(u), cc: set(u.countries, function (c) { return String(c).toUpperCase(); }), mo: set(u.months, Number), yr: set(u.years, Number) };
   });
 }
+// Does trip i start or end in one of these countries (ISO codes), as Filters counts it?
+function mrCcIn(list, i) {
+  var a = String(D.ccList[D.cs[i]] || '').toUpperCase(), b = String(D.ccList[D.ce[i]] || '').toUpperCase();
+  return list.some(function (c) { c = String(c).toUpperCase(); return c === a || c === b; });
+}
 function mrUnlessOk(u, i) {
   if (!mrWhenOk(u.w, i)) return false;
   if (u.mo && !u.mo[D.month[i] + 1]) return false;
@@ -11750,6 +11755,7 @@ function mrApplyGear(byName, addGear) {
     if (m.max_km != null && D.km[i] > m.max_km) return false;
     if (Array.isArray(m.sports) && m.sports.length && !(D.sport[i] && m.sports.indexOf(SPORTS[D.sport[i]][1] || SPORTS[D.sport[i]][0]) >= 0)) return false;
     if (m.weekdays_only && (D.dow[i] === 0 || D.dow[i] === 6)) return false;
+    if (Array.isArray(m.countries) && m.countries.length && !mrCcIn(m.countries, i)) return false;
     if (m.from && !mrNear(D.from[2 * i], D.from[2 * i + 1], m.from) && !mrNear(D.to[2 * i], D.to[2 * i + 1], m.from)) return false;
     if (m.to && !mrNear(D.to[2 * i], D.to[2 * i + 1], m.to) && !mrNear(D.from[2 * i], D.from[2 * i + 1], m.to)) return false;
     return true;
@@ -12766,6 +12772,8 @@ function mrRenderRules() {
     var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
     if (m.min_km != null) bits.push('over ' + dist(m.min_km));
+    var cst = mrCcState(r);
+    if (cst.how === 'only') bits.push(esc(mrCcText(cst)));  // Not in shows as its Not on tag, with Undo
     if (r.strava_name) bits.push('same as “' + esc(r.strava_name) + '”');
     var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR.on ? MR_COUNT[r.id] || 0 : null);
@@ -13399,6 +13407,7 @@ function mrGearDialog(i) {
       '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
       // The period's details show once this option is picked.
       '<span class="mr-opt-more" id="mrPeriodMore" hidden><span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
+      mrCcRow({ how: 'all', list: [] }) +
       '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="any" style="width:5em" aria-label="Maximum distance in ' + distUnit() + '"> ' + distUnit() + ' (optional)</span>' +
       '<small class="fine" id="mrCountTxt"></small><small class="fine">Gear recorded by Strava or another activity file is never replaced by a period.</small></span></span></label></div>',
     buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
@@ -13412,8 +13421,8 @@ function mrGearDialog(i) {
         count();
       }
       function count() {
-        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = distSave(parseFloat($('mrMax').value)), c = 0;
-        for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
+        var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = distSave(parseFloat($('mrMax').value)), cs = mrCcRead(), c = 0;
+        for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && mrCcFits(cs, j) && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
         $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
       }
       sel.addEventListener('change', prefill);
@@ -13421,6 +13430,7 @@ function mrGearDialog(i) {
         r.addEventListener('change', function () { $('mrPeriodMore').hidden = document.querySelector('input[name="mrScope"]:checked').value !== 'period'; });
       });
       ['mrFrom', 'mrTo', 'mrMax'].forEach(function (id) { $(id).addEventListener('input', count); });
+      mrCcWire(count);
       prefill();
     }
   });
@@ -13446,6 +13456,7 @@ function mrSaveGear(i) {
     if (f || t) r.when = w;
     if (mx > 0) r.match = { max_km: mx };
     if (recorded) r.strava_name = name;
+    mrCcInto(r, mrCcRead());
     (MR.doc.gear || (MR.doc.gear = [])).push(r);
     mrChange(name + ' period added (' + mrWhenText(r.when) + ')');
   }
@@ -13509,6 +13520,70 @@ function mrDatesInto(r) {
   if (Object.keys(w).length) r.when = w; else delete r.when;
   return true;
 }
+// Countries of a gear period: Everywhere, Only in (match.countries) or Not in (an unless entry with
+// countries alone, as Turn off for these trips writes). Switching between Only in and Not in flips the
+// chips, so "not in all but Spain" becomes "only in Spain", which also leaves out countries visited later.
+function mrCcState(r) {
+  var m = r && r.match || {}, not = {};
+  if (Array.isArray(m.countries) && m.countries.length) return { how: 'only', list: m.countries.map(function (c) { return String(c).toUpperCase(); }) };
+  (r && Array.isArray(r.unless) ? r.unless : []).forEach(function (u) { if (mrCcOnly(u)) u.countries.forEach(function (c) { not[String(c).toUpperCase()] = 1; }); });
+  var l = Object.keys(not);
+  return l.length ? { how: 'not', list: l } : { how: 'all', list: [] };
+}
+function mrCcOnly(u) { return u && typeof u === 'object' && Array.isArray(u.countries) && u.countries.length && Object.keys(u).every(function (k) { return k === 'countries'; }); }
+// The countries in your trips, and any the rule names that aren't in them, by name.
+function mrCcCodes(extra) {
+  var seen = {}, out = [];
+  function add(c) { c = String(c || '').toUpperCase(); if (/^[A-Z]{2}$/.test(c) && !seen[c]) { seen[c] = 1; out.push(c); } }
+  if (D && M) M.countries.forEach(function (k) { add(D.ccList[k]); });
+  (extra || []).forEach(add);
+  return out.sort(function (a, b) { return ccName(a).localeCompare(ccName(b)); });
+}
+function mrCcRow(st) {
+  var on = {}; st.list.forEach(function (c) { on[c] = 1; });
+  var codes = mrCcCodes(st.list);
+  return '<div class="field"><span>Countries</span><div class="seg full" id="mrCcHow" role="group" aria-label="Countries">' +
+    [['all', 'Everywhere'], ['only', 'Only in'], ['not', 'Not in']].map(function (o) { return '<button type="button" data-how="' + o[0] + '" aria-pressed="' + (st.how === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>' +
+    '<span class="chips mr-cc" id="mrCc"' + (st.how === 'all' ? ' hidden' : '') + '>' + (codes.length ? codes.map(function (c) {
+      return '<button type="button" class="chip sub" data-cc="' + c + '" aria-pressed="' + !!on[c] + '">' + (flag(c) ? flag(c) + ' ' : '') + esc(ccName(c)) + '</button>';
+    }).join('') : '<small class="fine">Load your location files to pick countries.</small>') + '</span>' +
+    '<small class="fine" id="mrCcNote"' + (st.how === 'all' ? ' hidden' : '') + '>A trip counts when it starts or ends in one.</small></div>';
+}
+function mrCcWire(onChange) {
+  $('mrCcHow').addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-how]'), was = mrCcRead().how;
+    if (!b || b.dataset.how === was) return;
+    this.querySelectorAll('[data-how]').forEach(function (x) { x.setAttribute('aria-pressed', String(x === b)); });
+    var chips = document.querySelectorAll('#mrCc [data-cc]');
+    if (b.dataset.how !== 'all' && was !== 'all') chips.forEach(function (c) { c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true'); });
+    else if (b.dataset.how !== 'all') chips.forEach(function (c) { c.setAttribute('aria-pressed', 'false'); });
+    $('mrCc').hidden = $('mrCcNote').hidden = b.dataset.how === 'all';
+    if (onChange) onChange();
+  });
+  $('mrCc').addEventListener('click', function (ev) {
+    var c = ev.target.closest('[data-cc]');
+    if (!c) return;
+    c.setAttribute('aria-pressed', c.getAttribute('aria-pressed') === 'true' ? 'false' : 'true');
+    if (onChange) onChange();
+  });
+}
+function mrCcRead() {
+  var h = document.querySelector('#mrCcHow [aria-pressed="true"]'), how = h ? h.dataset.how : 'all', list = [];
+  document.querySelectorAll('#mrCc [data-cc][aria-pressed="true"]').forEach(function (c) { list.push(c.dataset.cc); });
+  return how === 'all' || !list.length ? { how: 'all', list: [] } : { how: how, list: list };
+}
+function mrCcFits(st, i) { return st.how === 'all' || (st.how === 'only') === mrCcIn(st.list, i); }
+// Writes the dialog's countries into the rule: replaces its match.countries and its countries-only unless entries.
+function mrCcInto(r, st) {
+  var m = Object.assign({}, r.match);
+  delete m.countries;
+  if (st.how === 'only') m.countries = st.list;
+  if (Object.keys(m).length) r.match = m; else delete r.match;
+  var u = (Array.isArray(r.unless) ? r.unless : []).filter(function (x) { return !mrCcOnly(x); });
+  if (st.how === 'not') { u.push({ countries: st.list }); mrUseV2(); }
+  if (u.length) r.unless = u; else delete r.unless;
+}
+function mrCcText(st) { return st.how === 'all' ? '' : (st.how === 'only' ? 'only in ' : 'not in ') + st.list.map(ccName).join(', '); }
 function mrGearRuleDialog(r) {
   var kinds = mrKindsFor(r.mode);
   if (r.kind && kinds.indexOf(r.kind) < 0) kinds.push(r.kind);
@@ -13518,7 +13593,7 @@ function mrGearRuleDialog(r) {
     text: 'Every ' + esc((LABEL[r.mode] || r.mode || 'cycling').toLowerCase()) + ' trip without recorded gear in this period gets this gear.',
     extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '"></label>' +
       '<label class="field"><span>Kind</span><select id="mrGKind">' + kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === r.kind ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('') + '</select></label></div>' +
-      mrDateRow(r.when) +
+      mrDateRow(r.when) + mrCcRow(mrCcState(r)) +
       '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div>',
     buttons: [['Save', 'primary', function () {
       var name = $('mrGName').value.trim(), m = distSave(parseFloat($('mrGMax').value), mx);
@@ -13528,8 +13603,10 @@ function mrGearRuleDialog(r) {
       var match = Object.assign({}, r.match);
       if (m > 0) match.max_km = m; else delete match.max_km;
       if (Object.keys(match).length) r.match = match; else delete r.match;
+      mrCcInto(r, mrCcRead());
       mrChange('Gear period changed: ' + name + ' (' + mrWhenText(r.when) + ')');
-    }], ['Cancel', 'quiet', null]]
+    }], ['Cancel', 'quiet', null]],
+    after: function () { mrCcWire(); }
   });
 }
 // A routine from one trip: its two ends, any day and time, both ways, its type, and its own trail as
