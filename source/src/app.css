@@ -1122,6 +1122,10 @@ div.hit-row:hover { background: none; }
 .bg-pill .dl-bar { width: 80px; margin: 0; }
 /* While selecting trips only the selection's own bars show (the map's attribution stays). */
 body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .snap-bar:not(.sel-top), body.sel-mode #roadPill { display: none !important; }
+/* Making a map snap: the same, with its bar at the top. */
+body.snap-mode .dock, body.snap-mode .topbar, body.snap-mode .playbar, body.snap-mode #mapPage .fab, body.snap-mode .map-legend, body.snap-mode #map .leaflet-top, body.snap-mode #roadPill, body.snap-mode .tools-menu { display: none !important; }
+body.snap-mode #snapBar { top: calc(12px + var(--safe-t)); width: max-content; box-sizing: border-box; }
+body.snap-mode #snapBar .snap-bar-t { flex: 1 1 auto; min-width: 0; }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
 body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 .bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
@@ -1175,6 +1179,11 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .more-btn .ic { width: 20px; height: 20px; }
 .more-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 230px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
 .more-menu[hidden] { display: none; }
+.more-wrap.end .more-menu { left: auto; right: 0; }
+/* The pencil at the right of a trip's header: its edit menu. */
+.trip-head > div:not(.ic-badge) { flex: 1 1 auto; min-width: 0; }
+.trip-pencil { flex: none; margin-left: auto; align-self: flex-start; }
+.trip-edit .btn.quiet .ic { width: 18px; height: 18px; }
 .more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
 .more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }

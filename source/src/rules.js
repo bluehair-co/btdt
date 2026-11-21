@@ -1075,7 +1075,7 @@ function renderMyRules() {
   $('mrSheetExport').innerHTML = icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '');
   $('mrSheetExport').classList.add('mr-export');
   if (!MR) {
-    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title, or hide it, with <b>Edit trip</b> in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
+    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
     return;
   }
   var nGear = 0, nEd = 0, n = MR.changes.length;
@@ -1481,14 +1481,14 @@ function mrTripBlock(i) {
   if (tk && sn) h += '<div class="mr-chg"><b>On the tracks:</b> ' + esc(tk.from) + ' – ' + esc(tk.to) + '<div class="fine">Drawn ' + esc(tk.name.charAt(0).toLowerCase() + tk.name.slice(1)) + ' from your ' + esc(packNames(tk.packs || [])) + ' station pack' + ((tk.packs || []).length > 1 ? 's' : '') + ': ' + infoMore(dist(sn.km) + '.', 'Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. ' + tk.score + '% of them are near the line. Turn it off in Menu › Trip cleanup.') + '</div></div>';
   if (mrRoaded(i)) h += '<div class="mr-chg"><b>On the roads</b><div class="fine">' + infoMore('Drawn along main roads for ' + D.snap[i].cov + '% of the way: ' + dist(D.snap[i].km) + '.', 'It follows the motorways and main roads of your road pack where its GPS points stay close to them, and its own GPS points elsewhere. Its own GPS points, dashed on the map, come to ' + dist(D.base.km[i]) + '. Turn it off in Menu › Trip cleanup.') + '</div></div>';
   if (amb) h += '<div class="mr-chg"><b>Gear:</b> none<div class="fine">' + amb.map(function (id) { var r = mrById(id); return '<i>' + esc(r ? r.name || r.id : id) + '</i>'; }).join(' and ') + ' both fit this trip equally well. Set its gear, or narrow one of them.</div></div>';
-  // Edit trip is at the top of the details, under the trip's icon (mrEditTop).
+  // Trip info is in the pencil menu of the trip's header (mrEditMenu).
   var btns = '';
   // Remove edit: every correction that changed this trip lets go of it (mrRemoveEdits).
   var eds = mrTripEdits(i);
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
-  // Find similar trips sits at the top, next to Edit trip (mrEditTop).
+  // Group to similar trips sits in the row under the header (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
@@ -1498,31 +1498,32 @@ function mrTripBlock(i) {
   if (!h && !btns) return mrCheckBlock(i);
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
 }
-// The top of the trip details, under the trip's icon: Edit trip (gear included), Find similar trips,
-// and ⋯ with Show this day on the map, Open in Timeline and Raw data.
+// The row under the trip's header: Group to similar trips, and the trip's other views (this day on
+// the map, the trip in Timeline, its raw data) as buttons of their own.
 function mrEditTop(i) {
   if (!D) return '';
-  var more = [];
-  if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
-  if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
-  more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
-  return '<div class="trip-edit">' + (isDup(i) ? '' : '<button type="button" class="btn primary" data-mr-act="edit" data-t="' + i + '">' + icon('edit') + 'Edit trip</button>') +
-    (mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Find similar trips</button>' : '') + moreMenu(more, 'More for this trip') + '</div>';
+  var b = mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Group to similar trips</button>' : '';
+  if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') b += '<button type="button" class="btn quiet" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day</button>';
+  if (tab !== 'timeline') b += '<button type="button" class="btn quiet" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>';
+  b += '<button type="button" class="btn quiet" data-act="raw" data-i="' + i + '" aria-expanded="false">' + icon('file') + 'Raw data</button>';
+  return '<div class="trip-edit">' + b + '</div>';
 }
-// Find similar trips: a new routine between this trip's ends, matched by route, not by time (along
+// The pencil at the right of the trip's header: everything you can change about this one trip.
+// Trip info (type, title, gear), Split trip…, Ignore GPS points…, and Hide this trip.
+function mrEditMenu(i) {
+  if (!D || isDup(i)) return '';
+  var it = [moreItem('data-mr-act="edit" data-t="' + i + '"', 'edit', 'Trip info')];
+  if (splitHandOk(i)) it.push(moreItem('data-split-hand="' + i + '"', 'split', 'Split trip…'));
+  if (ignOk(i)) it.push(moreItem('data-ign="' + i + '"', 'pinOff', 'Ignore GPS points…'));
+  it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'close', 'Hide this trip'));
+  return moreMenu(it, 'Edit this trip', 'edit', 'end trip-pencil');
+}
+// Group to similar trips: a new routine between this trip's ends, matched by route, not by time (along
 // its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
 // Not for a trip a routine already has or left out, nor for flights or trips under 1 km end to end.
 function mrSimilarOk(i) {
   if (isDup(i) || D.mrRoute && D.mrRoute[i] && mrById(D.mrRoute[i].rule) || D.mrMiss && D.mrMiss[i] && mrById(D.mrMiss[i].rule)) return false;
   return MODES[D.mode[i]] !== 'FLYING' && isFinite(D.from[2 * i]) && isFinite(D.to[2 * i]) && km([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]) > 1;
-}
-// Fix the GPS: the two tools that work on a trip's GPS points, together near the end of the details.
-function mrFixGps(i) {
-  if (!D || isDup(i)) return '';
-  var b = (splitHandOk(i) ? '<button type="button" class="btn" data-split-hand="' + i + '">' + icon('split') + 'Split trip…</button>' : '') +
-    (ignOk(i) ? '<button type="button" class="btn" data-ign="' + i + '">' + icon('pinOff') + 'Ignore GPS points…</button>' : '');
-  return b ? '<div class="mr-trip">' + infoHead('h4', 'place-h', 'Fix the GPS', 'Split trip… cuts a trip Timeline joined into its legs. Ignore GPS points… leaves out points that jumped away, so the line, distance and speed go without them.', 'About Fix the GPS') +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + b + '</div></div>' : '';
 }
 // Is this the right type? For a trip in the check list: why, and one tap to keep or change its type.
 function mrCheckBlock(i) {
@@ -1666,34 +1667,34 @@ $('tripBody').addEventListener('click', function (ev) {
   else if (act === 'type') mrQuickType(i, b.dataset.m);
   else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
+  else if (act === 'hide' || act === 'show') mrHideTrip(i, act === 'hide');
   else if (act === 'remove') mrRemoveEdits(i);
 });
-// The correction for this one trip that Edit trip changes: the last one pointing at it by its start.
+// The correction for this one trip that Trip info changes: the last one pointing at it by its start.
 function mrTripCorrection(i) {
   return mrCorrections().filter(function (x) { return x.one && x.trips.length === 1 && x.trips[0] === i; }).map(function (x) { return x.c; }).pop() ||
     mrList('corrections').filter(function (c) { return c.trip && c.trip.start && c.enabled !== false && mrRefTrips(c.trip)[0] === i; }).pop() || null;
 }
-// Edit trip: its type, its title, and hiding it. Saved as a correction on this trip's start, so it
+// Trip info: its type, its title and its gear. Saved as a correction on this trip's start, so it
 // survives loading the files again.
 function mrEditDialog(i) {
-  var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]], hidden = !!D.mrHide[i];
+  var was = MODES[D.base.mode[i]], cur = MODES[D.mode[i]];
   // Unclassified last: for a trip that looks wrong (a GPS glitch?) when you aren't sure what it was.
   var modes = MODES.filter(function (m) { return m !== 'UNKNOWN'; }).concat(['UNKNOWN']);
   mrAsk({
-    title: 'Edit trip',
+    title: 'Trip info',
     text: esc(tripRoute(i)) + ' · ' + mrWhere(i) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Type</span><select id="mrEType">' + modes.map(function (m) {
       return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + esc(LABEL[m] || m) + (m === 'UNKNOWN' && m !== was ? ' (not sure what it was)' : '') + (m === was ? (D.base.est[i] & GUESSED ? ' (guessed from speed)' : ' (from your files)') : '') + '</option>';
     }).join('') + '</select></label>' +
       '<label class="field"><span>Title</span><input type="text" id="mrEName" value="' + esc(tripName(i)) + '" placeholder="' + esc(recName(i) || 'e.g. Ride to the coast') + '"></label>' +
-      mrGearField(i) +
-      '<label class="toggle-row"><span class="lbl" style="display:block">Hide this trip<small class="fine" style="display:block">Left out of the map, lists, totals and exports. Undo it in MyRules.</small></span><input type="checkbox" class="switch" id="mrEHide"' + (hidden ? ' checked' : '') + '></label></div>',
+      mrGearField(i) + '</div>',
     buttons: [['Save', 'primary', function () { mrSaveEdit(i); }], ['Cancel', 'quiet', null]],
     note: 'Saved in MyRules as a correction on this trip. It replaces what your files say.',
     after: function () { var gb = $('mrEGear'); if (gb) gb.addEventListener('click', function () { $('mrDlg').close(); mrGearDialog(i); }); }
   });
 }
-// Gear in Edit trip, for rides, runs and walks: what it has, and Set gear… unless an activity file
+// Gear in Trip info, for rides, runs and walks: what it has, and Set gear… unless an activity file
 // recorded it (recorded gear is never replaced).
 function mrGearField(i) {
   var m = MODES[D.mode[i]], g = D.mrGear && D.mrGear[i], has = D.gear[i], rec = has && !g;
@@ -1702,27 +1703,38 @@ function mrGearField(i) {
     (rec ? '' : '<button type="button" class="btn" id="mrEGear">' + icon('gear') + (has ? 'Change gear…' : 'Set gear…') + '</button>') + '</div></div>';
 }
 function mrSaveEdit(i) {
-  var type = $('mrEType').value, name = $('mrEName').value.trim(), hide = $('mrEHide').checked;
+  var type = $('mrEType').value, name = $('mrEName').value.trim();
   var was = MODES[D.base.mode[i]], rec = recName(i);
   mrEnsure();
   var c = mrTripCorrection(i), isNew = !c, what = [];
   if (isNew) c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} };
   var t = c.then || (c.then = {});
-  var oldMode = t.mode || was, oldName = t.name || rec, oldHide = !!t.hide;
+  var oldMode = t.mode || was, oldName = t.name || rec;
   // A type the files already had and wasn't guessed needs no correction; a guessed one does, to keep it.
   if (type !== was || D.base.est[i] & GUESSED) t.mode = type; else delete t.mode;
   if (name && name !== rec) t.name = name; else delete t.name;
-  if (hide) t.hide = true; else delete t.hide;
   if (type !== oldMode) what.push('type ' + (LABEL[type] || type).toLowerCase());
   if ((name || rec) !== oldName) what.push(name && name !== rec ? 'title “' + name + '”' : 'title reset');
-  if (hide !== oldHide) what.push(hide ? 'hidden' : 'shown again');
   if (!what.length && !(isNew && Object.keys(t).length)) return;
   if (isNew) { if (!Object.keys(t).length) return; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   else if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
   mrChange('Trip on ' + mrWhere(i) + ': ' + (what.join(', ') || 'type confirmed'));
   if (openId === 'mrSheet') return;
-  if (hide) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
-  else { openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0); }
+  openTrip(i); if (type !== oldMode && type !== 'UNKNOWN') setTimeout(function () { mrOfferRoutine(i, type); }, 0);
+}
+// Hide this trip (from the pencil menu), or show it again: saved on the same correction as Trip info.
+function mrHideTrip(i, on) {
+  var was = MODES[D.base.mode[i]], c = mrTripCorrection(i);
+  if (!on && !c) return;
+  mrEnsure();
+  if (!c) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: was }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
+  var t = c.then || (c.then = {});
+  if (on) t.hide = true; else delete t.hide;
+  if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
+  mrChange('Trip on ' + mrWhere(i) + ': ' + (on ? 'hidden' : 'shown again'));
+  if (openId === 'mrSheet') return;
+  if (on) { closeSheets(); toast('Trip hidden. Show it again from MyRules in Imported data.'); }
+  else openTrip(i);
 }
 
 // Set gear: on this trip only (a correction), or on every trip of its type without gear in a period
@@ -1886,7 +1898,7 @@ function mrSimilar(i) {
   if (D.pathOff[i + 1] - D.pathOff[i] < 5) delete r.then.snap;
   mrRoutineDialog(r, true);
 }
-// isNew: a routine not saved yet (Find similar trips), added to MyRules on Save.
+// isNew: a routine not saved yet (Group to similar trips), added to MyRules on Save.
 function mrRoutineDialog(r, isNew) {
   var t = r.then || {}, rt = r.return_when && Array.isArray(r.return_when.time) ? r.return_when.time : [];
   mrAsk({

@@ -6,7 +6,7 @@ var TL = { type: [], ref: [], tops: [], total: 0, sel: null, r0: -1, r1: -1, map
 var TL_H = [40, 64, 120];   // day header, trip, end of list
 // Lower case without accents, so "cafe" finds "Café" and "zurich" finds "Zürich".
 function tlNorm(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''); }
-// What a trip can be found by: its title (Strava, activity file or Edit trip), where it
+// What a trip can be found by: its title (Strava, activity file or Trip info), where it
 // started and ended, and its type or sport.
 function tlHay(i) {
   var h = TL.hay || (TL.hay = {});

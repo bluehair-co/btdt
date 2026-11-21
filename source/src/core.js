@@ -19,7 +19,9 @@ var ICONS = {
   pin: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   chart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
   history: 'M13 3a9 9 0 0 0-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42A8.954 8.954 0 0 0 13 21a9 9 0 0 0 0-18zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z',
-  filter: 'M10 18h4v-2h-4v2zM3 6v2h18V6H3zm3 7h12v-2H6v2z',
+  // Material Icons: filter_alt (the Filters button) and menu (the Menu button).
+  filter: 'M4.25 5.61C6.27 8.2 10 13 10 13v6c0 .55.45 1 1 1h2c.55 0 1-.45 1-1v-6s3.72-4.8 5.74-7.39c.51-.66.04-1.61-.79-1.61H5.04c-.83 0-1.3.95-.79 1.61z',
+  menu: 'M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z',
   layers: 'M11.99 18.54l-7.37-5.73L3 14.07l9 7 9-7-1.63-1.27-7.38 5.74zM12 16l7.36-5.73L21 9l-9-7-9 7 1.63 1.27L12 16z',
   gear: 'M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.488.488 0 0 0-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54a.484.484 0 0 0-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z',
   expand: 'M21 11V3h-8l3.29 3.29-10 10L3 13v8h8l-3.29-3.29 10-10z',
@@ -142,10 +144,12 @@ var INFO_N = 0;
 // The ⋯ button: the less-used actions of a sheet in a short menu, so each sheet has one main
 // action (see docs/design-rules.md). Items are buttons or links with role="menuitem" (moreItem); a
 // tap anywhere, an item included, closes it, and the item's own click handler still runs.
-function moreMenu(items, label) {
+// ic: the button's icon (⋯ unless given, e.g. the pencil of a trip's edit menu); cls: a class on its
+// wrap ("end" opens the menu from the button's right edge).
+function moreMenu(items, label, ic, cls) {
   if (!items.length) return '';
   label = label || 'More';
-  return '<span class="more-wrap"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon('more') + '</button>' +
+  return '<span class="more-wrap' + (cls ? ' ' + cls : '') + '"><button type="button" class="btn more-btn" aria-haspopup="menu" aria-expanded="false" aria-label="' + label + '" title="' + label + '">' + icon(ic || 'more') + '</button>' +
     '<span class="more-menu" role="menu" hidden>' + items.join('') + '</span></span>';
 }
 function moreItem(attrs, ic, text) { return '<button type="button" role="menuitem" ' + attrs + '>' + (ic ? icon(ic) : '') + '<span>' + text + '</span></button>'; }
@@ -198,7 +202,7 @@ var GROUPS = [
   { key: 'bike', label: 'Cycling', v: '--m-bike', modes: ['CYCLING'] },
   { key: 'water', label: 'Water', v: '--m-water', modes: ['FERRY', 'BOAT'] },
   { key: 'other', label: 'Other', v: '--m-other', modes: ['SKIING', 'OTHER'] },
-  // Trips with no type, or set to Unclassified in Edit trip when they look wrong: a kind of their own.
+  // Trips with no type, or set to Unclassified in Trip info when they look wrong: a kind of their own.
   { key: 'unknown', label: 'Unclassified', v: '--m-unknown', modes: ['UNKNOWN'] }
 ];
 var GROUP_OF = {};
