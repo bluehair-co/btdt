@@ -1180,9 +1180,9 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .more-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 230px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
 .more-menu[hidden] { display: none; }
 .more-wrap.end .more-menu { left: auto; right: 0; }
-/* The pencil at the right of a trip's header: its edit menu. */
+/* The pencil (edit menu) and ⋯ at the right of a trip's header. */
 .trip-head > div:not(.ic-badge) { flex: 1 1 auto; min-width: 0; }
-.trip-pencil { flex: none; margin-left: auto; align-self: flex-start; }
+.trip-acts { flex: none; margin-left: auto; align-self: flex-start; display: flex; gap: 8px; }
 .more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
 .more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }

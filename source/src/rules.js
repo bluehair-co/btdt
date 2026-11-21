@@ -1488,7 +1488,7 @@ function mrTripBlock(i) {
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
-  // Group to similar trips sits in the row under the header (mrEditTop).
+  // Group with similar trips is in ⋯ in the trip's header (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
   if (rr || mr) btns += '<button type="button" class="btn" data-mr-act="rule" data-r="' + esc((rr || mr).id) + '" data-t="' + i + '">Edit routine</button>';
   if (msr && sn) btns += '<button type="button" class="btn" data-mr-act="snaprule" data-r="' + esc(msr.id) + '" data-t="' + i + '">Open map snap</button>';
@@ -1498,17 +1498,18 @@ function mrTripBlock(i) {
   if (!h && !btns) return mrCheckBlock(i);
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
 }
-// The row under the trip's header: Group to similar trips, and ⋯ with Show this day on the map,
+// ⋯ beside the pencil in the trip's header: Group with similar trips, Show this day on the map,
 // Open in Timeline and Raw data.
 function mrEditTop(i) {
   if (!D) return '';
   var more = [];
+  if (mrSimilarOk(i)) more.push(moreItem('data-mr-act="similar" data-t="' + i + '"', 'flag', 'Group with similar trips'));
   if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
   if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
   more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
-  return '<div class="trip-edit">' + (mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Group to similar trips</button>' : '') + moreMenu(more, 'More for this trip') + '</div>';
+  return moreMenu(more, 'More for this trip', 'more', 'end');
 }
-// The pencil at the right of the trip's header: everything you can change about this one trip.
+// The pencil at the right of the trip's header, before ⋯: everything you can change about this one trip.
 // Trip info (type, title, gear), Split trip…, Ignore GPS points…, and Hide this trip.
 function mrEditMenu(i) {
   if (!D || isDup(i)) return '';
@@ -1516,9 +1517,9 @@ function mrEditMenu(i) {
   if (splitHandOk(i)) it.push(moreItem('data-split-hand="' + i + '"', 'split', 'Split trip…'));
   if (ignOk(i)) it.push(moreItem('data-ign="' + i + '"', 'pinOff', 'Ignore GPS points…'));
   it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'close', 'Hide this trip'));
-  return moreMenu(it, 'Edit this trip', 'edit', 'end trip-pencil');
+  return moreMenu(it, 'Edit this trip', 'edit', 'end');
 }
-// Group to similar trips: a new routine between this trip's ends, matched by route, not by time (along
+// Group with similar trips: a new routine between this trip's ends, matched by route, not by time (along
 // its own trail as the line when it has 5 or more GPS points, else by its ends and type alone).
 // Not for a trip a routine already has or left out, nor for flights or trips under 1 km end to end.
 function mrSimilarOk(i) {
@@ -1898,7 +1899,7 @@ function mrSimilar(i) {
   if (D.pathOff[i + 1] - D.pathOff[i] < 5) delete r.then.snap;
   mrRoutineDialog(r, true);
 }
-// isNew: a routine not saved yet (Group to similar trips), added to MyRules on Save.
+// isNew: a routine not saved yet (Group with similar trips), added to MyRules on Save.
 function mrRoutineDialog(r, isNew) {
   var t = r.then || {}, rt = r.return_when && Array.isArray(r.return_when.time) ? r.return_when.time : [];
   mrAsk({
