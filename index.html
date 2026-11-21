@@ -440,6 +440,8 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-opt:has(input:checked) { border-color: var(--accent); }
 .mr-opt input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
 .mr-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mr-opt-more { display: flex; flex-direction: column; gap: 6px; }
+.mr-opt-more[hidden] { display: none; }
 .g-name { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: -4px; }
 .g-out:empty { display: none; }
 .g-out .fine { margin: 0 0 6px; }
@@ -13240,13 +13242,13 @@ function mrGearDialog(i) {
     text: esc(tripRoute(i)) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) + ' · ' + dist(D.km[i]),
     extra: '<div class="mr-form"><label class="field"><span>Gear</span><select id="mrG">' + opts.map(function (g) { return '<option value="' + g + '">' + esc(GEAR[g].name) + '</option>'; }).join('') + '<option value="new">New gear…</option></select></label>' +
       '<div id="mrNew" hidden class="grid2"><label class="field"><span>Name</span><input type="text" id="mrName" placeholder="e.g. Strida EVO"></label><label class="field"><span>Kind</span><select id="mrKind">' + kinds.map(function (k) { return '<option value="' + k + '">' + MR_KINDS[k] + '</option>'; }).join('') + '</select></label></div>' +
-      '<label class="mr-opt"><input type="radio" name="mrScope" value="one"><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
-      '<label class="mr-opt"><input type="radio" name="mrScope" value="period" checked><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
-      '<span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
+      '<label class="mr-opt"><input type="radio" name="mrScope" value="one" checked><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
+      '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
+      // The period's details show once this option is picked.
+      '<span class="mr-opt-more" id="mrPeriodMore" hidden><span class="mr-dates"><input type="date" id="mrFrom" aria-label="From"> to <input type="date" id="mrTo" aria-label="To (empty: until now)"></span>' +
       '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="1" style="width:5em" aria-label="Maximum distance"> km (optional)</span>' +
-      '<small class="fine" id="mrCountTxt"></small></span></label></div>',
+      '<small class="fine" id="mrCountTxt"></small><small class="fine">Gear recorded by Strava or another activity file is never replaced by a period.</small></span></span></label></div>',
     buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
-    note: 'Gear recorded by Strava or another activity file is never replaced by a period.',
     after: function () {
       var sel = $('mrG');
       function prefill() {
@@ -13262,6 +13264,9 @@ function mrGearDialog(i) {
         $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
       }
       sel.addEventListener('change', prefill);
+      document.querySelectorAll('input[name="mrScope"]').forEach(function (r) {
+        r.addEventListener('change', function () { $('mrPeriodMore').hidden = document.querySelector('input[name="mrScope"]:checked').value !== 'period'; });
+      });
       ['mrFrom', 'mrTo', 'mrMax'].forEach(function (id) { $(id).addEventListener('input', count); });
       prefill();
     }

@@ -396,6 +396,8 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-opt:has(input:checked) { border-color: var(--accent); }
 .mr-opt input[type=radio] { margin-top: 3px; accent-color: var(--accent); }
 .mr-opt > span { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.mr-opt-more { display: flex; flex-direction: column; gap: 6px; }
+.mr-opt-more[hidden] { display: none; }
 .g-name { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; margin-top: -4px; }
 .g-out:empty { display: none; }
 .g-out .fine { margin: 0 0 6px; }
