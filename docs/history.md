@@ -1,6 +1,6 @@
 # BT•DT: how it got here
 
-A short history of the project and an overview of its features, for anyone (or any Claude) picking it up. The app was built by Claude from David's requests, between 13 October and 20 November 2026, in about 220 pull requests.
+A short history of the project and an overview of its features, for anyone (or any Claude) picking it up. The app was built by Claude from David's requests, between 13 October and 20 November 2026, in about 225 pull requests.
 
 ## Timeline
 
@@ -20,18 +20,21 @@ A short history of the project and an overview of its features, for anyone (or a
 | 18–19 Nov | Routines and packs | Routines apply fully or not at all. Added a routine editor with ghosts and a match slider, *Find similar trips*, a radius for each end, and both-ways time windows. **Station packs** from OpenStreetMap: splitting trips Timeline merged, naming stations and airports, map snaps, trains snapped to the tracks, and splitting a trip by hand. Also *Select trips* for bulk type changes and the "Working on it…" pill. |
 | 19–20 Nov | Roads and fixes | **Road packs** and *Snap car trips to roads* (NL, Mexico, and US states and Canadian provinces), one routing network across borders, download progress bars, and packs kept on the device. *Unclassified*, *Ignore GPS points…*, cell-tower and Wi-Fi fixes left out, more fixes for places Google moved, *Clean up rules*, and faster loading. |
 | 20 Nov | UI clean-up 2 | Long explanations moved behind (i) buttons across the whole app (#219). Handover docs written (`CLAUDE.md`, this file, `design-rules.md`). |
+| 20–21 Nov | **UX overhaul** | A UX audit (a 17-slide deck with six principles: one home per job, one door per thing, importance sets depth, show what's on, a choice of one is one control, one main button) led to four PRs. The pre-overhaul app was kept on the `v1.0` branch for rollback. #222: the gear opens a *Menu* (Your data, MyRules, Trip cleanup, Preferences, About), and Filters only filter, with chips for filters in use and *More about when*. #223: *Colour lines by* (Transport, Speed, Heart rate, No lines), a regrouped map sheet and a *Map tools* button (Select trips, New map snap). #224: trip and place pages share one action row with ⋯, gear moved into *Edit trip*, *Fix the GPS* groups Split and Ignore GPS points, and MyRules rows got shorter. #225: Insights is grouped (Scores, Overview, Places, Countries, Fitness, CO₂) with section chips, and one tap in Timeline opens a trip with its map. The patterns were written into `design-rules.md`. |
 
-## Feature overview (as of 20 Nov 2026)
+## Feature overview (as of 21 Nov 2026)
 
 **Inputs:** Google Timeline (Android on-device, iPhone, old Takeout Records.json and Semantic Location History), Strava export ZIP, Garmin export, Dawarich, and GPX, KML/KMZ, GeoJSON, TCX and FIT files. There are also MyRules files and simulated-trip files.
 
-**Map:** paths coloured by transport, heatmap (GPS points, paths or time spent), speed paths, heart rate paths, explorer squares, countries visited (with layover-only countries in blue), regular places with pin groups, and Mercator, Equal Earth or Globe views. Playback runs over a day, week, month or year, with a speed pill, sunrise and sunset, the night side, and roll-over at midnight. Small isolated trips get beacons, and a zoom to all button fits everything. One-finger zoom works on touch screens.
+**Map:** lines coloured by transport, speed or heart rate (*Colour lines by*), heatmap (GPS points, paths or time spent), explorer squares, countries visited (with layover-only countries in blue), regular places with pin groups, and Mercator, Equal Earth or Globe views. Playback runs over a day, week, month or year, with a speed pill, sunrise and sunset, the night side, and roll-over at midnight. Small isolated trips get beacons, and a zoom to all button fits everything. One-finger zoom works on touch screens.
 
-**Insights:** summary, how you travel, weekly rhythm, over time, top routes, top places (by time or visits), time by kind of place, records, countries over time, countries, CO₂, distance scores, heart rate and fitness, gear, and explorer squares.
+**Insights** (grouped as Scores, Overview, Places, Countries, Fitness and CO₂, with chips to jump between them): summary, how you travel, weekly rhythm, over time, top routes, top places (by time or visits), time by kind of place, records, countries over time, countries, CO₂, distance scores, heart rate and fitness, gear, and explorer squares.
 
-**Timeline:** a virtualised list of trips by day, with search, trip details (chart, raw data, flags, edits, legs of split trips), and place pages.
+**Timeline:** a virtualised list of trips by day, with search; one tap opens a trip with its map. Trip and place pages share one layout (main action, ⋯ for the rest, *Fix the GPS*), with trip details (chart, raw data, flags, edits, legs of split trips), and place pages.
 
-**Filters:** the period navigator and calendar, date range, years, months, days of the week, time of day, a transport tree with Strava sports and gear, source, countries, *Check* (unsure types), imported data, export to JSON or CSV, and a MyRules summary.
+**Filters** (only filters, with chips at the top for those in use): the period navigator and calendar, date range, *More about when* (years, months, days of the week, time of day), a transport tree with Strava sports and gear, source, countries, and *Check* (unsure types).
+
+**Menu** (the gear): *Your data* (files, import, *Export trips* as JSON or CSV, Home, remove), *MyRules* (with *Rules in these filters*), *Trip cleanup* (split trips, cell-tower fixes, station and road packs, snapping), *Preferences* (units, dates, theme, heart rate, CO₂) and *About*.
 
 **Cleaning:** GPS jumps, stale ends, stays that disagree with trips, parked time, places Google moved, re-IDed places, cell-tower and Wi-Fi fixes, merged trips split into legs, and transport guessing (speed, profile, history voting, corridors, stations, packs).
 
