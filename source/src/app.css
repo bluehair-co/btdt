@@ -1183,7 +1183,6 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 /* The pencil at the right of a trip's header: its edit menu. */
 .trip-head > div:not(.ic-badge) { flex: 1 1 auto; min-width: 0; }
 .trip-pencil { flex: none; margin-left: auto; align-self: flex-start; }
-.trip-edit .btn.quiet .ic { width: 18px; height: 18px; }
 .more-menu > button, .more-menu > a { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; border-radius: 10px; background: none; color: var(--fg); font: inherit; font-size: 14px; text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap; }
 .more-menu > button:hover, .more-menu > a:hover, .more-menu > button:focus-visible, .more-menu > a:focus-visible { background: var(--chip); }
 .more-menu .ic { flex: none; width: 20px; height: 20px; fill: var(--accent); }

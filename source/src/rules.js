@@ -1498,15 +1498,15 @@ function mrTripBlock(i) {
   if (!h && !btns) return mrCheckBlock(i);
   return mrCheckBlock(i) + '<div class="mr-trip">' + (h ? '<h4 class="place-h">From MyRules</h4>' + h : '') + (btns ? '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">' + btns + '</div>' : '') + '</div>';
 }
-// The row under the trip's header: Group to similar trips, and the trip's other views (this day on
-// the map, the trip in Timeline, its raw data) as buttons of their own.
+// The row under the trip's header: Group to similar trips, and ⋯ with Show this day on the map,
+// Open in Timeline and Raw data.
 function mrEditTop(i) {
   if (!D) return '';
-  var b = mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Group to similar trips</button>' : '';
-  if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') b += '<button type="button" class="btn quiet" data-act="day" data-i="' + i + '">' + icon('calendar') + 'Show this day</button>';
-  if (tab !== 'timeline') b += '<button type="button" class="btn quiet" data-act="tl" data-i="' + i + '">' + icon('history') + 'Open in Timeline</button>';
-  b += '<button type="button" class="btn quiet" data-act="raw" data-i="' + i + '" aria-expanded="false">' + icon('file') + 'Raw data</button>';
-  return '<div class="trip-edit">' + b + '</div>';
+  var more = [];
+  if (F.dm !== 'one' || F.unit !== 'day' || tab !== 'map') more.push(moreItem('data-act="day" data-i="' + i + '"', 'calendar', 'Show this day on the map'));
+  if (tab !== 'timeline') more.push(moreItem('data-act="tl" data-i="' + i + '"', 'history', 'Open in Timeline'));
+  more.push(moreItem('data-act="raw" data-i="' + i + '" aria-expanded="false"', 'file', 'Raw data'));
+  return '<div class="trip-edit">' + (mrSimilarOk(i) ? '<button type="button" class="btn" data-mr-act="similar" data-t="' + i + '">Group to similar trips</button>' : '') + moreMenu(more, 'More for this trip') + '</div>';
 }
 // The pencil at the right of the trip's header: everything you can change about this one trip.
 // Trip info (type, title, gear), Split trip…, Ignore GPS points…, and Hide this trip.
