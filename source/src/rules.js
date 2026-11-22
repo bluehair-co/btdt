@@ -222,7 +222,7 @@ function mrApplyGear(byName, addGear) {
   D.mrGear = []; D.mrAmb = []; MR_AMB = 0;
   mrActive('gear').forEach(function (r) { MR_COUNT[r.id] = 0; });
   if (!MR || !MR.on) return;
-  var periods = mrActive('gear').filter(function (r) { return MODE_IDX[r.mode] != null; }).map(function (r) {
+  var periods = mrActive('gear').filter(function (r) { return MODE_IDX[r.mode] != null && !r.default; }).map(function (r) {
     var m = r.match || {};
     return { r: r, mi: MODE_IDX[r.mode], w: mrWhen(r.when), ex: mrExcept(r), m: m, level: Object.keys(m).length ? 0 : 1 };
   });
@@ -264,8 +264,7 @@ function mrApplyGear(byName, addGear) {
     D.gear[i] = gr ? gearOf(gr) : addGear(String(rg), null, MODES[D.mode[i]]);
     D.mrGear[i] = { rule: rr.id, gear: D.gear[i] };
   }
-  if (!periods.length) return;
-  for (i = 0; i < n; i++) {
+  for (i = 0; periods.length && i < n; i++) {
     if (D.gear[i] || isDup(i)) continue;
     var best = [];
     for (k = 0; k < periods.length; k++) {
@@ -280,7 +279,21 @@ function mrApplyGear(byName, addGear) {
     D.mrGear[i] = { rule: best[0].r.id, gear: D.gear[i] };
     MR_COUNT[best[0].r.id] = (MR_COUNT[best[0].r.id] || 0) + 1;
   }
+  // The default car (a gear rule with "default": true, one per type): a guess for every trip of its
+  // type still without gear. It's marked as guessed until you confirm it (mrGearOk, a gear period).
+  var defs = {};
+  mrActive('gear').forEach(function (r) { if (r.default && MODE_IDX[r.mode] != null && !defs[MODE_IDX[r.mode]]) defs[MODE_IDX[r.mode]] = { r: r, ex: mrExcept(r) }; });
+  if (!Object.keys(defs).length) return;
+  for (i = 0; i < n; i++) {
+    var df = defs[D.mode[i]];
+    if (!df || D.gear[i] || D.mrAmb[i] || isDup(i) || df.ex[i]) continue;
+    D.gear[i] = gearOf(df.r);
+    D.mrGear[i] = { rule: df.r.id, gear: D.gear[i], def: true };
+    MR_COUNT[df.r.id] = (MR_COUNT[df.r.id] || 0) + 1;
+  }
 }
+function mrDefaultCar() { return mrList('gear').filter(function (r) { return r.default && r.mode === 'CAR'; })[0] || null; }
+var MR_CAR_FUELS = ['petrol', 'diesel', 'hybrid', 'ev'];
 // Rule applied (inferred): gear a gear period filled in, a type or line a routine or map snap set. Edited: anything a correction set.
 function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road); }
 function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor || D.mrDrop && D.mrDrop[i])); }
@@ -288,8 +301,8 @@ function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf ||
 function mrSnapped(i) { return !!(D.mrSnap && D.mrSnap[i] && D.snap && D.snap[i]); }
 function mrRoaded(i) { return !!(D.mrRoad && D.mrRoad[i] && D.snap && D.snap[i] === D.mrRoad[i]); }
 function mrTracked(i) { return !!(D.mrTrack && D.mrTrack[i] && D.snap && D.snap[i]); }
-function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
-function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRoaded(i) ? '<span class="guess inf" title="Drawn along the roads of your road pack">On the roads</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Rule applied</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
+function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor && !D.mrGear[i].def || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
+function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRoaded(i) ? '<span class="guess inf" title="Drawn along the roads of your road pack">On the roads</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Rule applied</span>' : '') + (D.mrGear && D.mrGear[i] && D.mrGear[i].def ? '<span class="guess" title="Guessed: your default car">Default car</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
 function mrCheck(i) { return !!(D.chk && D.chk[i] >= 0); }
 
 // Corrections, ready to apply: the switched-on ones that point at trips, those on a day or span
@@ -1248,7 +1261,7 @@ function mrRenderRules() {
   if (MR_AMB) h += '<p class="fine mr-warn">' + infoMore(tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear.', 'Narrow one of the periods (a shorter period, or a distance limit) to pick one.') + '</p>';
   var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
-    var m = r.match || {}, bits = [mrWhenText(r.when), LABEL[r.mode] || r.mode];
+    var m = r.match || {}, bits = r.default ? ['Default ' + esc((LABEL[r.mode] || r.mode).toLowerCase()) + ', a guess for trips without gear', esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode)] : [mrWhenText(r.when), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
     if (m.min_km != null) bits.push('over ' + dist(m.min_km));
     var cst = mrCcState(r);
@@ -1572,7 +1585,11 @@ function mrTripBlock(i) {
   if (D.mrOk && D.mrOk[i]) { var okc = mrTripCorrection(i); h += '<div class="mr-chg"><b>Type checked:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' is right' + (okc ? src(okc.id, 'checked') : '') + '</div>'; }
   if (md) h += '<div class="mr-chg"><b>Type:</b> ' + esc(LABEL[MODES[D.mode[i]]] || MODES[D.mode[i]]) + ' <span class="fine">(was ' + esc((LABEL[md.was] || md.was).toLowerCase()) + (md.guessed ? ', guessed' : '') + ')</span>' + src(md.rule, md.inf ? '' : 'mode') + '</div>';
   if (nm) h += '<div class="mr-chg"><b>Title:</b> ' + esc(nm.name) + (recName(i) ? ' <span class="fine">(was “' + esc(recName(i)) + '”)</span>' : '') + src(nm.rule, 'name') + '</div>';
-  if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
+  if (g && g.def) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + ' <span class="fine">(guessed)</span><div class="fine">' +
+    infoMore('Your default car, until you say it was.', 'Car trips without gear get your default car as a guess, and its CO₂ is counted with it. Confirm this trip, or every trip in a period at once (that saves a gear period). To pick another car, use Change gear in Trip info.', 'About the default car') + '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"><button type="button" class="btn primary" data-mr-act="gearok" data-t="' + i + '">' + esc(GEAR[g.gear].name) + ' is right</button>' +
+    '<button type="button" class="btn" data-mr-act="gearperiod" data-t="' + i + '">Confirm for a period…</button></div></div>';
+  else if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
   var dr = D.mrDrop && D.mrDrop[i];
   if (dr) h += '<div class="mr-chg"><b>GPS points ignored:</b> ' + fmt(dr.n) + ' of ' + fmt(dr.of) + (Math.abs(dr.km - D.km[i]) >= 0.01 ? ' <span class="fine">(' + dist(dr.km) + ' with them)</span>' : '') + src(dr.rule, 'ignore_points') + '</div>';
   var rt = D.mrRoute && D.mrRoute[i], rr = rt && mrById(rt.rule), sn = D.snap && D.snap[i], ln = rr && D.mrLine[rr.id];
@@ -1753,7 +1770,7 @@ $('tripBody').addEventListener('click', function (ev) {
   if (MR_SAVE_ACTS[act]) saving(function () { mrTripAct(b, i, act); }); else mrTripAct(b, i, act);
 });
 // The trip page's MyRules buttons; the ones that save (MR_SAVE_ACTS) run behind the Working pill.
-var MR_SAVE_ACTS = { line: 1, not: 1, undo: 1, detach: 1, include: 1, type: 1, hide: 1, show: 1 };
+var MR_SAVE_ACTS = { line: 1, not: 1, undo: 1, detach: 1, include: 1, type: 1, hide: 1, show: 1, gearok: 1 };
 function mrTripAct(b, i, act) {
   if (act === 'line') {
     var lr = mrById(b.dataset.r);
@@ -1795,6 +1812,8 @@ function mrTripAct(b, i, act) {
     openTrip(i);
   }
   else if (act === 'type') mrQuickType(i, b.dataset.m);
+  else if (act === 'gearok') mrGearOk(i);
+  else if (act === 'gearperiod') mrGearPeriodDialog(i);
   else if (act === 'gear') mrGearDialog(i);
   else if (act === 'edit') mrEditDialog(i);
   else if (act === 'hide' || act === 'show') mrHideTrip(i, act === 'hide');
@@ -1920,7 +1939,8 @@ function mrSaveGear(i) {
   if (!name) { toast('Give the gear a name'); return; }
   mrEnsure();
   // A gear period of the same name already in MyRules is pointed at; Strava's gear by its name.
-  var existing = mrList('gear').filter(function (r) { return (r.name === name || r.strava_name === name) && r.mode === mode; })[0];
+  var existing = mrList('gear').filter(function (r) { return (r.name === name || r.strava_name === name) && r.mode === mode && !r.default; })[0] ||
+    mrList('gear').filter(function (r) { return r.name === name && r.mode === mode && r.default; })[0];
   var recorded = sel !== 'new' && !existing && !GEAR[+sel].rule;
   if (one) {
     var c = mrTripCorrection(i), gv = existing ? '@' + existing.id : name;
@@ -1951,7 +1971,7 @@ function mrSaveGear(i) {
 function mrEditRule(ref) {
   var k = ref.indexOf(':'), sec = ref.slice(0, k), r = mrById(ref.slice(k + 1));
   if (!r) return;
-  if (sec === 'gear') { mrGearRuleDialog(r); return; }
+  if (sec === 'gear') { if (r.default && r.mode === 'CAR') mrDefaultCarDialog(); else mrGearRuleDialog(r); return; }
   if (sec === 'routines') { mrRoutineDialog(r); return; }
   if (sec === 'snaps') { closeSheets(true); snapStart(r); return; }
   if (!D) { toast('Load your Timeline file to edit this'); return; }
@@ -2900,4 +2920,86 @@ function mrTurnOffHere(id) {
 function mrUseV2() {
   var v = String(MR.doc.myrules || '0.1').split('.');
   if (v[0] === '0' && +v[1] < 2) { MR.doc.myrules = MR_VER; if (!MR.doc.$schema || /myrules-0\.1\.json$/.test(MR.doc.$schema)) MR.doc.$schema = MR_SCHEMA; }
+}
+
+// ---------- the default car ----------
+// One car of yours, set up in Preferences › CO₂ estimates: a gear rule with "default": true. Car trips
+// without gear get it as a guess (tagged Default car); its fuel sets their CO₂. Saved in MyRules like
+// any gear, so it goes with your rules file.
+function mrDefaultCarDialog() {
+  var r = mrDefaultCar(), kind = r && MR_CAR_FUELS.indexOf(r.kind) >= 0 ? r.kind : CAR[A.car] != null ? A.car : 'petrol';
+  mrAsk({
+    title: r ? 'Default car' : 'Set up your default car',
+    text: 'Car trips without gear get this car as a guess.',
+    info: 'They are tagged Default car until you confirm them, one trip or a whole period at once, and their CO₂ follows what the car runs on. Cars you add with Set gear on a trip count for their own trips. The default car is saved in MyRules.',
+    extra: '<div class="mr-dates" style="display:grid;gap:10px">' +
+      '<label class="field"><span>Name</span><input type="text" id="mrDcName" maxlength="60" placeholder="e.g. Family car" value="' + esc(r ? r.name || '' : '') + '"></label>' +
+      '<label class="field"><span>Make and model (optional)</span><input type="text" id="mrDcModel" maxlength="80" placeholder="e.g. Volvo XC40" value="' + esc(r && r.model || '') + '"></label>' +
+      '<label class="field"><span>Runs on</span><select id="mrDcKind">' + MR_CAR_FUELS.map(function (k) { return '<option value="' + k + '"' + (k === kind ? ' selected' : '') + '>' + esc(MR_KINDS[k]) + '</option>'; }).join('') + '</select></label></div>',
+    buttons: [[r ? 'Save' : 'Set up', 'primary', function () {
+      var name = $('mrDcName').value.trim() || 'My car', model = $('mrDcModel').value.trim(), k = $('mrDcKind').value;
+      mrEnsure();
+      var x = mrDefaultCar();
+      if (!x) { x = { id: mrNewId(name), name: name, mode: 'CAR', default: true }; (MR.doc.gear || (MR.doc.gear = [])).push(x); }
+      var was = x.name;
+      x.name = name; x.kind = k; x.default = true;
+      if (model) x.model = model; else delete x.model;
+      // A confirmed period or trip names the car by name: keep them with it when it's renamed.
+      if (was && was !== name) mrList('gear').forEach(function (p) { if (p !== x && p.mode === 'CAR' && p.name === was) p.name = name; });
+      mrChange('Default car: ' + name + ' (' + MR_KINDS[k].toLowerCase() + ')');
+      if (typeof renderDefCar === 'function') renderDefCar();
+    }]].concat(r ? [['Remove', 'danger', function () {
+      var x = mrDefaultCar();
+      if (!x) return;
+      // Confirmed trips keep it as a car of yours (corrections point at it): then it stops being the default only.
+      var used = mrList('corrections').some(function (c) { return c.then && c.then.gear === '@' + x.id; });
+      if (used) delete x.default; else MR.doc.gear = mrList('gear').filter(function (p) { return p !== x; });
+      mrChange('Default car removed: ' + x.name);
+      if (typeof renderDefCar === 'function') renderDefCar();
+    }]] : []).concat([['Cancel', 'quiet', null]])
+  });
+}
+// "This car is right": the trip gets the default car for good, in its own correction.
+function mrGearOk(i) {
+  var g = D.mrGear[i], r = g && mrById(g.rule);
+  if (!r) return;
+  mrEnsure();
+  var c = mrTripCorrection(i);
+  if (!c) (MR.doc.corrections || (MR.doc.corrections = [])).push(c = { id: mrNewId((r.name || 'car') + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} });
+  c.then.gear = '@' + r.id; delete c.then.gear_kind;
+  mrChange('Gear ' + (r.name || r.id) + ' confirmed on ' + mrWhere(i), i);
+  toast((r.name || 'Your car') + ' confirmed.');
+  openTrip(i);
+}
+// Confirm for a period: a gear period for the default car, so every trip in it that has no gear
+// gets the car for good (Rule applied). The dates start as the trip's year; the count is live.
+function mrGearPeriodDialog(i) {
+  var g = D.mrGear[i], r = g && mrById(g.rule);
+  if (!r) return;
+  var y = D.year[i], f0 = y + '-01-01', t0 = y + '-12-31';
+  mrAsk({
+    title: 'Confirm ' + (r.name || 'your car') + ' for a period',
+    text: 'Every car trip without gear in this period gets ' + esc(r.name || 'your car') + ' for good, saved as a gear period.',
+    extra: mrDateRow({ from: f0, to: t0 }) + '<p class="fine" id="mrGpCount"></p>',
+    buttons: [['Confirm', 'primary', function () {
+      var w = {}, f = $('mrWFrom').value, t = $('mrWTo').value;
+      if (f) w.from = f;
+      if (t) w.to = t;
+      var p = { id: mrNewId((r.name || 'car') + '-' + (f || 'start')), name: r.name, kind: r.kind, mode: r.mode };
+      if (f || t) p.when = w;
+      if (r.model) p.model = r.model;
+      (MR.doc.gear || (MR.doc.gear = [])).push(p);
+      mrChange((r.name || 'Car') + ' confirmed: ' + mrWhenText(p.when));
+      openTrip(i);
+    }], ['Cancel', 'quiet', null]],
+    after: function () {
+      function count() {
+        var f = mrDayNum($('mrWFrom').value), t = mrDayNum($('mrWTo').value), c = 0;
+        for (var j = 0; j < D.day.length; j++) if (D.mrGear[j] && D.mrGear[j].def && D.mrGear[j].rule === r.id && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t)) c++;
+        $('mrGpCount').textContent = tripsText(c) + ' with ' + (r.name || 'your car') + ' as a guess in that period.';
+      }
+      ['mrWFrom', 'mrWTo'].forEach(function (id) { $(id).addEventListener('input', count); });
+      count();
+    }
+  });
 }

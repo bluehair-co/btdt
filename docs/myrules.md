@@ -189,7 +189,9 @@ A move with `at` wins over `keep` on the stays in its dates; of two moves, the l
 
 | Field | Meaning |
 |---|---|
-| `kind` | Bikes: `bike`, `strida`, `halfbike`, `cargo`, `ebike`. Runs and walks: `shoe`. Cars: `car`, or `petrol`, `diesel`, `hybrid`, `ev` (electric) to count that car's CO₂ instead of *Your car* in *Preferences*. Motorbikes: `motorbike`, `scooter`. Boats (not ferries): `boat`, `sailboat`, `kayak`, `sup` (paddleboard). Snow sports: `skis`, `snowboard`. Any type: `other`. Picks the icon and the label in *Your gear*, as the app already does for Strava gear. |
+| `kind` | Bikes: `bike`, `strida`, `halfbike`, `cargo`, `ebike`. Runs and walks: `shoe`. Cars: `car`, or `petrol`, `diesel`, `hybrid`, `ev` (electric) to count that car's CO₂ instead of the car factor in *Preferences*. Motorbikes: `motorbike`, `scooter`. Boats (not ferries): `boat`, `sailboat`, `kayak`, `sup` (paddleboard). Snow sports: `skis`, `snowboard`. Any type: `other`. Picks the icon and the label in *Your gear*, as the app already does for Strava gear. |
+| `default` | `true` makes it the default of its `mode` (one per mode; BT•DT sets one for `CAR` in *Preferences › CO₂ estimates › Default car*). It needs no `when`. Every trip of that mode still without gear after corrections, routines and gear periods gets it as a guess: tagged *Default car*, counted as guessed, and its `kind` (`petrol`, `diesel`, `hybrid`, `ev`) sets the trip's CO₂. *… is right* on a trip confirms it with a correction (`"gear": "@id"`); *Confirm for a period…* adds a gear period with the same `name`. |
+| `model` | Optional make and model, for you (`"Volvo XC40"`). |
 | `mode` | The transport type it applies to (the app's own type names). The app offers gear for `CYCLING`, `RUNNING`, `WALKING`, `CAR`, `MOTORCYCLE`, `BOAT` and `SKIING`. |
 | `match` | Optional narrowing: `min_km`, `max_km`, `sports` (e.g. `["Mountain bike"]`), `from`/`to` (place ids: only rides starting or ending there), `weekdays_only`, `countries` (ISO codes such as `["ES"]`: only trips that start or end in one of them, so countries you visit later stay out). |
 

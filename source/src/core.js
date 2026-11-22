@@ -280,8 +280,9 @@ function gPerKm(m, kmv) {
   if (m === 'CAR' || m === 'MOTORCYCLE') return (A.g[m] || 0) / Math.max(1, A.occ);
   return A.g[m] || 0;
 }
-// A car trip with car gear of a known type (Petrol, Diesel, Hybrid or Electric car) uses that type's
-// factor, shared like any car; other car trips use Your car in Preferences.
+// A car trip with car gear of a known type (Petrol, Diesel, Hybrid or Electric car), the default car's
+// guess included, uses that type's factor, shared like any car; other car trips use the car factor
+// (A.g.CAR, which an old Your car setting set).
 function tripKg(i) {
   var m = modeOf(i), g = m === 'CAR' && D.gear[i] && GEAR[D.gear[i]], k = g && g.kind;
   if (k && CAR[k] != null) return D.km[i] * CAR[k] / Math.max(1, A.occ) / 1000;

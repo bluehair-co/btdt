@@ -4,7 +4,7 @@ function renderSettings() {
   setPressed('#themeSeg button', function (b) { return b.dataset.t === PREFS.theme; });
   renderDateTimeSettings();
   $('unitNote').textContent = 'Automatic uses ' + (LOCALE_FMT.unit === 'mi' ? 'miles' : 'kilometres') + ', from this device\'s region.';
-  buildFactors(); fillDists();
+  buildFactors(); renderDefCar(); fillDists();
   renderHrSettings();
   renderImports();
   renderSplitSettings();
@@ -159,10 +159,9 @@ function themeChanged() {
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function () { if (PREFS.theme === 'system') themeChanged(); });
 
 function buildFactors() {
-  $('carType').value = A.car;
   $('occ').value = A.occ;
   $('rf').checked = A.rf;
-  var rows = [['CAR', 'Car (per vehicle)']].concat(EDIT.map(function (m) { return [m, LABEL[m] + (m === 'MOTORCYCLE' ? ' (per vehicle)' : '')]; }));
+  var rows = [['CAR', 'Car, no car known (per vehicle)']].concat(EDIT.map(function (m) { return [m, LABEL[m] + (m === 'MOTORCYCLE' ? ' (per vehicle)' : '')]; }));
   var el = $('factors'); el.textContent = '';
   rows.forEach(function (r) {
     var id = 'g_' + r[0], l = document.createElement('label'), inp = document.createElement('input');
@@ -173,7 +172,7 @@ function buildFactors() {
     inp.addEventListener('input', function () {
       var v = parseFloat(inp.value); if (!isFinite(v) || v < 0) return;
       A.g[r[0]] = v / per;
-      if (r[0] === 'CAR') { A.car = 'custom'; $('carType').value = 'custom'; }
+      if (r[0] === 'CAR') A.car = 'custom';
       saveFactors(); co2Changed();
     });
     el.appendChild(l); el.appendChild(inp);
@@ -182,15 +181,18 @@ function buildFactors() {
   note.className = 'fine'; note.style.gridColumn = '1 / -1';
   $('factorsSum').textContent = 'Grams of CO₂e per ' + (PREFS.unit === 'mi' ? 'mile' : 'km');
   var fp = PREFS.unit === 'mi' ? 1 / MI : 1, fg = function (x) { return fmt(Math.round(x * fp)); };
-  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Car trips with car gear set as a petrol, diesel, hybrid or electric car use that car’s factor (' + fg(CAR.petrol) + ', ' + fg(CAR.diesel) + ', ' + fg(CAR.hybrid) + ' and ' + fg(CAR.ev) + ' g); other car trips use Your car. Walking and cycling count as zero. Factors are UK government averages for 2025.';
+  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Car trips count by what their car runs on, your default car included: petrol ' + fg(CAR.petrol) + ' g, diesel ' + fg(CAR.diesel) + ' g, hybrid ' + fg(CAR.hybrid) + ' g, electric ' + fg(CAR.ev) + ' g. Car trips with no car known use the car factor above. Walking and cycling count as zero. Factors are UK government averages for 2025.';
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }
-$('carType').addEventListener('change', function () {
-  A.car = this.value;
-  if (CAR[A.car] != null) A.g.CAR = CAR[A.car];
-  saveFactors(); buildFactors(); co2Changed();
-});
+// The default car (MyRules gear, see mrDefaultCarDialog): what it is, and Set up… or Edit….
+function renderDefCar() {
+  var r = mrDefaultCar(), on = r && MR && MR.on;
+  $('defCarTxt').innerHTML = r ? '<b>' + esc(r.name || 'My car') + '</b><small>' + esc([MR_KINDS[r.kind] || 'Car', r.model].filter(Boolean).join(' · ')) + (on ? '' : ' · MyRules are off') + '</small>'
+    : '<small>Not set up. Car trips without gear count as a ' + (CAR[A.car] != null && A.car !== 'petrol' ? esc(MR_KINDS[A.car].toLowerCase()) : 'petrol car') + '.</small>';
+  $('defCarBtn').textContent = r ? 'Edit…' : 'Set up…';
+}
+$('defCarBtn').addEventListener('click', function () { mrDefaultCarDialog(); });
 $('occ').addEventListener('input', function () { var v = parseFloat(this.value); if (v >= 1) { A.occ = v; saveFactors(); co2Changed(); } });
 $('rf').addEventListener('change', function () { A.rf = this.checked; saveFactors(); buildFactors(); co2Changed(); });
 $('resetFactors').addEventListener('click', function () { A = JSON.parse(JSON.stringify(DEFAULTS)); saveFactors(); buildFactors(); co2Changed(); });

@@ -420,6 +420,14 @@
               }
             }
           }
+        },
+        "default": {
+          "type": "boolean",
+          "description": "The default car (or other gear) of its mode: a guess for every trip of that mode still without gear, until the user confirms it"
+        },
+        "model": {
+          "type": "string",
+          "description": "Make and model, for the user's own reference"
         }
       }
     },

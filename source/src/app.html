@@ -627,9 +627,7 @@
     </div>
     <div class="sec">
       <div class="sec-head"><h3>CO₂ estimates</h3><div class="quick"><button type="button" id="resetFactors">Reset</button></div></div>
-      <div class="field"><label for="carType">Your car</label>
-        <select id="carType"><option value="petrol">Petrol</option><option value="diesel">Diesel</option><option value="hybrid">Hybrid</option><option value="ev">Electric</option><option value="custom">Custom (set below)</option></select>
-      </div>
+      <div class="field"><span>Default car</span><div class="def-car"><span class="def-car-t" id="defCarTxt"></span><button type="button" class="btn" id="defCarBtn">Set up…</button></div></div>
       <div class="field"><label for="occ">People sharing the car, on average</label><input type="number" id="occ" min="1" max="8" step="0.1" value="1"></div>
       <label class="toggle-row"><span class="lbl">Count extra warming from flights at altitude</span><input type="checkbox" class="switch" id="rf" checked></label>
       <details class="help"><summary id="factorsSum">Grams of CO₂e per km</summary><div class="factors" id="factors" style="margin-top:8px"></div></details>
