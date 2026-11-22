@@ -402,6 +402,9 @@ function hourOk(h) {
   if (F.h0 === 0 && F.h1 === 24) return true;
   return F.h0 < F.h1 ? h >= F.h0 && h < F.h1 : h >= F.h0 || h < F.h1;
 }
+// A transport, sport or gear filter picks trips, not where you were: stays and the days between
+// records have no type or gear, so countries then count only the trips that pass.
+function tripsOnly() { return F.modes.size !== M.modes.length || F.sports.size !== M.sports.length || F.gear.size !== gearIds().length; }
 function dayOk(d) {
   if (F.dm === 'one') return F.unit === 'day' ? d === F.one : d >= periodStart(F.one, F.unit) && d <= periodEnd(F.one, F.unit);
   if (F.dm === 'range' || F.dm === 'week') return d >= F.from && d <= F.to;

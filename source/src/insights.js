@@ -985,7 +985,7 @@ function countryVisits() {
     var air = D.mode[i] === fly;
     ev.push({ t: D.start[i], cc: D.ccList[D.cs[i]], off: D.off[i], trip: 1, dep: air, ll: [D.from[2 * i], D.from[2 * i + 1]] }, { t: D.end[i], cc: D.ccList[D.ce[i]], off: D.off[i], trip: 1, arr: air, ll: [D.to[2 * i], D.to[2 * i + 1]] });
   }
-  for (j = 0; j < selV.length; j++) {
+  for (j = 0; !tripsOnly() && j < selV.length; j++) {
     v = selV[j];
     var vll = [D.vll[2 * v], D.vll[2 * v + 1]];
     ev.push({ t: D.vs[v], cc: D.ccList[D.vcc[v]], off: D.voff[v], ll: vll }, { t: D.ve[v], cc: D.ccList[D.vcc[v]], off: D.voff[v], ll: vll });
@@ -1038,12 +1038,13 @@ function renderCountries() {
     if (!(cc in pd) || t < pd[cc]) pd[cc] = t;
   }
   for (var j = 0; j < sel.length; j++) { var i = sel[j]; add(D.cs[i], D.day[i], D.start[i]); add(D.ce[i], evDay(D.end[i], D.off[i]), D.end[i]); }
-  for (var v = 0; v < selV.length; v++) {
+  var only = tripsOnly();
+  for (var v = 0; !only && v < selV.length; v++) {
     var w = selV[v];
     add(D.vcc[w], D.vday[w], D.vs[w]);
     add(D.vcc[w], evDay(D.ve[w], D.voff[w]), D.ve[w]);   // and the day the stay ended
   }
-  gapDays(Infinity, function (k, d) { add(k, d); });
+  if (!only) gapDays(Infinity, function (k, d) { add(k, d); });
   var list = Object.keys(by).map(function (k) { var c = by[k]; c.n = Object.keys(c.days).length; c.stops = []; c.stays = 0; return c; }).sort(function (a, b) { return b.n - a.n; });
   var visits = countryVisits();
   visits.forEach(function (x) { var c = by[x.cc]; if (c) { if (x.short) c.stops.push(x); else c.stays++; } });
@@ -1089,9 +1090,10 @@ function ccSeenList() {
 // Stretches of the strip with no records: the country you were last seen in before and next
 // seen in after. The same country fills the stretch; two countries share it half and half.
 // They're drawn faded as a guess and don't add to the day counts. Left blank when a month,
-// weekday, year or country filter is on, since those leave days out on purpose.
+// weekday, year or country filter is on, since those leave days out on purpose, or a transport or
+// gear filter (tripsOnly), since then only those trips count.
 function ccGuesses(lo, hi, runs, byCc, list) {
-  if (F.months.size !== 12 || F.dows.size !== 7 || F.years.size !== M.years.length || F.countries.size !== M.countries.length) return [];
+  if (F.months.size !== 12 || F.dows.size !== 7 || F.years.size !== M.years.length || F.countries.size !== M.countries.length || tripsOnly()) return [];
   var ev = ccSeenList(), out = [], k = 0, d = lo;
   function before(day) { var a = 0, b = ev.length - 1, r = -1; while (a <= b) { var m = (a + b) >> 1; if (ev[m][1] < day) { r = m; a = m + 1; } else b = m - 1; } return r; }
   function color(cc) {
