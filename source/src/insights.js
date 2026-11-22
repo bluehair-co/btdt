@@ -753,8 +753,9 @@ function renderGear() {
     i = sel[j];
     var g = D.gear[i];
     if (!g) continue;
-    var x = by[g] || (by[g] = { g: g, km: 0, n: 0, d0: D.day[i], d1: D.day[i] });
+    var x = by[g] || (by[g] = { g: g, km: 0, n: 0, guess: 0, d0: D.day[i], d1: D.day[i] });
     x.km += D.km[i]; x.n++; x.d1 = D.day[i];
+    if (D.mrGear && D.mrGear[i] && D.mrGear[i].def) x.guess++;
   }
   var list = Object.keys(by).map(function (k) { return by[k]; }).sort(function (a, b) { return b.km - a.km; });
   $('gearCard').hidden = !list.length;
@@ -763,7 +764,7 @@ function renderGear() {
   $('gearList').innerHTML = list.map(function (x) {
     var G = M.gear[x.g], d = distParts(x.km);
     return '<button type="button" class="hit-row gear-row" data-gear="' + x.g + '"><span class="mode-badge sm" style="background:' + modeColor(G.mode) + '">' + icon(gearIcon(x.g)) + '</span>' +
-      '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + (BIKE_KIND[G.kind] || G.kind === 'shoe' ? ' activit' + (x.n === 1 ? 'y' : 'ies') : ' trip' + (x.n === 1 ? '' : 's')) + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
+      '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + (BIKE_KIND[G.kind] || G.kind === 'shoe' ? ' activit' + (x.n === 1 ? 'y' : 'ies') : ' trip' + (x.n === 1 ? '' : 's')) + (x.guess ? ' (' + fmt(x.guess) + ' guessed)' : '') + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
       '<i class="gear-bar"><i style="width:' + (x.km / max * 100).toFixed(1) + '%;background:' + modeColor(G.mode) + '"></i></i></span>' +
       '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
   }).join('');

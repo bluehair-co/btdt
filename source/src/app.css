@@ -775,6 +775,9 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 /* Working on it: a clear veil that takes taps while a slow change runs, and a pill with a spinner. */
 .working { position: fixed; inset: 0; z-index: 1000; cursor: progress; }
 .working[hidden] { display: none; }
+.def-car { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.def-car-t { min-width: 0; }
+.def-car-t small { display: block; color: var(--muted); }
 /* In the top layer (popover), above an open dialog; none of the popover's own box. */
 .working[popover] { width: auto; height: auto; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; overflow: visible; }
 .working[popover]::backdrop { display: none; }
