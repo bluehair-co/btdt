@@ -1164,6 +1164,7 @@ div.hit-row:hover { background: none; }
 .sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
 
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
+.mr-add { min-height: 36px; padding: 6px 14px; flex: none; }
 .mr-grp { margin: 14px 0 4px; }
 
 /* Download progress (station and road packs) */
@@ -12803,7 +12804,8 @@ function mrUnlessTags(r) {
 }
 function mrRenderRules() {
   var h = '';
-  if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p>'; return; }
+  var newGear = '<button type="button" class="btn mr-add" data-mr-newgear>New gear…</button>';
+  if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p><div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div></div>'; return; }
   // Switched off, no rule changes anything: say so where the rules are, with the switch at hand.
   // Off: the counts, left-out trips and lines the rules would have.
   var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
@@ -12811,7 +12813,8 @@ function mrRenderRules() {
   if (D && MR.on) h += mrCleanBar();
   if (MR_AMB) h += '<p class="fine mr-warn">' + infoMore(tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear.', 'Narrow one of the periods (a shorter period, or a distance limit) to pick one.') + '</p>';
   var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
-  if (gear.length) h += '<div class="sec" data-mr-tab="gear"><h3>Gear</h3>' + gear.map(function (r) {
+  // Gear always has its section, with New gear… (any type, period and countries) at its head.
+  h += '<div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div>' + (gear.length ? '' : '<p class="fine">No gear yet.</p>') + gear.map(function (r) {
     var m = r.match || {}, bits = r.default ? ['Default ' + esc((LABEL[r.mode] || r.mode).toLowerCase()) + ', a guess for trips without gear', esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode)] : [mrWhenText(r.when), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
     if (m.min_km != null) bits.push('over ' + dist(m.min_km));
@@ -12866,9 +12869,9 @@ function mrRenderRules() {
     return mrRuleRow('routines', r, r.name || r.id, bits, t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
   }).join('') + '</div>';
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
-  if (!h) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one.</p>';
+  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2]; });
+  var tabs = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2] || t[3]; });
   if (tabs.length > 1) {
     if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
     h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
@@ -13067,6 +13070,7 @@ $('mrBody').addEventListener('click', function (ev) {
   MR_TAB = t.dataset.mrTabbtn;
   mrRenderRules();
 });
+$('mrBody').addEventListener('click', function (ev) { if (ev.target.closest('[data-mr-newgear]')) mrGearRuleDialog(); });
 $('mrBody').addEventListener('change', function (ev) {
   var id = ev.target.dataset.mrOn;
   if (!id) return;
@@ -13636,29 +13640,49 @@ function mrCcInto(r, st) {
   if (u.length) r.unless = u; else delete r.unless;
 }
 function mrCcText(st) { return st.how === 'all' ? '' : (st.how === 'only' ? 'only in ' : 'not in ') + st.list.map(ccName).join(', '); }
+// Edit a gear period, or (no r) make new gear from MyRules › Gear: its type, kind, period and countries.
 function mrGearRuleDialog(r) {
-  var kinds = mrKindsFor(r.mode);
-  if (r.kind && kinds.indexOf(r.kind) < 0) kinds.push(r.kind);
+  var isNew = !r;
+  if (isNew) r = { mode: 'CYCLING' };
   var mx = r.match && r.match.max_km;
+  function kindOpts(mode, sel) {
+    var kinds = mrKindsFor(mode);
+    if (sel && kinds.indexOf(sel) < 0) kinds.push(sel);
+    return kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === sel ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('');
+  }
+  function lead(mode) { return 'Every ' + esc((LABEL[mode] || mode || 'cycling').toLowerCase()) + ' trip without recorded gear in this period gets this gear.'; }
+  var modes = Object.keys(MR_GEAR_KINDS);
+  if (modes.indexOf(r.mode) < 0) modes.push(r.mode);
   mrAsk({
-    title: 'Edit gear period',
-    text: 'Every ' + esc((LABEL[r.mode] || r.mode || 'cycling').toLowerCase()) + ' trip without recorded gear in this period gets this gear.',
-    extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '"></label>' +
-      '<label class="field"><span>Kind</span><select id="mrGKind">' + kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === r.kind ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('') + '</select></label></div>' +
+    title: isNew ? 'New gear' : 'Edit gear period',
+    text: '<span id="mrGLead">' + lead(r.mode) + '</span>',
+    extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '" placeholder="e.g. ' + esc(MR_GEAR_EG[r.mode] || 'My gear') + '"></label>' +
+      '<label class="field"><span>Type</span><select id="mrGMode">' + modes.map(function (m) { return '<option value="' + esc(m) + '"' + (m === r.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>'; }).join('') + '</select></label></div>' +
+      '<label class="field"><span>Kind</span><select id="mrGKind">' + kindOpts(r.mode, r.kind) + '</select></label>' +
       mrDateRow(r.when) + mrCcRow(mrCcState(r)) +
       '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div>',
-    buttons: [['Save', 'primary', function () {
+    buttons: [[isNew ? 'Add gear' : 'Save', 'primary', function () {
       var name = $('mrGName').value.trim(), m = distSave(parseFloat($('mrGMax').value), mx);
       if (!name) { toast('Give the gear a name'); return; }
       if (!mrDatesInto(r)) return;
-      r.name = name; r.kind = $('mrGKind').value;
+      r.name = name; r.mode = $('mrGMode').value; r.kind = $('mrGKind').value;
+      if (isNew) { r = Object.assign({ id: mrNewId(name) }, r); mrEnsure(); (MR.doc.gear || (MR.doc.gear = [])).push(r); MR_TAB = 'gear'; }
       var match = Object.assign({}, r.match);
       if (m > 0) match.max_km = m; else delete match.max_km;
       if (Object.keys(match).length) r.match = match; else delete r.match;
       mrCcInto(r, mrCcRead());
-      mrChange('Gear period changed: ' + name + ' (' + mrWhenText(r.when) + ')');
+      mrChange((isNew ? 'New gear: ' : 'Gear period changed: ') + name + ' (' + mrWhenText(r.when) + ')');
     }], ['Cancel', 'quiet', null]],
-    after: function () { mrCcWire(); }
+    after: function () {
+      mrCcWire();
+      // Another type: its kinds, example name and the line above follow.
+      $('mrGMode').addEventListener('change', function () {
+        var m = this.value;
+        $('mrGKind').innerHTML = kindOpts(m, null);
+        $('mrGName').placeholder = 'e.g. ' + (MR_GEAR_EG[m] || 'My gear');
+        $('mrGLead').innerHTML = lead(m);
+      });
+    }
   });
 }
 // A routine from one trip: its two ends, any day and time, both ways, its type, and its own trail as
