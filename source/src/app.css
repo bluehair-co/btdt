@@ -1100,6 +1100,8 @@ div.hit-row:hover { background: none; }
 .sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
 .sel-bar[hidden], .sel-top[hidden] { display: none; }
 .sel-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; }
+/* Phones: the summary on its own line, the buttons under it. */
+@media (max-width: 480px) { .sel-row { flex-wrap: wrap; } .sel-row .sel-sum { flex: 1 1 100%; } .sel-row .btn:not(.quiet) { flex: 1 1 0; } }
 .sel-sum { flex: 1; min-width: 0; min-height: 44px; text-align: left; border: 0; background: none; color: var(--fg); font: inherit; font-size: 14px; padding: 0 10px; cursor: pointer; }
 .ign-sum { cursor: default; display: flex; flex-direction: column; justify-content: center; }
 .ign-sum small { color: var(--muted); font-size: 12px; }
