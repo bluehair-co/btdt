@@ -2099,8 +2099,10 @@ function legend() {
 // While the time slider is back in time, only what was reached by then counts:
 // the trips started (their end country once they've arrived) and the stays begun.
 function ccReach() {
-  if (scrubV >= 1000) return { nb: sel.length, nv: selV.length, t: Infinity, key: 'all' };
-  var t = scrubTime(), lo = 0, hi = selV.length;
+  // With a transport or gear filter, only the trips count (tripsOnly): no stays.
+  var nvAll = tripsOnly() ? 0 : selV.length;
+  if (scrubV >= 1000) return { nb: sel.length, nv: nvAll, t: Infinity, key: 'all:' + nvAll };
+  var t = scrubTime(), lo = 0, hi = nvAll;
   while (lo < hi) { var mid = (lo + hi) >> 1; if (D.vs[selV[mid]] <= t) lo = mid + 1; else hi = mid; }
   var nb = visibleB, done = nb && D.end[sel[nb - 1]] <= t;
   return { nb: nb, nv: lo, t: t, key: nb + ':' + lo + ':' + (done ? 1 : 0) + ':' + evDay(t, NO_OFF) };
@@ -2112,7 +2114,7 @@ function visitedCountries() {
   for (var j = 0; j < r.nb; j++) { var i = sel[j]; add(D.cs[i], D.day[i]); if (D.end[i] <= r.t) add(D.ce[i], evDay(D.end[i], D.off[i])); }
   for (var v = 0; v < r.nv; v++) { var w = selV[v]; add(D.vcc[w], D.vday[w]); if (D.ve[w] <= r.t) add(D.vcc[w], evDay(D.ve[w], D.voff[w])); }
   // Days between records count too, as in Insights; with the slider back in time, only up to then.
-  gapDays(isFinite(r.t) ? evDay(r.t, NO_OFF) - 1 : Infinity, add);
+  if (!tripsOnly()) gapDays(isFinite(r.t) ? evDay(r.t, NO_OFF) - 1 : Infinity, add);
   // Countries where every visit reached so far was a true layover (flew in and out, stayed at
   // the airport), by the same rule as the Insights country timeline.
   var stays = {}, air = {};
@@ -2124,7 +2126,7 @@ function visitedCountries() {
 }
 var ccVisitCache = null;
 function ccVisits() {
-  var key = selVer();
+  var key = selVer() + (tripsOnly() ? ':t' : '');
   if (!ccVisitCache || ccVisitCache.key !== key || ccVisitCache.D !== D) ccVisitCache = { key: key, D: D, list: countryVisits() };
   return ccVisitCache.list;
 }
