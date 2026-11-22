@@ -390,6 +390,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-clean-g summary { cursor: pointer; }
 .mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .mr-form { display: flex; flex-direction: column; gap: 10px; }
+#mrGDefMore:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
 .mr-form select, .mr-form input[type=text], .mr-form input[type=date], .mr-form input[type=number] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 .mr-form .field span { font-size: 12px; color: var(--muted); }
 .mr-opt { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 10px; cursor: pointer; }
@@ -1121,6 +1122,8 @@ div.hit-row:hover { background: none; }
 
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
 .mr-add { min-height: 36px; padding: 6px 14px; flex: none; }
+.mr-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 8px; cursor: pointer; }
+.mr-switch-row small { display: block; margin-top: 2px; }
 .mr-grp { margin: 14px 0 4px; }
 
 /* Download progress (station and road packs) */
