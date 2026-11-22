@@ -434,6 +434,7 @@ details.help b { color: var(--fg); font-weight: 500; }
 .mr-clean-g summary { cursor: pointer; }
 .mr-changes { margin: 6px 0 0; padding-left: 18px; max-height: 180px; overflow-y: auto; font-size: 13px; }
 .mr-form { display: flex; flex-direction: column; gap: 10px; }
+#mrGDefMore:not([hidden]) { display: flex; flex-direction: column; gap: 10px; }
 .mr-form select, .mr-form input[type=text], .mr-form input[type=date], .mr-form input[type=number] { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
 .mr-form .field span { font-size: 12px; color: var(--muted); }
 .mr-opt { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line); border-radius: 12px; padding: 10px; cursor: pointer; }
@@ -1165,6 +1166,8 @@ div.hit-row:hover { background: none; }
 
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
 .mr-add { min-height: 36px; padding: 6px 14px; flex: none; }
+.mr-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 8px; cursor: pointer; }
+.mr-switch-row small { display: block; margin-top: 2px; }
 .mr-grp { margin: 14px 0 4px; }
 
 /* Download progress (station and road packs) */
@@ -11774,7 +11777,8 @@ function mrApplyGear(byName, addGear) {
   D.mrGear = []; D.mrAmb = []; MR_AMB = 0;
   mrActive('gear').forEach(function (r) { MR_COUNT[r.id] = 0; });
   if (!MR || !MR.on) return;
-  var periods = mrActive('gear').filter(function (r) { return MODE_IDX[r.mode] != null && !r.default; }).map(function (r) {
+  // "assign": false is gear in your list only: it goes on trips only where you set it (a correction).
+  var periods = mrActive('gear').filter(function (r) { return MODE_IDX[r.mode] != null && !r.default && r.assign !== false; }).map(function (r) {
     var m = r.match || {};
     return { r: r, mi: MODE_IDX[r.mode], w: mrWhen(r.when), ex: mrExcept(r), m: m, level: Object.keys(m).length ? 0 : 1 };
   });
@@ -11843,6 +11847,13 @@ function mrApplyGear(byName, addGear) {
     D.mrGear[i] = { rule: df.r.id, gear: D.gear[i], def: true };
     MR_COUNT[df.r.id] = (MR_COUNT[df.r.id] || 0) + 1;
   }
+}
+// Trips that have this gear (by name and type), for gear set by hand only.
+function mrGearUses(r) {
+  if (!D) return 0;
+  var c = 0, mi = MODE_IDX[r.mode];
+  for (var j = 0; j < D.day.length; j++) if (D.gear[j] && D.mode[j] === mi && GEAR[D.gear[j]].name === r.name) c++;
+  return c;
 }
 function mrDefaultCar() { return mrList('gear').filter(function (r) { return r.default && r.mode === 'CAR'; })[0] || null; }
 var MR_CAR_FUELS = ['petrol', 'diesel', 'hybrid', 'ev'];
@@ -12815,14 +12826,15 @@ function mrRenderRules() {
   var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
   // Gear always has its section, with New gear… (any type, period and countries) at its head.
   h += '<div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div>' + (gear.length ? '' : '<p class="fine">No gear yet.</p>') + gear.map(function (r) {
-    var m = r.match || {}, bits = r.default ? ['Default ' + esc((LABEL[r.mode] || r.mode).toLowerCase()) + ', a guess for trips without gear', esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode)] : [mrWhenText(r.when), LABEL[r.mode] || r.mode];
+    var m = r.match || {}, bits = r.default ? ['Default ' + esc((LABEL[r.mode] || r.mode).toLowerCase()) + ', a guess for trips without gear', esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode)]
+      : r.assign === false ? [esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode), 'set on trips by hand'] : ['Default: ' + (r.when ? mrWhenText(r.when) : 'any time'), LABEL[r.mode] || r.mode];
     if (m.max_km != null) bits.push('under ' + dist(m.max_km));
     if (m.min_km != null) bits.push('over ' + dist(m.min_km));
     var cst = mrCcState(r);
     if (cst.how === 'only') bits.push(esc(mrCcText(cst)));  // Not in shows as its Not on tag, with Undo
     if (r.strava_name) bits.push('same as “' + esc(r.strava_name) + '”');
     var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
-    return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), MR.on ? MR_COUNT[r.id] || 0 : null);
+    return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), !MR.on ? null : r.assign === false ? mrGearUses(r) : MR_COUNT[r.id] || 0);
   }).join('') + '</div>';
   if (places.length || moves.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
@@ -13445,6 +13457,9 @@ function mrHideTrip(i, on) {
 // (a gear period), with the dates from the first and last trip on that gear and a live count.
 function mrGearDialog(i) {
   var mode = MODES[D.mode[i]], opts = gearOrder().filter(function (g) { return GEAR[g].mode === mode || GEAR[g].modes && GEAR[g].modes[mode]; });
+  // Gear in your list (MyRules) that no trip has yet.
+  var listed = mrList('gear').filter(function (r) { return r.mode === mode && r.name && !opts.some(function (g) { return GEAR[g].name === r.name; }); })
+    .filter(function (r, k, a) { return a.findIndex(function (x) { return x.name === r.name; }) === k; });
   function span(g) {
     var a = Infinity, b = -Infinity;
     for (var j = 0; j < D.day.length; j++) if (D.gear[j] === g) { a = Math.min(a, D.day[j]); b = Math.max(b, D.day[j]); }
@@ -13454,7 +13469,7 @@ function mrGearDialog(i) {
   mrAsk({
     title: 'Set gear',
     text: esc(tripRoute(i)) + ' · ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]) + ' · ' + dist(D.km[i]),
-    extra: '<div class="mr-form"><label class="field"><span>Gear</span><select id="mrG">' + opts.map(function (g) { return '<option value="' + g + '">' + esc(GEAR[g].name) + '</option>'; }).join('') + '<option value="new">New gear…</option></select></label>' +
+    extra: '<div class="mr-form"><label class="field"><span>Gear</span><select id="mrG">' + opts.map(function (g) { return '<option value="' + g + '">' + esc(GEAR[g].name) + '</option>'; }).join('') + listed.map(function (r) { return '<option value="r:' + esc(r.id) + '">' + esc(r.name) + '</option>'; }).join('') + '<option value="new">New gear…</option></select></label>' +
       '<div id="mrNew" hidden class="grid2"><label class="field"><span>Name</span><input type="text" id="mrName" placeholder="e.g. ' + esc(MR_GEAR_EG[mode] || 'My gear') + '"></label><label class="field"><span>Kind</span><select id="mrKind">' + kinds.map(function (k) { return '<option value="' + k + '">' + MR_KINDS[k] + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="mr-opt"><input type="radio" name="mrScope" value="one" checked><span><b>Just this trip</b><small class="fine">Saved as a correction.</small></span></label>' +
       '<label class="mr-opt"><input type="radio" name="mrScope" value="period"><span><b>Every ' + esc((LABEL[mode] || mode).toLowerCase()) + ' trip without gear in a period</b>' +
@@ -13469,8 +13484,8 @@ function mrGearDialog(i) {
       function prefill() {
         var nw = sel.value === 'new';
         $('mrNew').hidden = !nw;
-        var s = nw ? [D.day[i], D.day[i]] : span(+sel.value);
-        $('mrFrom').value = isoDay(s[0]); $('mrTo').value = nw ? '' : isoDay(s[1]);
+        var lr = /^r:/.test(sel.value), s = nw || lr ? [D.day[i], D.day[i]] : span(+sel.value);
+        $('mrFrom').value = isoDay(s[0]); $('mrTo').value = nw || lr ? '' : isoDay(s[1]);
         count();
       }
       function count() {
@@ -13490,13 +13505,14 @@ function mrGearDialog(i) {
 }
 function mrSaveGear(i) {
   var sel = $('mrG').value, mode = MODES[D.mode[i]], one = document.querySelector('input[name="mrScope"]:checked').value === 'one';
-  var name = sel === 'new' ? $('mrName').value.trim() : GEAR[+sel].name, kind = sel === 'new' ? $('mrKind').value : GEAR[+sel].kind;
+  var lr = /^r:/.test(sel) ? mrById(sel.slice(2)) : null;
+  var name = sel === 'new' ? $('mrName').value.trim() : lr ? lr.name : GEAR[+sel].name, kind = sel === 'new' ? $('mrKind').value : lr ? lr.kind : GEAR[+sel].kind;
   if (!name) { toast('Give the gear a name'); return; }
   mrEnsure();
   // A gear period of the same name already in MyRules is pointed at; Strava's gear by its name.
-  var existing = mrList('gear').filter(function (r) { return (r.name === name || r.strava_name === name) && r.mode === mode && !r.default; })[0] ||
+  var existing = lr || mrList('gear').filter(function (r) { return (r.name === name || r.strava_name === name) && r.mode === mode && !r.default; })[0] ||
     mrList('gear').filter(function (r) { return r.name === name && r.mode === mode && r.default; })[0];
-  var recorded = sel !== 'new' && !existing && !GEAR[+sel].rule;
+  var recorded = sel !== 'new' && !lr && !existing && !GEAR[+sel].rule;
   if (one) {
     var c = mrTripCorrection(i), gv = existing ? '@' + existing.id : name;
     if (!c) (MR.doc.corrections || (MR.doc.corrections = [])).push(c = { id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} });
@@ -13643,44 +13659,54 @@ function mrCcText(st) { return st.how === 'all' ? '' : (st.how === 'only' ? 'onl
 // Edit a gear period, or (no r) make new gear from MyRules › Gear: its type, kind, period and countries.
 function mrGearRuleDialog(r) {
   var isNew = !r;
-  if (isNew) r = { mode: 'CYCLING' };
+  if (isNew) r = { mode: 'CYCLING', assign: false };
+  var isDef = r.assign !== false;
   var mx = r.match && r.match.max_km;
   function kindOpts(mode, sel) {
     var kinds = mrKindsFor(mode);
     if (sel && kinds.indexOf(sel) < 0) kinds.push(sel);
     return kinds.map(function (k) { return '<option value="' + esc(k) + '"' + (k === sel ? ' selected' : '') + '>' + esc(MR_KINDS[k] || k) + '</option>'; }).join('');
   }
-  function lead(mode) { return 'Every ' + esc((LABEL[mode] || mode || 'cycling').toLowerCase()) + ' trip without recorded gear in this period gets this gear.'; }
+  function lead(mode) { return 'Gear of yours for ' + esc((LABEL[mode] || mode || 'cycling').toLowerCase()) + ' trips. Set it on a trip with Set gear, or use it as the default for a period.'; }
+  function defTxt(mode) { return 'Every ' + esc((LABEL[mode] || mode || 'cycling').toLowerCase()) + ' trip without gear in this period and these countries gets it.'; }
   var modes = Object.keys(MR_GEAR_KINDS);
   if (modes.indexOf(r.mode) < 0) modes.push(r.mode);
   mrAsk({
-    title: isNew ? 'New gear' : 'Edit gear period',
+    title: isNew ? 'New gear' : 'Edit gear',
     text: '<span id="mrGLead">' + lead(r.mode) + '</span>',
     extra: '<div class="mr-form"><div class="grid2"><label class="field"><span>Name</span><input type="text" id="mrGName" value="' + esc(r.name || '') + '" placeholder="e.g. ' + esc(MR_GEAR_EG[r.mode] || 'My gear') + '"></label>' +
       '<label class="field"><span>Type</span><select id="mrGMode">' + modes.map(function (m) { return '<option value="' + esc(m) + '"' + (m === r.mode ? ' selected' : '') + '>' + esc(LABEL[m] || m) + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="field"><span>Kind</span><select id="mrGKind">' + kindOpts(r.mode, r.kind) + '</select></label>' +
-      mrDateRow(r.when) + mrCcRow(mrCcState(r)) +
-      '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div>',
+      // Off: gear in your list, set on trips by hand (Set gear). On: trips without gear in the period
+      // and countries get it.
+      '<label class="mr-switch-row"><span><b>Use as default</b><small class="fine" id="mrGDefTxt"></small></span><input type="checkbox" class="switch" id="mrGDef"' + (isDef ? ' checked' : '') + '></label>' +
+      '<div id="mrGDefMore"' + (isDef ? '' : ' hidden') + '>' + mrDateRow(r.when) + mrCcRow(mrCcState(r)) +
+      '<label class="field"><span>Only trips under (' + distUnit() + ', optional)</span><input type="number" id="mrGMax" min="0" step="any" value="' + distField(mx) + '"></label></div></div>',
     buttons: [[isNew ? 'Add gear' : 'Save', 'primary', function () {
       var name = $('mrGName').value.trim(), m = distSave(parseFloat($('mrGMax').value), mx);
       if (!name) { toast('Give the gear a name'); return; }
-      if (!mrDatesInto(r)) return;
+      var def = $('mrGDef').checked;
+      if (def) { if (!mrDatesInto(r)) return; delete r.assign; }
+      else { r.assign = false; delete r.when; }
       r.name = name; r.mode = $('mrGMode').value; r.kind = $('mrGKind').value;
       if (isNew) { r = Object.assign({ id: mrNewId(name) }, r); mrEnsure(); (MR.doc.gear || (MR.doc.gear = [])).push(r); MR_TAB = 'gear'; }
       var match = Object.assign({}, r.match);
-      if (m > 0) match.max_km = m; else delete match.max_km;
+      if (m > 0 && def) match.max_km = m; else delete match.max_km;
       if (Object.keys(match).length) r.match = match; else delete r.match;
-      mrCcInto(r, mrCcRead());
-      mrChange((isNew ? 'New gear: ' : 'Gear period changed: ') + name + ' (' + mrWhenText(r.when) + ')');
+      mrCcInto(r, def ? mrCcRead() : { how: 'all', list: [] });
+      mrChange((isNew ? 'New gear: ' : 'Gear changed: ') + name + (def ? ' (default, ' + mrWhenText(r.when) + ')' : ''));
     }], ['Cancel', 'quiet', null]],
     after: function () {
       mrCcWire();
-      // Another type: its kinds, example name and the line above follow.
+      $('mrGDefTxt').innerHTML = defTxt(r.mode);
+      $('mrGDef').addEventListener('change', function () { $('mrGDefMore').hidden = !this.checked; });
+      // Another type: its kinds, example name and the lines above follow.
       $('mrGMode').addEventListener('change', function () {
         var m = this.value;
         $('mrGKind').innerHTML = kindOpts(m, null);
         $('mrGName').placeholder = 'e.g. ' + (MR_GEAR_EG[m] || 'My gear');
         $('mrGLead').innerHTML = lead(m);
+        $('mrGDefTxt').innerHTML = defTxt(m);
       });
     }
   });

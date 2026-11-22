@@ -428,6 +428,10 @@
         "model": {
           "type": "string",
           "description": "Make and model, for the user's own reference"
+        },
+        "assign": {
+          "type": "boolean",
+          "description": "false: gear in the user's list only, set on trips by hand (corrections); it fills no trips by itself. Default true: a gear period"
         }
       }
     },
