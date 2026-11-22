@@ -189,7 +189,7 @@ A move with `at` wins over `keep` on the stays in its dates; of two moves, the l
 
 | Field | Meaning |
 |---|---|
-| `kind` | Bikes: `bike`, `strida`, `halfbike`, `cargo`, `ebike`. Runs and walks: `shoe`. Cars: `car`. Motorbikes: `motorbike`, `scooter`. Boats (not ferries): `boat`, `sailboat`, `kayak`, `sup` (paddleboard). Snow sports: `skis`, `snowboard`. Any type: `other`. Picks the icon and the label in *Your gear*, as the app already does for Strava gear. |
+| `kind` | Bikes: `bike`, `strida`, `halfbike`, `cargo`, `ebike`. Runs and walks: `shoe`. Cars: `car`, or `petrol`, `diesel`, `hybrid`, `ev` (electric) to count that car's CO₂ instead of *Your car* in *Preferences*. Motorbikes: `motorbike`, `scooter`. Boats (not ferries): `boat`, `sailboat`, `kayak`, `sup` (paddleboard). Snow sports: `skis`, `snowboard`. Any type: `other`. Picks the icon and the label in *Your gear*, as the app already does for Strava gear. |
 | `mode` | The transport type it applies to (the app's own type names). The app offers gear for `CYCLING`, `RUNNING`, `WALKING`, `CAR`, `MOTORCYCLE`, `BOAT` and `SKIING`. |
 | `match` | Optional narrowing: `min_km`, `max_km`, `sports` (e.g. `["Mountain bike"]`), `from`/`to` (place ids: only rides starting or ending there), `weekdays_only`, `countries` (ISO codes such as `["ES"]`: only trips that start or end in one of them, so countries you visit later stay out). |
 
@@ -272,7 +272,7 @@ One-off fixes for a trip, a day or a span.
 
 | Action | Meaning |
 |---|---|
-| `mode`, `gear`, `name` | Set the type, gear or title. Corrections are explicit, so they replace recorded values too. `"mode": "UNKNOWN"` marks a trip *Unclassified*: for one that looks wrong (a GPS glitch?) when you aren't sure what it was. `gear` is a gear period's id (`"@strida-evo"`) or a gear's name as your activity files record it (`"Gazelle"`). |
+| `mode`, `gear`, `name` | Set the type, gear or title. Corrections are explicit, so they replace recorded values too. `"mode": "UNKNOWN"` marks a trip *Unclassified*: for one that looks wrong (a GPS glitch?) when you aren't sure what it was. `gear` is a gear period's id (`"@strida-evo"`) or a gear's name as your activity files record it (`"Gazelle"`). A new gear named on one trip can carry its kind in `gear_kind` (same values as a gear period's `kind`, such as `"ev"`). |
 | `checked` | `true`: you checked the type your files give this trip and it is right. Nothing changes, but the trip leaves the *Check* list and its type counts three times when BT•DT learns from your trips. |
 | `ignore_points` | The GPS points of this trip to leave out, as a list of their times (ISO 8601, to the second, e.g. `"2024-03-06T07:41:48Z"`). For bad points such as a spike off the route: the trip's line, distance, speed chart, playback and the heatmap go without them. Only on a correction for one trip (`start`); a trip always keeps at least two points. *Ignore GPS points* in the trip details writes it. |
 | `hide` | Leave the matched trips out everywhere (map, totals, export). Undo shows them again. `"hide": false` on a later or narrower correction shows a trip a wider one hid. |

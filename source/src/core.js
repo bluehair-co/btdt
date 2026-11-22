@@ -280,7 +280,13 @@ function gPerKm(m, kmv) {
   if (m === 'CAR' || m === 'MOTORCYCLE') return (A.g[m] || 0) / Math.max(1, A.occ);
   return A.g[m] || 0;
 }
-function tripKg(i) { var m = modeOf(i); return D.km[i] * gPerKm(m, D.km[i]) / 1000; }
+// A car trip with car gear of a known type (Petrol, Diesel, Hybrid or Electric car) uses that type's
+// factor, shared like any car; other car trips use Your car in Preferences.
+function tripKg(i) {
+  var m = modeOf(i), g = m === 'CAR' && D.gear[i] && GEAR[D.gear[i]], k = g && g.kind;
+  if (k && CAR[k] != null) return D.km[i] * CAR[k] / Math.max(1, A.occ) / 1000;
+  return D.km[i] * gPerKm(m, D.km[i]) / 1000;
+}
 
 // ---------- formatting ----------
 var MI = 0.621371;
