@@ -363,6 +363,10 @@
             "ebike",
             "shoe",
             "car",
+            "petrol",
+            "diesel",
+            "hybrid",
+            "ev",
             "motorbike",
             "scooter",
             "boat",
@@ -614,6 +618,10 @@
                   "description": "A gear's name as your activity files record it"
                 }
               ]
+            },
+            "gear_kind": {
+              "type": "string",
+              "description": "The kind of a gear named here that no gear period names (same values as a gear period's kind)"
             },
             "name": {
               "type": "string"

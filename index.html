@@ -4931,7 +4931,13 @@ function gPerKm(m, kmv) {
   if (m === 'CAR' || m === 'MOTORCYCLE') return (A.g[m] || 0) / Math.max(1, A.occ);
   return A.g[m] || 0;
 }
-function tripKg(i) { var m = modeOf(i); return D.km[i] * gPerKm(m, D.km[i]) / 1000; }
+// A car trip with car gear of a known type (Petrol, Diesel, Hybrid or Electric car) uses that type's
+// factor, shared like any car; other car trips use Your car in Preferences.
+function tripKg(i) {
+  var m = modeOf(i), g = m === 'CAR' && D.gear[i] && GEAR[D.gear[i]], k = g && g.kind;
+  if (k && CAR[k] != null) return D.km[i] * CAR[k] / Math.max(1, A.occ) / 1000;
+  return D.km[i] * gPerKm(m, D.km[i]) / 1000;
+}
 
 // ---------- formatting ----------
 var MI = 0.621371;
@@ -5775,7 +5781,7 @@ function gearIcon(g) {
   var x = GEAR[g];
   return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'strida' ? 'strida' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
 }
-var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes', car: 'Car', motorbike: 'Motorbike',
+var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes', car: 'Car', petrol: 'Petrol car', diesel: 'Diesel car', hybrid: 'Hybrid car', ev: 'Electric car', motorbike: 'Motorbike',
   scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard', skis: 'Skis', snowboard: 'Snowboard' };
 function gearKind(g) { var x = GEAR[g]; return GEAR_KIND[x.kind] || LABEL[x.mode] || 'Gear'; }
 
@@ -11554,10 +11560,10 @@ var MR = null;
 var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes',
-  car: 'Car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
+  car: 'Car', petrol: 'Petrol car', diesel: 'Diesel car', hybrid: 'Hybrid car', ev: 'Electric car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
   skis: 'Skis', snowboard: 'Snowboard', other: 'Other' };
 // The kinds of gear each type can have (Other last), and an example name for new gear.
-var MR_GEAR_KINDS = { CYCLING: ['bike', 'strida', 'halfbike', 'cargo', 'ebike'], RUNNING: ['shoe'], WALKING: ['shoe'], CAR: ['car'],
+var MR_GEAR_KINDS = { CYCLING: ['bike', 'strida', 'halfbike', 'cargo', 'ebike'], RUNNING: ['shoe'], WALKING: ['shoe'], CAR: ['car', 'petrol', 'diesel', 'hybrid', 'ev'],
   MOTORCYCLE: ['motorbike', 'scooter'], BOAT: ['boat', 'sailboat', 'kayak', 'sup'], SKIING: ['skis', 'snowboard'] };
 var MR_GEAR_EG = { CYCLING: 'Strida EVO', RUNNING: 'Trail shoes', WALKING: 'Hiking boots', CAR: 'Blue Volvo', MOTORCYCLE: 'Vespa', BOAT: 'Sea kayak', SKIING: 'Powder skis' };
 function mrKindsFor(m) { return (MR_GEAR_KINDS[m || 'CYCLING'] || []).concat(['other']); }
@@ -11791,7 +11797,7 @@ function mrApplyGear(byName, addGear) {
     var hit = 0;
     x.trips.forEach(function (i) {
       if (!x.one && D.gear[i] && !D.mrGear[i]) return;
-      var g = r ? gearOf(r) : addGear(ref, null, MODES[D.mode[i]]);
+      var g = r ? gearOf(r) : addGear(ref, c.then.gear_kind || null, MODES[D.mode[i]]);
       D.gear[i] = g; D.mrGear[i] = { rule: c.id, gear: g, cor: true };
       hit++;
     });
@@ -13466,8 +13472,10 @@ function mrSaveGear(i) {
   var recorded = sel !== 'new' && !existing && !GEAR[+sel].rule;
   if (one) {
     var c = mrTripCorrection(i), gv = existing ? '@' + existing.id : name;
-    if (c) c.then.gear = gv;
-    else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
+    if (!c) (MR.doc.corrections || (MR.doc.corrections = [])).push(c = { id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} });
+    c.then.gear = gv;
+    // New gear on one trip keeps its kind (an electric car counts its own CO₂); a period has its own.
+    if (sel === 'new' && !existing && MR_KINDS[kind] && kind !== 'other') c.then.gear_kind = kind; else delete c.then.gear_kind;
     mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]), i);
   } else {
     var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = distSave(parseFloat($('mrMax').value));
@@ -17093,7 +17101,7 @@ function buildFactors() {
   note.className = 'fine'; note.style.gridColumn = '1 / -1';
   $('factorsSum').textContent = 'Grams of CO₂e per ' + (PREFS.unit === 'mi' ? 'mile' : 'km');
   var fp = PREFS.unit === 'mi' ? 1 / MI : 1, fg = function (x) { return fmt(Math.round(x * fp)); };
-  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
+  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Car trips with car gear set as a petrol, diesel, hybrid or electric car use that car’s factor (' + fg(CAR.petrol) + ', ' + fg(CAR.diesel) + ', ' + fg(CAR.hybrid) + ' and ' + fg(CAR.ev) + ' g); other car trips use Your car. Walking and cycling count as zero. Factors are UK government averages for 2025.';
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }

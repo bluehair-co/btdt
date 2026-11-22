@@ -12,10 +12,10 @@ var MR = null;
 var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes',
-  car: 'Car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
+  car: 'Car', petrol: 'Petrol car', diesel: 'Diesel car', hybrid: 'Hybrid car', ev: 'Electric car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
   skis: 'Skis', snowboard: 'Snowboard', other: 'Other' };
 // The kinds of gear each type can have (Other last), and an example name for new gear.
-var MR_GEAR_KINDS = { CYCLING: ['bike', 'strida', 'halfbike', 'cargo', 'ebike'], RUNNING: ['shoe'], WALKING: ['shoe'], CAR: ['car'],
+var MR_GEAR_KINDS = { CYCLING: ['bike', 'strida', 'halfbike', 'cargo', 'ebike'], RUNNING: ['shoe'], WALKING: ['shoe'], CAR: ['car', 'petrol', 'diesel', 'hybrid', 'ev'],
   MOTORCYCLE: ['motorbike', 'scooter'], BOAT: ['boat', 'sailboat', 'kayak', 'sup'], SKIING: ['skis', 'snowboard'] };
 var MR_GEAR_EG = { CYCLING: 'Strida EVO', RUNNING: 'Trail shoes', WALKING: 'Hiking boots', CAR: 'Blue Volvo', MOTORCYCLE: 'Vespa', BOAT: 'Sea kayak', SKIING: 'Powder skis' };
 function mrKindsFor(m) { return (MR_GEAR_KINDS[m || 'CYCLING'] || []).concat(['other']); }
@@ -249,7 +249,7 @@ function mrApplyGear(byName, addGear) {
     var hit = 0;
     x.trips.forEach(function (i) {
       if (!x.one && D.gear[i] && !D.mrGear[i]) return;
-      var g = r ? gearOf(r) : addGear(ref, null, MODES[D.mode[i]]);
+      var g = r ? gearOf(r) : addGear(ref, c.then.gear_kind || null, MODES[D.mode[i]]);
       D.gear[i] = g; D.mrGear[i] = { rule: c.id, gear: g, cor: true };
       hit++;
     });
@@ -1924,8 +1924,10 @@ function mrSaveGear(i) {
   var recorded = sel !== 'new' && !existing && !GEAR[+sel].rule;
   if (one) {
     var c = mrTripCorrection(i), gv = existing ? '@' + existing.id : name;
-    if (c) c.then.gear = gv;
-    else (MR.doc.corrections || (MR.doc.corrections = [])).push({ id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: { gear: gv } });
+    if (!c) (MR.doc.corrections || (MR.doc.corrections = [])).push(c = { id: mrNewId(name + '-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} });
+    c.then.gear = gv;
+    // New gear on one trip keeps its kind (an electric car counts its own CO₂); a period has its own.
+    if (sel === 'new' && !existing && MR_KINDS[kind] && kind !== 'other') c.then.gear_kind = kind; else delete c.then.gear_kind;
     mrChange('Gear ' + name + ' set on ' + niceDate(D.day[i]) + ', ' + clock(D.start[i], D.off[i]), i);
   } else {
     var w = {}, f = $('mrFrom').value, t = $('mrTo').value, mx = distSave(parseFloat($('mrMax').value));

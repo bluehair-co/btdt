@@ -182,7 +182,7 @@ function buildFactors() {
   note.className = 'fine'; note.style.gridColumn = '1 / -1';
   $('factorsSum').textContent = 'Grams of CO₂e per ' + (PREFS.unit === 'mi' ? 'mile' : 'km');
   var fp = PREFS.unit === 'mi' ? 1 / MI : 1, fg = function (x) { return fmt(Math.round(x * fp)); };
-  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Walking and cycling count as zero. Factors are UK government averages for 2025.';
+  note.textContent = 'Flights, per passenger by distance: under ' + dist(500) + ' ' + fg(A.fly.dom[A.rf ? 0 : 1]) + ' g, ' + dist(500).replace(/ \S+$/, '') + '–' + dist(3700) + ' ' + fg(A.fly.short[A.rf ? 0 : 1]) + ' g, longer ' + fg(A.fly.long[A.rf ? 0 : 1]) + ' g. Car trips with car gear set as a petrol, diesel, hybrid or electric car use that car’s factor (' + fg(CAR.petrol) + ', ' + fg(CAR.diesel) + ', ' + fg(CAR.hybrid) + ' and ' + fg(CAR.ev) + ' g); other car trips use Your car. Walking and cycling count as zero. Factors are UK government averages for 2025.';
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }

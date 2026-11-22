@@ -346,7 +346,7 @@ function gearIcon(g) {
   var x = GEAR[g];
   return x.kind === 'halfbike' ? 'halfbike' : x.kind === 'strida' ? 'strida' : x.kind === 'cargo' ? 'cargobike' : x.kind === 'bike' ? 'CYCLING' : x.kind === 'shoe' ? (x.mode === 'WALKING' ? 'WALKING' : 'RUNNING') : x.mode || 'OTHER';
 }
-var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes', car: 'Car', motorbike: 'Motorbike',
+var GEAR_KIND = { halfbike: 'Halfbike', strida: 'Strida', cargo: 'Cargo bike', bike: 'Bike', shoe: 'Shoes', car: 'Car', petrol: 'Petrol car', diesel: 'Diesel car', hybrid: 'Hybrid car', ev: 'Electric car', motorbike: 'Motorbike',
   scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard', skis: 'Skis', snowboard: 'Snowboard' };
 function gearKind(g) { var x = GEAR[g]; return GEAR_KIND[x.kind] || LABEL[x.mode] || 'Gear'; }
 
