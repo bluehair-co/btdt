@@ -1120,6 +1120,7 @@ div.hit-row:hover { background: none; }
 .sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); color: var(--chip-on-fg); }
 
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
+.mr-add { min-height: 36px; padding: 6px 14px; flex: none; }
 .mr-grp { margin: 14px 0 4px; }
 
 /* Download progress (station and road packs) */
