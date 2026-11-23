@@ -1127,6 +1127,7 @@ div.hit-row:hover { background: none; }
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
 .mr-add { min-height: 36px; padding: 6px 14px; flex: none; }
 .mr-drive { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.mr-card-drive .mr-drive { margin-top: 0; padding-top: 0; border-top: 0; }
 .mr-drive-head { display: flex; align-items: center; gap: 6px; }
 .mr-drive-what { margin: 0; }
 .mr-drive-st { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; }
