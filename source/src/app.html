@@ -665,14 +665,14 @@
     </div>
     <div class="sec" id="roadSec">
       <div class="info-head"><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi and motorcycle trips along the roads they drove, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi, motorcycle and bus trips along the roads they took, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
       <ul class="file-list pack-list" id="roadList" hidden></ul>
       <p class="fine" id="roadPackNote"></p>
       <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="earth"></span>Add a country</button><select id="roadSel" aria-label="Country, state or province" hidden></select></div>
       <div class="dl-bar" id="roadBar" hidden><i></i></div>
       <p class="fine" id="roadMsg" aria-live="polite"></p>
       <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
-      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Routines, map snaps and your fixes come first.</p>
+      <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Buses too, when the trip is longer than <span data-dist-km="10">10 km</span> and runs mostly on main roads, like a coach or an airport bus; city buses keep their own path. Routines, map snaps and your fixes come first.</p>
       <p class="fine" id="roadNote" aria-live="polite"></p>
     </div>
   </div>
