@@ -51,7 +51,8 @@ The JSON Schema is published with the app at [`schema/myrules-0.2.json`](../sche
   "moves": [ … ],
   "gear": [ … ],
   "routines": [ … ],
-  "corrections": [ … ]
+  "corrections": [ … ],
+  "gps_spots": [ … ]
 }
 ```
 
@@ -282,6 +283,20 @@ One-off fixes for a trip, a day or a span.
 | `replace` | Replace everything in the span or day with one trip, written like a simulated trip (airports by IATA code or place id). This is a one-line version of the existing `"simulated": true` files. |
 
 A correction on a day or span that sets `gear` only fills trips without recorded gear; only one on a single trip (`start`) replaces it. A trip's `start` matches the trip that starts within 3 minutes of it; add the type the files gave it (`"mode"` in the TripRef) to pick between two. Setting a type also clears *guessed from speed*, and a Strava sport of another type.
+
+### 5.4.1 Bad GPS spots
+
+`gps_spots` lists spots where the phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower that *Leave out cell-tower fixes* doesn't catch (its coordinates move a few metres over the years). GPS points within 15 m of a spot are left out of every trip, including trips loaded later, except a trip's first and last points; a trip keeps at least two points, and flights and recorded activities are left alone. It applies while MyRules are on.
+
+```json
+{ "id": "gps-spot-2019-10-14", "name": "GPS spot from the trip on 14/10/2019", "at": [[52.369705, 4.977301]] }
+```
+
+| Field | Meaning |
+|---|---|
+| `at` | The spots, `[lat, lng]` each. |
+
+**In BT•DT.** *Ignore GPS points* (a trip's pencil menu): after you mark points and *Save*, it asks *Just this trip* or *Every trip, here*, with how many points on how many trips the spot would take. *Every trip, here* saves the new points as one `gps_spots` rule; they show in *MyRules › Corrections* under *Bad GPS spots*, with a switch, rename and *Delete*. A trip that loses points to one says so in its details.
 
 ### 5.5 How corrections show in the app
 

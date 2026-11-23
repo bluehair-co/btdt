@@ -1915,7 +1915,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
     <div class="sec" id="netSec">
       <h3>GPS cleanup</h3>
       <label class="toggle-row"><span class="lbl">Leave out cell-tower fixes<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="netFixInfo" aria-label="About leave out cell-tower fixes" title="About leave out cell-tower fixes"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="netFix" checked></label>
-      <p class="fine info-box" id="netFixInfo" hidden>Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. This leaves them out of trip lines, distances, speed charts and the heatmap.</p>
+      <p class="fine info-box" id="netFixInfo" hidden>Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. A single point far off a trip's route and straight back (<span data-dist-km="1">1 km</span> or more) goes too: most are such fixes as well. This leaves them out of trip lines, distances, speed charts and the heatmap. To leave out a bad spot this doesn't catch, use Ignore GPS points on a trip and choose Every trip, here.</p>
       <p class="fine" id="netNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
@@ -2664,11 +2664,16 @@ function cleanJumps(R) {
 // trip starts and ends: the station or the airport you went to has its own Wi-Fi, which you pass
 // often, and leaving it out would cut the trip short), and the ones before the first real point (or
 // after the last) within NET_END_KM of it: most often the Wi-Fi at home or work, which is where you were.
+// Out-and-back jumps go the same way: a point in the middle of a trip that sits NET_JUMP_KM or more from
+// both of its neighbours, where going there and back is NET_JUMP_X times the way between them or more.
+// The gaps between Timeline's points are often minutes long, so the speed looks fine and cleanJumps lets
+// such a point be. On the author's data (Records.json 2017–2019), 85% of these were Wi-Fi or cell fixes,
+// most over 100 m off, and 6% good GPS (most likely a quick errand there and back between two points).
 // A trip whose points are all such fixes, or that would keep fewer than two, is left as it is, and so are
 // flights and recorded activities (their own GPS).
 // netFixes(R, order): { trip index: [indices (from the trip's first point) of the points to keep] },
 // for the trips that lose any. order: the trips in time order (any order works, a little slower).
-var NET_DAYS = 3, NET_END_KM = 0.15;
+var NET_DAYS = 3, NET_END_KM = 0.15, NET_JUMP_KM = 1, NET_JUMP_X = 3;
 function netFixes(R, order) {
   var n = R.start.length, P = R.pathPts, O = R.pathOff, fly = MODE_IDX.FLYING, i, k, q;
   var bits = new Uint32Array(P.buffer, P.byteOffset, P.length);
@@ -2697,8 +2702,14 @@ function netFixes(R, order) {
     if (skip(i)) continue;
     var o0 = O[i], len = O[i + 1] - o0, net = [], any = false, first = -1, last = -1;
     for (q = 0; q < len; q++) {
-      net.push(at[o0 + q].n >= NET_DAYS);
-      if (net[q]) any = true; else { if (first < 0) first = q; last = q; }
+      var bad = at[o0 + q].n >= NET_DAYS;
+      if (!bad && q > 0 && q < len - 1) {
+        var a = o0 + q - 1, b = o0 + q, c = o0 + q + 1;
+        var ab = kmLL(P[2 * a], P[2 * a + 1], P[2 * b], P[2 * b + 1]), bc = kmLL(P[2 * b], P[2 * b + 1], P[2 * c], P[2 * c + 1]);
+        bad = Math.min(ab, bc) >= NET_JUMP_KM && ab + bc >= NET_JUMP_X * Math.max(0.05, kmLL(P[2 * a], P[2 * a + 1], P[2 * c], P[2 * c + 1]));
+      }
+      net.push(bad);
+      if (bad) any = true; else { if (first < 0) first = q; last = q; }
     }
     if (!any || first < 0) continue;
     var keep = [];
@@ -7882,7 +7893,9 @@ function tripRows(i) {
   else if (D.orig[i] > 0 && (!(e & JUMPS) || e & 8)) notes.push('Timeline recorded ' + dist(D.orig[i]) + ' for this trip, which is impossible at its speed, so BT•DT uses the ' + ((e & 3) === 1 ? 'GPS trail' : 'straight line') + ' instead.');
   if (e & JUMPS) notes.push('Some GPS points here were bad (a fix that jumped impossibly far for a ' + (LABEL[m] || m).toLowerCase() + ' trip, an end at a stale position away from the stay next to it, or time parked counted as part of the trip), so the line, times and distance leave them out' + (D.orig[i] > k && !(e & (RECORDS_GPS | 8)) ? ' (Timeline recorded ' + dist(D.orig[i]) + ', counting them).' : '.'));
   var nd = D.netDrop && D.netDrop[i];
-  if (nd) notes.push(fmt(nd.n) + ' of its GPS points ' + (nd.n === 1 ? 'was a cell-tower or Wi-Fi fix' : 'were cell-tower or Wi-Fi fixes') + ': the phone had no GPS and put itself where a tower or router is, a spot your other trips land on too. The line, distance and heatmap leave ' + (nd.n === 1 ? 'it' : 'them') + ' out' + (Math.abs(nd.km - D.km[i]) >= 0.01 ? ' (' + dist(nd.km) + ' with ' + (nd.n === 1 ? 'it' : 'them') + ')' : '') + '. Turn it off in Menu › Trip cleanup.');
+  if (nd) notes.push(fmt(nd.n) + ' of its GPS points ' + (nd.n === 1 ? 'looked like a cell-tower or Wi-Fi fix' : 'looked like cell-tower or Wi-Fi fixes') + ': the phone had no GPS and put itself where a tower or router is (a spot your other trips land on too, or one far off the route and straight back). The line, distance and heatmap leave ' + (nd.n === 1 ? 'it' : 'them') + ' out' + (Math.abs(nd.km - D.km[i]) >= 0.01 ? ' (' + dist(nd.km) + ' with ' + (nd.n === 1 ? 'it' : 'them') + ')' : '') + '. Turn it off in Menu › Trip cleanup.');
+  var sd = D.spotDrop && D.spotDrop[i];
+  if (sd) notes.push(fmt(sd.n) + ' of its GPS points ' + (sd.n === 1 ? 'is' : 'are') + ' at a bad GPS spot you marked, “' + esc(sd.name) + '” in MyRules, so the line, distance and heatmap leave ' + (sd.n === 1 ? 'it' : 'them') + ' out.');
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
@@ -11574,7 +11587,7 @@ $('tlSearchClear').addEventListener('click', function () { clearTimeout(tlQT); t
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
 var MR = null;
-var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections'];
+var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections', 'gps_spots'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes',
   car: 'Car', petrol: 'Petrol car', diesel: 'Diesel car', hybrid: 'Hybrid car', ev: 'Electric car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
@@ -11994,10 +12007,48 @@ function mrNetFixes() {
   if (!b.net) b.net = netFixes(b === D ? D : Object.assign({}, D, b), D.order);
   return b.net;
 }
+// Bad GPS spots you marked (MyRules gps_spots, from Ignore GPS points › Every trip, here): a trip's
+// points within GPS_SPOT_KM of one are left out, but never its first or last point (where it starts and
+// ends), and a trip keeps at least two. Flights and recorded activities (their own GPS) are left alone.
+// rules: the spot rules to use (default: the active ones). { trip: { keep, rule, n } }.
+var GPS_SPOT_KM = 0.015;
+function mrSpotDrops(rules) {
+  rules = rules || mrActive('gps_spots');
+  var out = {}, b = D.base || D, cell = 0.001, grid = new Map();
+  rules.forEach(function (r) {
+    (Array.isArray(r.at) ? r.at : []).forEach(function (p) {
+      if (!Array.isArray(p) || !isFinite(p[0]) || !isFinite(p[1])) return;
+      var k = Math.floor(p[0] / cell) + ',' + Math.floor(p[1] / cell);
+      (grid.get(k) || grid.set(k, []).get(k)).push([p[0], p[1], r.id]);
+    });
+  });
+  if (!grid.size) return out;
+  function hit(la, lo) {
+    var ci = Math.floor(la / cell), cj = Math.floor(lo / cell);
+    for (var di = -1; di <= 1; di++) for (var dj = -1; dj <= 1; dj++) {
+      var L = grid.get((ci + di) + ',' + (cj + dj));
+      if (L) for (var k = 0; k < L.length; k++) if (kmLL(la, lo, L[k][0], L[k][1]) <= GPS_SPOT_KM) return L[k][2];
+    }
+    return null;
+  }
+  for (var i = 0, n = D.start.length; i < n; i++) {
+    var o0 = b.pathOff[i], len = b.pathOff[i + 1] - o0;
+    if (len < 3 || isDup(i) || MODES[b.mode[i]] === 'FLYING' || (b.est || D.est)[i] & STRAVA) continue;
+    var keep = [0], rule = null;
+    for (var q = 1; q < len - 1; q++) {
+      var id = hit(b.pathPts[2 * (o0 + q)], b.pathPts[2 * (o0 + q) + 1]);
+      if (id) { if (!rule) rule = id; } else keep.push(q);
+    }
+    keep.push(len - 1);
+    if (rule && keep.length < len) out[i] = { keep: keep, rule: rule, n: len - keep.length };
+  }
+  return out;
+}
 // netOnly: with MyRules off, only the network fixes.
 function mrApplyDrops(netOnly) {
-  var b = D.base, by = {}, net = netFixOn() ? mrNetFixes() : {};
-  D.netDrop = [];
+  var b = D.base, by = {}, net = netFixOn() ? mrNetFixes() : {}, spots = netOnly ? {} : mrSpotDrops();
+  D.netDrop = []; D.spotDrop = [];
+  mrActive('gps_spots').forEach(function (r) { MR_COUNT[r.id] = 0; });
   if (!netOnly) mrCorrections().forEach(function (x) {
     var ig = x.c.then.ignore_points;
     if (!x.one || x.trips.length !== 1 || !Array.isArray(ig) || !ig.length) return;
@@ -12008,6 +12059,16 @@ function mrApplyDrops(netOnly) {
     by[i] = { rule: x.c.id, keep: keep, pts: pts };
     MR_COUNT[x.c.id] = 1;
   });
+  // Your bad GPS spots: on their own, or on top of the points you ignored (still keeping two).
+  Object.keys(spots).forEach(function (k) {
+    var i = +k, sp = spots[k], x = by[i];
+    MR_COUNT[sp.rule] = (MR_COUNT[sp.rule] || 0) + 1;
+    if (!x) { x = by[i] = { keep: sp.keep, pts: mrBasePoints(i) }; x.spot = sp; x.spotN = x.pts.length - sp.keep.length; return; }
+    var on = {};
+    sp.keep.forEach(function (q) { on[q] = 1; });
+    var both = x.keep.filter(function (q) { return on[q]; });
+    if (both.length >= 2 && both.length < x.keep.length) { x.spot = sp; x.spotN = x.keep.length - both.length; x.userKeep = x.userKeep || x.keep.length; x.keep = both; }
+  });
   // The network fixes go too: on their own, or on top of the points you ignored (still keeping two).
   Object.keys(net).forEach(function (k) {
     var i = +k, nk = net[k], x = by[i];
@@ -12015,7 +12076,7 @@ function mrApplyDrops(netOnly) {
     var on = {};
     nk.forEach(function (q) { on[q] = 1; });
     var both = x.keep.filter(function (q) { return on[q]; });
-    if (both.length >= 2 && both.length < x.keep.length) { x.net = x.keep.length - both.length; x.userKeep = x.keep.length; x.keep = both; }
+    if (both.length >= 2 && both.length < x.keep.length) { x.net = x.keep.length - both.length; x.userKeep = x.userKeep || x.keep.length; x.keep = both; }
   });
   var list = Object.keys(by).map(Number);
   if (!list.length) return;
@@ -12045,6 +12106,7 @@ function mrApplyDrops(netOnly) {
     var before = pathKm(x.pts.map(function (p) { return p.ll; })), after = pathKm(kept.map(function (p) { return p.ll; }));
     if (x.rule) D.mrDrop[i] = { rule: x.rule, n: (x.userKeep ? x.pts.length - x.userKeep : x.pts.length - kept.length), of: x.pts.length, km: b.km[i], gaps: gaps };
     if (x.net) D.netDrop[i] = { n: x.net, of: x.pts.length, km: b.km[i] };
+    if (x.spot) { var sr = mrById(x.spot.rule); D.spotDrop[i] = { n: x.spotN, rule: x.spot.rule, name: sr && sr.name || 'a bad GPS spot' }; }
     // Never longer than before, nor shorter than the trail that's left.
     if (before > 0) D.km[i] = Math.min(b.km[i], Math.max(after, b.km[i] - (before - after)));
   }
@@ -12833,7 +12895,7 @@ function mrRenderRules() {
   if (!MR.on) h += '<p class="fine mr-warn">' + infoMore('MyRules are switched off.', 'None of these rules change your trips. Routines and corrections show how many trips they would change.', 'About switched-off rules') + ' <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (D && MR.on) h += mrCleanBar();
   if (MR_AMB) h += '<p class="fine mr-warn">' + infoMore(tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear.', 'Narrow one of the periods (a shorter period, or a distance limit) to pick one.') + '</p>';
-  var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps');
+  var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps'), spots = mrList('gps_spots');
   // Gear always has its section, with New gear… (any type, period and countries) at its head.
   h += '<div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div>' + (gear.length ? '' : '<p class="fine">No gear yet.</p>') + gear.map(function (r) {
     var m = r.match || {}, bits = r.default ? ['Default ' + esc((LABEL[r.mode] || r.mode).toLowerCase()) + ', a guess for trips without gear', esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode)]
@@ -12891,9 +12953,14 @@ function mrRenderRules() {
     return mrRuleRow('routines', r, r.name || r.id, bits, t.mode || 'OTHER', t.mode ? modeColor(t.mode) : '#9aa49d', D ? W.count[r.id] || 0 : null);
   }).join('') + '</div>';
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
-  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
+  // Bad GPS spots (Ignore GPS points › Every trip, here), with the corrections.
+  if (spots.length) h += '<div class="sec" data-mr-tab="corrections"><h3>Bad GPS spots</h3>' + spots.map(function (r) {
+    var n = Array.isArray(r.at) ? r.at.length : 0;
+    return mrRuleRow('gps_spots', r, r.name || 'Bad GPS spot', [fmt(n) + ' spot' + (n === 1 ? '' : 's'), distShort(GPS_SPOT_KM * 1000) + ' around each', 'its points are left out of every trip, except where a trip starts or ends'], 'pinOff', 'var(--muted)', MR.on ? MR_COUNT[r.id] || 0 : null);
+  }).join('') + '</div>';
+  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length && !spots.length) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length]].filter(function (t) { return t[2] || t[3]; });
+  var tabs = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length + spots.length]].filter(function (t) { return t[2] || t[3]; });
   if (tabs.length > 1) {
     if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
     h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
@@ -13554,6 +13621,7 @@ function mrEditRule(ref) {
   if (!r) return;
   if (sec === 'gear') { if (r.default && r.mode === 'CAR') mrDefaultCarDialog(); else mrGearRuleDialog(r); return; }
   if (sec === 'routines') { mrRoutineDialog(r); return; }
+  if (sec === 'gps_spots') { mrSpotDialog(r); return; }
   if (sec === 'snaps') { closeSheets(true); snapStart(r); return; }
   if (!D) { toast('Load your Timeline file to edit this'); return; }
   if (sec === 'moves') { mvEditRule(r); return; }
@@ -14612,6 +14680,23 @@ function mrGearPeriodDialog(i) {
       ['mrWFrom', 'mrWTo'].forEach(function (id) { $(id).addEventListener('input', count); });
       count();
     }
+  });
+}
+
+// A bad GPS spot rule: its name, or Delete (which brings its points back on every trip).
+function mrSpotDialog(r) {
+  var n = Array.isArray(r.at) ? r.at.length : 0, t = MR.on ? MR_COUNT[r.id] || 0 : null;
+  mrAsk({
+    title: 'Bad GPS spot',
+    text: fmt(n) + ' spot' + (n === 1 ? '' : 's') + (t != null ? ', on ' + tripsText(t) : '') + '. GPS points within ' + distShort(GPS_SPOT_KM * 1000) + ' of ' + (n === 1 ? 'it' : 'them') + ' are left out of every trip, except where a trip starts or ends.',
+    extra: '<label class="field"><span>Name</span><input type="text" id="mrSpName" maxlength="80" value="' + esc(r.name || '') + '"></label>',
+    buttons: [['Save', 'primary', function () {
+      r.name = $('mrSpName').value.trim() || r.name;
+      mrChange('Bad GPS spot renamed: ' + r.name);
+    }], ['Delete', 'danger', function () {
+      MR.doc.gps_spots = mrList('gps_spots').filter(function (x) { return x !== r; });
+      mrChange('Bad GPS spot deleted: ' + (r.name || r.id));
+    }], ['Cancel', 'quiet', null]]
   });
 }
 
@@ -17149,24 +17234,49 @@ function ignInPoly(p, shape) {
   }
   return c;
 }
-// Save: the times of the ignored points in the trip's own correction (made, changed or emptied).
+// Save: with points newly ignored, first Just this trip or Every trip, here (a bad GPS spot in MyRules,
+// gps_spots: the points within GPS_SPOT_KM of these go on every trip, see mrSpotDrops), with how many
+// points and trips that would take.
 function ignSave() {
   if (!IGN) return;
-  var i = IGN.i, list = Array.from(IGN.off).sort(function (a, b) { return a - b; }).map(function (k) { return mrIgnoreIso(IGN.pts[k].t); }), n = list.length;
+  var was = {};
+  IGN.was.split(',').forEach(function (k) { if (k !== '') was[k] = 1; });
+  var fresh = Array.from(IGN.off).filter(function (k) { return !was[k]; }).sort(function (a, b) { return a - b; });
+  if (!fresh.length) { ignSaveDo([]); return; }
+  // The spots: the new points, one per few metres.
+  var at = [];
+  fresh.forEach(function (k) { var ll = IGN.pts[k].ll; if (!at.some(function (p) { return kmLL(p[0], p[1], ll[0], ll[1]) < 0.005; })) at.push([+ll[0].toFixed(6), +ll[1].toFixed(6)]); });
+  var pre = mrSpotDrops([{ id: '_preview', at: at }]), tn = 0, pn = 0;
+  Object.keys(pre).forEach(function (k) { tn++; pn += pre[k].n; });
+  mrAsk({
+    title: 'Leave these points out where?',
+    text: fmt(fresh.length) + ' GPS point' + (fresh.length === 1 ? '' : 's') + ' marked on this trip.',
+    info: 'Every trip, here leaves out the GPS points within ' + distShort(GPS_SPOT_KM * 1000) + ' of these on all your trips, and on trips you load later, except where a trip starts or ends. Use it for a spot where your phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower. It is saved in MyRules › Corrections as a bad GPS spot, which you can switch off or delete.',
+    extra: '<p class="fine">Every trip, here: ' + (tn > 1 ? fmt(pn) + ' points on ' + tripsText(tn) + ' now.' : 'only this trip has points there now.') + '</p>',
+    buttons: [['Just this trip', 'primary', function () { ignSaveDo([]); }], ['Every trip, here', '', function () { ignSaveDo(fresh, at); }], ['Back to the points', 'quiet', null]]
+  });
+}
+// fresh: the newly ignored points that go into a bad GPS spot at (not into the trip's correction).
+function ignSaveDo(fresh, at) {
+  if (!IGN) return;
+  var spot = fresh.length > 0, skip = {};
+  fresh.forEach(function (k) { skip[k] = 1; });
+  var i = IGN.i, list = Array.from(IGN.off).filter(function (k) { return !skip[k]; }).sort(function (a, b) { return a - b; }).map(function (k) { return mrIgnoreIso(IGN.pts[k].t); }), n = list.length + fresh.length;
   mrEnsure();
+  if (spot) (MR.doc.gps_spots || (MR.doc.gps_spots = [])).push({ id: mrNewId('gps-spot-' + isoDay(D.day[i])), name: 'GPS spot from the trip on ' + niceDate(D.day[i]), at: at });
   var c = mrTripCorrection(i);
-  if (!c && n) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
+  if (!c && list.length) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   if (c) {
     var t = c.then || (c.then = {});
-    if (n) t.ignore_points = list; else delete t.ignore_points;
+    if (list.length) t.ignore_points = list; else delete t.ignore_points;
     if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
   }
   ignEnd();
   working(n ? 'Leaving out ' + fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + '…' : 'Bringing the GPS points back…', function () {
-    mrChange('Trip on ' + mrWhere(i) + ': ' + (n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored' : 'GPS points back'));
+    mrChange(spot ? 'Bad GPS spot marked on ' + mrWhere(i) : 'Trip on ' + mrWhere(i) + ': ' + (n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored' : 'GPS points back'));
     openTrip(i);
   });
-  toast(n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored. Remove edit in the trip details brings them back.' : 'All its GPS points are back.');
+  toast(spot ? 'Left out on every trip there. Switch it off or delete it in MyRules › Corrections.' : n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored. Remove edit in the trip details brings them back.' : 'All its GPS points are back.');
 }
 function ignEnd() {
   if (!IGN) return;

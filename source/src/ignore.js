@@ -159,24 +159,49 @@ function ignInPoly(p, shape) {
   }
   return c;
 }
-// Save: the times of the ignored points in the trip's own correction (made, changed or emptied).
+// Save: with points newly ignored, first Just this trip or Every trip, here (a bad GPS spot in MyRules,
+// gps_spots: the points within GPS_SPOT_KM of these go on every trip, see mrSpotDrops), with how many
+// points and trips that would take.
 function ignSave() {
   if (!IGN) return;
-  var i = IGN.i, list = Array.from(IGN.off).sort(function (a, b) { return a - b; }).map(function (k) { return mrIgnoreIso(IGN.pts[k].t); }), n = list.length;
+  var was = {};
+  IGN.was.split(',').forEach(function (k) { if (k !== '') was[k] = 1; });
+  var fresh = Array.from(IGN.off).filter(function (k) { return !was[k]; }).sort(function (a, b) { return a - b; });
+  if (!fresh.length) { ignSaveDo([]); return; }
+  // The spots: the new points, one per few metres.
+  var at = [];
+  fresh.forEach(function (k) { var ll = IGN.pts[k].ll; if (!at.some(function (p) { return kmLL(p[0], p[1], ll[0], ll[1]) < 0.005; })) at.push([+ll[0].toFixed(6), +ll[1].toFixed(6)]); });
+  var pre = mrSpotDrops([{ id: '_preview', at: at }]), tn = 0, pn = 0;
+  Object.keys(pre).forEach(function (k) { tn++; pn += pre[k].n; });
+  mrAsk({
+    title: 'Leave these points out where?',
+    text: fmt(fresh.length) + ' GPS point' + (fresh.length === 1 ? '' : 's') + ' marked on this trip.',
+    info: 'Every trip, here leaves out the GPS points within ' + distShort(GPS_SPOT_KM * 1000) + ' of these on all your trips, and on trips you load later, except where a trip starts or ends. Use it for a spot where your phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower. It is saved in MyRules › Corrections as a bad GPS spot, which you can switch off or delete.',
+    extra: '<p class="fine">Every trip, here: ' + (tn > 1 ? fmt(pn) + ' points on ' + tripsText(tn) + ' now.' : 'only this trip has points there now.') + '</p>',
+    buttons: [['Just this trip', 'primary', function () { ignSaveDo([]); }], ['Every trip, here', '', function () { ignSaveDo(fresh, at); }], ['Back to the points', 'quiet', null]]
+  });
+}
+// fresh: the newly ignored points that go into a bad GPS spot at (not into the trip's correction).
+function ignSaveDo(fresh, at) {
+  if (!IGN) return;
+  var spot = fresh.length > 0, skip = {};
+  fresh.forEach(function (k) { skip[k] = 1; });
+  var i = IGN.i, list = Array.from(IGN.off).filter(function (k) { return !skip[k]; }).sort(function (a, b) { return a - b; }).map(function (k) { return mrIgnoreIso(IGN.pts[k].t); }), n = list.length + fresh.length;
   mrEnsure();
+  if (spot) (MR.doc.gps_spots || (MR.doc.gps_spots = [])).push({ id: mrNewId('gps-spot-' + isoDay(D.day[i])), name: 'GPS spot from the trip on ' + niceDate(D.day[i]), at: at });
   var c = mrTripCorrection(i);
-  if (!c && n) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
+  if (!c && list.length) { c = { id: mrNewId('trip-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] }, then: {} }; (MR.doc.corrections || (MR.doc.corrections = [])).push(c); }
   if (c) {
     var t = c.then || (c.then = {});
-    if (n) t.ignore_points = list; else delete t.ignore_points;
+    if (list.length) t.ignore_points = list; else delete t.ignore_points;
     if (!Object.keys(t).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
   }
   ignEnd();
   working(n ? 'Leaving out ' + fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + '…' : 'Bringing the GPS points back…', function () {
-    mrChange('Trip on ' + mrWhere(i) + ': ' + (n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored' : 'GPS points back'));
+    mrChange(spot ? 'Bad GPS spot marked on ' + mrWhere(i) : 'Trip on ' + mrWhere(i) + ': ' + (n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored' : 'GPS points back'));
     openTrip(i);
   });
-  toast(n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored. Remove edit in the trip details brings them back.' : 'All its GPS points are back.');
+  toast(spot ? 'Left out on every trip there. Switch it off or delete it in MyRules › Corrections.' : n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored. Remove edit in the trip details brings them back.' : 'All its GPS points are back.');
 }
 function ignEnd() {
   if (!IGN) return;

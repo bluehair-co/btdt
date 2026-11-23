@@ -684,11 +684,16 @@ function cleanJumps(R) {
 // trip starts and ends: the station or the airport you went to has its own Wi-Fi, which you pass
 // often, and leaving it out would cut the trip short), and the ones before the first real point (or
 // after the last) within NET_END_KM of it: most often the Wi-Fi at home or work, which is where you were.
+// Out-and-back jumps go the same way: a point in the middle of a trip that sits NET_JUMP_KM or more from
+// both of its neighbours, where going there and back is NET_JUMP_X times the way between them or more.
+// The gaps between Timeline's points are often minutes long, so the speed looks fine and cleanJumps lets
+// such a point be. On the author's data (Records.json 2017–2019), 85% of these were Wi-Fi or cell fixes,
+// most over 100 m off, and 6% good GPS (most likely a quick errand there and back between two points).
 // A trip whose points are all such fixes, or that would keep fewer than two, is left as it is, and so are
 // flights and recorded activities (their own GPS).
 // netFixes(R, order): { trip index: [indices (from the trip's first point) of the points to keep] },
 // for the trips that lose any. order: the trips in time order (any order works, a little slower).
-var NET_DAYS = 3, NET_END_KM = 0.15;
+var NET_DAYS = 3, NET_END_KM = 0.15, NET_JUMP_KM = 1, NET_JUMP_X = 3;
 function netFixes(R, order) {
   var n = R.start.length, P = R.pathPts, O = R.pathOff, fly = MODE_IDX.FLYING, i, k, q;
   var bits = new Uint32Array(P.buffer, P.byteOffset, P.length);
@@ -717,8 +722,14 @@ function netFixes(R, order) {
     if (skip(i)) continue;
     var o0 = O[i], len = O[i + 1] - o0, net = [], any = false, first = -1, last = -1;
     for (q = 0; q < len; q++) {
-      net.push(at[o0 + q].n >= NET_DAYS);
-      if (net[q]) any = true; else { if (first < 0) first = q; last = q; }
+      var bad = at[o0 + q].n >= NET_DAYS;
+      if (!bad && q > 0 && q < len - 1) {
+        var a = o0 + q - 1, b = o0 + q, c = o0 + q + 1;
+        var ab = kmLL(P[2 * a], P[2 * a + 1], P[2 * b], P[2 * b + 1]), bc = kmLL(P[2 * b], P[2 * b + 1], P[2 * c], P[2 * c + 1]);
+        bad = Math.min(ab, bc) >= NET_JUMP_KM && ab + bc >= NET_JUMP_X * Math.max(0.05, kmLL(P[2 * a], P[2 * a + 1], P[2 * c], P[2 * c + 1]));
+      }
+      net.push(bad);
+      if (bad) any = true; else { if (first < 0) first = q; last = q; }
     }
     if (!any || first < 0) continue;
     var keep = [];
