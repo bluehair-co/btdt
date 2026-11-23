@@ -366,7 +366,7 @@ The app already shows two kinds of uncertainty: *type guessed from speed* and *S
 | Set a trip's gear, choosing *All rides without gear from … to …* (dates prefilled from the first and last ride with this gear) | gear period |
 | Name a stay or mark it *Home* / *Work* | place, with `when` from the first to last stay there |
 | Mark a home, work or school *Current* or *Past* | place with `role`, and `when.to` for a past one |
-| Say what kind of place it is (Restaurant, Bar / café, Supermarket, Store, Public transport stop, Friends, and the others) | place with `role`: `restaurant`, `cafe`, `supermarket`, `store`, `transit`, `friends`, `family`, `sport` |
+| Say what kind of place it is (Restaurant, Bar / café, Supermarket, Store, Entertainment, Public transport stop, Friends, and the others) | place with `role`: `restaurant`, `cafe`, `supermarket`, `store`, `entertainment`, `transit`, `friends`, `family`, `sport` |
 | *Hide this place* | place with `hide: true` |
 
 Once 5 or more places have a kind, Insights adds *Time by kind of place*: the time stayed at each kind in the filters, with how many places and the share of all your time.
