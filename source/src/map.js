@@ -1377,35 +1377,39 @@ function rawStay(v) {
     at: isFinite(lat) ? [+lat.toFixed(6), +lng.toFixed(6)] : null
   };
 }
-function exportJson() {
+// trips/stays: indices in time order (default: what the filters show); name: the file name;
+// how: what picked them, for the file's header (default: the filters).
+function exportJson(trips, stays, name, how) {
+  trips = trips || sel; stays = stays || selV;
   // Newest first, as in Timeline. Built in pieces so a large export doesn't need one huge string.
-  var head = JSON.stringify({ app: 'BT•DT', exported: new Date().toISOString(), filters: exportFilters(), tripCount: sel.length, stayCount: selV.length }, null, 1);
+  var head = JSON.stringify(Object.assign({ app: 'BT•DT', exported: new Date().toISOString() }, how || { filters: exportFilters() }, { tripCount: trips.length, stayCount: stays.length }), null, 1);
   var parts = [head.slice(0, -2) + ',\n "trips": ['], k;
-  for (k = sel.length - 1; k >= 0; k--) parts.push((k < sel.length - 1 ? ',\n' : '\n') + rawText(sel[k]));
+  for (k = trips.length - 1; k >= 0; k--) parts.push((k < trips.length - 1 ? ',\n' : '\n') + rawText(trips[k]));
   parts.push('\n],\n "stays": [');
-  for (k = selV.length - 1; k >= 0; k--) parts.push((k < selV.length - 1 ? ',\n' : '\n') + JSON.stringify(rawStay(selV[k])));
+  for (k = stays.length - 1; k >= 0; k--) parts.push((k < stays.length - 1 ? ',\n' : '\n') + JSON.stringify(rawStay(stays[k])));
   parts.push('\n]\n}\n');
-  saveFile(exportName('json'), parts, 'application/json');
+  saveFile(name || exportName('json'), parts, 'application/json');
 }
 function csvCell(v) {
   if (v == null) return '';
   var s = String(v);
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
-function exportCsv() {
+function exportCsv(trips, name) {
+  trips = trips || sel;
   var cols = ['start', 'end', 'localStart', 'localEnd', 'utcOffsetMin', 'localDay', 'durationMin', 'type', 'mode', 'sport', 'source', 'km', 'fileKm',
     'route', 'fromCountry', 'toCountry', 'fromLat', 'fromLng', 'toLat', 'toLng', 'co2Kg', 'gpsPoints', 'flags'];
   var rows = [cols.join(',')];
   function local(ms, off) { return off === NO_OFF ? '' : new Date(ms + off * 60000).toISOString().slice(0, 16).replace('T', ' '); }
-  for (var k = sel.length - 1; k >= 0; k--) {
-    var i = sel[k], o = rawTrip(i);
+  for (var k = trips.length - 1; k >= 0; k--) {
+    var i = trips[k], o = rawTrip(i);
     rows.push([o.start, o.end, local(D.start[i], D.off[i]), local(D.end[i], D.off[i]), o.utcOffsetMin, o.localDay, Math.round((D.end[i] - D.start[i]) / 6e4),
       o.type, o.mode, o.sport, o.source, o.km, o.fileKm, tripRoute(i).replace(/&amp;/g, '&'),
       D.ccList[D.cs[i]] ? ccName(D.ccList[D.cs[i]]) : '', D.ccList[D.ce[i]] ? ccName(D.ccList[D.ce[i]]) : '',
       o.from && o.from[0], o.from && o.from[1], o.to && o.to[0], o.to && o.to[1], +tripKg(i).toFixed(3), o.points.length, o.flags.join('; ')].map(csvCell).join(','));
   }
   // The byte order mark lets Excel read the accents and arrows.
-  saveFile(exportName('csv'), ['﻿' + rows.join('\r\n') + '\r\n'], 'text/csv');
+  saveFile(name || exportName('csv'), ['﻿' + rows.join('\r\n') + '\r\n'], 'text/csv');
 }
 function runExport(fn) {
   busy('Preparing the export…');
@@ -1413,8 +1417,8 @@ function runExport(fn) {
     try { fn(); toast('Export ready'); } catch (e) { toast('Export failed: ' + e.message); } finally { busy(''); }
   }, 30);
 }
-$('exportJson').addEventListener('click', function () { runExport(exportJson); });
-$('exportCsv').addEventListener('click', function () { runExport(exportCsv); });
+$('exportJson').addEventListener('click', function () { runExport(function () { exportJson(); }); });
+$('exportCsv').addEventListener('click', function () { runExport(function () { exportCsv(); }); });
 var listTitle = null;
 function openList(list, title) {
   setPinOn([]); placeLast = null;

@@ -59,7 +59,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 | `snaps.js` | Map snaps (two stations, one line, saved in MyRules `snaps`). |
 | `roads.js` | Road packs and *Snap car trips to roads* (IndexedDB `btdt-roads`). |
 | `split.js` | Trips Timeline merged: automatic/suggested splits, *Keep as one trip*, *Split trip* by hand. |
-| `select.js` | *Select trips* on the map (lasso/rectangle, touch too) and bulk *Change type…*. |
+| `select.js` | *Select trips* on the map (lasso/rectangle, touch too), bulk *Change type…* and *Set gear…*, and ⋯ › *Export trips* for the picked trips. |
 | `ignore.js` | *Ignore GPS points* of one trip. |
 | `settings.js` | The *Menu* (the three-line button) and its pages: *Your data*, *Trip cleanup* (merged trips, cell-tower fixes, packs, snapping) and *Preferences* (units, theme, date/time format, CO₂ factors, heart rate). |
 
@@ -68,7 +68,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 - **Inputs:** see `source/README.md` (one section per format, with the cleaning steps). Old Takeout and new on-device Timeline files can be loaded together; Records.json fills gaps under Timeline. A Timeline-format file with `"simulated": true` at the top holds trips rebuilt from bookings and wins where it clashes with the export.
 - **Internal:** parsed trips and stays are column arrays (`start`, `end`, `mode`, `km`, `from`, `to`, `pathOff` + flat points, `off` = UTC offset in minutes, `vs/ve/vll` for stays, flags as bits such as `GUESSED`, `FIXED`, `JUMPS`). Saved in IndexedDB, never uploaded.
 - **MyRules (`*.myrules.json`, v0.2):** sections `places`, `moves`, `gear`, `routines`, `snaps`, `corrections`. Every rule has `id`, optional `name`, `when` (from/to/days/times), `enabled`, `except` (trip refs), `unless` (conditions), `note`. Trips are referenced by local start time with UTC offset and mode, never by index. Spec: `docs/myrules.md`; JSON Schema: `schema/myrules-0.2.json` (keep `source/static/schema/` in sync). Rules apply fully or not at all: a routine sets type, line and gear together. Values a rule fills in are tagged *Rule applied* (or *Map snap*), user fixes *Edited*, and both can be undone per trip or per rule. Unknown keys round-trip on export.
-- **Export:** *Export trips* in *Menu › Your data* writes the filtered trips as JSON (same shape as a trip's *{ } Raw data*, with GPS points) or CSV.
+- **Export:** *Export trips* in *Menu › Your data* writes the filtered trips as JSON (same shape as a trip's *{ } Raw data*, with GPS points) or CSV. *Select trips on the map* › ⋯ › *Export trips* writes the same files for just the picked trips.
 
 ## Station and road packs
 
