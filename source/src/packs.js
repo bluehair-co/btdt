@@ -375,8 +375,10 @@ function refreshData() {
   var oldF = F, oldM = M, oldCC = D && D.ccList;
   // Trips are numbered again: an open trip's details would point at another trip.
   if (openId === 'tripSheet') closeSheets(true);
+  // The map stays where it is: you're likely fixing more trips in the same spot.
+  mapKeep = !!oldF;
   setData(RAW);
-  if (!oldF || !oldM) return;
+  if (!oldF || !oldM) { mapKeep = false; return; }
   ['dm', 'one', 'unit', 'from', 'to', 'h0', 'h1', 'guess', 'src', 'years', 'months', 'dows'].forEach(function (k) { F[k] = oldF[k]; });
   F.modes = new Set(M.modes.filter(function (m) { return oldF.modes.has(m) || oldM.modes.indexOf(m) < 0; }));
   F.sports = new Set(M.sports.filter(function (s) { return oldF.sports.has(s) || oldM.sports.indexOf(s) < 0; }));
@@ -389,6 +391,9 @@ function refreshData() {
   if (F.guess === 'check' && !M.nCheck) F.guess = 'all';
   syncFilterUI();
   apply();
+  // The period is the one the map showed, so it isn't fitted again when the map is next drawn.
+  if (mapKeep) fitKey = mapFitKey();
+  mapKeep = false;
 }
 
 // ---------- Settings: station packs ----------

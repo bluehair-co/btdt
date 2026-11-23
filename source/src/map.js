@@ -238,6 +238,9 @@ function initMap() {
   }
   return true;
 }
+// The period the map was last fitted to: a new one zooms the map to its trips.
+var mapKeep = false;
+function mapFitKey() { return F.dm + '|' + (F.dm === 'one' ? periodStart(F.one, F.unit) + F.unit : '') + '|' + F.from + '|' + F.to; }
 function mapReset() { fitKey = null; if (P) P.fitted = false; highlight(null); stopPlay(); }
 
 function renderMapTab() {
@@ -249,9 +252,10 @@ function renderMapTab() {
     heatDirty = true;
     updateTopbar();
     legend();
-    var key = F.dm + '|' + (F.dm === 'one' ? periodStart(F.one, F.unit) + F.unit : '') + '|' + F.from + '|' + F.to;
-    // Playback rolling on into the next day keeps following the trip rather than fitting the day.
-    if (key !== fitKey) { fitKey = key; if (!carry) fitAll(); }
+    var key = mapFitKey();
+    // Playback rolling on into the next day keeps following the trip rather than fitting the day;
+    // trips set up again after a fix (refreshData) keep the map where it is.
+    if (key !== fitKey) { fitKey = key; if (!carry && !mapKeep) fitAll(); }
   }
   if (map) {
     layerToggles();
