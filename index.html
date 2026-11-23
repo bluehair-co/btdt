@@ -1170,6 +1170,11 @@ div.hit-row:hover { background: none; }
 
 .mr-sort button { min-height: 36px; padding: 6px 12px; }
 .mr-add { min-height: 36px; padding: 6px 14px; flex: none; }
+.mr-drive { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.mr-drive .file-txt { flex: 1 1 auto; min-width: 0; }
+.drive-bar { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); top: calc(12px + var(--safe-t, 0px)); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow); max-width: calc(100vw - 24px); }
+.drive-bar[hidden] { display: none; }
+.drive-bar span { font-size: 14px; }
 .mr-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 8px; cursor: pointer; }
 .mr-switch-row small { display: block; margin-top: 2px; }
 .mr-grp { margin: 14px 0 4px; }
@@ -1372,7 +1377,8 @@ body.drift-mode .dr-top .snap-bar-t { flex: 1 1 auto; min-width: 0; }
           <li><b>Trips are cleaned up.</b> Bad GPS jumps, stale start and end points, time parked counted as driving and places Google moved are fixed, and loose GPS points become trips. Fixed trips are flagged in their details.</li>
           <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
           <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
-          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, and the station and road packs you choose. Add the app to your home screen and it opens offline.</li>
+          <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, the station and road packs you choose, and, only when you turn it on, Google sign-in and your rules file in Google Drive. Add the app to your home screen and it opens offline.</li>
+          <li><b>MyRules in Google Drive</b> only when you turn on <i>Keep in Google Drive</i> in MyRules: BT•DT signs in with Google and keeps your rules file, nothing else, in your own Google Drive. It asks only for the files it makes itself, so it can't see the rest of your Drive. Your location history never goes there.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
           <li><b>Public transport lines</b> for a routine come only from your station packs when you have one for that country (never online there). Elsewhere, and for buses and ferries, they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
           <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) and <b>road packs</b> (motorways and main roads, per country, or per state or province in the United States and Canada) are downloaded from GitHub only when you choose one, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
@@ -1389,6 +1395,7 @@ body.drift-mode .dr-top .snap-bar-t { flex: 1 1 auto; min-width: 0; }
           <li><a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>, the map library <small>BSD 2-Clause</small></li>
           <li><a href="https://d3js.org" target="_blank" rel="noopener">D3</a>, for the globe and Equal Earth views <small>ISC License</small></li>
           <li>Map tiles from <a href="https://www.esri.com" target="_blank" rel="noopener">Esri</a> and its data providers <small>Esri terms of use</small></li>
+          <li><a href="https://developers.google.com/identity/gsi/web" target="_blank" rel="noopener">Google Identity Services</a> and the <a href="https://developers.google.com/drive" target="_blank" rel="noopener">Google Drive API</a>, for <i>Keep in Google Drive</i> (only when you turn it on) <small>Google APIs Terms of Service</small></li>
           <li>Demo Halfbike routes from <a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> on <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> data <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Place names and the public transport lines of routines, on request, from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> via <a href="https://nominatim.org" target="_blank" rel="noopener">Nominatim</a> and the <a href="https://overpass-api.de" target="_blank" rel="noopener">Overpass API</a> <small>© OpenStreetMap contributors, ODbL</small></li>
           <li>Road packs: motorways, trunk and main roads from <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>, via <a href="https://download.geofabrik.de" target="_blank" rel="noopener">Geofabrik</a> extracts, read with <a href="https://osmcode.org" target="_blank" rel="noopener">Osmium</a> <small>© OpenStreetMap contributors, ODbL</small></li>
@@ -1877,6 +1884,7 @@ body.drift-mode .dr-top .snap-bar-t { flex: 1 1 auto; min-width: 0; }
     <div id="mrBody"></div>
   </div>
 </aside>
+<div class="drive-bar" id="driveBar" role="status" hidden><span>Sync MyRules with Google Drive</span><button type="button" class="btn primary" id="driveBarSync">Sync</button><button type="button" class="icon-btn" id="driveBarClose" aria-label="Not now"><span data-icon="close"></span></button></div>
 <dialog class="mr-rad" id="mrRadDlg" aria-labelledby="mrRadTitle">
   <div id="mrRadMap" class="mr-rad-map"></div>
   <div class="mr-rad-panel">
@@ -12603,6 +12611,7 @@ function mrAnyGuess() {
 // ---------- reading, saving and exporting ----------
 function mrSave() {
   if (DEMO) return Promise.resolve();
+  driveChanged();
   if (!MR) return withStore('btdt', 'readwrite', function (s) { return s.delete('myrules'); }).catch(function () {});
   return withStore('btdt', 'readwrite', function (s) { return s.put({ doc: MR.doc, name: MR.name, on: MR.on, changes: MR.changes, exported: MR.exported, lines: MR.lines || {} }, 'myrules'); }).catch(function () {});
 }
@@ -12902,7 +12911,8 @@ function renderMyRules() {
   $('mrSheetExport').innerHTML = icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '');
   $('mrSheetExport').classList.add('mr-export');
   if (!MR) {
-    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>';
+    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About MyRules') + '</p>' + driveRow();
+    driveWire();
     return;
   }
   var nGear = 0, nEd = 0, n = MR.changes.length;
@@ -12911,8 +12921,9 @@ function renderMyRules() {
     '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply MyRules"' + (MR.on ? ' checked' : '') + '></div>' +
     '<p class="fine" style="margin:8px 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + (nEd ? ', ' + tripsText(nEd) + ' edited' : '') + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p>' +
     '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
-    '<span class="fine mr-unsaved">' + (n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
-    '<p class="fine" style="margin-top:8px">The exported file includes your places, such as home.</p></div>';
+    '<span class="fine mr-unsaved">' + (DRIVE.on && DRIVE.at ? '' : n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
+    '<p class="fine" style="margin-top:8px">The exported file includes your places, such as home.</p></div>' + driveRow();
+  driveWire();
   $('mrOn').addEventListener('change', function () { var on = this.checked; working(on ? 'Applying MyRules…' : 'Switching MyRules off…', function () { MR.on = on; mrSave(); mrReapply(); }); });
 }
 
@@ -17933,6 +17944,280 @@ function driftEnd() {
 }
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && DR && !$('mrDlg').open) driftEnd(); });
 
+// ---------- MyRules in Google Drive ----------
+// "Keep in Google Drive" (Menu › MyRules) keeps the MyRules document in one file, btdt.myrules.json,
+// in the user's own Drive, so a laptop and a phone use the same rules. Off until turned on, and nothing
+// is fetched before that. Only the rules file goes to Drive, never location data.
+// - Sign-in: Google Identity Services, token flow in the browser (no server, no client secret), only
+//   the drive.file scope: BT•DT sees just the files it made itself. The token lasts an hour and is kept
+//   in this tab (sessionStorage); after that a tap on Sync asks again (browsers only open Google's
+//   window after a tap).
+// - Sync (driveSync): read the Drive file, merge it with this device's rules (driveMerge), write back
+//   what changed, apply what came in. Each change here (mrSave) syncs again a moment later.
+// - Merging is rule by rule (every rule has an id), against the copy both had at the last sync (the
+//   base): a rule changed or added on one side wins; deleted on one side and left alone on the other is
+//   deleted; changed on both sides, the document saved last wins (counted, and said in a toast).
+var DRIVE_CLIENT = '598451119921-pnn3e50l7g0vqburnssvjnkjl9hruuc8.apps.googleusercontent.com';
+var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+var DRIVE_NAME = 'btdt.myrules.json';
+var DRIVE_API = 'https://www.googleapis.com';
+var DRIVE = { on: false, file: null, version: null, at: 0, err: '', state: 'off', token: null, exp: 0, gis: null, client: null, pushT: 0, running: null, again: false, applying: false };
+(function () {
+  try {
+    var s = JSON.parse(localStorage.getItem('btdt.drive') || 'null');
+    if (s) { DRIVE.on = !!s.on; DRIVE.file = s.file || null; DRIVE.version = s.version || null; DRIVE.at = s.at || 0; }
+    var t = JSON.parse(sessionStorage.getItem('btdt.driveTok') || 'null');
+    if (t && t.exp > Date.now()) { DRIVE.token = t.token; DRIVE.exp = t.exp; }
+  } catch (e) { /* storage unavailable */ }
+  DRIVE.state = DRIVE.on ? (DRIVE.token ? 'ok' : 'signin') : 'off';
+})();
+function driveKeep() {
+  try {
+    localStorage.setItem('btdt.drive', JSON.stringify({ on: DRIVE.on, file: DRIVE.file, version: DRIVE.version, at: DRIVE.at }));
+    if (DRIVE.token) sessionStorage.setItem('btdt.driveTok', JSON.stringify({ token: DRIVE.token, exp: DRIVE.exp })); else sessionStorage.removeItem('btdt.driveTok');
+  } catch (e) { /* storage unavailable */ }
+}
+// The rules as both sides had them at the last sync.
+function driveBase() { try { return JSON.parse(localStorage.getItem('btdt.driveBase') || 'null'); } catch (e) { return null; } }
+function driveSetBase(doc) { try { if (doc) localStorage.setItem('btdt.driveBase', JSON.stringify(doc)); else localStorage.removeItem('btdt.driveBase'); } catch (e) { /* too big or unavailable */ } }
+
+// ---------- signing in ----------
+function driveGis() {
+  if (DRIVE.gis) return DRIVE.gis;
+  DRIVE.gis = new Promise(function (resolve, reject) {
+    if (window.google && google.accounts && google.accounts.oauth2) { resolve(); return; }
+    var s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = function () { resolve(); };
+    s.onerror = function () { DRIVE.gis = null; reject(new Error('Google sign-in could not load. Are you online?')); };
+    document.head.appendChild(s);
+  });
+  return DRIVE.gis;
+}
+// A token, asking Google for one when needed (ask: from a tap; else only one already held).
+function driveToken(ask) {
+  if (DRIVE.token && DRIVE.exp - 60000 > Date.now()) return Promise.resolve(DRIVE.token);
+  if (!ask) return Promise.reject(Object.assign(new Error('Sign in to sync'), { signin: true }));
+  return driveGis().then(function () {
+    return new Promise(function (resolve, reject) {
+      var c = google.accounts.oauth2.initTokenClient({
+        client_id: DRIVE_CLIENT, scope: DRIVE_SCOPE,
+        callback: function (r) {
+          if (!r || r.error || !r.access_token) { reject(new Error(r && r.error === 'access_denied' ? 'Google Drive access was not allowed.' : 'Google sign-in did not finish.')); return; }
+          if (google.accounts.oauth2.hasGrantedAllScopes && !google.accounts.oauth2.hasGrantedAllScopes(r, DRIVE_SCOPE)) { reject(new Error('Tick the box that lets BT•DT see the files it makes in your Drive.')); return; }
+          DRIVE.token = r.access_token; DRIVE.exp = Date.now() + (+r.expires_in || 3600) * 1000; driveKeep();
+          resolve(DRIVE.token);
+        },
+        error_callback: function (e) {
+          reject(Object.assign(new Error(e && e.type === 'popup_failed_to_open' ? 'Your browser blocked Google’s sign-in window. Allow pop-ups for this site and try again.' : 'Google sign-in was closed.'), { signin: true }));
+        }
+      });
+      c.requestAccessToken({ prompt: '' });
+    });
+  });
+}
+// A call to the Drive API with the token. A 401 means the token ran out: sign in again.
+function driveFetch(path, opt) {
+  opt = opt || {};
+  opt.headers = Object.assign({ Authorization: 'Bearer ' + DRIVE.token }, opt.headers || {});
+  return fetch(DRIVE_API + path, opt).then(function (res) {
+    if (res.status === 401) { DRIVE.token = null; DRIVE.exp = 0; driveKeep(); throw Object.assign(new Error('Sign in to sync'), { signin: true }); }
+    if (res.status === 404) throw Object.assign(new Error('The rules file is no longer in your Drive.'), { gone: true });
+    if (!res.ok) throw new Error('Google Drive answered ' + res.status + '.');
+    return res;
+  });
+}
+function driveFind() {
+  var q = encodeURIComponent("name = '" + DRIVE_NAME + "' and trashed = false");
+  return driveFetch('/drive/v3/files?q=' + q + '&spaces=drive&orderBy=modifiedTime%20desc&fields=files(id,version)').then(function (r) { return r.json(); }).then(function (j) { return j.files && j.files[0] || null; });
+}
+function driveMeta(id) { return driveFetch('/drive/v3/files/' + id + '?fields=id,version,trashed').then(function (r) { return r.json(); }); }
+function driveRead(id) { return driveFetch('/drive/v3/files/' + id + '?alt=media').then(function (r) { return r.text(); }).then(function (t) { return t.trim() ? JSON.parse(t) : {}; }); }
+function driveCreate(doc) {
+  var b = 'btdt' + Math.random().toString(36).slice(2);
+  var body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify({ name: DRIVE_NAME, mimeType: 'application/json' }) +
+    '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(doc, null, 2) + '\n\r\n--' + b + '--';
+  return driveFetch('/upload/drive/v3/files?uploadType=multipart&fields=id,version', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: body }).then(function (r) { return r.json(); });
+}
+function driveWrite(id, doc) {
+  return driveFetch('/upload/drive/v3/files/' + id + '?uploadType=media&fields=id,version', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(doc, null, 2) + '\n' }).then(function (r) { return r.json(); });
+}
+
+// ---------- merging ----------
+// JSON with its keys in order, so the same rule written on two devices compares equal.
+function driveStable(x) {
+  if (Array.isArray(x)) return '[' + x.map(driveStable).join(',') + ']';
+  if (x && typeof x === 'object') return '{' + Object.keys(x).sort().map(function (k) { return JSON.stringify(k) + ':' + driveStable(x[k]); }).join(',') + '}';
+  return JSON.stringify(x === undefined ? null : x);
+}
+function driveSame(a, b) { return driveStable(a) === driveStable(b); }
+// local, remote, base: MyRules documents (base may be null: never synced, both count as new).
+// { doc, conflicts }. A list of rules with ids is merged rule by rule; anything else as a whole.
+function driveMerge(local, remote, base) {
+  local = local || {}; remote = remote || {}; base = base || {};
+  var conflicts = 0, out = {};
+  var newer = String(local.about && local.about.updated || '') >= String(remote.about && remote.about.updated || '') ? 'local' : 'remote';
+  function pick(l, r, b, hasB) {
+    if (driveSame(l, r)) return l;
+    if (hasB && driveSame(l, b)) return r;
+    if (hasB && driveSame(r, b)) return l;
+    conflicts++;
+    return newer === 'local' ? l : r;
+  }
+  function isList(v) { return Array.isArray(v) && v.every(function (x) { return x && typeof x === 'object' && typeof x.id === 'string'; }); }
+  var keys = {};
+  Object.keys(remote).concat(Object.keys(local)).forEach(function (k) { keys[k] = 1; });
+  Object.keys(keys).forEach(function (k) {
+    var L = local[k], R = remote[k], B = base[k];
+    if (k === 'about') { out[k] = newer === 'local' ? L || R : R || L; return; }
+    if ((L === undefined || isList(L)) && (R === undefined || isList(R)) && (B === undefined || isList(B))) {
+      var lm = {}, rm = {}, bm = {}, ids = [], seen = {}, list = [];
+      (L || []).forEach(function (x) { lm[x.id] = x; });
+      (R || []).forEach(function (x) { rm[x.id] = x; });
+      (B || []).forEach(function (x) { bm[x.id] = x; });
+      // Drive's order first, then rules only this device has, in its order.
+      (R || []).concat(L || []).forEach(function (x) { if (!seen[x.id]) { seen[x.id] = 1; ids.push(x.id); } });
+      ids.forEach(function (id) {
+        var l = lm[id], r = rm[id], b = bm[id], hasB = b !== undefined;
+        if (l && r) { list.push(pick(l, r, b, hasB)); return; }
+        var one = l || r;
+        // On one side only: new there, or deleted on the other. Deleted wins unless it changed since.
+        if (hasB && driveSame(one, b)) return;
+        if (hasB) conflicts++;
+        list.push(one);
+      });
+      if (list.length || L !== undefined || R !== undefined) out[k] = list;
+      return;
+    }
+    if (L === undefined) { if (!(k in base) || !driveSame(R, B)) out[k] = R; return; }
+    if (R === undefined) { if (!(k in base) || !driveSame(L, B)) out[k] = L; return; }
+    out[k] = pick(L, R, B, k in base);
+  });
+  return { doc: out, conflicts: conflicts };
+}
+
+// ---------- syncing ----------
+// ask: started by a tap (may sign in; shows the pill). One sync at a time; a change made during one
+// syncs again after it.
+function driveSync(ask) {
+  if (!DRIVE.on || DEMO) return Promise.resolve();
+  if (DRIVE.running) { DRIVE.again = true; return DRIVE.running; }
+  var pill = !!ask;
+  if (pill) driveBusy(true);
+  DRIVE.state = 'sync'; driveShow();
+  var conflicts = 0, changed = false;
+  DRIVE.running = driveToken(ask).then(function () {
+    if (DRIVE.file) return driveMeta(DRIVE.file).then(function (m) { if (m.trashed) throw Object.assign(new Error('gone'), { gone: true }); return m; }).catch(function (e) { if (e.gone) { DRIVE.file = null; DRIVE.version = null; return driveFind(); } throw e; });
+    return driveFind();
+  }).then(function (meta) {
+    var local = MR ? MR.doc : null, base = driveBase();
+    // No file yet: this device's rules start it.
+    if (!meta) {
+      var start = local || mrEnsure().doc;
+      return driveCreate(start).then(function (m) { DRIVE.file = m.id; DRIVE.version = m.version; driveSetBase(start); });
+    }
+    DRIVE.file = meta.id;
+    var same = meta.version != null && String(meta.version) === String(DRIVE.version);
+    var read = same && base ? Promise.resolve(base) : driveRead(meta.id);
+    return read.then(function (remote) {
+      var m = driveMerge(local, remote, base);
+      conflicts = m.conflicts;
+      var doc = m.doc, up = !driveSame(doc, remote);
+      changed = !driveSame(doc, local || {});
+      var w = up ? driveWrite(meta.id, doc) : Promise.resolve(meta);
+      return w.then(function (m2) {
+        DRIVE.version = m2.version != null ? m2.version : meta.version;
+        driveSetBase(doc);
+        if (changed) driveApply(doc);
+      });
+    });
+  }).then(function () {
+    DRIVE.at = Date.now(); DRIVE.err = ''; DRIVE.state = 'ok'; driveKeep();
+    if (conflicts) toast(conflicts + ' rule' + (conflicts === 1 ? ' was' : 's were') + ' changed on two devices: the one saved last was kept.');
+    else if (pill) toast(changed ? 'MyRules updated from Google Drive.' : 'MyRules are in sync with Google Drive.');
+  }, function (e) {
+    DRIVE.state = e && e.signin ? 'signin' : 'err'; DRIVE.err = e && e.message || 'Could not sync.';
+    driveKeep();
+    if (pill) toast(DRIVE.err);
+  }).then(function () {
+    if (pill) driveBusy(false);
+    DRIVE.running = null; driveShow();
+    if (DRIVE.again && DRIVE.state === 'ok') { DRIVE.again = false; return driveSync(false); }
+    DRIVE.again = false;
+  });
+  return DRIVE.running;
+}
+// Rules that came from Drive: saved here and applied, without syncing back.
+function driveApply(doc) {
+  DRIVE.applying = true;
+  try {
+    mrEnsure();
+    MR.doc = doc;
+    MR.changes = [];
+    mrSave();
+    if (D) mrReapply(); else { renderSettings(); if (openId === 'mrSheet') mrRenderRules(); }
+  } finally { DRIVE.applying = false; }
+}
+// Called by mrSave: a change here goes to Drive a moment later (a burst of saves is one sync).
+function driveChanged() {
+  if (!DRIVE.on || DRIVE.applying || DEMO) return;
+  clearTimeout(DRIVE.pushT);
+  DRIVE.pushT = setTimeout(function () { driveSync(false); }, 1500);
+}
+function driveBusy(on) {
+  if (on) { if (!WORKING.n++) WORKING.at = performance.now(); $('workingText').textContent = 'Syncing with Google Drive…'; workingShow(true); }
+  else if (WORKING.n && !--WORKING.n) setTimeout(function () { if (!WORKING.n) workingShow(false); }, Math.max(0, WORKING_MIN - (performance.now() - WORKING.at)));
+}
+
+// ---------- the switch and its line (in the MyRules card) ----------
+function driveRow() {
+  if (DEMO) return '';
+  var t = DRIVE.state === 'off' ? 'Use the same rules on your phone and computer.'
+    : DRIVE.state === 'sync' ? 'Syncing…'
+    : DRIVE.state === 'signin' ? 'Sign in again to sync.'
+    : DRIVE.state === 'err' ? esc(DRIVE.err)
+    : DRIVE.at ? 'Synced at ' + clock(DRIVE.at, null, Date.now() - DRIVE.at > 20 * 3600000) + '.' : 'On.';
+  return '<div class="mr-drive"><span class="file-txt"><b>Keep in Google Drive</b><small id="driveTxt">' + t + '</small></span>' +
+    (DRIVE.on ? '<button type="button" class="btn" id="driveSyncBtn"' + (DRIVE.state === 'sync' ? ' disabled' : '') + '>Sync</button>' : '') +
+    '<input type="checkbox" class="switch" id="driveOn" aria-label="Keep MyRules in Google Drive"' + (DRIVE.on ? ' checked' : '') + '></div>' +
+    '<p class="fine">' + infoMore('Your rules in a file in your own Google Drive.', 'Turn it on here and on your other devices, signing in with the same Google account. BT•DT asks only for the files it makes itself, so it can’t see the rest of your Drive, and only the rules file goes there, never your location history. Each change you make is saved there a moment later, and the rules from your other devices come in when you open the app or tap Sync. Rules changed on two devices are merged rule by rule; if the same rule was changed on both, the one saved last is kept. Google’s sign-in lasts an hour; after that, tap Sync. Turning it off stops syncing and leaves the file in your Drive.', 'About Keep in Google Drive') + '</p>';
+}
+function driveWire() {
+  var sw = $('driveOn');
+  if (!sw) return;
+  sw.addEventListener('change', function () {
+    if (this.checked) {
+      DRIVE.on = true; DRIVE.state = 'sync'; driveKeep();
+      driveSync(true).then(function () {
+        if (DRIVE.state !== 'ok' && !DRIVE.at) { DRIVE.on = false; DRIVE.state = 'off'; driveKeep(); driveShow(); }
+      });
+    } else {
+      DRIVE.on = false; DRIVE.state = 'off'; DRIVE.file = null; DRIVE.version = null; DRIVE.at = 0; DRIVE.token = null; DRIVE.exp = 0;
+      driveSetBase(null); driveKeep(); driveShow(); $('driveBar').hidden = true;
+      toast('Syncing is off. The rules file stays in your Google Drive.');
+    }
+  });
+  var b = $('driveSyncBtn');
+  if (b) b.addEventListener('click', function () { driveSync(true); });
+}
+function driveShow() {
+  var bar = $('driveBar');
+  if (bar) {
+    bar.hidden = !(DRIVE.on && DRIVE.state === 'signin' && !DEMO);
+    // Just under the top bar, so the date stays in view.
+    var tb = $('topbar'), r = tb && tb.getBoundingClientRect();
+    if (!bar.hidden && r && r.height) bar.style.top = Math.round(r.bottom + 8) + 'px';
+  }
+  if ($('mrCard')) renderMyRules();
+}
+// When the app opens: sync if a token is still held, else offer the bar with Sync.
+function driveStart() {
+  if (!DRIVE.on || DEMO) return;
+  if (DRIVE.token && DRIVE.exp - 60000 > Date.now()) driveSync(false); else { DRIVE.state = 'signin'; driveShow(); }
+}
+$('driveBarSync').addEventListener('click', function () { $('driveBar').hidden = true; driveSync(true); });
+$('driveBarClose').addEventListener('click', function () { $('driveBar').hidden = true; });
+
 // ---------- settings ----------
 function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unitF; });
@@ -18150,7 +18435,7 @@ busy('Opening your saved trips…');
 mrLoad().then(packsLoad).then(function () { return roadOn() && !RG ? roadsLoad() : null; }).then(loadSaved).then(function (R) {
   if (!R || D) return;
   return setDataSoon(R).then(function () { toast('Showing the trips saved on this device.'); });
-}).catch(function () { /* opens without them */ }).then(function () { busy(''); });
+}).catch(function () { /* opens without them */ }).then(function () { busy(''); driveStart(); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js').catch(function () { /* offline start unavailable */ });
 }

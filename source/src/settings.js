@@ -215,7 +215,7 @@ busy('Opening your saved trips…');
 mrLoad().then(packsLoad).then(function () { return roadOn() && !RG ? roadsLoad() : null; }).then(loadSaved).then(function (R) {
   if (!R || D) return;
   return setDataSoon(R).then(function () { toast('Showing the trips saved on this device.'); });
-}).catch(function () { /* opens without them */ }).then(function () { busy(''); });
+}).catch(function () { /* opens without them */ }).then(function () { busy(''); driveStart(); });
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   navigator.serviceWorker.register('sw.js').catch(function () { /* offline start unavailable */ });
 }
