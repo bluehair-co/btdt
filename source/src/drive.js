@@ -1,5 +1,5 @@
 // ---------- MyRules in Google Drive ----------
-// "Keep in Google Drive" (Menu › MyRules) keeps the MyRules document in one file, btdt.myrules.json,
+// Keep your rules › In Google Drive (Menu › MyRules) keeps the MyRules document in one file, btdt.myrules.json,
 // in the user's own Drive, so a laptop and a phone use the same rules. Off until turned on, and nothing
 // is fetched before that. Only the rules file goes to Drive, never location data.
 // - Sign-in: Google Identity Services, token flow in the browser (no server, no client secret), only
@@ -226,33 +226,39 @@ function driveBusy(on) {
 // ---------- the switch and its line (in the MyRules card) ----------
 function driveRow() {
   if (DEMO) return '';
-  var t = DRIVE.state === 'off' ? 'Use the same rules on your phone and computer.'
+  var on = DRIVE.on;
+  var t = !on ? 'Saved in this browser.'
     : DRIVE.state === 'sync' ? 'Syncing…'
     : DRIVE.state === 'signin' ? 'Sign in again to sync.'
     : DRIVE.state === 'err' ? esc(DRIVE.err)
-    : DRIVE.at ? 'Synced at ' + clock(DRIVE.at, null, Date.now() - DRIVE.at > 20 * 3600000) + '.' : 'On.';
-  return '<div class="mr-drive"><span class="file-txt"><b>Keep in Google Drive</b><small id="driveTxt">' + t + '</small></span>' +
-    (DRIVE.on ? '<button type="button" class="btn" id="driveSyncBtn"' + (DRIVE.state === 'sync' ? ' disabled' : '') + '>Sync</button>' : '') +
-    '<input type="checkbox" class="switch" id="driveOn" aria-label="Keep MyRules in Google Drive"' + (DRIVE.on ? ' checked' : '') + '></div>' +
-    '<p class="fine">' + infoMore('Your rules in a file in your own Google Drive.', 'Turn it on here and on your other devices, signing in with the same Google account. BT•DT asks only for the files it makes itself, so it can’t see the rest of your Drive, and only the rules file goes there, never your location history. Each change you make is saved there a moment later, and the rules from your other devices come in when you open the app or tap Sync. Rules changed on two devices are merged rule by rule; if the same rule was changed on both, the one saved last is kept. Google’s sign-in lasts an hour; after that, tap Sync. Turning it off stops syncing and leaves the file in your Drive.', 'About Keep in Google Drive') + '</p>';
+    : DRIVE.at ? 'Synced at ' + clock(DRIVE.at, null, Date.now() - DRIVE.at > 20 * 3600000) + '.' : 'Connecting…';
+  return '<div class="mr-drive"><div class="mr-drive-head"><b>Keep your rules</b>' + infoBtn('driveInfo', 'About where your rules are kept') + '</div>' +
+    '<div class="seg full" id="driveWhere" role="group" aria-label="Keep your rules">' +
+    '<button type="button" data-w="local" aria-pressed="' + !on + '">On this device</button><button type="button" data-w="drive" aria-pressed="' + on + '">In Google Drive</button></div>' +
+    '<p class="fine mr-drive-what">Only your rules: gear, place names, routines and your fixes to trips. Your location history always stays on this device.</p>' +
+    infoBox('driveInfo', '<b>On this device</b> keeps your rules in this browser only; use Export to keep a copy or move them. <b>In Google Drive</b> keeps them in one file in your own Google Drive, so your phone and computer use the same rules: choose it on each device and sign in with the same Google account. BT•DT asks only for the files it makes itself, so it can’t see the rest of your Drive. Each change you make is saved there a moment later; rules from your other devices come in when you open the app or tap Sync. If the same rule was changed on two devices, the one saved last is kept. Google’s sign-in lasts an hour; after that, tap Sync. Going back to On this device stops syncing and leaves the file in your Drive.') +
+    // On this device, the card above already says where the rules are and offers Export.
+    (on ? '<div class="mr-drive-st"><small id="driveTxt">' + t + '</small><button type="button" class="btn" id="driveSyncBtn"' + (DRIVE.state === 'sync' ? ' disabled' : '') + '>Sync</button></div>' : '<small id="driveTxt" hidden>' + t + '</small>') + '</div>';
 }
 function driveWire() {
-  var sw = $('driveOn');
-  if (!sw) return;
-  sw.addEventListener('change', function () {
-    if (this.checked) {
-      DRIVE.on = true; DRIVE.state = 'sync'; driveKeep();
+  var seg = $('driveWhere');
+  if (!seg) return;
+  seg.addEventListener('click', function (ev) {
+    var b = ev.target.closest('[data-w]');
+    if (!b || (b.dataset.w === 'drive') === DRIVE.on) return;
+    if (b.dataset.w === 'drive') {
+      DRIVE.on = true; DRIVE.state = 'sync'; driveKeep(); driveShow();
       driveSync(true).then(function () {
         if (DRIVE.state !== 'ok' && !DRIVE.at) { DRIVE.on = false; DRIVE.state = 'off'; driveKeep(); driveShow(); }
       });
     } else {
       DRIVE.on = false; DRIVE.state = 'off'; DRIVE.file = null; DRIVE.version = null; DRIVE.at = 0; DRIVE.token = null; DRIVE.exp = 0;
       driveSetBase(null); driveKeep(); driveShow(); $('driveBar').hidden = true;
-      toast('Syncing is off. The rules file stays in your Google Drive.');
+      toast('Your rules are kept on this device. The file stays in your Google Drive.');
     }
   });
-  var b = $('driveSyncBtn');
-  if (b) b.addEventListener('click', function () { driveSync(true); });
+  var sb = $('driveSyncBtn');
+  if (sb) sb.addEventListener('click', function () { driveSync(true); });
 }
 function driveShow() {
   var bar = $('driveBar');
