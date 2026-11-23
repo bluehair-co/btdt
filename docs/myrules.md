@@ -381,6 +381,10 @@ The app never asks someone to type JSON. People who like files can still edit it
 
 **Exporting.** *Export MyRules* in the card downloads the `.myrules.json`. Because it contains places like home, the export button says so: "This file includes your home and work locations." The demo gets a small example file so the feature can be tried.
 
+### Keeping MyRules in Google Drive
+
+*Keep in Google Drive* (the MyRules card) keeps the document in one file, `btdt.myrules.json`, in the user's own Drive, so several devices share it. BT•DT signs in with Google Identity Services and asks only for the `drive.file` scope (the files it makes itself). It syncs when the app opens (while Google's one-hour sign-in lasts; after that a bar offers *Sync*), a moment after every change, and on *Sync*. Merging is rule by rule against the copy both sides had at the last sync: a rule added or changed on one device is kept, a rule deleted on one device and unchanged on the other is deleted, and a rule changed on both keeps the version from the document saved last (`about.updated`), with a note saying how many. Sections that aren't lists of rules with ids are merged as a whole the same way. Turning it off stops syncing and leaves the file in Drive.
+
 ### Cleaning up the corrections
 
 Edits pile up over time: a trip fixed twice, a type set to what the files already said, a trip that is no longer in the data, bulk edits made in several goes. When some of them can be written more simply, the top of the rules sheet says so, with **Clean up rules**. It opens a preview with one group per kind of tidy-up, each with a count, a switch, and *See them* for the list:

@@ -41,7 +41,7 @@ docs/                 myrules.md (format spec), myrules-example.json, screenshot
 
 ### Source files (`source/src/`)
 
-Everything is plain ES5-style JavaScript with globals, concatenated by `build.py` into one IIFE inside `index.html` in this order: `core.js, data.js, map.js, insights.js, timeline.js, rules.js, moved.js, packs.js, snaps.js, roads.js, split.js, select.js, ignore.js, settings.js`. `parser.js` goes in its own `<script id="parser">` so it can also run in a Web Worker. Libraries: Leaflet 1.9.4 and D3 7.9.0 from cdnjs.
+Everything is plain ES5-style JavaScript with globals, concatenated by `build.py` into one IIFE inside `index.html` in this order: `core.js, data.js, map.js, insights.js, timeline.js, rules.js, moved.js, packs.js, snaps.js, roads.js, split.js, select.js, ignore.js, drift.js, drive.js, settings.js`. `parser.js` goes in its own `<script id="parser">` so it can also run in a Web Worker. Libraries: Leaflet 1.9.4 and D3 7.9.0 from cdnjs. Google's sign-in script (`accounts.google.com/gsi/client`) loads only when *Keep in Google Drive* is turned on.
 
 | File | What it holds |
 |---|---|
@@ -61,6 +61,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 | `split.js` | Trips Timeline merged: automatic/suggested splits, *Keep as one trip*, *Split trip* by hand. |
 | `select.js` | *Select trips* on the map (lasso/rectangle, touch too), bulk *Change type…* and *Set gear…*, and ⋯ › *Export trips* for the picked trips. |
 | `ignore.js` | *Ignore GPS points* of one trip. |
+| `drive.js` | *Keep in Google Drive* (MyRules card): Google Identity Services token flow (`drive.file` scope, client ID in `DRIVE_CLIENT`), one `btdt.myrules.json` in the user's Drive, rule-by-rule merge against the last synced copy (`driveMerge`), sync on open and after each `mrSave`. |
 | `settings.js` | The *Menu* (the three-line button) and its pages: *Your data*, *Trip cleanup* (merged trips, cell-tower fixes, packs, snapping) and *Preferences* (units, theme, date/time format, CO₂ factors, heart rate). |
 
 ## Data formats
