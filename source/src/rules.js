@@ -36,16 +36,19 @@ function mrNewId(name) {
 }
 function mrDayNum(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5) : null; }
 function mrMin(s) { var m = /^(\d{2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
+// When a trip started as loaded: rules point at trips by it, even after GPS drifts here (drift.js)
+// cut back the still minutes at a walk's start.
+function tripT0(i) { return (D.base && D.base.start || D.start)[i]; }
 // A trip's local start: its day number, day of the week and minutes after midnight.
 function mrLocalMin(i) {
-  var off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(D.start[i]).getTimezoneOffset();
-  var t = D.start[i] + off * 60000;
+  var t0 = tripT0(i), off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(t0).getTimezoneOffset();
+  var t = t0 + off * 60000;
   return Math.floor((t - Math.floor(t / 864e5) * 864e5) / 60000);
 }
 // The local start of a trip as ISO 8601 with its UTC offset, to the minute: how rules point at one trip.
 function mrIsoLocal(i) {
-  var off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(D.start[i]).getTimezoneOffset();
-  var s = new Date(D.start[i] + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
+  var t0 = tripT0(i), off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(t0).getTimezoneOffset();
+  var s = new Date(t0 + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
   return s + (off < 0 ? '-' : '+') + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60);
 }
 // A rule's when, ready to test trips against.
@@ -75,7 +78,7 @@ function mrWhenOk(w, i) {
 // type it had, when given, picks between two); day every trip that day; span every trip starting in it.
 function mrFirstAfter(ms) {
   var o = D.order, lo = 0, hi = o.length;
-  while (lo < hi) { var mid = (lo + hi) >> 1; if (D.start[o[mid]] < ms) lo = mid + 1; else hi = mid; }
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (tripT0(o[mid]) < ms) lo = mid + 1; else hi = mid; }
   return lo;
 }
 function mrRefTrips(ref) {
@@ -85,19 +88,19 @@ function mrRefTrips(ref) {
   if (Array.isArray(ref.trips)) {
     var seen = {};
     ref.trips.forEach(function (r) { mrRefTrips(r).forEach(function (j) { if (!seen[j]) { seen[j] = 1; out.push(j); } }); });
-    return out.sort(function (x, y) { return D.start[x] - D.start[y]; });
+    return out.sort(function (x, y) { return tripT0(x) - tripT0(y); });
   }
   if (ref.start) {
     var t = Date.parse(ref.start);
     if (!isFinite(t)) return out;
-    for (k = mrFirstAfter(t - 3 * 60000); k < o.length && D.start[o[k]] <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
+    for (k = mrFirstAfter(t - 3 * 60000); k < o.length && tripT0(o[k]) <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
     // The type the trip had in the files, not the one a correction gave it.
     if (out.length > 1 && ref.mode) out = out.filter(function (j) { return MODES[(D.base || D).mode[j]] === ref.mode; });
     return out.length === 1 ? out : [];
   }
   if (ref.span && ref.span.length === 2) {
     var a = Date.parse(ref.span[0]), b = Date.parse(ref.span[1]);
-    for (k = mrFirstAfter(a); k < o.length && D.start[o[k]] <= b; k++) if (!isDup(o[k])) out.push(o[k]);
+    for (k = mrFirstAfter(a); k < o.length && tripT0(o[k]) <= b; k++) if (!isDup(o[k])) out.push(o[k]);
     return out;
   }
   var d = mrDayNum(ref.day);
@@ -133,11 +136,14 @@ function mrUnlessOk(u, i) {
   if (u.cc && !u.cc[String(D.ccList[D.cs[i]] || '').toUpperCase()] && !u.cc[String(D.ccList[D.ce[i]] || '').toUpperCase()]) return false;
   return true;
 }
+// A place made only for GPS drifts here (drift.js, drift.only) doesn't name stays: it has no part in
+// naming, counting or grouping places, only in turning its walks into stays.
+function mrNames(r) { return !(r && r.drift && r.drift.only); }
 // The place rules with a position, and the one a point is in (the nearest, if several).
 function mrPlaceAt(lat, lng) {
   var best = null, bd = Infinity;
   mrActive('places').forEach(function (r) {
-    if (!Array.isArray(r.at) || !isFinite(lat)) return;
+    if (!Array.isArray(r.at) || !isFinite(lat) || !mrNames(r)) return;
     var d = km([lat, lng], r.at) * 1000;
     if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; }
   });
@@ -172,7 +178,7 @@ function mrStayPlace(v) {
 // Made fresh for each pass, as rules change between them.
 var MR_PF_CELL = 0.05;
 function mrPlaceFinder() {
-  var L = mrActive('places').filter(function (r) { return Array.isArray(r.at) && isFinite(r.at[0]) && isFinite(r.at[1]); });
+  var L = mrActive('places').filter(function (r) { return Array.isArray(r.at) && isFinite(r.at[0]) && isFinite(r.at[1]) && mrNames(r); });
   var grid = new Map(), wide = [], U = null, memo = null;
   L.forEach(function (r, k) {
     var rad = Math.max(+r.radius_m || 100, 1) / 1000 * 1.05 + 0.01, la = +r.at[0], lo = +r.at[1];
@@ -303,13 +309,13 @@ function mrGearUses(r) {
 function mrDefaultCar() { return mrList('gear').filter(function (r) { return r.default && r.mode === 'CAR'; })[0] || null; }
 var MR_CAR_FUELS = ['petrol', 'diesel', 'hybrid', 'ev'];
 // Rule applied (inferred): gear a gear period filled in, a type or line a routine or map snap set. Edited: anything a correction set.
-function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road); }
+function mrInferred(i) { return !!(D.drift && D.drift[i] || D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road); }
 function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor || D.mrDrop && D.mrDrop[i])); }
 // A trip a map snap took says so; anything else a rule filled in is "Rule applied".
 function mrSnapped(i) { return !!(D.mrSnap && D.mrSnap[i] && D.snap && D.snap[i]); }
 function mrRoaded(i) { return !!(D.mrRoad && D.mrRoad[i] && D.snap && D.snap[i] === D.mrRoad[i]); }
 function mrTracked(i) { return !!(D.mrTrack && D.mrTrack[i] && D.snap && D.snap[i]); }
-function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor && !D.mrGear[i].def || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
+function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.drift && D.drift[i] || D.mrGear && D.mrGear[i] && !D.mrGear[i].cor && !D.mrGear[i].def || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
 function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRoaded(i) ? '<span class="guess inf" title="Drawn along the roads of your road pack">On the roads</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Rule applied</span>' : '') + (D.mrGear && D.mrGear[i] && D.mrGear[i].def ? '<span class="guess" title="Guessed: your default car">Default car</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
 function mrCheck(i) { return !!(D.chk && D.chk[i] >= 0); }
 
@@ -360,6 +366,7 @@ function* mrCorrectSteps(dry) {
     if (b.vll) D.vll = b.vll; D.mvStay = {};
     D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
     MR_COUNT = {}; MR_COR = null; MR_LEFT = {}; D.preCor = null;
+    driftReset();
   }
   reset();
   if (!dry) MR_WOULD = null;
@@ -390,6 +397,9 @@ function* mrCorrectSteps(dry) {
   // A trip a correction made a flight isn't drawn along a routine's line.
   D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
   if (dry) return;
+  // Walks that were really a stay, where GPS drifts (MyRules places, drift.js).
+  driftApply();
+  yield;
   // Train trips nothing above drew, along the tracks of the packs (when that's on).
   yield* mrTrackSteps();
   // Car trips nothing above drew, along the roads of the road packs (when that's on).
@@ -564,14 +574,14 @@ function* mrLearnSteps() {
 function mrLearnFixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
 // A trip's vote for its like trips (0: none).
 function mrLearnWeight(j) {
-  if (isDup(j) || D.mrHide[j] || D.est[j] & GUESSED || D.mode[j] === MODE_IDX.FLYING) return 0;
+  if (isDup(j) || D.mrHide[j] || D.drift && D.drift[j] === 1 || D.est[j] & GUESSED || D.mode[j] === MODE_IDX.FLYING) return 0;
   if (mrLearnFixed(j)) return VOTE_FIX;
   return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
 }
 // One trip's guess and check, from the votes of its like trips.
 function mrLearnOne(idx, i) {
   var fly = MODE_IDX.FLYING;
-  if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || mrLearnFixed(i)) return;
+  if (isDup(i) || D.mrHide[i] || D.drift && D.drift[i] === 1 || D.mode[i] === fly || mrLearnFixed(i)) return;
   var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
   if (D.est[i] & GUESSED) {
     if (D.est[i] & STRAVA) return;
@@ -996,6 +1006,8 @@ var MR_FAST = { n: 0, ms: 0 };
 function mrReapplyTrip(i) {
   var P = D && D.preCor, idx = D && D.tidx, n = D ? D.day.length : 0;
   if (!P || !idx || P.n !== n || !MR || !MR.on || BUILDING || ROAD_RUN || roadOn() && !RG || !(i >= 0 && i < n)) return false;
+  // A walk where GPS drifts here may become (or stop being) part of a stay: everything again.
+  if (D.driftOn && (D.drift[i] || MODES[D.mode[i]] === 'WALKING' || MODES[P.mode[i]] === 'WALKING' || D.learn[i])) return false;
   var t0 = performance.now(), b = D.base, oldCor = (MR_COR || []).filter(function (x) { return x.trips.indexOf(i) >= 0; });
   // 1.
   D.mode[i] = P.mode[i]; D.est[i] = P.est[i]; D.sport[i] = P.sport[i]; if (D.stype) D.stype[i] = P.stype[i];
@@ -1331,7 +1343,8 @@ function mrRenderRules() {
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), !MR.on ? null : r.assign === false ? mrGearUses(r) : MR_COUNT[r.id] || 0);
   }).join('') + '</div>';
   if (places.length || moves.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
-    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
+    if (!mrNames(r)) return mrRuleRow('places', r, r.name || r.id, driftRowText(r), 'WALKING', 'var(--m-foot)', null);
+    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays', driftRowText(r)].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
   }).join('') + (moves.length ? '<h4 class="place-h mr-grp">Places that moved</h4>' + moves.map(function (r) {
     var sub = (r.keep ? 'Google\'s location kept' : 'Where it was ' + mvWhen(r.when)) + ' · ' + mvStays(MR.on ? MR_COUNT[r.id] || 0 : 0);
@@ -1658,6 +1671,7 @@ function mrTripBlock(i) {
   else if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
   var dr = D.mrDrop && D.mrDrop[i];
   if (dr) h += '<div class="mr-chg"><b>GPS points ignored:</b> ' + fmt(dr.n) + ' of ' + fmt(dr.of) + (Math.abs(dr.km - D.km[i]) >= 0.01 ? ' <span class="fine">(' + dist(dr.km) + ' with them)</span>' : '') + src(dr.rule, 'ignore_points') + '</div>';
+  h += driftTripHtml(i);
   var rt = D.mrRoute && D.mrRoute[i], rr = rt && mrById(rt.rule), sn = D.snap && D.snap[i], ln = rr && D.mrLine[rr.id];
   var ms = !rr && D.mrMiss && D.mrMiss[i], mr = ms && mrById(ms.rule), mln = mr && D.mrLine[mr.id];
   function way(d) { return ' <span class="fine">· the way ' + (d > 0 ? 'there' : 'back') + '</span>'; }
@@ -1693,6 +1707,8 @@ function mrTripBlock(i) {
   var eds = mrTripEdits(i);
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
+  var dx = D.driftInfo && D.driftInfo[i];
+  if (dx) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(dx.rule) + '" data-t="' + i + '">Not this trip</button>';
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
   // Group with similar trips is in ⋯ in the trip's header (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
@@ -2049,6 +2065,8 @@ function mrEditRule(ref) {
   if (sec === 'moves') { mvEditRule(r); return; }
   if (sec === 'places') {
     if (!Array.isArray(r.at)) { toast('This place has no position to edit'); return; }
+    // A place only for GPS drifts here opens its walks.
+    if (!mrNames(r)) { closeSheets(true); driftStart({ rule: r }); return; }
     needPlaces(); mrPlaceDialog('mr:' + r.id); return;
   }
   if (sec === 'corrections') {
@@ -2332,7 +2350,7 @@ function mrSpotRule(key) {
   var c = mrSpotCentre(key), best = null, bd = Infinity;
   if (!c) return null;
   mrList('places').forEach(function (r) {
-    if (!Array.isArray(r.at)) return;
+    if (!Array.isArray(r.at) || !mrNames(r)) return;
     var d = km(c, r.at) * 1000;
     if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; }
   });
@@ -2359,7 +2377,7 @@ function mrPlaceDialog(key) {
       '<label class="mr-opt"><input type="radio" name="mrPNow" value="past"' + (past ? ' checked' : '') + '><span><b>Past</b><span class="mr-dates">Until <input type="date" id="mrPTo" value="' + esc(until) + '" aria-label="Until"></span></span></label></div>' +
       '<div class="field"><span>Counts as this place within</span><div class="mr-rad-row"><span><b id="mrPRadTxt"></b> <small class="fine" id="mrPCount"></small></span>' +
       '<button type="button" class="btn" id="mrPRadBtn">' + icon('pin') + 'Define radius</button></div><input type="hidden" id="mrPRad" value="' + rad + '"></div>' +
-      '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
+      '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label>' + driftPlaceHtml(r) + '</div>',
     buttons: [['Save', 'primary', function () { mrSavePlace(key, r, c); }]].concat(r ? [['Remove the name', 'danger', function () {
       var vs = spotStays(key);
       placeLast = null;
@@ -2376,6 +2394,7 @@ function mrPlaceDialog(key) {
       $('mrPRole').addEventListener('change', function () { $('mrPLife').hidden = !MR_LIFE[this.value]; });
       $('mrPTo').addEventListener('input', function () { document.querySelector('input[name="mrPNow"][value="past"]').checked = true; });
       $('mrPOsm').addEventListener('click', function () { osmNameFill(c, +$('mrPRad').value); });
+      if ($('mrPDriftRev')) $('mrPDriftRev').addEventListener('click', function () { $('mrDlg').close(); driftStart({ rule: r }); });
       $('mrPRadBtn').addEventListener('click', function () {
         mrRadiusMap(c, +$('mrPRad').value, $('mrPName').value.trim() || 'This place', function (m) { $('mrPRad').value = m; upd(); });
       });
@@ -2492,6 +2511,8 @@ function mrSavePlace(key, r, c) {
   if (role) r.role = role; else delete r.role;
   r.radius_m = rad;
   if (hide) r.hide = true; else delete r.hide;
+  // GPS drifts here switched off: its walks are walks again (and the ones kept as walks forgotten).
+  if ($('mrPDrift') && !$('mrPDrift').checked) { delete r.drift; delete r.except; }
   // Current or past, for home, work and school: past ends on its until date.
   var wasPast = mrIsPast(r), past = !!MR_LIFE[role] && document.querySelector('input[name="mrPNow"]:checked').value === 'past';
   if (past) { var to = $('mrPTo').value || isoDay(todayDay() - 1); if (mrDayNum(to) >= todayDay()) to = isoDay(todayDay() - 1); r.when = Object.assign({}, r.when, { to: to }); }

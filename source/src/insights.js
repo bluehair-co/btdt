@@ -1620,6 +1620,7 @@ function placeActs(o, lat, lng, pid) {
   more.push('<a role="menuitem" href="' + esc(mapsUrl(lat, lng, pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + '<span>Open in Google Maps</span></a>');
   if (o.town != null) more.push(moreItem('data-ptown="' + o.town + '"', 'pin', 'All of ' + esc(placeLabel(o.town))));
   if (o.spot && mvCanNew(o.spot)) more.push(moreItem('data-mv-new="' + esc(o.spot) + '"', 'pin', 'This place moved…'));
+  if (o.spot) more.push(moreItem('data-drift-spot="' + esc(o.spot) + '"', 'WALKING', 'Check walks here…'));
   return '<div class="trip-edit">' + (o.spot ? '<button type="button" class="btn primary" data-mr-place="' + esc(o.spot) + '">' + icon('edit') + (mrSpotRule(o.spot) ? 'Edit this place' : 'Name this place') + '</button>' : '') +
     '<button type="button" class="btn' + (o.spot ? '' : ' primary') + '" data-pmap="' + (o.ll ? o.ll.join(',') : lat + ',' + lng) + '">' + icon('fit') + 'Show on the map</button>' + moreMenu(more, 'More for this place') + '</div>';
 }

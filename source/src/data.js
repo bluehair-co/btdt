@@ -162,7 +162,8 @@ function* setDataSteps(R) {
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
-  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to, vll: D.vll };
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to, vll: D.vll,
+    start: D.start, end: D.end, vs: D.vs, ve: D.ve };
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {
@@ -420,8 +421,8 @@ function apply() {
     // Guessed types and gear MyRules filled in go together.
     if (F.guess === 'check') { if (!mrCheck(i)) continue; }
     else if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || mrInferred(i))) continue;
-    // Trips a MyRules correction hides.
-    if (D.mrHide[i]) continue;
+    // Trips a MyRules correction hides, and walks that became part of a stay (GPS drifts here, drift.js).
+    if (D.mrHide[i] || D.drift && D.drift[i] === 1) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
     // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
     if (F.src !== 'timeline' && isDup(i)) continue;
@@ -740,6 +741,8 @@ function openSheet(id) {
   $('filtersBtn').setAttribute('aria-expanded', id === 'filtersSheet' ? 'true' : 'false');
   document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', menuSheet(id) ? 'true' : 'false'); });
   $('layersBtn').setAttribute('aria-expanded', id === 'layersSheet' ? 'true' : 'false');
+  // Trip cleanup looks for places where walks may be stays when it opens (drift.js).
+  if (id === 'cleanupSheet' && typeof driftSettings === 'function') driftSettings(true);
 }
 function closeSheets(quiet) {
   if (!openId) return;

@@ -312,7 +312,7 @@ function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
   // While a routine's ghost trips are on the map, nothing else is, so which ones the routine takes
   // (solid) and which it leaves (dashed) stand out.
-  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main || typeof SPL !== 'undefined' && SPL || typeof IGN !== 'undefined' && IGN) {
+  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main || typeof SPL !== 'undefined' && SPL || typeof IGN !== 'undefined' && IGN || typeof DR !== 'undefined' && DR) {
     [sqLayer, pathLayer, speedLayer, ccLayer, heatLayer, pinLayer, hlLayer, beaconLayer].forEach(function (l) { if (l && map.hasLayer(l)) map.removeLayer(l); });
     return;
   }
@@ -892,8 +892,8 @@ function onMapTap(pt, ev) {
   if (SN && SN.phase === 'pick') { snapTap(map.containerPointToLatLng(pt)); return; }
   // Selecting trips: the selection handles its own taps.
   if (SEL) return;
-  // Ignoring GPS points: it handles its own taps too.
-  if (IGN) return;
+  // Ignoring GPS points, or reviewing walks that may be stays: they handle their own taps too.
+  if (IGN || typeof DR !== 'undefined' && DR) return;
   // Splitting a trip by hand: the tap picks a point of its path.
   if (SPL) { splitHandTap(pt); return; }
   var list = hitsAt(pt);
@@ -914,7 +914,7 @@ function setHovered(list) {
 }
 function onMapHover(e) {
   // Ignoring GPS points: only the trip's own points are on the map.
-  if (IGN) { setHovered([]); hideTip(); return; }
+  if (IGN || typeof DR !== 'undefined' && DR) { setHovered([]); hideTip(); return; }
   if (hits.length > 8000) return;
   var list = hitsAt(e.containerPoint);
   setHovered(list);
