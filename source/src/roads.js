@@ -1,5 +1,5 @@
 // ---------- car trips along the roads ----------
-// With "Snap car trips to roads" on (Menu › Trip cleanup), car, taxi and motorcycle trips are
+// With "Snap car trips to roads" on (Menu › Trip cleanup), car, taxi, motorcycle and bus trips are
 // drawn along the motorways and main roads of a road pack (roads/NL.json.gz on the packs branch:
 // motorway, trunk and primary roads with their links, from OpenStreetMap, same node and line format
 // as a station pack). The packs are downloaded like station packs (offered after an import, or Add a
@@ -14,7 +14,12 @@
 // length is along the roads. That is worked out in the background, a slice at a time with a pill
 // over the map, once per trip (ROAD_CACHE, by its start and end); applied after MyRules and the
 // tracks, it changes the line, the times along it and the distance, never the type.
-var ROAD_MODES = { CAR: 1, TAXI: 1, MOTORCYCLE: 1 };
+var ROAD_MODES = { CAR: 1, TAXI: 1, MOTORCYCLE: 1, BUS: 1 };
+// Buses: the data doesn't say city bus or coach, so they must fit the main roads better. Only trips of
+// ROAD_BUS_KM or more, and only when ROAD_BUS_MIN % of the length is along the roads: a coach on the
+// motorway snaps, a city bus through the streets keeps its own points (as do the stretches of any
+// bus off the main roads, the bus lanes and side streets).
+var ROAD_BUS_KM = 10, ROAD_BUS_MIN = 70;
 var ROAD_STEP_KM = 0.1, ROAD_NEAR_KM = 0.2, ROAD_DETOUR = 1.5, ROAD_DETOUR_KM = 0.5, ROAD_MIN = 50;
 var ROADS = {};         // installed road packs, by country: { cc, name, bytes, built, km } (no nodes)
 var RG = null;          // the graph of the installed road packs, while it's on
@@ -206,7 +211,8 @@ function roadTrip(G, i) {
 }
 function roadKey(i) { return D.start[i] + ',' + D.end[i]; }
 function roadCan(i) {
-  return !!ROAD_MODES[MODES[D.mode[i]]] && !D.snap[i] && !isDup(i) && !(D.mrHide && D.mrHide[i]) && D.pathOff[i + 1] - D.pathOff[i] >= 2 && (D.base || D).km[i] >= 0.5;
+  var m = MODES[D.mode[i]], km = (D.base || D).km[i];
+  return !!ROAD_MODES[m] && !D.snap[i] && !isDup(i) && !(D.mrHide && D.mrHide[i]) && D.pathOff[i + 1] - D.pathOff[i] >= 2 && km >= (m === 'BUS' ? ROAD_BUS_KM : 0.5);
 }
 
 // After the tracks: trips worked out already take their line; the others are worked out in the
@@ -220,7 +226,7 @@ function mrApplyRoads() {
     if (!roadCan(i)) continue;
     var k = roadKey(i), sn = ROAD_CACHE.get(k);
     if (sn === undefined) { todo.push(i); continue; }
-    if (!sn) continue;
+    if (!sn || MODES[D.mode[i]] === 'BUS' && sn.cov < ROAD_BUS_MIN) continue;
     D.snap[i] = sn; D.km[i] = sn.km; D.mrRoad[i] = sn;
   }
   if (todo.length && !ROAD_RUN) roadRun(todo);
