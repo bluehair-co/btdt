@@ -2337,10 +2337,10 @@ function mrRoutineDialog(r, isNew) {
 // radius that counts as this place (set on its own map with Define radius), and Hide. Saved as a
 // place rule in MyRules.
 var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['friends', 'Friends'], ['sport', 'Sport'],
-  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['transit', 'Transport stop'], ['airport', 'Airport']];
+  ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['entertainment', 'Entertainment'], ['transit', 'Transport stop'], ['airport', 'Airport']];
 // Each kind of place: its name and icon, for pins, the places list and Time by kind of place.
 var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'home'], friends: ['Friends', 'friends'], sport: ['Sport', 'basketball'],
-  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], transit: ['Transport stop', 'BUS'], airport: ['Airport', 'FLYING'] };
+  restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], entertainment: ['Entertainment', 'ticket'], transit: ['Transport stop', 'BUS'], airport: ['Airport', 'FLYING'] };
 function mrKindName(role) { return MR_KIND[role] ? MR_KIND[role][0] : role ? role.charAt(0).toUpperCase() + role.slice(1) : ''; }
 // How a place looks wherever it's shown (pins, lists, its page): the icon of its kind, in the sunrise
 // colour when it's your current home, work or school, teal when you named it, grey otherwise.
