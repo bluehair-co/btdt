@@ -661,6 +661,16 @@
             "hide": {
               "type": "boolean"
             },
+            "stay": {
+              "type": "object",
+              "description": "This walk was time spent at a place: the walk is hidden and a stay at `at` covers its time; only on a correction for one trip",
+              "required": ["at"],
+              "properties": {
+                "at": { "type": "array", "items": { "type": "number" }, "minItems": 2, "maxItems": 2, "description": "[latitude, longitude] of the place" },
+                "name": { "type": "string" },
+                "place": { "type": "string", "description": "id of the MyRules place, when the place has one" }
+              }
+            },
             "ignore_points": {
               "type": "array",
               "items": {

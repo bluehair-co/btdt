@@ -353,6 +353,8 @@ function mrCorrectOne(x, i) {
   }
   if (t.checked === true && mi == null) { D.mrOk[i] = 1; hit = true; }
   if (typeof t.name === 'string' && t.name.trim()) { D.mrName[i] = { rule: x.c.id, name: t.name.trim() }; hit = true; }
+  // This was a stay: the walk leaves the map, lists and totals (its stay was added when the trips were set up, mrStayInject).
+  if (t.stay && typeof t.stay === 'object' && Array.isArray(t.stay.at)) { D.mrHide[i] = 1; D.mrStay[i] = { rule: x.c.id, name: t.stay.name || '' }; hit = true; }
   if (t.hide === true) { D.mrHide[i] = 1; hit = true; }
   else if (t.hide === false && D.mrHide[i]) { D.mrHide[i] = 0; hit = true; }
   return hit;
@@ -364,7 +366,7 @@ function* mrCorrectSteps(dry) {
     D.mode = copy(b.mode); D.est = copy(b.est); D.sport = copy(b.sport); D.stype = copy(b.stype); D.km = copy(b.km);
     D.pathPts = b.pathPts; D.pathT = b.pathT; D.pathOff = b.pathOff; D.from = b.from; D.to = b.to; D.mrDrop = [];
     if (b.vll) D.vll = b.vll; D.mvStay = {};
-    D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
+    D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrStay = []; D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
     MR_COUNT = {}; MR_COR = null; MR_LEFT = {}; D.preCor = null;
     driftReset();
   }
@@ -938,6 +940,8 @@ function mrReapply() {
   if (!D) { renderImports(); return; }
   // The trips are still being set up (setDataSoon): this comes once they are.
   if (BUILDING) { BUILDING.again = true; return; }
+  // Walks made stays changed: their stays are added while the trips are set up, so everything again.
+  if (D.staySig !== mrStaySig()) { refreshData(); return; }
   mrApplyCorrections();
   mrReapplied();
 }
@@ -1006,6 +1010,7 @@ function mrChange(text, trip) {
 var MR_FAST = { n: 0, ms: 0 };
 function mrReapplyTrip(i) {
   var P = D && D.preCor, idx = D && D.tidx, n = D ? D.day.length : 0;
+  if (D.staySig !== mrStaySig()) return false;
   if (!P || !idx || P.n !== n || !MR || !MR.on || BUILDING || ROAD_RUN || roadOn() && !RG || !(i >= 0 && i < n)) return false;
   // A walk where GPS drifts here may become (or stop being) part of a stay: everything again.
   if (D.driftOn && (D.drift[i] || MODES[D.mode[i]] === 'WALKING' || MODES[P.mode[i]] === 'WALKING' || D.learn[i])) return false;
@@ -1364,14 +1369,15 @@ function mrRenderRules() {
     if (th.mode) bits.push('Type: ' + esc(LABEL[th.mode] || th.mode));
     if (th.name) bits.push('Title: “' + esc(th.name) + '”');
     if (g) bits.push('Gear: ' + esc(gr ? gr.name || gr.id : g));
+    if (th.stay && typeof th.stay === 'object') bits.push('Made a stay' + (th.stay.name ? ' at ' + esc(th.stay.name) : ''));
     if (th.hide === true) bits.push('Hidden');
     if (th.hide === false) bits.push('Shown again');
     var ign = Array.isArray(th.ignore_points) ? th.ignore_points.length : 0;
     if (ign) bits.push(fmt(ign) + ' GPS point' + (ign === 1 ? '' : 's') + ' ignored');
     if (th.replace) bits.push('Replace: not applied in this version of BT•DT');
     var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
-    var ic = th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : ign ? 'pinOff' : 'info');
-    var applied = th.mode || th.name || g || th.hide != null || ign;
+    var ic = th.stay ? 'home' : th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : ign ? 'pinOff' : 'info');
+    var applied = th.mode || th.name || g || th.hide != null || th.stay || ign;
     return gh + mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : '#9aa49d', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
@@ -1420,7 +1426,7 @@ function mrCorTime(c) {
 // What sort of change it makes, to sort and group by: the type it sets, else what else it does.
 function mrCorGroup(c) {
   var th = c.then || {};
-  return th.mode ? LABEL[th.mode] || th.mode : th.hide === true ? 'Hidden' : th.gear ? 'Gear' : th.name ? 'Titles' : th.checked ? 'Type checked' : Array.isArray(th.ignore_points) && th.ignore_points.length ? 'Ignored GPS points' : 'Other';
+  return th.mode ? LABEL[th.mode] || th.mode : th.stay ? 'Made a stay' : th.hide === true ? 'Hidden' : th.gear ? 'Gear' : th.name ? 'Titles' : th.checked ? 'Type checked' : Array.isArray(th.ignore_points) && th.ignore_points.length ? 'Ignored GPS points' : 'Other';
 }
 // ---------- cleaning up the corrections ----------
 // Edits pile up: a trip fixed twice, a type set to what the files already said, a trip that is no
@@ -1441,7 +1447,7 @@ var MR_CLEAN_GROUPS = [
 ];
 function mrCorDoes(t) {
   t = t || {};
-  return !!(t.mode != null && MODE_IDX[t.mode] != null || typeof t.name === 'string' && t.name.trim() || t.gear || typeof t.hide === 'boolean' || t.checked === true || Array.isArray(t.ignore_points) && t.ignore_points.length || t.replace);
+  return !!(t.mode != null && MODE_IDX[t.mode] != null || typeof t.name === 'string' && t.name.trim() || t.gear || typeof t.hide === 'boolean' || t.stay && typeof t.stay === 'object' && Array.isArray(t.stay.at) || t.checked === true || Array.isArray(t.ignore_points) && t.ignore_points.length || t.replace);
 }
 function mrRefDay(ref) {
   var v = ref && (ref.start || ref.day || ref.span && ref.span[0]);
@@ -1660,7 +1666,9 @@ function mrTripBlock(i) {
     return '<div class="fine">' + (one ? 'Set for this trip' : r && r.trip ? 'From the correction for ' + esc(r.trip.day || (r.trip.span || []).join(' – ')) : 'From the rule <i>' + esc(r ? r.name || r.id : id) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) +
       (field ? ' · <button type="button" class="link-btn" data-mr-act="undo" data-f="' + field + '" data-r="' + esc(id) + '" data-t="' + i + '">Undo</button>' : '') + '</div>';
   }
-  if (D.mrHide && D.mrHide[i]) {
+  var ms0 = D.mrStay && D.mrStay[i];
+  if (ms0) h += '<div class="mr-chg"><b>Made a stay</b> at ' + esc(ms0.name || 'a place of yours') + ': this walk was time spent there.' + src(ms0.rule, 'stay') + '</div>';
+  else if (D.mrHide && D.mrHide[i]) {
     var hc = mrCorrections().filter(function (x) { return x.c.then.hide === true && x.trips.indexOf(i) >= 0; }).pop();
     h += '<div class="mr-chg"><b>Hidden</b> from the map, lists and totals' + (hc ? src(hc.c.id, 'hide') : '') + '</div>';
   }
@@ -1741,7 +1749,9 @@ function mrEditMenu(i) {
   var it = [moreItem('data-mr-act="edit" data-t="' + i + '"', 'edit', 'Trip info')];
   if (splitHandOk(i)) it.push(moreItem('data-split-hand="' + i + '"', 'split', 'Split trip'));
   if (ignOk(i)) it.push(moreItem('data-ign="' + i + '"', 'pinOff', 'Ignore GPS points'));
-  it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'hide', 'Hide this trip'));
+  if (stayPickOk(i)) it.push(moreItem('data-stay-pick="' + i + '"', 'home', 'This was a stay…'));
+  if (D.mrStay && D.mrStay[i]) it.push(moreItem('data-mr-act="undo" data-f="stay" data-r="' + esc(D.mrStay[i].rule) + '" data-t="' + i + '"', 'undo', 'Make it a walk again'));
+  else it.push(D.mrHide && D.mrHide[i] ? moreItem('data-mr-act="show" data-t="' + i + '"', 'undo', 'Show this trip again') : moreItem('data-mr-act="hide" data-t="' + i + '"', 'hide', 'Hide this trip'));
   return moreMenu(it, 'Edit this trip', 'edit', 'end');
 }
 // Group with similar trips: a new routine between this trip's ends, matched by route, not by time (along
@@ -1845,7 +1855,7 @@ function mrDropAction(c, field) {
   delete c.then[field];
   if (!Object.keys(c.then).length) MR.doc.corrections = mrList('corrections').filter(function (x) { return x !== c; });
 }
-var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked', ignore_points: 'Ignored GPS points' };
+var MR_UNDO = { mode: 'Type', name: 'Title', gear: 'Gear', hide: 'Hidden', checked: 'Type checked', ignore_points: 'Ignored GPS points', stay: 'Made a stay' };
 $('tripBody').addEventListener('click', function (ev) {
   var lt = ev.target.closest('[data-mr-trips]');
   if (lt) { mrBulkList(lt.dataset.mrTrips); return; }
@@ -1878,7 +1888,9 @@ function mrTripAct(b, i, act) {
     // A correction on a day or span: this trip is left out of it.
     else (c.except || (c.except = [])).push({ start: mrIsoLocal(i), mode: MODES[D.base.mode[i]] });
     // Ignored GPS points change the trip's line before anything else: those need everything again.
-    mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i), f === 'ignore_points' ? null : i);
+    mrChange('Undone: ' + MR_UNDO[f] + ' on ' + mrWhere(i), f === 'ignore_points' || f === 'stay' ? null : i);
+    // A stay made from a walk: the trips were set up again (numbered anew), so the walk is found by its start.
+    if (f === 'stay') { toast('It’s a walk again.'); return; }
     openTrip(i);
   } else if (act === 'detach') {
     var bc = mrById(b.dataset.r);
