@@ -619,7 +619,7 @@ function mrStayInject(R) {
 }
 
 // The picker: the walk on the map and your places around it, one to tap.
-var STP = null, STAY_NEAR_KM = 3, STAY_MAX = 20;
+var STP = null, STAY_NEAR_KM = 3, STAY_MAX = 20, STAY_SUGGEST_KM = 0.4;
 function stayPickOk(i) {
   return !!D && !isDup(i) && !(D.mrStay && D.mrStay[i]) && !(D.mrHide && D.mrHide[i]) && MODES[D.mode[i]] === 'WALKING' && !(D.est[i] & STRAVA);
 }
@@ -642,7 +642,12 @@ function stayPickStart(i) {
   });
   cands.sort(function (x, y) { return x.d - y.d; });
   cands = cands.slice(0, STAY_MAX);
-  if (!cands.length) { toast('None of your places are near this walk. Places come from where you stayed.'); return; }
+  // Where the walk spent its time: the middle of its points (they come at a steady pace, so the
+  // middle sits where it lingered). The suggestion is the place nearest to it, if one is close;
+  // otherwise a new place right there, which you can move with a tap anywhere on the map.
+  var la = pts.map(function (x) { return x[0]; }).sort(function (a, b) { return a - b; }), ln = pts.map(function (x) { return x[1]; }).sort(function (a, b) { return a - b; });
+  var mid = { lat: la[la.length >> 1], lng: ln[ln.length >> 1] }, best = null;
+  cands.forEach(function (c) { c.dm = kmLL(c.lat, c.lng, mid.lat, mid.lng); if (c.dm <= STAY_SUGGEST_KM && (!best || c.dm < best.dm)) best = c; });
   closeSheets(true);
   if (PREFS.proj !== 'merc') setProj('merc');
   setTab('map');
@@ -653,18 +658,19 @@ function stayPickStart(i) {
   if (typeof snapEnd === 'function') snapEnd();
   stayPickEnd();
   if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
-  STP = { i: i, cands: cands, sel: null };
+  STP = { i: i, cands: cands, spot: mid, sug: best ? best.k : null, sel: best ? best.k : 'spot' };
   STP.r = L.canvas({ pane: 'mrg', padding: 0.5 });
   STP.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: STP.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
   STP.line = L.polyline(pts, { pane: 'mrg', renderer: STP.r, color: cssVar('--m-foot') || '#c98500', weight: 4, opacity: .8, interactive: false }).addTo(map);
   STP.layer = L.layerGroup().addTo(map);
   map.getContainer().classList.add('sel-on');
   document.body.classList.add('sel-mode');
+  map.on('click', stayPickTap);
   layerToggles();
   hideTip(); setHovered([]);
   stayPickBars();
   stayPickRender();
-  var bb = L.latLngBounds(pts);
+  var bb = L.latLngBounds(pts).extend([mid.lat, mid.lng]);
   cands.slice(0, 8).forEach(function (c) { bb.extend([c.lat, c.lng]); });
   map.fitBounds(bb, { paddingTopLeft: [80, wide() ? 120 : 160], paddingBottomRight: [80, wide() ? 140 : 200], maxZoom: 17 });
 }
@@ -672,7 +678,7 @@ function stayPickRender() {
   if (!STP) return;
   STP.layer.clearLayers();
   STP.cands.forEach(function (c) {
-    var on = STP.sel === c.k, lab = placeLabel(c.k) + ' · ' + fmt(c.n) + ' stay' + (c.n === 1 ? '' : 's');
+    var on = STP.sel === c.k, lab = (STP.sug === c.k ? 'Suggested: ' : '') + placeLabel(c.k) + ' · ' + fmt(c.n) + ' stay' + (c.n === 1 ? '' : 's');
     var m = L.marker([c.lat, c.lng], { pane: 'mrg', keyboard: true, title: lab, alt: lab, zIndexOffset: on ? 1000 : 0,
       icon: L.divIcon({ className: 'stay-pin' + (on ? ' on' : ''), html: '<span data-stay-k="' + c.k + '"></span>', iconSize: on ? [30, 30] : [22, 22] }) })
       .bindTooltip(esc(lab), { direction: 'top', offset: [0, on ? -14 : -10], permanent: on })
@@ -680,9 +686,21 @@ function stayPickRender() {
       .addTo(STP.layer);
     if (on) m.openTooltip();
   });
+  // The new place: shown while it's picked, or when none of yours is close to the walk.
+  if (STP.sel === 'spot' || STP.sug == null) {
+    var on = STP.sel === 'spot', lab = 'A new place' + (on ? ' here' : ', where the walk lingered');
+    var sm = L.marker([STP.spot.lat, STP.spot.lng], { pane: 'mrg', keyboard: true, title: lab, alt: lab, zIndexOffset: on ? 1000 : 0,
+      icon: L.divIcon({ className: 'stay-pin new' + (on ? ' on' : ''), html: '<span data-stay-k="spot"></span>', iconSize: on ? [30, 30] : [22, 22] }) })
+      .bindTooltip(esc(lab), { direction: 'top', offset: [0, on ? -14 : -10], permanent: on })
+      .on('click', function () { STP.sel = 'spot'; stayPickRender(); })
+      .addTo(STP.layer);
+    if (on) sm.openTooltip();
+  }
   var i = STP.i, s = STP.sel;
-  $('stpSum').innerHTML = s == null ? '<b>Tap the place where you were</b><small>' + clock(D.start[i], D.off[i]) + '–' + clock(D.end[i], D.off[i]) + ' · ' + fmt(STP.cands.length) + ' of your places nearby</small>'
-    : '<b>A stay at ' + esc(placeLabel(s)) + '</b><small>' + clock(D.start[i], D.off[i]) + '–' + clock(D.end[i], D.off[i]) + ', instead of this walk</small>';
+  var when = clock(D.start[i], D.off[i]) + '–' + clock(D.end[i], D.off[i]);
+  $('stpSum').innerHTML = s == null ? '<b>Tap the place where you were</b><small>' + when + '</small>'
+    : s === 'spot' ? '<b>A stay at a new place' + (stayNewName() ? ' in ' + esc(stayNewName()) : '') + '</b><small>' + when + ', instead of this walk. Tap the map to move it.</small>'
+    : '<b>A stay at ' + esc(placeLabel(s)) + '</b><small>' + when + ', instead of this walk' + (s === STP.sug ? ' (suggested: the place nearest to where it lingered)' : '') + '</small>';
   $('stpBot').querySelector('[data-a="save"]').disabled = s == null;
 }
 function stayPickBars() {
@@ -690,7 +708,7 @@ function stayPickBars() {
   if (!top) {
     top = document.createElement('div');
     top.id = 'stpTop'; top.className = 'snap-bar sel-top'; top.setAttribute('role', 'status');
-    top.innerHTML = '<span class="snap-bar-t">' + icon('home') + '<span><b>This was a stay</b><span class="sel-hint">The dots are places you stayed at. Tap the one where you were.</span></span></span>' +
+    top.innerHTML = '<span class="snap-bar-t">' + icon('home') + '<span><b>This was a stay</b><span class="sel-hint">Tap one of your places, or anywhere on the map for a new one.</span></span></span>' +
       '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
     top.addEventListener('click', function (ev) {
       var b = ev.target.closest('button');
@@ -708,13 +726,24 @@ function stayPickBars() {
   }
   top.hidden = false; $('stpBot').hidden = false;
 }
+function stayNewName() {
+  var c = STP && nearestCity(STP.spot.lat, STP.spot.lng);
+  return c ? (c.d > 8 ? 'Near ' : '') + c.name : '';
+}
+function stayPickTap(e) {
+  if (!STP) return;
+  STP.spot = { lat: e.latlng.lat, lng: e.latlng.lng }; STP.sel = 'spot';
+  stayPickRender();
+}
 function stayPickSave() {
   if (!STP || STP.sel == null) return;
-  var i = STP.i, p = D.places[STP.sel], name = placeLabel(STP.sel), b = D.base || D;
+  var i = STP.i, b = D.base || D, spot = STP.sel === 'spot';
+  var p = spot ? STP.spot : D.places[STP.sel], name = spot ? stayNewName() || 'a new place' : placeLabel(STP.sel);
   mrEnsure();
   var c = mrTripCorrection(i);
   if (!c) (MR.doc.corrections || (MR.doc.corrections = [])).push(c = { id: mrNewId('stay-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[b.mode[i]] }, then: {} });
-  c.then.stay = { at: [+p.lat.toFixed(6), +p.lng.toFixed(6)], name: name };
+  c.then.stay = { at: [+p.lat.toFixed(6), +p.lng.toFixed(6)], name: spot ? stayNewName() : name };
+  if (!c.then.stay.name) delete c.then.stay.name;
   if (p.mr) c.then.stay.place = p.mr;
   stayPickEnd();
   working('Making it a stay…', function () { mrChange('Walk on ' + mrWhere(i) + ' made a stay at ' + name); });
@@ -725,6 +754,7 @@ function stayPickEnd() {
   var was = STP;
   STP = null;
   was.dim.remove(); was.line.remove(); was.layer.remove();
+  map.off('click', stayPickTap);
   map.getContainer().classList.remove('sel-on');
   document.body.classList.remove('sel-mode');
   if ($('stpTop')) { $('stpTop').hidden = true; $('stpBot').hidden = true; }
