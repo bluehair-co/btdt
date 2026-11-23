@@ -64,6 +64,13 @@
         "$ref": "#/$defs/correction"
       }
     },
+    "gps_spots": {
+      "type": "array",
+      "description": "Bad GPS spots: where the phone keeps putting itself without GPS (a Wi-Fi router, a cell tower). Their points are left out of every trip.",
+      "items": {
+        "$ref": "#/$defs/gps_spot"
+      }
+    },
     "myrules": {
       "type": "string",
       "pattern": "^0\\.[0-9]+$"
@@ -869,6 +876,29 @@
           "description": "true: keep Google's location for these stays, even where your GPS says otherwise."
         }
       }
+    },
+    "gps_spot": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        },
+        {
+          "type": "object",
+          "required": [
+            "at"
+          ],
+          "properties": {
+            "at": {
+              "type": "array",
+              "minItems": 1,
+              "description": "The spots, [lat, lng] each: GPS points within 15 m of one are left out of every trip, except a trip's first and last points",
+              "items": {
+                "$ref": "#/$defs/latlng"
+              }
+            }
+          }
+        }
+      ]
     }
   }
 }
