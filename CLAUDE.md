@@ -61,7 +61,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 | `split.js` | Trips Timeline merged: automatic/suggested splits, *Keep as one trip*, *Split trip* by hand. |
 | `select.js` | *Select trips* on the map (lasso/rectangle, touch too), bulk *Change type…* and *Set gear…*, and ⋯ › *Export trips* for the picked trips. |
 | `ignore.js` | *Ignore GPS points* of one trip. |
-| `drive.js` | *Keep in Google Drive* (MyRules card): Google Identity Services token flow (`drive.file` scope, client ID in `DRIVE_CLIENT`), one `btdt.myrules.json` in the user's Drive, rule-by-rule merge against the last synced copy (`driveMerge`), sync on open and after each `mrSave`. |
+| `drive.js` | *Keep your rules: On this device / In Google Drive* (MyRules card): Google Identity Services token flow (`drive.file` scope, client ID in `DRIVE_CLIENT`), one `btdt.myrules.json` in the user's Drive, rule-by-rule merge against the last synced copy (`driveMerge`), sync on open and after each `mrSave`. |
 | `settings.js` | The *Menu* (the three-line button) and its pages: *Your data*, *Trip cleanup* (merged trips, cell-tower fixes, packs, snapping) and *Preferences* (units, theme, date/time format, CO₂ factors, heart rate). |
 
 ## Data formats
