@@ -158,6 +158,8 @@ function* setDataSteps(R) {
   if (D === RAW) D = Object.assign({}, RAW);
   // Trips Timeline merged are split into their legs (split.js), on D only.
   D = splitTrips(D);
+  // Walks you made stays (MyRules corrections with then.stay): their stays join the stays here.
+  D = mrStayInject(D);
   yield;
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};

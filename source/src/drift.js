@@ -564,3 +564,175 @@ function driftEnd() {
   layerToggles();
 }
 document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && DR && !$('mrDlg').open) driftEnd(); });
+
+// ---------- this was a stay (one walk, a place you pick on the map) ----------
+// In a walk's pencil menu, This was a stay… shows your regular places near it on the map; tap one and
+// Make it a stay saves a correction { trip, then: { stay: { at, name, place } } }. The walk is hidden
+// (mrCorrectOne) and, when the trips are set up, a stay at that place covers its time (mrStayInject).
+// Stays can only be added then, so a change to these corrections sets the trips up again (mrReapply
+// compares mrStaySig with the one the trips were set up with).
+function mrStayCors() {
+  if (!MR || !MR.on) return [];
+  return mrActive('corrections').filter(function (c) { return c.trip && c.trip.start && c.then && c.then.stay && Array.isArray(c.then.stay.at) && isFinite(c.then.stay.at[0]) && isFinite(c.then.stay.at[1]); });
+}
+function mrStaySig() {
+  return mrStayCors().map(function (c) { return c.id + '@' + c.trip.start + '@' + c.then.stay.at.join(',') + '@' + (c.then.stay.name || '') + (c.except ? '@' + JSON.stringify(c.except) : ''); }).join('|');
+}
+// R is D while the trips are set up (after splitTrips): its stays plus one per walk made a stay.
+function mrStayInject(R) {
+  var cors = mrStayCors();
+  R.staySig = mrStaySig(); R.madeStays = [];
+  if (!cors.length) return R;
+  var n = R.start.length, k;
+  // mrRefTrips finds trips by their start, in time order.
+  R.order = Int32Array.from(Array.from({ length: n }, function (_, j) { return j; }).sort(function (a, b) { return R.start[a] - R.start[b]; }));
+  var add = [];
+  cors.forEach(function (c) {
+    var ex = c.except ? mrExcept(c) : {}, t = mrRefTrips(c.trip).filter(function (j) { return !ex[j]; });
+    if (t.length !== 1) return;
+    var i = t[0], s = c.then.stay;
+    add.push({ i: i, at: s.at, name: s.name || '', rule: c.id });
+  });
+  if (!add.length) return R;
+  var nv = R.vs.length, m = nv + add.length, O = Object.assign({}, R);
+  function grow(key, w, Ctor) {
+    var a = R[key];
+    if (a == null) return null;
+    if (Array.isArray(a)) return a.slice();
+    var b = new (Ctor || a.constructor)(m * w);
+    b.set(a.subarray(0, nv * w));
+    return b;
+  }
+  O.vs = grow('vs', 1); O.ve = grow('ve', 1); O.vday = grow('vday', 1); O.voff = grow('voff', 1); O.vll = grow('vll', 2);
+  O.vtype = grow('vtype', 1); O.vname = grow('vname', 1) || []; O.vpid = grow('vpid', 1) || []; O.vgoog = grow('vgoog', 2); O.vsrcs = grow('vsrcs', 1);
+  add.forEach(function (x, j) {
+    var v = nv + j, i = x.i;
+    O.vs[v] = R.start[i]; O.ve[v] = R.end[i]; O.vday[v] = R.day[i]; O.voff[v] = R.off[i];
+    O.vll[2 * v] = x.at[0]; O.vll[2 * v + 1] = x.at[1];
+    if (O.vtype) O.vtype[v] = 0;
+    O.vname[v] = x.name; O.vpid[v] = '';
+    if (O.vgoog) { O.vgoog[2 * v] = NaN; O.vgoog[2 * v + 1] = NaN; }
+    if (O.vsrcs) O.vsrcs[v] = R.srcs ? R.srcs[i] : R.src || 0;
+    O.madeStays.push({ v: v, trip: i, rule: x.rule });
+  });
+  return O;
+}
+
+// The picker: the walk on the map and your places around it, one to tap.
+var STP = null, STAY_NEAR_KM = 3, STAY_MAX = 20;
+function stayPickOk(i) {
+  return !!D && !isDup(i) && !(D.mrStay && D.mrStay[i]) && !(D.mrHide && D.mrHide[i]) && MODES[D.mode[i]] === 'WALKING' && !(D.est[i] & STRAVA);
+}
+function stayPickStart(i) {
+  if (!stayPickOk(i)) return;
+  needPlaces();
+  var b = D.base || D, pts = [];
+  for (var q = b.pathOff[i]; q < b.pathOff[i + 1]; q++) pts.push([b.pathPts[2 * q], b.pathPts[2 * q + 1]]);
+  if (!pts.length) pts.push([D.from[2 * i], D.from[2 * i + 1]], [D.to[2 * i], D.to[2 * i + 1]]);
+  // Your places (where you stayed, named or not) near the walk, nearest first, each with how often you were there.
+  var visits = {}, v;
+  for (v = 0; v < D.vs.length; v++) if (D.pv && D.pv[v] >= 0) visits[D.pv[v]] = (visits[D.pv[v]] || 0) + 1;
+  var cands = [];
+  D.places.forEach(function (p, k) {
+    if (p.ap || !visits[k] && !p.mr) return;
+    var d = Infinity;
+    for (var j = 0; j < pts.length; j += Math.max(1, Math.floor(pts.length / 40))) d = Math.min(d, kmLL(p.lat, p.lng, pts[j][0], pts[j][1]));
+    d = Math.min(d, kmLL(p.lat, p.lng, pts[pts.length - 1][0], pts[pts.length - 1][1]));
+    if (d <= STAY_NEAR_KM) cands.push({ k: k, d: d, n: visits[k] || 0, lat: p.lat, lng: p.lng });
+  });
+  cands.sort(function (x, y) { return x.d - y.d; });
+  cands = cands.slice(0, STAY_MAX);
+  if (!cands.length) { toast('None of your places are near this walk. Places come from where you stayed.'); return; }
+  closeSheets(true);
+  if (PREFS.proj !== 'merc') setProj('merc');
+  setTab('map');
+  if (!initMap()) return;
+  if (typeof splitHandEnd === 'function') splitHandEnd();
+  if (typeof ignEnd === 'function') ignEnd();
+  if (typeof selEnd === 'function') selEnd();
+  if (typeof snapEnd === 'function') snapEnd();
+  stayPickEnd();
+  if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
+  STP = { i: i, cands: cands, sel: null };
+  STP.r = L.canvas({ pane: 'mrg', padding: 0.5 });
+  STP.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: STP.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
+  STP.line = L.polyline(pts, { pane: 'mrg', renderer: STP.r, color: cssVar('--m-foot') || '#c98500', weight: 4, opacity: .8, interactive: false }).addTo(map);
+  STP.layer = L.layerGroup().addTo(map);
+  map.getContainer().classList.add('sel-on');
+  document.body.classList.add('sel-mode');
+  layerToggles();
+  hideTip(); setHovered([]);
+  stayPickBars();
+  stayPickRender();
+  var bb = L.latLngBounds(pts);
+  cands.slice(0, 8).forEach(function (c) { bb.extend([c.lat, c.lng]); });
+  map.fitBounds(bb, { paddingTopLeft: [80, wide() ? 120 : 160], paddingBottomRight: [80, wide() ? 140 : 200], maxZoom: 17 });
+}
+function stayPickRender() {
+  if (!STP) return;
+  STP.layer.clearLayers();
+  STP.cands.forEach(function (c) {
+    var on = STP.sel === c.k, lab = placeLabel(c.k) + ' · ' + fmt(c.n) + ' stay' + (c.n === 1 ? '' : 's');
+    var m = L.marker([c.lat, c.lng], { pane: 'mrg', keyboard: true, title: lab, alt: lab, zIndexOffset: on ? 1000 : 0,
+      icon: L.divIcon({ className: 'stay-pin' + (on ? ' on' : ''), html: '<span data-stay-k="' + c.k + '"></span>', iconSize: on ? [30, 30] : [22, 22] }) })
+      .bindTooltip(esc(lab), { direction: 'top', offset: [0, on ? -14 : -10], permanent: on })
+      .on('click', function () { STP.sel = c.k; stayPickRender(); })
+      .addTo(STP.layer);
+    if (on) m.openTooltip();
+  });
+  var i = STP.i, s = STP.sel;
+  $('stpSum').innerHTML = s == null ? '<b>Tap the place where you were</b><small>' + clock(D.start[i], D.off[i]) + '–' + clock(D.end[i], D.off[i]) + ' · ' + fmt(STP.cands.length) + ' of your places nearby</small>'
+    : '<b>A stay at ' + esc(placeLabel(s)) + '</b><small>' + clock(D.start[i], D.off[i]) + '–' + clock(D.end[i], D.off[i]) + ', instead of this walk</small>';
+  $('stpBot').querySelector('[data-a="save"]').disabled = s == null;
+}
+function stayPickBars() {
+  var top = $('stpTop');
+  if (!top) {
+    top = document.createElement('div');
+    top.id = 'stpTop'; top.className = 'snap-bar sel-top'; top.setAttribute('role', 'status');
+    top.innerHTML = '<span class="snap-bar-t">' + icon('home') + '<span><b>This was a stay</b><span class="sel-hint">The dots are places you stayed at. Tap the one where you were.</span></span></span>' +
+      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
+    top.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (b && b.dataset.a === 'cancel' && STP) { var i = STP.i; stayPickEnd(); openTrip(i); }
+    });
+    document.body.appendChild(top);
+    var bot = document.createElement('div');
+    bot.id = 'stpBot'; bot.className = 'sel-bar';
+    bot.innerHTML = '<div class="sel-row"><div class="sel-sum ign-sum" id="stpSum"></div><button type="button" class="btn primary" data-a="save">Make it a stay</button></div>';
+    bot.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (b && b.dataset.a === 'save') stayPickSave();
+    });
+    document.body.appendChild(bot);
+  }
+  top.hidden = false; $('stpBot').hidden = false;
+}
+function stayPickSave() {
+  if (!STP || STP.sel == null) return;
+  var i = STP.i, p = D.places[STP.sel], name = placeLabel(STP.sel), b = D.base || D;
+  mrEnsure();
+  var c = mrTripCorrection(i);
+  if (!c) (MR.doc.corrections || (MR.doc.corrections = [])).push(c = { id: mrNewId('stay-' + isoDay(D.day[i])), trip: { start: mrIsoLocal(i), mode: MODES[b.mode[i]] }, then: {} });
+  c.then.stay = { at: [+p.lat.toFixed(6), +p.lng.toFixed(6)], name: name };
+  if (p.mr) c.then.stay.place = p.mr;
+  stayPickEnd();
+  working('Making it a stay…', function () { mrChange('Walk on ' + mrWhere(i) + ' made a stay at ' + name); });
+  toast('Made a stay at ' + name + '. Undo it in MyRules › Corrections.');
+}
+function stayPickEnd() {
+  if (!STP) return;
+  var was = STP;
+  STP = null;
+  was.dim.remove(); was.line.remove(); was.layer.remove();
+  map.getContainer().classList.remove('sel-on');
+  document.body.classList.remove('sel-mode');
+  if ($('stpTop')) { $('stpTop').hidden = true; $('stpBot').hidden = true; }
+  layerToggles();
+}
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-stay-pick]');
+  if (!b) return;
+  ev.stopPropagation();
+  stayPickStart(+b.dataset.stayPick);
+});
