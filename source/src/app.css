@@ -1097,17 +1097,19 @@ div.hit-row:hover { background: none; }
 .sel-top { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; }
 .sel-top .snap-bar-t { flex: 1 1 240px; }
 .sel-top .seg button { min-height: 40px; }
-.sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; }
+.sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
 .sel-bar[hidden], .sel-top[hidden] { display: none; }
 .sel-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; }
 /* Phones: the summary on its own line, the buttons under it. */
-@media (max-width: 480px) { .sel-row { flex-wrap: wrap; } .sel-row .sel-sum { flex: 1 1 100%; } .sel-row .btn:not(.quiet) { flex: 1 1 0; } }
+.sel-row .btn { white-space: nowrap; }
+@media (max-width: 480px) { .sel-row { flex-wrap: wrap; } .sel-row .sel-sum { flex: 1 1 100%; } .sel-row .btn:not(.quiet):not(.more-btn) { flex: 1 1 auto; } .sel-row .btn { padding-left: 12px; padding-right: 12px; } }
 .sel-sum { flex: 1; min-width: 0; min-height: 44px; text-align: left; border: 0; background: none; color: var(--fg); font: inherit; font-size: 14px; padding: 0 10px; cursor: pointer; }
 .ign-sum { cursor: default; display: flex; flex-direction: column; justify-content: center; }
 .ign-sum small { color: var(--muted); font-size: 12px; }
 .trip-edit { display: flex; margin: 12px 0 2px; }
 .sel-caret { color: var(--accent); font-size: 13px; font-weight: 600; margin-left: 4px; }
-.sel-list { max-height: min(30vh, 320px); overflow-y: auto; border-bottom: 1px solid var(--line); }
+.sel-km { white-space: nowrap; }
+.sel-list { max-height: min(30vh, 320px); overflow-y: auto; border-bottom: 1px solid var(--line); border-radius: 18px 18px 0 0; }
 .sel-item { display: flex; align-items: center; gap: 10px; padding: 6px 14px; border-top: 1px solid var(--line); font-size: 13px; }
 .sel-item:first-child { border-top: 0; }
 .sel-item input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }
@@ -1198,6 +1200,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .more-menu { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; min-width: 230px; padding: 6px; border-radius: 14px; border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 2px; }
 .more-menu[hidden] { display: none; }
 .more-wrap.end .more-menu { left: auto; right: 0; }
+.more-wrap.up .more-menu { top: auto; bottom: calc(100% + 6px); }
 /* The pencil (edit menu) and ⋯ at the right of a trip's header. */
 .trip-head > div:not(.ic-badge) { flex: 1 1 auto; min-width: 0; }
 .trip-acts { flex: none; margin-left: auto; align-self: flex-start; display: flex; gap: 8px; }

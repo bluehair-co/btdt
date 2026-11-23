@@ -4,6 +4,7 @@
 // through it is picked. Drawing again adds more; a tap on a trip, or its box in the list, drops it or
 // adds it. Change type… and Set gear… save one correction listing them all (a bulk edit, MyRules
 // "corrections" with trip: { trips: [{ start, mode }, …] }); each trip's details can detach it.
+// ⋯ › Export trips downloads the picked trips, as JSON or CSV (the same files as Menu › Your data).
 var SEL = null, SEL_TAP_PX = 6;
 function selStart() {
   if (!D) { toast('Load your Timeline file first'); return; }
@@ -45,7 +46,9 @@ function selBars() {
     var bot = document.createElement('div');
     bot.id = 'selBot'; bot.className = 'sel-bar';
     bot.innerHTML = '<div class="sel-list" id="selList" hidden></div><div class="sel-row"><button type="button" class="sel-sum" id="selSum" aria-expanded="false" aria-controls="selList"></button>' +
-      '<button type="button" class="btn quiet" data-a="clear">Clear</button><button type="button" class="btn" data-a="gear">Set gear…</button><button type="button" class="btn primary" data-a="type">Change type…</button></div>';
+      '<button type="button" class="btn quiet" data-a="clear">Clear</button>' +
+      moreMenu([moreItem('data-a="json"', 'download', 'Export trips (JSON)'), moreItem('data-a="csv"', 'download', 'Export trips (CSV)')], 'More for these trips', null, 'up') +
+      '<button type="button" class="btn" data-a="gear">Set gear…</button><button type="button" class="btn primary" data-a="type">Change type…</button></div>';
     bot.addEventListener('click', function (ev) {
       if (!SEL) return;
       var b = ev.target.closest('button');
@@ -53,6 +56,7 @@ function selBars() {
       if (b && b.dataset.a === 'clear') { SEL.picked = []; SEL.on.clear(); selRender(); return; }
       if (b && b.dataset.a === 'type') { selTypeDialog(); return; }
       if (b && b.dataset.a === 'gear') { selGearDialog(); return; }
+      if (b && (b.dataset.a === 'json' || b.dataset.a === 'csv')) { moreClose(null); selExport(b.dataset.a); return; }
       if (b && b.dataset.i != null) { closeSheets(true); openTrip(+b.dataset.i); }
     });
     bot.addEventListener('change', function (ev) {
@@ -81,10 +85,11 @@ function selRender(keepList) {
   var n = SEL.picked.length, kmT = 0;
   SEL.picked.forEach(function (i) { kmT += D.km[i]; });
   $('selTop').querySelector('.sel-hint').textContent = SEL.shape === 'rect' ? 'Drag a rectangle over the trips. Again to add more, tap one to drop it.' : 'Draw around the trips. Again to add more, tap one to drop it.';
-  $('selSum').innerHTML = n ? '<b>' + tripsText(n) + '</b> · ' + dist(kmT) + ' <span class="sel-caret">' + (SEL.list ? 'Hide list' : 'List') + '</span>' : '<b>No trips yet</b>';
+  $('selSum').innerHTML = n ? '<b>' + tripsText(n) + '</b> · <span class="sel-km">' + dist(kmT) + '</span> <span class="sel-caret">' + (SEL.list ? 'Hide list' : 'List') + '</span>' : '<b>No trips yet</b>';
   $('selSum').setAttribute('aria-expanded', String(SEL.list && n > 0));
   $('selBot').querySelector('[data-a="clear"]').disabled = !n;
   $('selBot').querySelector('[data-a="type"]').disabled = !n;
+  $('selBot').querySelector('.more-btn').disabled = !n;
   var box = $('selList');
   box.hidden = !(SEL.list && n);
   if (!box.hidden && !keepList) {
@@ -315,6 +320,18 @@ function selGearSave() {
     try { mrChange(label); } finally { busy(''); }
     toast(name + ' set on ' + tripsText(trips.length) + '. Undo it in MyRules, or detach a trip in its details.');
   }, 60);
+}
+// Export trips: the picked trips, oldest to newest, in the files Menu › Your data writes for the filters.
+// The selection stays, so the trips can still be changed afterwards.
+function selExport(fmtName) {
+  if (!SEL || !SEL.picked.length) return;
+  var trips = SEL.picked.slice().sort(function (a, b) { return D.start[a] - D.start[b]; });
+  var d0 = D.day[trips[0]], d1 = D.day[trips[trips.length - 1]];
+  var name = 'btdt-selected-' + trips.length + '-trips-' + (d0 === d1 ? isoDay(d0) : isoDay(d0) + '-to-' + isoDay(d1)) + '.' + fmtName;
+  runExport(function () {
+    if (fmtName === 'csv') exportCsv(trips, name);
+    else exportJson(trips, [], name, { selection: { how: 'Selected on the map', days: { from: isoDay(d0), to: isoDay(d1) }, filters: exportFilters() } });
+  });
 }
 function selEnd() {
   if (!SEL) return;
