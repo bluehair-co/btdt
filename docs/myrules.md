@@ -155,7 +155,18 @@ Corrections and exceptions have to point at one trip in a way that survives a re
 | `google_place_id` | Optional. Matches stays with that place ID wherever Google put them (useful for places Google moved). |
 | `hide` | `true` hides the place: stays there are left out of the map's pins and heatmap and the places in Insights, and trips to or from it show the town instead of the place's name. The trips themselves still count. |
 
-What a place does: it names stays, decides the Home pin, and anchors routines (`"from": "@home-oudwest"`). Places don't change trips.
+| `drift` | *GPS drifts here.* `{ "radius_m": 300 }` (or `true`, for the place's own radius): walks that were really time spent here become part of the stays, or are cut back to the part where you moved (see below). `"only": true` marks a place made just for this: it names no stays and has no part in places. The place's `except` lists the walks to keep as walks. |
+
+What a place does: it names stays, decides the Home pin, and anchors routines (`"from": "@home-oudwest"`). Places don't change trips, except with `drift`.
+
+**GPS drifts here (`drift`).** Indoors the phone keeps guessing where it is, so Timeline records slow "walks" that start and end where you sat, or keeps a real walk going while you stood still at one end. A walk counts when it starts or ends inside the circle next to a stay inside it (within 15 minutes); a walk whose type you set or checked, a recorded activity, a walk in a routine, and a walk between two stays over 150 m apart are left alone. A walk that never leaves the circle and averages under 3 km/h (or lasts 5 minutes or less) becomes part of the stay next to it. A walk with a still stretch at an end inside the circle (10 minutes or more between two GPS points, beyond the time to walk between them) is cut back to the part where you moved, and those minutes join the stay; its details say *Cut back* with *Not this trip*, which adds it to `except`. It applies to walks loaded later too, and only while MyRules are on.
+
+```json
+{ "id": "office-drift", "name": "Office", "at": [52.0787, 4.3356], "drift": { "radius_m": 400, "only": true },
+  "except": [{ "start": "2019-01-16T09:40+01:00", "mode": "WALKING" }] }
+```
+
+**In BT•DT.** *Menu › Trip cleanup › Walks that may be stays* lists places where such walks keep happening, and a place page's ⋯ menu has *Check walks here…*. Either opens the place's walks on the map with a radius slider and a list to untick the real ones; saving writes `drift` and `except`. A place with `drift` shows *GPS drifts here* in MyRules; for one with `only`, tapping it opens the same review, with *Remove*.
 
 ### 5.1.1 Places that moved
 

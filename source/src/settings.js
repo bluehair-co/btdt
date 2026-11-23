@@ -9,6 +9,7 @@ function renderSettings() {
   renderImports();
   renderSplitSettings();
   netSettings();
+  if (typeof driftSettings === 'function') driftSettings();
   renderPacks();
   renderMenu();
   $('homeSec').hidden = !D || !!DEMO;
@@ -23,7 +24,7 @@ function renderMenu() {
   $('menuSub-mrSheet').textContent = !MR ? 'Add what only you know: gear, places, routines' : mrCount(MR.doc) + (MR.on ? '' : ' · switched off');
   var packs = typeof packCodes === 'function' ? packCodes().length : 0, split = splitSetting();
   $('menuSub-cleanupSheet').textContent = [split === 'auto' ? 'Merged trips split' : split === 'ask' ? 'Merged trips suggested' : 'Merged trips kept whole',
-    packs ? packs + ' station pack' + (packs === 1 ? '' : 's') : 'No station packs'].join(' · ');
+    packs ? packs + ' station pack' + (packs === 1 ? '' : 's') : 'No station packs'].concat(typeof driftMenuText === 'function' ? driftMenuText() : []).filter(Boolean).join(' · ');
   var u = PREFS.unitF === 'km' ? 'Kilometres' : PREFS.unitF === 'mi' ? 'Miles' : LOCALE_FMT.unit === 'mi' ? 'Miles' : 'Kilometres';
   $('menuSub-prefsSheet').textContent = u + ' · ' + niceDate(todayDay()) + ' · ' + (PREFS.theme === 'dark' ? 'Dark' : PREFS.theme === 'light' ? 'Light' : 'System') + ' theme';
 }

@@ -1262,6 +1262,45 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .ins-chips button[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: var(--accent-fg); }
 .ins-chips button[hidden] { display: none; }
 @media (min-width: 960px) { .cards .card.span { grid-column: 1 / -1; } }
+
+/* Walks that may be stays: the places in Trip cleanup, and the review on the map (drift.js) */
+.drift-list li { padding: 0; }
+.drift-row { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 52px; padding: 8px 0; border: 0; background: none; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.drift-row .file-txt { flex: 1; }
+.drift-row .mr-chev { width: 18px; height: 18px; fill: var(--muted); flex: none; }
+.tag-done { font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: color-mix(in srgb, var(--m-transit) 18%, transparent); color: var(--fg); flex: none; }
+.tag-cut { font-size: 11px; font-weight: 600; padding: 0 7px; border-radius: 999px; background: color-mix(in srgb, var(--m-foot) 24%, transparent); color: var(--fg); white-space: nowrap; }
+.dr-bar { display: flex; flex-direction: column; max-height: min(56vh, 560px); padding: 8px 12px 12px; }
+.dr-head { flex: none; }
+.dr-rad { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--muted); }
+.dr-rad input { flex: 1; min-width: 0; accent-color: var(--accent); min-height: 36px; margin: 0; }
+.dr-rad b { min-width: 56px; text-align: right; color: var(--fg); font-weight: 500; font-size: 13px; }
+.dr-sum { display: flex; align-items: center; gap: 6px; font-size: 13px; margin: 0 0 6px; }
+.dr-sum #drSum { flex: 1; min-width: 0; }
+.dr-sum b { font-weight: 600; }
+.dr-head .info-box { margin: 0 0 8px; }
+.dr-list { flex: 1 1 auto; min-height: 64px; overflow-y: auto; border-top: 1px solid var(--line); margin: 0 -12px; }
+.dr-item { display: flex; align-items: center; gap: 10px; padding: 5px 12px; border-top: 1px solid var(--grid); font-size: 13px; }
+.dr-item:first-child { border-top: 0; }
+.dr-item input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; margin: 0; }
+.dr-item.sel { background: var(--chip-on-bg); }
+.dr-item.off .sel-open b, .dr-item.off .dr-n .num { color: var(--muted); text-decoration: line-through; }
+.dr-n { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 12px; color: var(--muted); flex: none; }
+.dr-more { padding: 8px 12px; }
+.dr-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 12px 0; margin: 0 -12px; border-top: 1px solid var(--line); }
+.dr-k { display: inline-block; width: 16px; vertical-align: middle; margin-right: 5px; border-top: 3px solid var(--m-foot); }
+.dr-k.off { border-top: 2px dashed var(--muted); }
+.dr-k.c { width: 11px; height: 11px; border: 1.5px dashed var(--accent); border-radius: 50%; }
+.dr-acts { display: flex; gap: 8px; margin-top: 10px; }
+.dr-acts .primary { flex: 1; justify-content: center; }
+body.drift-mode .dr-top { flex-wrap: nowrap; }
+body.drift-mode .dr-top .snap-bar-t { flex: 1 1 auto; min-width: 0; }
+@media (max-width: 600px) { body.drift-mode .dr-top { left: 12px; right: 12px; width: auto; transform: none; justify-content: space-between; } }
+/* On a wide screen the panel sits on the right, full height, and the top bar over the map beside it. */
+@media (min-width: 960px) {
+  body.drift-mode .dr-bar { left: auto; right: 16px; transform: none; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 400px; max-height: none; }
+  body.drift-mode .dr-top { left: calc((100vw - 432px) / 2); }
+}
 </style>
 </head>
 <body>
@@ -1917,6 +1956,12 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       <label class="toggle-row"><span class="lbl">Leave out cell-tower fixes<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="netFixInfo" aria-label="About leave out cell-tower fixes" title="About leave out cell-tower fixes"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="netFix" checked></label>
       <p class="fine info-box" id="netFixInfo" hidden>Without GPS (indoors, in a station, in a tunnel) your phone places itself at a nearby cell tower or Wi-Fi router, often hundreds of metres off. The same tower gives the same spot every time, so these points pile up in a few places on different days and draw spikes out and back. A single point far off a trip's route and straight back (<span data-dist-km="1">1 km</span> or more) goes too: most are such fixes as well. This leaves them out of trip lines, distances, speed charts and the heatmap. To leave out a bad spot this doesn't catch, use Ignore GPS points on a trip and choose Every trip, here.</p>
       <p class="fine" id="netNote" aria-live="polite"></p>
+    </div>
+    <div class="sec" id="driftSec">
+      <div class="info-head"><h3>Walks that may be stays</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="driftInfo" aria-label="About walks that may be stays" title="About walks that may be stays"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="driftInfo" hidden>Indoors, your phone keeps guessing where it is, and each guess lands somewhere nearby. Timeline then records short, slow "walks" that start and end where you were sitting, or adds the time you sat still to a real walk. BT•DT looks for places where such walks keep starting and ending. Open one to see its walks on the map, choose how far around it counts, and untick the ones that were real walks. Saving makes the place a MyRules place with <i>GPS drifts here</i>: its walks become part of your stays there, and walks that only stood still at one end are cut back to the part where you moved. Nothing changes until you save, and it applies to walks loaded later too. For a place that isn't listed, use <i>Check walks here…</i> in the ⋯ menu of its place page.</p>
+      <ul class="file-list drift-list" id="driftList"></ul>
+      <p class="fine" id="driftNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
       <div class="info-head"><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
@@ -5620,7 +5665,8 @@ function* setDataSteps(R) {
   $('app').classList.remove('no-data');
   var n = D.day.length, nv = D.vs.length, i, yc = {};
   if (!D.sport) D.sport = new Uint8Array(n);
-  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to, vll: D.vll };
+  D.base = { mode: D.mode, est: D.est, sport: D.sport, stype: D.stype, km: D.km, pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, from: D.from, to: D.to, vll: D.vll,
+    start: D.start, end: D.end, vs: D.vs, ve: D.ve };
   D.order = Int32Array.from(Array.from({ length: n }, function (_, k) { return k; }).sort(function (a, b) { return D.start[a] - D.start[b]; }));
   D.year = new Int16Array(n); D.month = new Int8Array(n); D.dow = new Int8Array(n); D.hour = new Int8Array(n);
   for (i = 0; i < n; i++) {
@@ -5878,8 +5924,8 @@ function apply() {
     // Guessed types and gear MyRules filled in go together.
     if (F.guess === 'check') { if (!mrCheck(i)) continue; }
     else if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || mrInferred(i))) continue;
-    // Trips a MyRules correction hides.
-    if (D.mrHide[i]) continue;
+    // Trips a MyRules correction hides, and walks that became part of a stay (GPS drifts here, drift.js).
+    if (D.mrHide[i] || D.drift && D.drift[i] === 1) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
     // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
     if (F.src !== 'timeline' && isDup(i)) continue;
@@ -6198,6 +6244,8 @@ function openSheet(id) {
   $('filtersBtn').setAttribute('aria-expanded', id === 'filtersSheet' ? 'true' : 'false');
   document.querySelectorAll('[data-open-settings]').forEach(function (b) { b.setAttribute('aria-expanded', menuSheet(id) ? 'true' : 'false'); });
   $('layersBtn').setAttribute('aria-expanded', id === 'layersSheet' ? 'true' : 'false');
+  // Trip cleanup looks for places where walks may be stays when it opens (drift.js).
+  if (id === 'cleanupSheet' && typeof driftSettings === 'function') driftSettings(true);
 }
 function closeSheets(quiet) {
   if (!openId) return;
@@ -7202,7 +7250,7 @@ function pathsKey() { return PREFS.hrPaths ? 'hr' + hrMax() : 'speed'; }
 function layerToggles() {
   // While a routine's ghost trips are on the map, nothing else is, so which ones the routine takes
   // (solid) and which it leaves (dashed) stand out.
-  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main || typeof SPL !== 'undefined' && SPL || typeof IGN !== 'undefined' && IGN) {
+  if (typeof MR_GHOST !== 'undefined' && MR_GHOST && MR_GHOST.main && MR_GHOST.map || typeof SN !== 'undefined' && SN && SN.main || typeof SPL !== 'undefined' && SPL || typeof IGN !== 'undefined' && IGN || typeof DR !== 'undefined' && DR) {
     [sqLayer, pathLayer, speedLayer, ccLayer, heatLayer, pinLayer, hlLayer, beaconLayer].forEach(function (l) { if (l && map.hasLayer(l)) map.removeLayer(l); });
     return;
   }
@@ -7782,8 +7830,8 @@ function onMapTap(pt, ev) {
   if (SN && SN.phase === 'pick') { snapTap(map.containerPointToLatLng(pt)); return; }
   // Selecting trips: the selection handles its own taps.
   if (SEL) return;
-  // Ignoring GPS points: it handles its own taps too.
-  if (IGN) return;
+  // Ignoring GPS points, or reviewing walks that may be stays: they handle their own taps too.
+  if (IGN || typeof DR !== 'undefined' && DR) return;
   // Splitting a trip by hand: the tap picks a point of its path.
   if (SPL) { splitHandTap(pt); return; }
   var list = hitsAt(pt);
@@ -7804,7 +7852,7 @@ function setHovered(list) {
 }
 function onMapHover(e) {
   // Ignoring GPS points: only the trip's own points are on the map.
-  if (IGN) { setHovered([]); hideTip(); return; }
+  if (IGN || typeof DR !== 'undefined' && DR) { setHovered([]); hideTip(); return; }
   if (hits.length > 8000) return;
   var list = hitsAt(e.containerPoint);
   setHovered(list);
@@ -11284,6 +11332,7 @@ function placeActs(o, lat, lng, pid) {
   more.push('<a role="menuitem" href="' + esc(mapsUrl(lat, lng, pid)) + '" target="_blank" rel="noopener noreferrer">' + icon('pin') + '<span>Open in Google Maps</span></a>');
   if (o.town != null) more.push(moreItem('data-ptown="' + o.town + '"', 'pin', 'All of ' + esc(placeLabel(o.town))));
   if (o.spot && mvCanNew(o.spot)) more.push(moreItem('data-mv-new="' + esc(o.spot) + '"', 'pin', 'This place moved…'));
+  if (o.spot) more.push(moreItem('data-drift-spot="' + esc(o.spot) + '"', 'WALKING', 'Check walks here…'));
   return '<div class="trip-edit">' + (o.spot ? '<button type="button" class="btn primary" data-mr-place="' + esc(o.spot) + '">' + icon('edit') + (mrSpotRule(o.spot) ? 'Edit this place' : 'Name this place') + '</button>' : '') +
     '<button type="button" class="btn' + (o.spot ? '' : ' primary') + '" data-pmap="' + (o.ll ? o.ll.join(',') : lat + ',' + lng) + '">' + icon('fit') + 'Show on the map</button>' + moreMenu(more, 'More for this place') + '</div>';
 }
@@ -11614,16 +11663,19 @@ function mrNewId(name) {
 }
 function mrDayNum(s) { var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s || ''); return m ? Math.floor(Date.UTC(+m[1], +m[2] - 1, +m[3]) / 864e5) : null; }
 function mrMin(s) { var m = /^(\d{2}):(\d{2})$/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; }
+// When a trip started as loaded: rules point at trips by it, even after GPS drifts here (drift.js)
+// cut back the still minutes at a walk's start.
+function tripT0(i) { return (D.base && D.base.start || D.start)[i]; }
 // A trip's local start: its day number, day of the week and minutes after midnight.
 function mrLocalMin(i) {
-  var off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(D.start[i]).getTimezoneOffset();
-  var t = D.start[i] + off * 60000;
+  var t0 = tripT0(i), off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(t0).getTimezoneOffset();
+  var t = t0 + off * 60000;
   return Math.floor((t - Math.floor(t / 864e5) * 864e5) / 60000);
 }
 // The local start of a trip as ISO 8601 with its UTC offset, to the minute: how rules point at one trip.
 function mrIsoLocal(i) {
-  var off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(D.start[i]).getTimezoneOffset();
-  var s = new Date(D.start[i] + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
+  var t0 = tripT0(i), off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(t0).getTimezoneOffset();
+  var s = new Date(t0 + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
   return s + (off < 0 ? '-' : '+') + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60);
 }
 // A rule's when, ready to test trips against.
@@ -11653,7 +11705,7 @@ function mrWhenOk(w, i) {
 // type it had, when given, picks between two); day every trip that day; span every trip starting in it.
 function mrFirstAfter(ms) {
   var o = D.order, lo = 0, hi = o.length;
-  while (lo < hi) { var mid = (lo + hi) >> 1; if (D.start[o[mid]] < ms) lo = mid + 1; else hi = mid; }
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (tripT0(o[mid]) < ms) lo = mid + 1; else hi = mid; }
   return lo;
 }
 function mrRefTrips(ref) {
@@ -11663,19 +11715,19 @@ function mrRefTrips(ref) {
   if (Array.isArray(ref.trips)) {
     var seen = {};
     ref.trips.forEach(function (r) { mrRefTrips(r).forEach(function (j) { if (!seen[j]) { seen[j] = 1; out.push(j); } }); });
-    return out.sort(function (x, y) { return D.start[x] - D.start[y]; });
+    return out.sort(function (x, y) { return tripT0(x) - tripT0(y); });
   }
   if (ref.start) {
     var t = Date.parse(ref.start);
     if (!isFinite(t)) return out;
-    for (k = mrFirstAfter(t - 3 * 60000); k < o.length && D.start[o[k]] <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
+    for (k = mrFirstAfter(t - 3 * 60000); k < o.length && tripT0(o[k]) <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
     // The type the trip had in the files, not the one a correction gave it.
     if (out.length > 1 && ref.mode) out = out.filter(function (j) { return MODES[(D.base || D).mode[j]] === ref.mode; });
     return out.length === 1 ? out : [];
   }
   if (ref.span && ref.span.length === 2) {
     var a = Date.parse(ref.span[0]), b = Date.parse(ref.span[1]);
-    for (k = mrFirstAfter(a); k < o.length && D.start[o[k]] <= b; k++) if (!isDup(o[k])) out.push(o[k]);
+    for (k = mrFirstAfter(a); k < o.length && tripT0(o[k]) <= b; k++) if (!isDup(o[k])) out.push(o[k]);
     return out;
   }
   var d = mrDayNum(ref.day);
@@ -11711,11 +11763,14 @@ function mrUnlessOk(u, i) {
   if (u.cc && !u.cc[String(D.ccList[D.cs[i]] || '').toUpperCase()] && !u.cc[String(D.ccList[D.ce[i]] || '').toUpperCase()]) return false;
   return true;
 }
+// A place made only for GPS drifts here (drift.js, drift.only) doesn't name stays: it has no part in
+// naming, counting or grouping places, only in turning its walks into stays.
+function mrNames(r) { return !(r && r.drift && r.drift.only); }
 // The place rules with a position, and the one a point is in (the nearest, if several).
 function mrPlaceAt(lat, lng) {
   var best = null, bd = Infinity;
   mrActive('places').forEach(function (r) {
-    if (!Array.isArray(r.at) || !isFinite(lat)) return;
+    if (!Array.isArray(r.at) || !isFinite(lat) || !mrNames(r)) return;
     var d = km([lat, lng], r.at) * 1000;
     if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; }
   });
@@ -11750,7 +11805,7 @@ function mrStayPlace(v) {
 // Made fresh for each pass, as rules change between them.
 var MR_PF_CELL = 0.05;
 function mrPlaceFinder() {
-  var L = mrActive('places').filter(function (r) { return Array.isArray(r.at) && isFinite(r.at[0]) && isFinite(r.at[1]); });
+  var L = mrActive('places').filter(function (r) { return Array.isArray(r.at) && isFinite(r.at[0]) && isFinite(r.at[1]) && mrNames(r); });
   var grid = new Map(), wide = [], U = null, memo = null;
   L.forEach(function (r, k) {
     var rad = Math.max(+r.radius_m || 100, 1) / 1000 * 1.05 + 0.01, la = +r.at[0], lo = +r.at[1];
@@ -11881,13 +11936,13 @@ function mrGearUses(r) {
 function mrDefaultCar() { return mrList('gear').filter(function (r) { return r.default && r.mode === 'CAR'; })[0] || null; }
 var MR_CAR_FUELS = ['petrol', 'diesel', 'hybrid', 'ev'];
 // Rule applied (inferred): gear a gear period filled in, a type or line a routine or map snap set. Edited: anything a correction set.
-function mrInferred(i) { return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road); }
+function mrInferred(i) { return !!(D.drift && D.drift[i] || D.mrGear && D.mrGear[i] && !D.mrGear[i].cor || D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road); }
 function mrEdited(i) { return !!(D.mrMode && (D.mrMode[i] && !D.mrMode[i].inf || D.mrName[i] || D.mrHide[i] || D.mrGear[i] && D.mrGear[i].cor || D.mrDrop && D.mrDrop[i])); }
 // A trip a map snap took says so; anything else a rule filled in is "Rule applied".
 function mrSnapped(i) { return !!(D.mrSnap && D.mrSnap[i] && D.snap && D.snap[i]); }
 function mrRoaded(i) { return !!(D.mrRoad && D.mrRoad[i] && D.snap && D.snap[i] === D.mrRoad[i]); }
 function mrTracked(i) { return !!(D.mrTrack && D.mrTrack[i] && D.snap && D.snap[i]); }
-function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.mrGear && D.mrGear[i] && !D.mrGear[i].cor && !D.mrGear[i].def || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
+function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.drift && D.drift[i] || D.mrGear && D.mrGear[i] && !D.mrGear[i].cor && !D.mrGear[i].def || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
 function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRoaded(i) ? '<span class="guess inf" title="Drawn along the roads of your road pack">On the roads</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Rule applied</span>' : '') + (D.mrGear && D.mrGear[i] && D.mrGear[i].def ? '<span class="guess" title="Guessed: your default car">Default car</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
 function mrCheck(i) { return !!(D.chk && D.chk[i] >= 0); }
 
@@ -11938,6 +11993,7 @@ function* mrCorrectSteps(dry) {
     if (b.vll) D.vll = b.vll; D.mvStay = {};
     D.mrMode = []; D.mrName = []; D.mrHide = new Uint8Array(n); D.mrRoute = []; D.mrMiss = []; D.snap = []; D.mrLine = {}; D.mrOk = new Uint8Array(n);
     MR_COUNT = {}; MR_COR = null; MR_LEFT = {}; D.preCor = null;
+    driftReset();
   }
   reset();
   if (!dry) MR_WOULD = null;
@@ -11968,6 +12024,9 @@ function* mrCorrectSteps(dry) {
   // A trip a correction made a flight isn't drawn along a routine's line.
   D.snap.forEach(function (s, i) { if (s && MODES[D.mode[i]] === 'FLYING') { D.snap[i] = null; D.km[i] = b.km[i]; } });
   if (dry) return;
+  // Walks that were really a stay, where GPS drifts (MyRules places, drift.js).
+  driftApply();
+  yield;
   // Train trips nothing above drew, along the tracks of the packs (when that's on).
   yield* mrTrackSteps();
   // Car trips nothing above drew, along the roads of the road packs (when that's on).
@@ -12142,14 +12201,14 @@ function* mrLearnSteps() {
 function mrLearnFixed(j) { return D.mrMode[j] && !D.mrMode[j].inf || D.mrOk[j]; }
 // A trip's vote for its like trips (0: none).
 function mrLearnWeight(j) {
-  if (isDup(j) || D.mrHide[j] || D.est[j] & GUESSED || D.mode[j] === MODE_IDX.FLYING) return 0;
+  if (isDup(j) || D.mrHide[j] || D.drift && D.drift[j] === 1 || D.est[j] & GUESSED || D.mode[j] === MODE_IDX.FLYING) return 0;
   if (mrLearnFixed(j)) return VOTE_FIX;
   return D.est[j] & STRAVA || D.mrMode[j] ? 2 : 1;
 }
 // One trip's guess and check, from the votes of its like trips.
 function mrLearnOne(idx, i) {
   var fly = MODE_IDX.FLYING;
-  if (isDup(i) || D.mrHide[i] || D.mode[i] === fly || mrLearnFixed(i)) return;
+  if (isDup(i) || D.mrHide[i] || D.drift && D.drift[i] === 1 || D.mode[i] === fly || mrLearnFixed(i)) return;
   var m = MODES[D.mode[i]], avg = tripAvg(D, i), v;
   if (D.est[i] & GUESSED) {
     if (D.est[i] & STRAVA) return;
@@ -12574,6 +12633,8 @@ var MR_FAST = { n: 0, ms: 0 };
 function mrReapplyTrip(i) {
   var P = D && D.preCor, idx = D && D.tidx, n = D ? D.day.length : 0;
   if (!P || !idx || P.n !== n || !MR || !MR.on || BUILDING || ROAD_RUN || roadOn() && !RG || !(i >= 0 && i < n)) return false;
+  // A walk where GPS drifts here may become (or stop being) part of a stay: everything again.
+  if (D.driftOn && (D.drift[i] || MODES[D.mode[i]] === 'WALKING' || MODES[P.mode[i]] === 'WALKING' || D.learn[i])) return false;
   var t0 = performance.now(), b = D.base, oldCor = (MR_COR || []).filter(function (x) { return x.trips.indexOf(i) >= 0; });
   // 1.
   D.mode[i] = P.mode[i]; D.est[i] = P.est[i]; D.sport[i] = P.sport[i]; if (D.stype) D.stype[i] = P.stype[i];
@@ -12909,7 +12970,8 @@ function mrRenderRules() {
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), !MR.on ? null : r.assign === false ? mrGearUses(r) : MR_COUNT[r.id] || 0);
   }).join('') + '</div>';
   if (places.length || moves.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
-    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays'].filter(Boolean).join(' · ');
+    if (!mrNames(r)) return mrRuleRow('places', r, r.name || r.id, driftRowText(r), 'WALKING', 'var(--m-foot)', null);
+    var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays', driftRowText(r)].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
   }).join('') + (moves.length ? '<h4 class="place-h mr-grp">Places that moved</h4>' + moves.map(function (r) {
     var sub = (r.keep ? 'Google\'s location kept' : 'Where it was ' + mvWhen(r.when)) + ' · ' + mvStays(MR.on ? MR_COUNT[r.id] || 0 : 0);
@@ -13236,6 +13298,7 @@ function mrTripBlock(i) {
   else if (g) h += '<div class="mr-chg"><b>Gear:</b> ' + esc(GEAR[g.gear].name) + src(g.rule, g.cor ? 'gear' : '') + '</div>';
   var dr = D.mrDrop && D.mrDrop[i];
   if (dr) h += '<div class="mr-chg"><b>GPS points ignored:</b> ' + fmt(dr.n) + ' of ' + fmt(dr.of) + (Math.abs(dr.km - D.km[i]) >= 0.01 ? ' <span class="fine">(' + dist(dr.km) + ' with them)</span>' : '') + src(dr.rule, 'ignore_points') + '</div>';
+  h += driftTripHtml(i);
   var rt = D.mrRoute && D.mrRoute[i], rr = rt && mrById(rt.rule), sn = D.snap && D.snap[i], ln = rr && D.mrLine[rr.id];
   var ms = !rr && D.mrMiss && D.mrMiss[i], mr = ms && mrById(ms.rule), mln = mr && D.mrLine[mr.id];
   function way(d) { return ' <span class="fine">· the way ' + (d > 0 ? 'there' : 'back') + '</span>'; }
@@ -13271,6 +13334,8 @@ function mrTripBlock(i) {
   var eds = mrTripEdits(i);
   if (eds.length) btns += '<button type="button" class="btn" data-mr-act="remove" data-t="' + i + '">' + icon('undo') + (eds.length > 1 ? 'Remove edits' : 'Remove edit') + '</button>';
   // Not this trip: out of the routine (its type, gear and line), else out of the gear period.
+  var dx = D.driftInfo && D.driftInfo[i];
+  if (dx) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(dx.rule) + '" data-t="' + i + '">Not this trip</button>';
   if (rr || g && !g.cor) btns += '<button type="button" class="btn" data-mr-act="not" data-r="' + esc(rr ? rr.id : g.rule) + '" data-t="' + i + '">Not this trip' + (rr ? '' : '') + '</button>';
   // Group with similar trips is in ⋯ in the trip's header (mrEditTop).
   if (ms && ms.why === 'fit' && ms.can && mr) btns += '<button type="button" class="btn primary" data-mr-act="include" data-r="' + esc(mr.id) + '" data-t="' + i + '">Add to routine</button>';
@@ -13627,6 +13692,8 @@ function mrEditRule(ref) {
   if (sec === 'moves') { mvEditRule(r); return; }
   if (sec === 'places') {
     if (!Array.isArray(r.at)) { toast('This place has no position to edit'); return; }
+    // A place only for GPS drifts here opens its walks.
+    if (!mrNames(r)) { closeSheets(true); driftStart({ rule: r }); return; }
     needPlaces(); mrPlaceDialog('mr:' + r.id); return;
   }
   if (sec === 'corrections') {
@@ -13910,7 +13977,7 @@ function mrSpotRule(key) {
   var c = mrSpotCentre(key), best = null, bd = Infinity;
   if (!c) return null;
   mrList('places').forEach(function (r) {
-    if (!Array.isArray(r.at)) return;
+    if (!Array.isArray(r.at) || !mrNames(r)) return;
     var d = km(c, r.at) * 1000;
     if (d <= (+r.radius_m || 100) && d < bd) { bd = d; best = r; }
   });
@@ -13937,7 +14004,7 @@ function mrPlaceDialog(key) {
       '<label class="mr-opt"><input type="radio" name="mrPNow" value="past"' + (past ? ' checked' : '') + '><span><b>Past</b><span class="mr-dates">Until <input type="date" id="mrPTo" value="' + esc(until) + '" aria-label="Until"></span></span></label></div>' +
       '<div class="field"><span>Counts as this place within</span><div class="mr-rad-row"><span><b id="mrPRadTxt"></b> <small class="fine" id="mrPCount"></small></span>' +
       '<button type="button" class="btn" id="mrPRadBtn">' + icon('pin') + 'Define radius</button></div><input type="hidden" id="mrPRad" value="' + rad + '"></div>' +
-      '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label></div>',
+      '<label class="toggle-row"><span class="lbl">Hide from pins, heatmap and places</span><input type="checkbox" class="switch" id="mrPHide"' + (r && r.hide ? ' checked' : '') + '></label>' + driftPlaceHtml(r) + '</div>',
     buttons: [['Save', 'primary', function () { mrSavePlace(key, r, c); }]].concat(r ? [['Remove the name', 'danger', function () {
       var vs = spotStays(key);
       placeLast = null;
@@ -13954,6 +14021,7 @@ function mrPlaceDialog(key) {
       $('mrPRole').addEventListener('change', function () { $('mrPLife').hidden = !MR_LIFE[this.value]; });
       $('mrPTo').addEventListener('input', function () { document.querySelector('input[name="mrPNow"][value="past"]').checked = true; });
       $('mrPOsm').addEventListener('click', function () { osmNameFill(c, +$('mrPRad').value); });
+      if ($('mrPDriftRev')) $('mrPDriftRev').addEventListener('click', function () { $('mrDlg').close(); driftStart({ rule: r }); });
       $('mrPRadBtn').addEventListener('click', function () {
         mrRadiusMap(c, +$('mrPRad').value, $('mrPName').value.trim() || 'This place', function (m) { $('mrPRad').value = m; upd(); });
       });
@@ -14070,6 +14138,8 @@ function mrSavePlace(key, r, c) {
   if (role) r.role = role; else delete r.role;
   r.radius_m = rad;
   if (hide) r.hide = true; else delete r.hide;
+  // GPS drifts here switched off: its walks are walks again (and the ones kept as walks forgotten).
+  if ($('mrPDrift') && !$('mrPDrift').checked) { delete r.drift; delete r.except; }
   // Current or past, for home, work and school: past ends on its until date.
   var wasPast = mrIsPast(r), past = !!MR_LIFE[role] && document.querySelector('input[name="mrPNow"]:checked').value === 'past';
   if (past) { var to = $('mrPTo').value || isoDay(todayDay() - 1); if (mrDayNum(to) >= todayDay()) to = isoDay(todayDay() - 1); r.when = Object.assign({}, r.when, { to: to }); }
@@ -17296,6 +17366,573 @@ $('tripBody').addEventListener('click', function (ev) {
   ignStart(+b.dataset.ign);
 });
 
+// ---------- walks that may be stays (GPS drifts here) ----------
+// Indoors, a phone keeps guessing where it is (Wi-Fi, cell towers, a weak GPS fix), and each guess
+// lands somewhere nearby. Timeline then records short, slow "walks" that start and end where you sat,
+// or keeps the time you sat still at one end of a real walk. A MyRules place with drift
+// ({ "radius_m": 300 }, or true for its own radius) turns those walks into what they were:
+// - a walk that never leaves the circle and is slow (under DRIFT_SLOW on average) or short (up to
+//   DRIFT_SHORT) becomes part of the stay before or after it (D.drift[i] 1: it leaves every list,
+//   map and total, and that stay ends later or starts earlier);
+// - a walk with a still stretch at an end inside the circle (DRIFT_IDLE or more between two GPS
+//   points, after the time walking between them) is cut back to the part where you moved, and the
+//   still minutes join the stay there (D.drift[i] 2: its start or end, line and distance change).
+// Only walks next to a stay in the circle (ending or starting within DRIFT_GAP of it) count, so
+// the time always has a stay to go to, and a walk from one stay to another over DRIFT_APART away
+// is never made a stay (it took you somewhere, however short). Walks whose type you set or checked, recorded activities,
+// simulated trips and walks in a routine are left alone, and the place's except (TripRefs) lists
+// the walks you said were real. drift.only: a place made only for this, which names no stays.
+// Applied in mrCorrectSteps after the corrections (driftApply), on D's copies; D.base keeps the
+// trips and stays as loaded, and driftReset puts them back before the rules run again.
+// Trip cleanup lists places where such walks keep happening (driftSuggest), and the review
+// (driftStart) shows one place's walks on the map with a radius slider and tick boxes.
+var DRIFT_GAP = 15 * 60000, DRIFT_TOUCH = 2 * 60000, DRIFT_IDLE = 10 * 60000, DRIFT_SHORT = 5 * 60000;
+var DRIFT_SLOW = 3, DRIFT_WALK = 5;   // km/h: slower than this on average; walking pace for the moving bits
+var DRIFT_APART = 0.15;               // km between the stays before and after a walk that took you somewhere
+var DRIFT_RAD = 300, DRIFT_RAD_MIN = 50, DRIFT_RAD_MAX = 600, DRIFT_MIN = 8, DRIFT_MIN_MS = 2 * 36e5, DRIFT_SUG = 6;
+var MR_DRIFT = {};   // by place id: { stay, cut, ms } walks it changed
+
+function driftRad(r) {
+  var d = r && r.drift, m = d && typeof d === 'object' && +d.radius_m || +r.radius_m || 100;
+  return Math.max(DRIFT_RAD_MIN, Math.min(2000, m));
+}
+function driftRules() { return mrActive('places').filter(function (r) { return r.drift && Array.isArray(r.at) && isFinite(r.at[0]) && isFinite(r.at[1]); }); }
+function driftAll() { return mrList('places').filter(function (r) { return r.drift && Array.isArray(r.at) && isFinite(r.at[0]); }); }
+function driftName(r) { return r.name || (r.role ? mrKindName(r.role) : '') || 'A place'; }
+
+// Back to the trips and stays as loaded (called by mrCorrectSteps before the rules run).
+function driftReset() {
+  var b = D.base;
+  if (D.driftOn && b) {
+    D.start = b.start; D.end = b.end; D.vs = b.vs; D.ve = b.ve;
+    (D.driftDays || []).forEach(function (x) { var i = x[0]; D.day[i] = x[1]; D.year[i] = x[2]; D.month[i] = x[3]; D.dow[i] = x[4]; D.hour[i] = x[5]; });
+  }
+  D.driftOn = false; D.drift = null; D.driftInfo = null; D.driftDays = null; D.preDrift = null; MR_DRIFT = {};
+}
+// The trips as they were before driftApply changed them: the review and the suggestions look at those.
+function driftSrc() {
+  var P = D.preDrift && D.preDrift.pathPts ? D.preDrift : D, b = D.base || D;
+  return { start: b.start, end: b.end, pathPts: P.pathPts, pathT: P.pathT, pathOff: P.pathOff, km: P.km, from: P.from, to: P.to, mode: D.preDrift && D.preDrift.mode || D.mode };
+}
+function driftOk(i) {
+  return !isDup(i) && !D.mrHide[i] && !(D.est[i] & STRAVA) && !(D.mrMode[i] && !D.mrMode[i].inf) && !D.mrOk[i] && !(D.mrRoute && D.mrRoute[i]) &&
+    (D.srcs ? D.srcs[i] : D.src) !== SRC.sim;
+}
+// Stays as loaded, sorted by when they end and by when they start, to find the one next to a walk.
+function driftStayIdx() {
+  var b = D.base || D;
+  if (b.driftIdx && b.driftIdx.n === b.vs.length) return b.driftIdx;
+  var nv = b.vs.length, s = new Int32Array(nv), e = new Int32Array(nv);
+  for (var v = 0; v < nv; v++) { s[v] = v; e[v] = v; }
+  s.sort(function (x, y) { return b.vs[x] - b.vs[y]; });
+  e.sort(function (x, y) { return b.ve[x] - b.ve[y]; });
+  return (b.driftIdx = { n: nv, s: s, e: e });
+}
+function driftFirst(t, idx, at) {
+  var lo = 0, hi = idx.length;
+  while (lo < hi) { var mid = (lo + hi) >> 1; if (at[idx[mid]] < t) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+// The stay that ends nearest a walk's start (from DRIFT_GAP before it to DRIFT_TOUCH after), or -1.
+function driftPrev(t) {
+  var b = D.base || D, X = driftStayIdx().e, best = -1, bd = Infinity;
+  for (var k = driftFirst(t - DRIFT_GAP, X, b.ve); k < X.length && b.ve[X[k]] <= t + DRIFT_TOUCH; k++) { var d = Math.abs(b.ve[X[k]] - t); if (d < bd) { bd = d; best = X[k]; } }
+  return best;
+}
+// The stay that starts nearest a walk's end, or -1.
+function driftNext(t) {
+  var b = D.base || D, X = driftStayIdx().s, best = -1, bd = Infinity;
+  for (var k = driftFirst(t - DRIFT_TOUCH, X, b.vs); k < X.length && b.vs[X[k]] <= t + DRIFT_GAP; k++) { var d = Math.abs(b.vs[X[k]] - t); if (d < bd) { bd = d; best = X[k]; } }
+  return best;
+}
+
+// The walks a circle (centre c, radius rk km) would change: [{ i, kind: 'stay' | 'cut', s, e (the
+// walk's new start and end), a, z (its first and last GPS point kept), head, tail (still time cut
+// off at each end), ms (time that joins a stay), prev, next (the stays it goes to, or -1) }].
+function driftCands(c, rk) {
+  var S = driftSrc(), out = [], n = D.day.length, wk = MODE_IDX.WALKING;
+  var dLat = rk / 110.57 + 0.0002, dLng = dLat / Math.max(0.05, Math.cos(c[0] * Math.PI / 180));
+  function near(la, lo) { return Math.abs(la - c[0]) <= dLat && Math.abs(lo - c[1]) <= dLng && kmLL(la, lo, c[0], c[1]) <= rk; }
+  for (var i = 0; i < n; i++) {
+    if (S.mode[i] !== wk) continue;
+    if (!near(S.from[2 * i], S.from[2 * i + 1]) && !near(S.to[2 * i], S.to[2 * i + 1])) continue;
+    if (!driftOk(i)) continue;
+    var o0 = S.pathOff[i], o1 = S.pathOff[i + 1], t0 = S.start[i], t1 = S.end[i], dur = t1 - t0;
+    if (o1 - o0 < 2 || dur <= 0) continue;
+    var pv = driftPrev(t0), nx = driftNext(t1);
+    var pa = pv >= 0 && near(D.vll[2 * pv], D.vll[2 * pv + 1]), na = nx >= 0 && near(D.vll[2 * nx], D.vll[2 * nx + 1]);
+    if (!pa && !na) continue;
+    var P = [], inside = [], all = true, q;
+    for (q = o0; q < o1; q++) {
+      var la = S.pathPts[2 * q], lo = S.pathPts[2 * q + 1], ok = near(la, lo);
+      P.push([la, lo, t0 + S.pathT[q] * 1000]); inside.push(ok);
+      if (!ok) all = false;
+    }
+    var kmh = S.km[i] / (dur / 36e5);
+    // Between two stays at different spots (over DRIFT_APART), it took you somewhere: a real walk, however short.
+    var apart = pv >= 0 && nx >= 0 && kmLL(D.vll[2 * pv], D.vll[2 * pv + 1], D.vll[2 * nx], D.vll[2 * nx + 1]) > DRIFT_APART;
+    if (all && !apart && (kmh < DRIFT_SLOW || dur <= DRIFT_SHORT)) {
+      out.push({ i: i, kind: 'stay', s: t0, e: t1, a: 0, z: P.length - 1, head: 0, tail: 0, ms: dur, prev: pa ? pv : -1, next: na ? nx : -1 });
+      continue;
+    }
+    // Still at the start: the last long gap between points inside the circle, from the first point on.
+    var a = 0, z = P.length - 1, s = t0, e = t1, k, wm, idle;
+    if (pa) for (k = 1; k < P.length && inside[k] && inside[k - 1]; k++) {
+      wm = km(P[k - 1], P[k]) / DRIFT_WALK * 36e5; idle = P[k][2] - P[k - 1][2] - wm;
+      if (idle >= DRIFT_IDLE) { a = k - 1; s = P[k][2] - wm; }
+    }
+    // Still at the end: the first long gap among the last points inside the circle.
+    if (na) for (k = P.length - 2; k >= a && inside[k] && inside[k + 1]; k--) {
+      wm = km(P[k], P[k + 1]) / DRIFT_WALK * 36e5; idle = P[k + 1][2] - P[k][2] - wm;
+      if (idle >= DRIFT_IDLE) { z = k + 1; e = P[k][2] + wm; }
+    }
+    if (s === t0 && e === t1 || e - s < 60000 || z <= a) continue;
+    out.push({ i: i, kind: 'cut', s: s, e: e, a: a, z: z, head: s - t0, tail: t1 - e, ms: (s - t0) + (t1 - e), prev: s > t0 ? pv : -1, next: e < t1 ? nx : -1 });
+  }
+  return out;
+}
+
+// In mrCorrectSteps, after the corrections: every place with drift changes its walks.
+function driftApply() {
+  D.preDrift = { mode: D.mode.slice() };
+  var rules = driftRules();
+  if (!rules.length) return;
+  var plan = [], taken = {};
+  rules.forEach(function (r) {
+    var w = r.when ? mrWhen(r.when) : null, ex = mrExcept(r), st = { stay: 0, cut: 0, ms: 0 };
+    driftCands(r.at, driftRad(r) / 1000).forEach(function (x) {
+      if (taken[x.i] || ex[x.i] || w && !mrWhenOk(w, x.i)) return;
+      taken[x.i] = 1; x.rule = r.id; plan.push(x); st[x.kind]++; st.ms += x.ms;
+    });
+    MR_DRIFT[r.id] = st;
+  });
+  if (!plan.length) return;
+  var b = D.base, n = D.day.length, cut = {};
+  Object.assign(D.preDrift, { pathPts: D.pathPts, pathT: D.pathT, pathOff: D.pathOff, km: D.km, from: D.from, to: D.to });
+  D.driftOn = true; D.drift = new Uint8Array(n); D.driftInfo = []; D.driftDays = [];
+  D.start = b.start.slice(); D.end = b.end.slice(); D.vs = b.vs.slice(); D.ve = b.ve.slice();
+  D.km = D.km.slice(); D.from = D.from.slice(); D.to = D.to.slice();
+  plan.forEach(function (x) {
+    var i = x.i;
+    if (x.kind === 'stay') {
+      D.drift[i] = 1;
+      D.driftInfo[i] = { rule: x.rule, kind: 'stay', ms: x.ms };
+      // The stay before runs on to the one after (or to the walk's end); else the one after starts earlier.
+      if (x.prev >= 0) D.ve[x.prev] = Math.max(D.ve[x.prev], x.next >= 0 ? D.vs[x.next] : x.e);
+      else if (x.next >= 0) D.vs[x.next] = Math.min(D.vs[x.next], x.s);
+      return;
+    }
+    D.drift[i] = 2; cut[i] = x;
+    D.driftInfo[i] = { rule: x.rule, kind: 'cut', head: x.head, tail: x.tail, s0: b.start[i], e0: b.end[i], km0: D.km[i] };
+    D.start[i] = x.s; D.end[i] = x.e;
+    if (x.prev >= 0) D.ve[x.prev] = Math.max(D.ve[x.prev], x.s);
+    if (x.next >= 0) D.vs[x.next] = Math.min(D.vs[x.next], x.e);
+    if (x.head) {
+      // A later start can be another hour, or (just after midnight) another day.
+      var off = D.off[i], day = off === NO_OFF ? D.day[i] : Math.floor((x.s + off * 60000) / 864e5);
+      D.driftDays.push([i, D.day[i], D.year[i], D.month[i], D.dow[i], D.hour[i]]);
+      if (day !== D.day[i]) { var dt = dayToDate(day); D.day[i] = day; D.year[i] = dt.getUTCFullYear(); D.month[i] = dt.getUTCMonth(); D.dow[i] = dt.getUTCDay(); }
+      D.hour[i] = localHour(x.s, off);
+    }
+  });
+  // The cut-back walks' GPS points: from the last still one to the first still one, with times
+  // from their new start; their distance loses what the points left out added.
+  var ids = Object.keys(cut);
+  if (!ids.length) return;
+  var np = D.pathT.length, i, q, w = 0;
+  ids.forEach(function (k) { var x = cut[k], j = +k; np -= (D.pathOff[j + 1] - D.pathOff[j]) - (x.z - x.a + 1); });
+  var P = new Float32Array(2 * np), T = new Float32Array(np), O = new Uint32Array(n + 1);
+  for (i = 0; i < n; i++) {
+    O[i] = w;
+    var x = cut[i], o0 = D.pathOff[i], o1 = D.pathOff[i + 1];
+    if (!x) { for (q = o0; q < o1; q++, w++) { P[2 * w] = D.pathPts[2 * q]; P[2 * w + 1] = D.pathPts[2 * q + 1]; T[w] = D.pathT[q]; } continue; }
+    var shift = (x.s - b.start[i]) / 1000, len = (x.e - x.s) / 1000, all = [], kept = [];
+    for (q = o0; q < o1; q++) all.push([D.pathPts[2 * q], D.pathPts[2 * q + 1]]);
+    for (q = x.a; q <= x.z; q++, w++) {
+      P[2 * w] = all[q][0]; P[2 * w + 1] = all[q][1];
+      T[w] = q === x.a ? 0 : q === x.z ? len : Math.min(len, Math.max(0, D.pathT[o0 + q] - shift));
+      kept.push(all[q]);
+    }
+    var gone = pathKm(all.slice(0, x.a + 1)) + pathKm(all.slice(x.z)), left = pathKm(kept);
+    D.km[i] = Math.min(D.km[i], Math.max(D.km[i] - gone, left));
+    D.from[2 * i] = kept[0][0]; D.from[2 * i + 1] = kept[0][1];
+    D.to[2 * i] = kept[kept.length - 1][0]; D.to[2 * i + 1] = kept[kept.length - 1][1];
+  }
+  O[n] = w;
+  D.pathPts = P; D.pathT = T; D.pathOff = O;
+}
+
+// ---------- in the trip details, the rules sheet and the place dialog ----------
+function driftTripHtml(i) {
+  var x = D.driftInfo && D.driftInfo[i];
+  if (!x || x.kind !== 'cut') return '';
+  var r = mrById(x.rule), bits = [];
+  if (x.head >= 30000) bits.push(duration(x.head) + ' standing still at the start');
+  if (x.tail >= 30000) bits.push(duration(x.tail) + ' standing still at the end');
+  return '<div class="mr-chg"><b>Cut back:</b> ' + bits.join(' and ') + ' joined your stay <span class="fine">(was ' + clock(x.s0, D.off[i]) + '–' + clock(x.e0, D.off[i]) + ', ' + dist(x.km0) + ')</span>' +
+    '<div class="fine">' + infoMore('From <i>' + esc(r ? driftName(r) : x.rule) + '</i>, where GPS drifts.', 'Indoors your phone kept guessing where it was, so Timeline kept this walk going while you stood still. Only the part where you moved is a walk now. Not this trip makes it whole again.', 'About cut back walks') + '</div></div>';
+}
+function driftRowText(r) {
+  if (!r.drift) return '';
+  var st = MR && MR.on && MR_DRIFT[r.id], n = st ? st.stay + st.cut : 0;
+  return 'GPS drifts here' + (r.drift.only ? ' · within ' + distShort(driftRad(r)) : '') + (st ? ' · ' + fmt(n) + ' walk' + (n === 1 ? '' : 's') + ' made stays' : '');
+}
+function driftPlaceHtml(r) {
+  if (!r || !r.drift) return '';
+  var id = infoId(), st = MR && MR.on && MR_DRIFT[r.id];
+  return '<label class="toggle-row"><span class="lbl">GPS drifts here' + infoBtn(id, 'About GPS drifts here') + '</span><input type="checkbox" class="switch" id="mrPDrift" checked></label>' +
+    infoBox(id, 'Walks within ' + distShort(driftRad(r)) + ' that were really time spent here become part of your stays. Switch it off to make them walks again.') +
+    '<p class="fine">' + (st ? fmt(st.stay + st.cut) + ' walk' + (st.stay + st.cut === 1 ? '' : 's') + ' made stays' + (st.cut ? ' (' + fmt(st.cut) + ' cut back)' : '') : 'No walks changed right now') +
+    (Array.isArray(r.except) && r.except.length ? ' · ' + fmt(r.except.length) + ' kept as walks' : '') + '.</p>' +
+    '<button type="button" class="btn" id="mrPDriftRev">' + icon('WALKING') + 'Review walks</button>';
+}
+
+// ---------- places to check (Trip cleanup) ----------
+// Stays that walks keep starting or ending at while slow, staying close, or standing still at that
+// end. The spots with the most of them are measured as a circle of DRIFT_RAD, and those with
+// DRIFT_MIN or more walks and DRIFT_MIN_MS or more time to change are offered, most time first. Places that already have drift
+// (and anything within 400 m of an offered one) are left out.
+function driftSuggest() {
+  if (!D || !D.base) return [];
+  var stamp = (MR ? MR.changes.length + ':' + MR.on + ':' + driftAll().length : '-') + ':' + D.day.length + ':' + (D.mrHide ? 1 : 0);
+  if (D.driftSug && D.driftSug.stamp === stamp && D.driftSug.d === D.base) return D.driftSug.list;
+  needPlaces();
+  var S = driftSrc(), wk = MODE_IDX.WALKING, by = {}, n = D.day.length, i, q;
+  for (i = 0; i < n; i++) {
+    if (S.mode[i] !== wk || !driftOk(i)) continue;
+    var o0 = S.pathOff[i], o1 = S.pathOff[i + 1], t0 = S.start[i], t1 = S.end[i], dur = t1 - t0;
+    if (o1 - o0 < 2 || dur <= 0) continue;
+    var kmh = S.km[i] / (dur / 36e5), pv = driftPrev(t0), nx = driftNext(t1);
+    var slow = (kmh < DRIFT_SLOW || dur <= DRIFT_SHORT) && !(pv >= 0 && nx >= 0 && kmLL(D.vll[2 * pv], D.vll[2 * pv + 1], D.vll[2 * nx], D.vll[2 * nx + 1]) > DRIFT_APART);
+    [[pv, o0, 1], [nx, o1 - 1, -1]].forEach(function (x) {
+      var v = x[0];
+      if (v < 0) return;
+      var la = D.vll[2 * v], lo = D.vll[2 * v + 1], far = 0, still = false;
+      for (q = o0; q < o1; q++) far = Math.max(far, kmLL(S.pathPts[2 * q], S.pathPts[2 * q + 1], la, lo));
+      // A long gap at that end, close to the stay.
+      var e = x[1], f = e + x[2];
+      if (f >= o0 && f < o1 && Math.abs(S.pathT[f] - S.pathT[e]) * 1000 >= DRIFT_IDLE && kmLL(S.pathPts[2 * e], S.pathPts[2 * e + 1], la, lo) <= 0.3) still = true;
+      if (!(slow && far <= 0.5) && !still) return;
+      var k = spotKey(v), o = by[k] || (by[k] = { key: k, n: 0, v: v });
+      o.n++;
+    });
+  }
+  var have = driftAll(), out = [];
+  Object.keys(by).map(function (k) { return by[k]; }).filter(function (o) { return o.n >= DRIFT_MIN / 2; })
+    .sort(function (a, b) { return b.n - a.n; }).slice(0, 40).forEach(function (o) {
+      if (out.length >= DRIFT_SUG * 2) return;
+      var c = spotPos(o.key) || [D.vll[2 * o.v], D.vll[2 * o.v + 1]];
+      if (out.some(function (x) { return km(x.c, c) < 0.4; }) || have.some(function (r) { return km(r.at, c) < driftRad(r) / 1000 + 0.1; })) return;
+      var cs = driftCands(c, DRIFT_RAD / 1000), ms = 0;
+      cs.forEach(function (x) { ms += x.ms; });
+      if (cs.length < DRIFT_MIN || ms < DRIFT_MIN_MS) return;
+      var s = spotsOf(spotStays(o.key))[0];
+      out.push({ key: o.key, c: [+c[0].toFixed(6), +c[1].toFixed(6)], n: cs.length, ms: ms, name: s ? spotName(s) : 'A place' });
+    });
+  out.sort(function (a, b) { return b.ms - a.ms; });
+  out = out.slice(0, DRIFT_SUG);
+  D.driftSug = { stamp: stamp, d: D.base, list: out };
+  return out;
+}
+function driftWalks(n) { return fmt(n) + ' walk' + (n === 1 ? '' : 's'); }
+function driftHours(ms) { return hoursLabel(ms / 36e5).replace(/ \d+ min$/, ''); }
+// The Menu's Trip cleanup row: places to check, once they are known.
+function driftMenuText() {
+  var s = D && D.driftSug && D.driftSug.d === D.base ? D.driftSug.list.length : 0;
+  return s ? s + ' place' + (s === 1 ? '' : 's') + ' to check' : '';
+}
+// The section in Trip cleanup. Looking for places takes a moment, so it runs only when the sheet
+// opens (look), and then after each change while it is open.
+var DRIFT_LOOK = 0;
+function driftSettings(look) {
+  var box = $('driftList'), note = $('driftNote');
+  if (!box) return;
+  if (!D) { box.innerHTML = ''; note.textContent = 'Load your Timeline file to look for them.'; return; }
+  if (look === true || openId === 'cleanupSheet') {
+    var known = D.driftSug && D.driftSug.d === D.base;
+    if (!known) { box.innerHTML = ''; note.textContent = 'Looking for places…'; }
+    var my = ++DRIFT_LOOK;
+    setTimeout(function () { if (my === DRIFT_LOOK) { driftSuggest(); driftList(); renderMenu(); } }, known ? 0 : 30);
+    if (!known) return;
+  }
+  driftList();
+}
+function driftList() {
+  var box = $('driftList'), note = $('driftNote'), sug = D.driftSug && D.driftSug.d === D.base ? D.driftSug.list : null, done = driftAll();
+  var rows = (sug || []).map(function (x, k) {
+    return '<li><button type="button" class="drift-row" data-drift-sug="' + k + '">' + lookBadge({ ic: 'WALKING', bg: 'var(--m-foot)' }, true) +
+      '<span class="file-txt"><b>' + esc(x.name) + '</b><small>' + driftWalks(x.n) + ' · ' + driftHours(x.ms) + '</small></span>' + icon('right', 'mr-chev') + '</button></li>';
+  }).concat(done.map(function (r) {
+    var st = MR && MR.on && MR_DRIFT[r.id], n = st ? st.stay + st.cut : 0;
+    return '<li><button type="button" class="drift-row" data-drift-rule="' + esc(r.id) + '">' + lookBadge({ ic: 'home', bg: '#8a918c' }, true) +
+      '<span class="file-txt"><b>' + esc(driftName(r)) + '</b><small>' + (r.enabled === false || !MR.on ? 'Switched off' : driftWalks(n) + ' made stays') + '</small></span><span class="tag-done">Done</span>' + icon('right', 'mr-chev') + '</button></li>';
+  }));
+  box.innerHTML = rows.join('');
+  box.hidden = !rows.length;
+  note.textContent = !sug ? '' : !sug.length && !done.length ? 'No places where walks look like stays.' : sug.length ? '' : 'No more places to check.';
+  if (MR && !MR.on && done.length) note.textContent = 'MyRules are switched off, so these places don\'t change any walks.';
+}
+$('driftList').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-drift-sug],[data-drift-rule]');
+  if (!b) return;
+  if (b.dataset.driftRule) { var r = mrById(b.dataset.driftRule); if (r) driftStart({ rule: r }); return; }
+  var x = D.driftSug && D.driftSug.list[+b.dataset.driftSug];
+  if (x) driftStart({ c: x.c, name: x.name });
+});
+// A place page's ⋯ › Check walks here…: the review at that spot (or at the place it is named by).
+$('tripBody').addEventListener('click', function (ev) {
+  var b = ev.target.closest('[data-drift-spot]');
+  if (!b) return;
+  var key = b.dataset.driftSpot, r = mrSpotRule(key), s = spotsOf(spotStays(key))[0], c = r ? r.at : spotPos(key) || (s && [s.lat, s.lng]);
+  if (r && r.drift) { driftStart({ rule: r }); return; }
+  // A place made only for GPS drifts here whose circle takes in this spot: that one.
+  var dr = c && driftAll().filter(function (x) { return km(x.at, c) * 1000 <= driftRad(x); }).sort(function (x, y) { return km(x.at, c) - km(y.at, c); })[0];
+  if (dr) { driftStart({ rule: dr }); return; }
+  if (c) driftStart({ c: [+(+c[0]).toFixed(6), +(+c[1]).toFixed(6)], name: r ? driftName(r) : s ? spotName(s) : 'This place', place: r });
+});
+
+// ---------- the review: one place's walks on the map ----------
+// Only the walks the circle would change are drawn, the rest of the map steps aside (sel-mode, as in
+// Select trips). The slider sets the radius, the list ticks walks (unticked: they stay walks, dashed
+// grey), a tap on a walk on the map or in the list shows which is which. Saving writes the place's
+// drift and its except (the walks you unticked), behind the Saving… pill.
+var DR = null;
+function driftStart(o) {
+  if (!D) { toast('Load your Timeline file first'); return; }
+  closeSheets(true);
+  if ($('mrDlg').open) $('mrDlg').close();
+  if (PREFS.proj !== 'merc') setProj('merc');
+  setTab('map');
+  if (!initMap()) return;
+  if (typeof snapEnd === 'function') snapEnd();
+  if (typeof splitHandEnd === 'function') splitHandEnd();
+  if (typeof selEnd === 'function') selEnd();
+  if (typeof ignEnd === 'function') ignEnd();
+  driftEnd();
+  if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
+  var r = o.rule || o.place && o.place.drift && o.place || null;
+  DR = { rule: r, place: o.place || r, c: r ? r.at.map(Number) : o.c, rad: r ? driftRad(r) : DRIFT_RAD, name: r ? driftName(r) : o.name || 'This place', off: new Set(), sel: -1, cands: [] };
+  DR.r = L.canvas({ pane: 'mrg', padding: 0.5, tolerance: 6 });
+  DR.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: DR.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
+  DR.layer = L.layerGroup().addTo(map);
+  map.getContainer().classList.add('drift-on');
+  document.body.classList.add('sel-mode', 'drift-mode');
+  layerToggles();
+  hideTip(); setHovered([]);
+  driftCompute();
+  // Walks you said were real (the place's except) start unticked.
+  if (r) { var ex = mrExcept(r); DR.cands.forEach(function (x) { if (ex[x.i]) DR.off.add(x.i); }); }
+  driftBars();
+  driftRender();
+  driftFit();
+}
+// The walks for the radius: what the circle would change, with the ones the place keeps as walks.
+function driftCompute() {
+  var cs = driftCands(DR.c, DR.rad / 1000);
+  DR.cands = cs;
+  driftSort();
+}
+// Newest first.
+function driftSort() { var t = (D.base || D).start; DR.cands.sort(function (a, b) { return t[b.i] - t[a.i]; }); }
+function driftFit() {
+  var b = L.latLng(DR.c).toBounds(DR.rad * 2.4), pad = wide() ? { paddingTopLeft: [30, 80], paddingBottomRight: [440, 30] } : { paddingTopLeft: [20, 80], paddingBottomRight: [20, Math.min(innerHeight * .5, ($('drBot') ? $('drBot').offsetHeight : 380)) + 20] };
+  map.fitBounds(b, Object.assign({ maxZoom: 18, animate: false }, pad));
+}
+function driftBars() {
+  var top = $('drTop');
+  if (!top) {
+    top = document.createElement('div');
+    top.id = 'drTop'; top.className = 'snap-bar sel-top dr-top'; top.setAttribute('role', 'status');
+    top.innerHTML = '<span class="snap-bar-t">' + icon('WALKING') + '<span><b id="drTitle"></b><span class="sel-hint">Walks that may be stays</span></span></span>' +
+      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
+    top.addEventListener('click', function (ev) { var b = ev.target.closest('[data-a="cancel"]'); if (b) driftEnd(); });
+    document.body.appendChild(top);
+    var bot = document.createElement('div'), id = infoId();
+    bot.id = 'drBot'; bot.className = 'sel-bar dr-bar';
+    bot.innerHTML = '<div class="dr-head"><label class="dr-rad"><span>Radius</span><input type="range" id="drRad" min="' + DRIFT_RAD_MIN + '" max="' + DRIFT_RAD_MAX + '" step="25" aria-label="Radius"><b class="num" id="drRadTxt"></b></label>' +
+      '<div class="dr-sum"><span id="drSum"></span>' + infoBtn(id, 'About walks that may be stays', 'sm') + '<button type="button" class="link-btn" id="drAll"></button></div>' +
+      infoBox(id, 'Each walk here starts or ends at a stay inside the circle. Ticked walks that never leave the circle become part of that stay. Walks marked <i>Cut back</i> stood still at one end: only those still minutes join the stay, and the part where you moved stays a walk. Untick the walks that were real. Saving keeps this as a MyRules place with <i>GPS drifts here</i>, so walks loaded later are handled the same way.') + '</div>' +
+      '<div class="dr-list" id="drList"></div>' +
+      '<div class="dr-legend fine"><span><i class="dr-k on"></i>Becomes a stay</span><span><i class="dr-k off"></i>Stays a walk</span><span><i class="dr-k c"></i>Radius</span></div>' +
+      '<div class="dr-acts"><button type="button" class="btn quiet" id="drRemove" hidden>Remove</button><button type="button" class="btn primary" id="drSave"></button></div>';
+    document.body.appendChild(bot);
+    fillIcons(bot);
+    var rad = $('drRad'), tm = 0;
+    rad.addEventListener('input', function () {
+      DR.rad = +rad.value; $('drRadTxt').textContent = distShort(DR.rad);
+      if (DR.circle) DR.circle.setRadius(DR.rad);
+      clearTimeout(tm); tm = setTimeout(function () { if (DR) { driftCompute(); driftRender(); } }, 60);
+    });
+    $('drAll').addEventListener('click', function () {
+      if (!DR) return;
+      var allOn = !DR.cands.some(function (x) { return DR.off.has(x.i); });
+      DR.cands.forEach(function (x) { if (allOn) DR.off.add(x.i); else DR.off.delete(x.i); });
+      driftRender();
+    });
+    $('drList').addEventListener('change', function (ev) {
+      var c = ev.target.closest('input[data-i]');
+      if (!c || !DR) return;
+      if (c.checked) DR.off.delete(+c.dataset.i); else DR.off.add(+c.dataset.i);
+      DR.sel = +c.dataset.i;
+      driftRender(true);
+    });
+    $('drList').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-i]');
+      if (!b || !DR) return;
+      DR.sel = DR.sel === +b.dataset.i ? -1 : +b.dataset.i;
+      driftRender(true);
+      if (DR.sel >= 0) driftShow(DR.sel);
+    });
+    $('drSave').addEventListener('click', function () { if (DR) driftSave(); });
+    $('drRemove').addEventListener('click', function () { if (DR) driftRemove(); });
+    map.on('click', driftTap);
+  }
+  $('drTitle').textContent = DR.name;
+  $('drRad').value = DR.rad; $('drRadTxt').textContent = distShort(DR.rad);
+  $('drRemove').hidden = !DR.rule;
+  top.hidden = false; $('drBot').hidden = false;
+}
+function driftWhen(x) {
+  var i = x.i, b = D.base || D, off = D.off[i], bits = [];
+  if (x.head) bits.push('still ' + duration(x.head) + ' at the start');
+  if (x.tail) bits.push('still ' + duration(x.tail) + ' at the end');
+  // The day it started as loaded (a cut-back start can be on the next day).
+  var day = off === NO_OFF ? D.day[i] : Math.floor((b.start[i] + off * 60000) / 864e5);
+  return { day: niceDate(day),
+    t: clock(b.start[i], off) + '–' + clock(b.end[i], off) + (bits.length ? ' · ' + bits.join(', ') : ''), dur: duration(b.end[i] - b.start[i]) };
+}
+function driftRender(keepList) {
+  if (!DR) return;
+  var n = DR.cands.length, on = DR.cands.filter(function (x) { return !DR.off.has(x.i); }), ms = 0;
+  on.forEach(function (x) { ms += x.ms; });
+  $('drSum').innerHTML = n ? '<b>' + fmt(on.length) + '</b> of ' + driftWalks(n) + ' ticked · <b>' + driftHours(ms) + '</b>' : 'No walks here look like stays.';
+  $('drAll').textContent = on.length === n ? 'Untick all' : 'Tick all';
+  $('drAll').hidden = !n;
+  var save = $('drSave');
+  save.textContent = on.length ? 'Make ' + driftWalks(on.length) + ' stays' : DR.rule ? 'Save' : 'Make walks stays';
+  save.disabled = !on.length && !DR.rule;
+  if (!keepList) {
+    $('drList').innerHTML = DR.cands.slice(0, 400).map(function (x) {
+      var w = driftWhen(x), off = DR.off.has(x.i);
+      return '<div class="dr-item' + (off ? ' off' : '') + (x.i === DR.sel ? ' sel' : '') + '" data-row="' + x.i + '"><input type="checkbox" data-i="' + x.i + '"' + (off ? '' : ' checked') + ' aria-label="Make the walk on ' + esc(w.day) + ' part of the stay">' +
+        '<button type="button" class="sel-open" data-i="' + x.i + '"><b>' + esc(w.day) + '</b><small>' + esc(w.t) + '</small></button>' +
+        '<span class="dr-n"><span class="num">' + w.dur + '</span>' + (x.kind === 'cut' ? '<span class="tag-cut">Cut back</span>' : '') + '</span></div>';
+    }).join('') + (n > 400 ? '<p class="fine dr-more">Showing the latest 400 of ' + fmt(n) + '.</p>' : '');
+  } else {
+    $('drList').querySelectorAll('.dr-item').forEach(function (el) {
+      var i = +el.dataset.row;
+      el.classList.toggle('off', DR.off.has(i)); el.classList.toggle('sel', i === DR.sel);
+    });
+  }
+  driftDraw();
+}
+function driftPath(i) {
+  var S = driftSrc(), out = [];
+  for (var q = S.pathOff[i]; q < S.pathOff[i + 1]; q++) out.push([S.pathPts[2 * q], S.pathPts[2 * q + 1]]);
+  return out;
+}
+function driftDraw() {
+  DR.layer.clearLayers();
+  var foot = cssVar('--m-foot') || '#eda100', acc = cssVar('--accent') || '#c25228', grey = cssVar('--muted') || '#6b6688';
+  DR.circle = L.circle(DR.c, { pane: 'mrg', renderer: DR.r, radius: DR.rad, color: acc, weight: 2, dashArray: '7 5', fillColor: acc, fillOpacity: .07, interactive: false }).addTo(DR.layer);
+  // A cut-back walk: only its still ends become the stay; the part where you moved stays a walk (grey).
+  var onP = [], offP = [], moveP = [], sel = null;
+  DR.lines = [];
+  DR.cands.forEach(function (x) {
+    var p = driftPath(x.i);
+    DR.lines.push({ i: x.i, p: p });
+    if (x.i === DR.sel) sel = p;
+    else if (DR.off.has(x.i)) offP.push(p);
+    else if (x.kind === 'cut') {
+      moveP.push(p.slice(x.a, x.z + 1));
+      if (x.head) onP.push(p.slice(0, x.a + 2));
+      if (x.tail) onP.push(p.slice(x.z - 1));
+    } else onP.push(p);
+  });
+  if (offP.length) L.polyline(offP, { pane: 'mrg', renderer: DR.r, color: grey, weight: 2, dashArray: '5 5', opacity: .8, interactive: false }).addTo(DR.layer);
+  if (moveP.length) L.polyline(moveP, { pane: 'mrg', renderer: DR.r, color: grey, weight: 1.6, opacity: sel ? .3 : .55, interactive: false }).addTo(DR.layer);
+  if (onP.length) L.polyline(onP, { pane: 'mrg', renderer: DR.r, color: foot, weight: 2.6, opacity: sel ? .45 : .85, interactive: false }).addTo(DR.layer);
+  if (sel) {
+    L.polyline(sel, { pane: 'mrg', renderer: DR.r, color: '#fff', weight: 8, opacity: .95, interactive: false }).addTo(DR.layer);
+    L.polyline(sel, { pane: 'mrg', renderer: DR.r, color: DR.off.has(DR.sel) ? grey : acc, weight: 4, dashArray: DR.off.has(DR.sel) ? '6 5' : null, interactive: false }).addTo(DR.layer);
+  }
+  L.circleMarker(DR.c, { pane: 'mrg', renderer: DR.r, radius: 5, color: '#fff', weight: 2, fillColor: acc, fillOpacity: 1, interactive: false }).addTo(DR.layer);
+}
+// A tap on the map: the walk nearest it (within 14 px) is shown, and its row in the list.
+function driftTap(ev) {
+  if (!DR || !DR.lines) return;
+  var p = map.latLngToContainerPoint(ev.latlng), best = -1, bd = 14;
+  DR.lines.forEach(function (l) {
+    var prev = null;
+    l.p.forEach(function (ll) {
+      var c = map.latLngToContainerPoint(ll);
+      var d = prev ? L.LineUtil.pointToSegmentDistance(p, prev, c) : p.distanceTo(c);
+      if (d < bd) { bd = d; best = l.i; }
+      prev = c;
+    });
+  });
+  DR.sel = best;
+  driftRender(true);
+  var row = best >= 0 && $('drList').querySelector('[data-row="' + best + '"]');
+  if (row) row.scrollIntoView({ block: 'nearest' });
+}
+function driftShow(i) {
+  var p = driftPath(i);
+  if (!p.length) return;
+  var b = L.latLngBounds(p);
+  if (!map.getBounds().contains(b)) map.panTo(b.getCenter());
+}
+// Save: the place gets drift with the radius, and the walks you unticked in its except. A new place
+// is made only for this (drift.only), so it names no stays. Nothing ticked takes drift off again.
+function driftSave() {
+  var on = DR.cands.filter(function (x) { return !DR.off.has(x.i); }), off = DR.cands.filter(function (x) { return DR.off.has(x.i); });
+  var r = DR.rule || DR.place, name = DR.name, rad = DR.rad, c = DR.c, b = D.base || D, isNew = false;
+  if (!on.length && !r) return;
+  mrEnsure();
+  if (!r) { isNew = true; r = { id: mrNewId(name), name: name, at: c }; (MR.doc.places || (MR.doc.places = [])).push(r); }
+  var refs = off.map(function (x) { return { start: mrIsoLocal(x.i), mode: MODES[b.mode[x.i]] }; });
+  if (on.length) {
+    r.drift = Object.assign({}, typeof r.drift === 'object' ? r.drift : {}, { radius_m: rad });
+    if (isNew || r.drift.only) r.drift.only = true;
+    if (refs.length) r.except = refs; else delete r.except;
+  } else if (r.drift && r.drift.only) {
+    MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
+  } else { delete r.drift; delete r.except; }
+  driftEnd();
+  saving(function () {
+    mrChange(on.length ? 'GPS drifts here: ' + name + ' (' + driftWalks(on.length) + ' made stays)' : 'GPS drifts here removed: ' + name);
+    if (D.driftSug) D.driftSug = null;
+    toast(on.length ? driftWalks(on.length) + ' near ' + name + ' are now part of your stays. Change it in Menu › Trip cleanup.' : 'The walks near ' + name + ' are walks again.');
+  });
+}
+function driftRemove() {
+  var r = DR.rule, name = DR.name;
+  if (!r) return;
+  mrAsk({
+    title: 'Make these walks walks again?',
+    text: 'The walks near <b>' + esc(name) + '</b> stop being part of your stays.' + (r.drift && r.drift.only ? ' The place goes from MyRules.' : ' The place keeps its name.'),
+    buttons: [['Remove', 'danger', function () {
+      if (r.drift && r.drift.only) MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
+      else { delete r.drift; delete r.except; }
+      driftEnd();
+      mrChange('GPS drifts here removed: ' + name);
+      D.driftSug = null;
+      toast('The walks near ' + name + ' are walks again.');
+    }], ['Cancel', 'quiet', null]]
+  });
+}
+function driftEnd() {
+  if (!DR) return;
+  var was = DR;
+  DR = null;
+  was.dim.remove(); was.layer.remove();
+  map.getContainer().classList.remove('drift-on');
+  document.body.classList.remove('sel-mode', 'drift-mode');
+  if ($('drTop')) { $('drTop').hidden = true; $('drBot').hidden = true; }
+  layerToggles();
+}
+document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape' && DR && !$('mrDlg').open) driftEnd(); });
+
 // ---------- settings ----------
 function renderSettings() {
   setPressed('#unitSeg button', function (b) { return b.dataset.u === PREFS.unitF; });
@@ -17307,6 +17944,7 @@ function renderSettings() {
   renderImports();
   renderSplitSettings();
   netSettings();
+  if (typeof driftSettings === 'function') driftSettings();
   renderPacks();
   renderMenu();
   $('homeSec').hidden = !D || !!DEMO;
@@ -17321,7 +17959,7 @@ function renderMenu() {
   $('menuSub-mrSheet').textContent = !MR ? 'Add what only you know: gear, places, routines' : mrCount(MR.doc) + (MR.on ? '' : ' · switched off');
   var packs = typeof packCodes === 'function' ? packCodes().length : 0, split = splitSetting();
   $('menuSub-cleanupSheet').textContent = [split === 'auto' ? 'Merged trips split' : split === 'ask' ? 'Merged trips suggested' : 'Merged trips kept whole',
-    packs ? packs + ' station pack' + (packs === 1 ? '' : 's') : 'No station packs'].join(' · ');
+    packs ? packs + ' station pack' + (packs === 1 ? '' : 's') : 'No station packs'].concat(typeof driftMenuText === 'function' ? driftMenuText() : []).filter(Boolean).join(' · ');
   var u = PREFS.unitF === 'km' ? 'Kilometres' : PREFS.unitF === 'mi' ? 'Miles' : LOCALE_FMT.unit === 'mi' ? 'Miles' : 'Kilometres';
   $('menuSub-prefsSheet').textContent = u + ' · ' + niceDate(todayDay()) + ' · ' + (PREFS.theme === 'dark' ? 'Dark' : PREFS.theme === 'light' ? 'Light' : 'System') + ' theme';
 }

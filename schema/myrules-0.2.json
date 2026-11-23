@@ -348,6 +348,19 @@
         "hide": {
           "type": "boolean",
           "default": false
+        },
+        "drift": {
+          "description": "GPS drifts here: walks that were really time spent at this place become part of the stays (or are cut back to the part where you moved). except lists the walks to keep. Since BT•DT's Walks that may be stays.",
+          "oneOf": [
+            { "type": "boolean" },
+            {
+              "type": "object",
+              "properties": {
+                "radius_m": { "type": "number", "minimum": 10, "maximum": 2000, "description": "The circle walks must stay in (default: the place's radius_m)." },
+                "only": { "type": "boolean", "default": false, "description": "The place is only for this: it names no stays and has no part in places." }
+              }
+            }
+          ]
         }
       }
     },
