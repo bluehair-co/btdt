@@ -572,8 +572,9 @@ function mrStayCors() {
   if (!MR || !MR.on) return [];
   return mrActive('corrections').filter(function (c) { return c.trip && c.trip.start && c.then && c.then.stay && Array.isArray(c.then.stay.at) && isFinite(c.then.stay.at[0]) && isFinite(c.then.stay.at[1]); });
 }
+// Splits (split.js) are made while the trips are set up too, so they are in the same signature.
 function mrStaySig() {
-  return mrStayCors().map(function (c) { return c.id + '@' + c.trip.start + '@' + c.then.stay.at.join(',') + '@' + (c.then.stay.name || '') + (c.except ? '@' + JSON.stringify(c.except) : ''); }).join('|');
+  return JSON.stringify(mrSplitRules()) + '|' + mrStayCors().map(function (c) { return c.id + '@' + c.trip.start + '@' + c.then.stay.at.join(',') + '@' + (c.then.stay.name || '') + (c.except ? '@' + JSON.stringify(c.except) : ''); }).join('|');
 }
 // R is D while the trips are set up (after splitTrips): its stays plus one per walk made a stay.
 function mrStayInject(R) {

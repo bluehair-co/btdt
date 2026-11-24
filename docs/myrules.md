@@ -52,7 +52,9 @@ The JSON Schema is published with the app at [`schema/myrules-0.2.json`](../sche
   "gear": [ … ],
   "routines": [ … ],
   "corrections": [ … ],
-  "gps_spots": [ … ]
+  "gps_spots": [ … ],
+  "splits": [ … ],
+  "place_merges": [ … ]
 }
 ```
 
@@ -309,6 +311,32 @@ A correction on a day or span that sets `gear` only fills trips without recorded
 | `at` | The spots, `[lat, lng]` each. |
 
 **In BT•DT.** *Ignore GPS points* (a trip's pencil menu): after you mark points and *Save*, it asks *Just this trip* or *Every trip, here*, with how many points on how many trips the spot would take. *Every trip, here* saves the new points as one `gps_spots` rule; they show in *MyRules › Corrections* under *Bad GPS spots*, with a switch, rename and *Delete*. A trip that loses points to one says so in its details.
+
+### Split trips and merged places
+
+Changes you make to how trips and places are cut up live here too, so they travel and sync with the rest of your rules. Older versions of BT•DT kept them in the browser only; they move into MyRules by themselves the next time the trips are set up (for the trips that are loaded). Both apply whether MyRules are switched on or off.
+
+`splits` holds trips Timeline merged that you looked at (see *Trips Timeline merged*). `trip` is the trip as loaded, before it is split, with its type then. One of:
+
+```json
+{ "id": "split-2017-10-31", "trip": { "start": "2017-10-31T09:27+01:00", "mode": "WALKING" }, "at": ["2017-10-31T08:30:22Z", "2017-10-31T14:55:22Z"] }
+{ "id": "split-2018-03-02", "trip": { "start": "2018-03-02T08:12+01:00", "mode": "TRAIN" }, "keep": true }
+{ "id": "split-2018-03-05", "trip": { "start": "2018-03-05T17:40+01:00", "mode": "VEHICLE" }, "split": true }
+```
+
+| Field | Meaning |
+|---|---|
+| `at` | *Split trip* by hand: cuts, each at the GPS point nearest that moment (UTC). |
+| `keep` | *Keep as one trip*: no cuts at all, not even BT•DT's own. |
+| `split` | *Split into legs* on a trip BT•DT only offered to split. `split` and `at` can go together. |
+
+`place_merges` holds places you merged on a place page: the stays at Google place ID `from` count as stays at `into`.
+
+```json
+{ "id": "merge-ah", "from": "ChIJ…a", "into": "ChIJ…b" }
+```
+
+**In BT•DT.** Both show in *MyRules*: *Split trips* under *Corrections*, *Places merged* under *Places*, each with a switch, *Undo* (or *Separate them*) and *Delete*.
 
 ### 5.5 How corrections show in the app
 

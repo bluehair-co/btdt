@@ -8,8 +8,8 @@
 // MR is null until a file is loaded or a rule is made in the app. It is saved in this browser's
 // IndexedDB next to the trips, never uploaded. changes lists what was changed in the app since the
 // file was last loaded or exported, so nothing is lost by removing it from the device.
-var MR = null;
-var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections', 'gps_spots'];
+var MR = null, MR_LOADED = false;  // MR_LOADED: the saved rules are read (nothing may write them before)
+var MR_SECTIONS = ['places', 'moves', 'gear', 'routines', 'snaps', 'corrections', 'gps_spots', 'splits', 'place_merges'];
 var MR_DOW = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 var MR_KINDS = { bike: 'Bike', strida: 'Strida', halfbike: 'Halfbike', cargo: 'Cargo bike', ebike: 'E-bike', shoe: 'Shoes',
   car: 'Car', petrol: 'Petrol car', diesel: 'Diesel car', hybrid: 'Hybrid car', ev: 'Electric car', motorbike: 'Motorbike', scooter: 'Scooter', boat: 'Boat', sailboat: 'Sailing boat', kayak: 'Kayak or canoe', sup: 'Paddleboard',
@@ -46,10 +46,29 @@ function mrLocalMin(i) {
   return Math.floor((t - Math.floor(t / 864e5) * 864e5) / 60000);
 }
 // The local start of a trip as ISO 8601 with its UTC offset, to the minute: how rules point at one trip.
-function mrIsoLocal(i) {
-  var t0 = tripT0(i), off = D.off[i] !== NO_OFF ? D.off[i] : -new Date(t0).getTimezoneOffset();
-  var s = new Date(t0 + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
+function mrIsoLocal(i) { return mrIsoAt(tripT0(i), D.off[i]); }
+// A moment as a rule names a trip by it: local time to the minute, with the UTC offset.
+function mrIsoAt(ms, off) {
+  if (off == null || off === NO_OFF) off = -new Date(ms).getTimezoneOffset();
+  var s = new Date(ms + off * 60000).toISOString().slice(0, 16), a = Math.abs(off);
   return s + (off < 0 ? '-' : '+') + pad2(Math.floor(a / 60)) + ':' + pad2(a % 60);
+}
+// A ref's start ('2017-10-31T09:27+01:00') as the date and time settings show it.
+function mrRefWhen(s) {
+  var m = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}([+-])(\d{2}):(\d{2})$/.exec(String(s || ''));
+  if (!m) return String(s || '');
+  var off = (m[2] === '-' ? -1 : 1) * (+m[3] * 60 + +m[4]);
+  return niceDate(mrDayNum(m[1])) + ', ' + clock(Date.parse(s), off);
+}
+// A trip ref ({ start, mode }) among trips that aren't D (the trips as loaded, before they are split):
+// its index, or -1. The same matching as mrRefTrips.
+function mrRefIn(R, ref) {
+  var t = ref && ref.start ? Date.parse(ref.start) : NaN, c = [], i;
+  if (!isFinite(t)) return -1;
+  for (i = 0; i < R.start.length; i++) if (Math.abs(R.start[i] - t) <= 3 * 60000 && !(R.dup && R.dup[i])) c.push(i);
+  if (c.length > 1 && ref.mode) c = c.filter(function (j) { return MODES[R.mode[j]] === ref.mode; });
+  if (c.length > 1) { var m = c.filter(function (j) { var d = R.start[j] - t; return d >= 0 && d < 60000; }); if (m.length === 1) c = m; }
+  return c.length === 1 ? c[0] : -1;
 }
 // A rule's when, ready to test trips against.
 function mrWhen(w) {
@@ -993,17 +1012,23 @@ function mrSave() {
 function mrLoad() {
   return withStore('btdt', 'readonly', function (s) { return s.get('myrules'); }).then(function (x) {
     if (x && x.doc) MR = { doc: x.doc, name: x.name || 'my.myrules.json', on: x.on !== false, changes: x.changes || [], exported: x.exported || 0, lines: x.lines || {} };
-  }).catch(function () {});
+  }).catch(function () {}).then(function () { MR_LOADED = true; });
 }
 // Something changed in the app: kept with a short description, until the next export.
 // trip: the one trip a change is about, when it only touches that trip's own corrections (its type,
 // checked mark, title, hiding or gear): then only that trip and its like trips are worked out again.
 function mrChange(text, trip) {
+  mrNote(text);
+  // Place merges are read when the places are worked out: they are again, as needed.
+  if (D && typeof respot === 'function') respot();
+  if (trip != null && mrReapplyTrip(trip)) { mrReapplied(); return; }
+  mrReapply();
+}
+// A change kept with its description and saved (and synced), without working the trips out again.
+function mrNote(text) {
   MR.changes.push({ t: Date.now(), text: text });
   MR.doc.about = Object.assign({}, MR.doc.about, { updated: new Date().toISOString(), generator: 'BT•DT' });
   mrSave();
-  if (trip != null && mrReapplyTrip(trip)) { mrReapplied(); return; }
-  mrReapply();
 }
 // The fast way after a change to one trip's own corrections, with the same result as mrReapply:
 // 1. the trip goes back to how it was before the corrections (D.preCor, kept by mrCorrectSteps),
@@ -1343,7 +1368,7 @@ function mrRenderRules() {
   if (!MR.on) h += '<p class="fine mr-warn">' + infoMore('MyRules are switched off.', 'None of these rules change your trips. Routines and corrections show how many trips they would change.', 'About switched-off rules') + ' <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
   if (D && MR.on) h += mrCleanBar();
   if (MR_AMB) h += '<p class="fine mr-warn">' + infoMore(tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear.', 'Narrow one of the periods (a shorter period, or a distance limit) to pick one.') + '</p>';
-  var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps'), spots = mrList('gps_spots');
+  var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps'), spots = mrList('gps_spots'), splits = mrList('splits'), merges = mrList('place_merges');
   // Gear always has its section, with New gear… (any type, period and countries) at its head.
   h += '<div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div>' + (gear.length ? '' : '<p class="fine">No gear yet.</p>') + gear.map(function (r) {
     var m = r.match || {}, bits = r.default ? ['Default ' + esc((LABEL[r.mode] || r.mode).toLowerCase()) + ', a guess for trips without gear', esc(MR_KINDS[r.kind] || LABEL[r.mode] || r.mode)]
@@ -1356,13 +1381,15 @@ function mrRenderRules() {
     var ic = r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode;
     return mrRuleRow('gear', r, r.name || r.id, bits.map(function (b) { return b; }).join(' · '), ic, modeColor(r.mode || 'CYCLING'), !MR.on ? null : r.assign === false ? mrGearUses(r) : MR_COUNT[r.id] || 0);
   }).join('') + '</div>';
-  if (places.length || moves.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
+  if (places.length || moves.length || merges.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
     if (!mrNames(r)) return mrRuleRow('places', r, r.name || r.id, driftRowText(r), 'WALKING', 'var(--m-foot)', null);
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays', driftRowText(r)].filter(Boolean).join(' · ');
     return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? '#9aa49d' : mrLook(r).bg, null);
   }).join('') + (moves.length ? '<h4 class="place-h mr-grp">Places that moved</h4>' + moves.map(function (r) {
     var sub = (r.keep ? 'Google\'s location kept' : 'Where it was ' + mvWhen(r.when)) + ' · ' + mvStays(MR.on ? MR_COUNT[r.id] || 0 : 0);
     return mrRuleRow('moves', r, r.name || r.id, sub, 'pin', r.keep ? '#9aa49d' : '#0f7c8c', null);
+  }).join('') : '') + (merges.length ? '<h4 class="place-h mr-grp">Places merged</h4>' + merges.map(function (r) {
+    return mrRuleRow('place_merges', r, spotPidName(r.from) + ' → ' + spotPidName(r.into), 'Counted as one place, the second', 'pin', '#9aa49d', null);
   }).join('') : '') + '</div>';
   // Corrections by date (newest first) or by type (then newest first), with a heading per type.
   var csort = PREFS.corSort === 'type' ? 'type' : 'date', cgrp = null;
@@ -1408,9 +1435,18 @@ function mrRenderRules() {
     var n = Array.isArray(r.at) ? r.at.length : 0;
     return mrRuleRow('gps_spots', r, r.name || 'Bad GPS spot', [fmt(n) + ' spot' + (n === 1 ? '' : 's'), distShort(GPS_SPOT_KM * 1000) + ' around each', 'its points are left out of every trip, except where a trip starts or ends'], 'pinOff', 'var(--muted)', MR.on ? MR_COUNT[r.id] || 0 : null);
   }).join('') + '</div>';
-  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length && !spots.length) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
+  // Trips Timeline merged that you split or kept whole, with the corrections.
+  if (splits.length) h += '<div class="sec" data-mr-tab="corrections"><h3>Split trips</h3>' + splits.slice().sort(function (a, b) { return Date.parse(b.trip && b.trip.start) - Date.parse(a.trip && a.trip.start); }).map(function (r) {
+    var n = Array.isArray(r.at) ? r.at.length : 0, bits = [];
+    if (r.keep) bits.push('Kept as one trip');
+    if (r.split) bits.push('Split where BT•DT suggested');
+    if (n) bits.push(fmt(n) + ' cut' + (n === 1 ? '' : 's') + ' made by hand');
+    var t = r.trip && r.trip.start ? mrRefWhen(r.trip.start) : r.id;
+    return mrRuleRow('splits', r, t + (r.trip && r.trip.mode ? ' · ' + (LABEL[r.trip.mode] || r.trip.mode).toLowerCase() : ''), bits.join(' · '), r.keep ? 'undo' : 'split', 'var(--muted)', null);
+  }).join('') + '</div>';
+  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length && !spots.length && !splits.length && !merges.length) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
   // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length + spots.length]].filter(function (t) { return t[2] || t[3]; });
+  var tabs = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length + merges.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length + spots.length + splits.length]].filter(function (t) { return t[2] || t[3]; });
   if (tabs.length > 1) {
     if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
     h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
@@ -2081,6 +2117,7 @@ function mrEditRule(ref) {
   if (sec === 'gear') { if (r.default && r.mode === 'CAR') mrDefaultCarDialog(); else mrGearRuleDialog(r); return; }
   if (sec === 'routines') { mrRoutineDialog(r); return; }
   if (sec === 'gps_spots') { mrSpotDialog(r); return; }
+  if (sec === 'splits' || sec === 'place_merges') { mrUndoRuleDialog(sec, r); return; }
   if (sec === 'snaps') { closeSheets(true); snapStart(r); return; }
   if (!D) { toast('Load your Timeline file to edit this'); return; }
   if (sec === 'moves') { mvEditRule(r); return; }
@@ -3147,6 +3184,20 @@ function mrGearPeriodDialog(i) {
   });
 }
 
+// A split trip or a place merge: Undo, which brings the trip (or the two places) back as loaded.
+function mrUndoRuleDialog(sec, r) {
+  var split = sec === 'splits';
+  mrAsk({
+    title: split ? (r.keep ? 'Kept as one trip' : 'Split trip') : 'Places merged',
+    text: split ? 'The trip that started ' + esc(mrRefWhen(r.trip && r.trip.start)) + '. ' + (r.keep ? 'You chose to keep it as one trip.' : 'You split it into legs.')
+      : esc(spotPidName(r.from)) + ' is counted as part of ' + esc(spotPidName(r.into)) + '.',
+    buttons: [[split ? 'Undo' : 'Separate them', 'danger', function () {
+      MR.doc[sec] = mrList(sec).filter(function (x) { return x !== r; });
+      if (split) mrChange((r.keep ? 'Keep as one trip' : 'Split') + ' undone: ' + mrRefWhen(r.trip && r.trip.start));
+      else { mrNote('Places separated again'); respot(); renderMyRules(); }
+    }], ['Cancel', 'quiet', null]]
+  });
+}
 // A bad GPS spot rule: its name, or Delete (which brings its points back on every trip).
 function mrSpotDialog(r) {
   var n = Array.isArray(r.at) ? r.at.length : 0, t = MR.on ? MR_COUNT[r.id] || 0 : null;

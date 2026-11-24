@@ -1425,7 +1425,8 @@ function buildSpotKeys() {
 // side of the handover. Neighbouring shops have their visits mixed in time, so they stay apart.
 // (Checked on a real Timeline: 11 of 440 ID pairs within 25 m merge, including a place whose ID
 // changed in 2022 with 2 visits to the new ID in 2020.) Merges you make on a spot page
-// (PREFS.spotMerge, from key to key) are applied on top. The merged spot keeps the key with
+// (MyRules place_merges: { id, from, into } by Google place ID, so they sync with your rules) are
+// applied on top. The merged spot keeps the key with
 // more time there.
 var AUTO_MERGE_KM = 0.025, AUTO_MERGE_MIN = 3, AUTO_MERGE_OFF = 0.1;
 // The fewest visits that would have to go for all of a's to come before all of b's, or the other way.
@@ -1467,7 +1468,7 @@ function mergedSpots(keys) {
       union(a.k, b.k); D.autoMerged[a.k] = D.autoMerged[b.k] = 1;
     });
   }
-  var man = PREFS.spotMerge || {};
+  var man = spotMergeMap();
   for (k in man) if (info[k] && info[man[k]]) union(man[k], k);
   return function (x) { return parent[x] ? find(x) : x; };
 }
@@ -1479,7 +1480,7 @@ function spotParts(key) {
     if (!pid || seen[pid] || spotKey(v) !== key) continue;
     seen[pid] = 1;
     var k = 'id:' + pid;
-    out.push({ k: k, pid: pid, manual: !!(PREFS.spotMerge && PREFS.spotMerge[k]), auto: !!(D.autoMerged && D.autoMerged[k]) });
+    out.push({ k: k, pid: pid, manual: !!spotMergeMap()[k], auto: !!(D.autoMerged && D.autoMerged[k]) });
   }
   return out;
 }
@@ -1489,18 +1490,45 @@ function respot() {
   if (map && PREFS.pins) layerToggles();
 }
 function mergeSpot(from, into) { saving(function () { mergeSpotNow(from, into); }); }
+// Merges you made, from spot key to spot key ('id:' + Google place ID), from MyRules (and any older
+// ones still in PREFS). They apply whether MyRules are switched on or off.
+function spotMergeMap() {
+  var m = {};
+  if (typeof mrList === 'function') mrList('place_merges').forEach(function (r) { if (r.id && r.enabled !== false && r.from && r.into) m['id:' + r.from] = 'id:' + r.into; });
+  var p = PREFS.spotMerge || {};
+  for (var k in p) if (!m[k]) m[k] = p[k];
+  return m;
+}
+function spotMergeAdd(from, into) {
+  mrEnsure();
+  var L = MR.doc.place_merges || (MR.doc.place_merges = []);
+  if (L.some(function (r) { return r.from === from && r.into === into; })) return;
+  MR.doc.place_merges = L.filter(function (r) { return r.from !== from; });
+  MR.doc.place_merges.push({ id: mrNewId('merge-' + spotPidName(from)), from: from, into: into });
+}
+// A Google place ID's name, from your stays there.
+function spotPidName(pid) {
+  if (D && D.vpid) for (var v = 0; v < D.vs.length; v++) if (D.vpid[v] === pid && D.vname[v]) return D.vname[v];
+  return 'place';
+}
 function mergeSpotNow(from, into) {
-  PREFS.spotMerge = PREFS.spotMerge || {};
-  PREFS.spotMerge[from] = into; savePrefs(); respot();
+  spotMergeAdd(from.replace(/^id:/, ''), into.replace(/^id:/, ''));
+  mrNote('Places merged: ' + spotPidName(from.replace(/^id:/, '')) + ' into ' + spotPidName(into.replace(/^id:/, '')));
+  respot();
   var pid = into.slice(3);
   for (var v = 0; v < D.vs.length; v++) if (D.vpid[v] === pid) { openSpot(spotKey(v)); return; }
 }
 function unmergeSpot(key) { saving(function () { unmergeSpotNow(key); }); }
 function unmergeSpotNow(key) {
-  var m = PREFS.spotMerge || {};
-  spotParts(key).forEach(function (x) { delete m[x.k]; });
+  var m = PREFS.spotMerge || {}, parts = {};
+  spotParts(key).forEach(function (x) { delete m[x.k]; parts[x.k] = 1; });
   for (var k in m) if (m[k] === key) delete m[k];
-  savePrefs(); respot(); openSpot(key);
+  savePrefs();
+  if (MR) {
+    MR.doc.place_merges = mrList('place_merges').filter(function (r) { return !parts['id:' + r.from] && 'id:' + r.into !== key; });
+    mrNote('Places separated again');
+  }
+  respot(); openSpot(key);
 }
 function spotStays(key) {
   var out = [];
