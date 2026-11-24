@@ -106,20 +106,12 @@ function snapStart(r) {
 // The bar over the map while you tap the ends.
 function snapPickBar() {
   SN.phase = 'pick';
-  var bar = $('snapBar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'snapBar'; bar.className = 'snap-bar'; bar.setAttribute('role', 'status');
-    bar.innerHTML = '<span class="snap-bar-t"></span><button type="button" class="btn quiet">Cancel</button>';
-    bar.querySelector('button').addEventListener('click', snapEnd);
-    document.body.appendChild(bar);
-  }
-  bar.hidden = false;
+  promptBar('snapBar', { mode: true, icon: 'pin', acts: [['Cancel', 'quiet', 'cancel']], on: function (a) { if (a === 'cancel') snapEnd(); } });
   snapBarText();
 }
 function snapBarText() {
-  var t = $('snapBar') && $('snapBar').querySelector('.snap-bar-t');
-  if (t) t.innerHTML = !SN.a ? icon('pin') + '<span><b>New map snap</b>Tap the station or stop it starts at</span>' : icon('pin') + '<span><b>From ' + esc(SN.a.name) + '</b>Now tap the one it goes to</span>';
+  if (!SN.a) promptText('snapBar', 'New map snap', 'Tap the station or stop it starts at');
+  else promptText('snapBar', 'From ' + esc(SN.a.name), 'Now tap the one it goes to');
 }
 // A tap on the map while picking: the nearest station or stop of the packs within 1 km.
 function snapTap(ll) {

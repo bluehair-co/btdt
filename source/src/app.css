@@ -146,7 +146,7 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 .proj-zoom { position: absolute; z-index: 5; right: 16px; top: calc(50% - 44px); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--glass); box-shadow: var(--shadow); }
 .proj-zoom button { font-size: 20px; line-height: 1; width: 44px; height: 44px; border: 0; background: none; color: var(--fg); cursor: pointer; }
 .proj-zoom button + button { border-top: 1px solid var(--line); }
-.map-legend { position: absolute; z-index: 15; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 36px + var(--safe-b)); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; max-width: calc(100% - 150px); padding: 5px 10px; border-radius: 12px; background: var(--glass); font-size: 11px; color: var(--muted); pointer-events: none; }
+.map-legend { position: absolute; z-index: 15; left: 0; right: 0; margin: 0 auto; width: max-content; box-sizing: border-box; bottom: calc(var(--dock-h) + var(--dock-gap) + 36px + var(--safe-b)); display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 10px; max-width: calc(100% - 150px); padding: 5px 10px; border-radius: 12px; background: var(--glass); font-size: 11px; color: var(--muted); pointer-events: none; }
 .map-legend span { display: inline-flex; align-items: center; gap: 5px; }
 .map-legend i { width: 10px; height: 3px; border-radius: 2px; display: block; }
 .map-legend .heat-scale { width: 80px; height: 8px; border-radius: 4px; }
@@ -772,7 +772,7 @@ svg text { font-family: var(--font-body); font-size: 11px; fill: var(--muted); }
 .ld-t { font-weight: 500; overflow-wrap: anywhere; }
 .ld-p { font: 500 13px var(--font-mono); color: var(--muted); }
 @media (prefers-reduced-motion: reduce) { .ld-ico.in, .ld-ico.out { animation: none; } .ld-donut.spin .ld-ring { animation-duration: 3s; } }
-.toast { position: fixed; z-index: 70; left: 50%; top: calc(16px + var(--safe-t)); transform: translateX(-50%); max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow); }
+.toast { position: fixed; z-index: 70; left: 0; right: 0; margin: 0 auto; width: max-content; top: calc(16px + var(--safe-t)); max-width: min(560px, calc(100% - 32px)); box-sizing: border-box; background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 14px; font-size: 13px; box-shadow: var(--shadow); }
 /* Working on it: a clear veil that takes taps while a slow change runs, and a pill with a spinner. */
 .working { position: fixed; inset: 0; z-index: 1000; cursor: progress; }
 .working[hidden] { display: none; }
@@ -1080,11 +1080,6 @@ div.hit-row:hover { background: none; }
 .pack-btns { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
 
 /* Map snaps: the bar over the map while you tap the two stations. */
-.snap-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + 116px); display: flex; align-items: center; gap: 12px; max-width: calc(100vw - 32px); padding: 8px 8px 8px 14px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
-.snap-bar[hidden] { display: none; }
-.snap-bar-t { display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.35; }
-.snap-bar-t svg { flex: none; color: var(--accent); }
-.snap-bar-t b { display: block; font-size: 14px; }
 .leaflet-tooltip.snap-tip { font: 600 12px var(--font-body); padding: 2px 8px; border-radius: 8px; }
 #snapMode button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 #snapMode svg { width: 16px; height: 16px; }
@@ -1094,11 +1089,9 @@ div.hit-row:hover { background: none; }
 /* While selecting, a finger draws: with panning off, Leaflet leaves the map at pan-x pan-y, and the
    browser would take the stroke as a scroll and cancel it. */
 #map.sel-on, #map.sel-on * { touch-action: none !important; }
-.sel-top { flex-wrap: wrap; justify-content: center; width: max-content; max-width: calc(100vw - 32px); box-sizing: border-box; }
-.sel-top .snap-bar-t { flex: 1 1 240px; }
-.sel-top .seg button { min-height: 40px; }
-.sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 32px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
-.sel-bar[hidden], .sel-top[hidden] { display: none; }
+.prompt .seg button { min-height: 40px; }
+.sel-bar { position: fixed; z-index: 55; left: 50%; transform: translateX(-50%); bottom: calc(var(--dock-h) + var(--dock-gap) + 24px + var(--safe-b)); width: min(520px, calc(100vw - 24px)); background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+.sel-bar[hidden] { display: none; }
 .sel-row { display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 6px; }
 /* Phones: the summary on its own line, the buttons under it. */
 .sel-row .btn { white-space: nowrap; }
@@ -1136,31 +1129,45 @@ div.hit-row:hover { background: none; }
 .mr-drive-what { margin: 0; }
 .mr-drive-st { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 36px; }
 .mr-drive-st small { color: var(--muted); }
-.drive-bar { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); top: calc(12px + var(--safe-t, 0px)); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 16px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow); max-width: calc(100vw - 24px); }
-.drive-bar[hidden] { display: none; }
-.drive-bar span { font-size: 14px; }
 .mr-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 4px 0 8px; cursor: pointer; }
 .mr-switch-row small { display: block; margin-top: 2px; }
 .mr-grp { margin: 14px 0 4px; }
+
+/* Prompts over the app: promptBar() in core.js. One look and one fit for every floating bar. */
+.prompt { position: fixed; z-index: 55; left: 0; right: 0; margin: 0 auto; width: max-content; max-width: min(640px, calc(100vw - 32px)); box-sizing: border-box;
+  top: calc(var(--safe-t) + 116px); display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 10px; padding: 8px 8px 8px 14px;
+  background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
+.prompt[hidden] { display: none; }
+.prompt-mode { top: calc(12px + var(--safe-t)); }
+.prompt-t { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 10px; font-size: 13px; line-height: 1.35; }
+.prompt-t > svg { flex: none; width: 22px; height: 22px; color: var(--accent); }
+.prompt-words { min-width: 0; }
+.prompt-title { display: block; font-size: 14px; }
+.prompt-title:empty, .prompt-sub:empty { display: none; }
+.prompt-sub { display: block; color: var(--muted); }
+.prompt-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+.prompt-acts .btn { white-space: nowrap; min-height: 40px; }
+.prompt-x { flex: none; }
+/* Work going on with no buttons (the road-snapping pill): one slim line, words in full colour. */
+.prompt-slim { padding: 6px 14px 6px 12px; flex-wrap: nowrap; }
+.prompt-slim .prompt-t { flex: 1 1 auto; }
+.prompt-slim .prompt-sub { color: var(--fg); }
+.prompt-slim .prompt-acts { flex: none; }
+/* Phones: the full width less a small margin; text first, the buttons beside it or on their own line. */
+@media (min-width: 601px) { .prompt { flex-wrap: nowrap; } .prompt-acts { flex: none; } }
+@media (max-width: 600px) { .prompt { left: 12px; right: 12px; width: auto; max-width: none; } .prompt:not(.prompt-slim) .prompt-t { flex-basis: 200px; } }
 
 /* Download progress (station and road packs) */
 .dl-bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin: 10px 0 2px; }
 .dl-bar[hidden] { display: none; }
 .dl-bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 3px; transition: width .15s linear; }
 /* Work in the background (snapping car trips to roads) */
-.bg-pill { position: fixed; z-index: 54; left: 50%; transform: translateX(-50%); top: calc(var(--safe-t) + 116px); display: flex; align-items: center; gap: 10px; padding: 6px 14px 6px 10px; border-radius: 999px; background: var(--panel); color: var(--fg); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 13px; }
-.bg-pill[hidden] { display: none; }
-.bg-pill .dl-bar { width: 80px; margin: 0; }
+.prompt .dl-bar { width: 80px; margin: 0; }
 /* While selecting trips only the selection's own bars show (the map's attribution stays). */
-body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .snap-bar:not(.sel-top), body.sel-mode #roadPill { display: none !important; }
+body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mode #mapPage .fab, body.sel-mode .map-legend, body.sel-mode #map .leaflet-top, body.sel-mode .prompt:not(.prompt-mode) { display: none !important; }
 /* Making a map snap: the same, with its bar at the top. */
-body.snap-mode .dock, body.snap-mode .topbar, body.snap-mode .playbar, body.snap-mode #mapPage .fab, body.snap-mode .map-legend, body.snap-mode #map .leaflet-top, body.snap-mode #roadPill, body.snap-mode .tools-menu { display: none !important; }
-body.snap-mode #snapBar { top: calc(12px + var(--safe-t)); width: max-content; box-sizing: border-box; }
-body.snap-mode #snapBar .snap-bar-t { flex: 1 1 auto; min-width: 0; }
-/* On a phone the bar spans the screen, with a small margin each side. */
-@media (max-width: 600px) { body.snap-mode #snapBar { left: 12px; right: 12px; width: auto; max-width: none; transform: none; justify-content: space-between; } }
+body.snap-mode .dock, body.snap-mode .topbar, body.snap-mode .playbar, body.snap-mode #mapPage .fab, body.snap-mode .map-legend, body.snap-mode #map .leaflet-top, body.snap-mode .prompt:not(.prompt-mode), body.snap-mode .tools-menu { display: none !important; }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
-body.sel-mode .sel-top { top: calc(12px + var(--safe-t)); }
 .bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
 @media (prefers-reduced-motion: reduce) { .bg-spin { animation-duration: 2s; } }
 .mv-map { height: 240px; border-radius: 10px; border: 1px solid var(--line); }
@@ -1262,11 +1269,8 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .dr-k.c { width: 11px; height: 11px; border: 1.5px dashed var(--accent); border-radius: 50%; }
 .dr-acts { display: flex; gap: 8px; margin-top: 10px; }
 .dr-acts .primary { flex: 1; justify-content: center; }
-body.drift-mode .dr-top { flex-wrap: nowrap; }
-body.drift-mode .dr-top .snap-bar-t { flex: 1 1 auto; min-width: 0; }
-@media (max-width: 600px) { body.drift-mode .dr-top { left: 12px; right: 12px; width: auto; transform: none; justify-content: space-between; } }
 /* On a wide screen the panel sits on the right, full height, and the top bar over the map beside it. */
 @media (min-width: 960px) {
   body.drift-mode .dr-bar { left: auto; right: 16px; transform: none; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 400px; max-height: none; }
-  body.drift-mode .dr-top { left: calc((100vw - 432px) / 2); }
+  body.drift-mode .prompt-mode { left: 0; right: 432px; }
 }

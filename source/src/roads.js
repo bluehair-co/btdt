@@ -260,14 +260,8 @@ function roadRun(todo) {
 function roadPill(done, all, text) {
   var el = $('roadPill');
   if (done == null && !text) { if (el) el.hidden = true; return; }
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'roadPill'; el.className = 'bg-pill'; el.setAttribute('role', 'status');
-    el.innerHTML = '<i class="bg-spin" aria-hidden="true"></i><span></span><div class="dl-bar"><i></i></div>';
-    document.body.appendChild(el);
-  }
-  el.hidden = false;
-  el.querySelector('span').textContent = text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all);
+  el = promptBar('roadPill', { spin: true, cls: 'prompt-slim', extra: '<div class="dl-bar"><i></i></div>' });
+  promptText(el, null, esc(text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all)));
   el.querySelector('.dl-bar').hidden = done == null;
   if (done != null) el.querySelector('.dl-bar i').style.width = Math.round(100 * done / Math.max(1, all)) + '%';
 }

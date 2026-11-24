@@ -44,18 +44,14 @@ function ignStart(i) {
 function ignBars() {
   var top = $('ignTop');
   if (!top) {
-    top = document.createElement('div');
-    top.id = 'ignTop'; top.className = 'snap-bar sel-top'; top.setAttribute('role', 'status');
-    top.innerHTML = '<span class="snap-bar-t">' + icon('pinOff') + '<span><b>Ignore GPS points</b><span class="sel-hint"></span></span></span>' +
-      '<div class="seg" role="group" aria-label="Shape"><button type="button" data-shape="lasso">Lasso</button><button type="button" data-shape="rect">Rectangle</button></div>' +
-      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
-    top.addEventListener('click', function (ev) {
-      var b = ev.target.closest('button');
-      if (!b || !IGN) return;
-      if (b.dataset.shape) { IGN.shape = PREFS.selShape = b.dataset.shape; savePrefs(); ignRender(); }
-      else if (b.dataset.a === 'cancel') { var i = IGN.i; ignEnd(); openTrip(i); }
-    });
-    document.body.appendChild(top);
+    top = promptBar('ignTop', { mode: true, icon: 'pinOff', title: 'Ignore GPS points',
+      extra: '<div class="seg" role="group" aria-label="Shape"><button type="button" data-shape="lasso">Lasso</button><button type="button" data-shape="rect">Rectangle</button></div>',
+      acts: [['Cancel', 'quiet', 'cancel']],
+      on: function (a, b) {
+        if (!b || !IGN) return;
+        if (b.dataset.shape) { IGN.shape = PREFS.selShape = b.dataset.shape; savePrefs(); ignRender(); }
+        else if (a === 'cancel') { var i = IGN.i; ignEnd(); openTrip(i); }
+      } });
     var bot = document.createElement('div');
     bot.id = 'ignBot'; bot.className = 'sel-bar';
     bot.innerHTML = '<div class="sel-row"><div class="sel-sum ign-sum" id="ignSum"></div>' +
@@ -80,7 +76,7 @@ function ignKept() { return IGN.pts.filter(function (_, k) { return !IGN.off.has
 function ignRender() {
   if (!IGN) return;
   setPressed('#ignTop [data-shape]', function (b) { return b.dataset.shape === IGN.shape; });
-  $('ignTop').querySelector('.sel-hint').textContent = (IGN.shape === 'rect' ? 'Drag a rectangle over the bad points' : 'Draw around the bad points') + ', or tap one. Do it again on ignored ones to bring them back.';
+  promptText('ignTop', null, (IGN.shape === 'rect' ? 'Drag a rectangle over the bad points' : 'Draw around the bad points') + ', or tap one. Do it again on ignored ones to bring them back.');
   var n = IGN.off.size, kept = ignKept(), b = D.base || D, k0 = b.km[IGN.i], left = pathKm(kept);
   // The distance it would have, as mrApplyDrops works it out.
   var kmNow = n && IGN.km0 > 0 ? Math.max(left, k0 - (IGN.km0 - left)) : k0;

@@ -301,21 +301,13 @@ function splitHandStart(i) {
   splitHandEnd();
   SPL = { i: i, key: key, ms: l ? l.was.start : D.start[i], pts: pts, t: t, cuts: [], layer: L.layerGroup().addTo(map), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) || '#c25228' };
   layerToggles();
-  var bar = $('splitBar');
-  if (!bar) {
-    bar = document.createElement('div');
-    bar.id = 'splitBar'; bar.className = 'snap-bar'; bar.setAttribute('role', 'status');
-    bar.innerHTML = '<span class="snap-bar-t"></span><button type="button" class="btn quiet" data-a="undo">Undo</button><button type="button" class="btn quiet" data-a="cancel">Cancel</button><button type="button" class="btn primary" data-a="save">Split</button>';
-    bar.addEventListener('click', function (ev) {
-      var b = ev.target.closest('button[data-a]');
-      if (!b || !SPL) return;
-      if (b.dataset.a === 'undo') { SPL.cuts.pop(); splitHandDraw(); }
-      else if (b.dataset.a === 'cancel') { var ii = SPL.i; splitHandEnd(); openTrip(ii); }
-      else splitHandSave();
-    });
-    document.body.appendChild(bar);
-  }
-  bar.hidden = false;
+  promptBar('splitBar', { icon: 'split', acts: [['Undo', 'quiet', 'undo'], ['Cancel', 'quiet', 'cancel'], ['Split', 'primary', 'save']],
+    on: function (a) {
+      if (!a || !SPL) return;
+      if (a === 'undo') { SPL.cuts.pop(); splitHandDraw(); }
+      else if (a === 'cancel') { var ii = SPL.i; splitHandEnd(); openTrip(ii); }
+      else if (a === 'save') splitHandSave();
+    } });
   splitHandDraw();
   map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 16 });
 }
@@ -330,8 +322,8 @@ function splitHandDraw() {
     L.circleMarker(SPL.pts[k], { radius: 8, color: '#fff', weight: 2.5, fillColor: cssVar('--accent') || '#c25228', fillOpacity: 1, interactive: false })
       .bindTooltip(clock(SPL.t[k] * 1000, D.off[SPL.i]), { permanent: true, direction: 'top', offset: [0, -9], className: 'snap-tip' }).addTo(SPL.layer);
   });
-  var n = cuts.length, t = $('splitBar').querySelector('.snap-bar-t');
-  t.innerHTML = icon('split') + '<span><b>' + (n ? 'Split into ' + (n + 1) + ' trips' : 'Split trip') + '</b>' + (n ? 'Tap the path again for another leg' : 'Tap its path where a leg ends') + '</span>';
+  var n = cuts.length;
+  promptText('splitBar', n ? 'Split into ' + (n + 1) + ' trips' : 'Split trip', n ? 'Tap the path again for another leg' : 'Tap its path where a leg ends');
   $('splitBar').querySelector('[data-a="undo"]').disabled = !n;
   $('splitBar').querySelector('[data-a="save"]').disabled = !n;
 }

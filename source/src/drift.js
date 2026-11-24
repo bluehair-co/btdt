@@ -373,12 +373,9 @@ function driftFit() {
 function driftBars() {
   var top = $('drTop');
   if (!top) {
-    top = document.createElement('div');
-    top.id = 'drTop'; top.className = 'snap-bar sel-top dr-top'; top.setAttribute('role', 'status');
-    top.innerHTML = '<span class="snap-bar-t">' + icon('WALKING') + '<span><b id="drTitle"></b><span class="sel-hint">Walks that may be stays</span></span></span>' +
-      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
-    top.addEventListener('click', function (ev) { var b = ev.target.closest('[data-a="cancel"]'); if (b) driftEnd(); });
-    document.body.appendChild(top);
+    top = promptBar('drTop', { mode: true, cls: 'dr-top', icon: 'WALKING', text: 'Walks that may be stays', acts: [['Cancel', 'quiet', 'cancel']],
+      on: function (a) { if (a === 'cancel') driftEnd(); } });
+    top.querySelector('.prompt-title').id = 'drTitle';
     var bot = document.createElement('div'), id = infoId();
     bot.id = 'drBot'; bot.className = 'sel-bar dr-bar';
     bot.innerHTML = '<div class="dr-head"><label class="dr-rad"><span>Radius</span><input type="range" id="drRad" min="' + DRIFT_RAD_MIN + '" max="' + DRIFT_RAD_MAX + '" step="25" aria-label="Radius"><b class="num" id="drRadTxt"></b></label>' +
@@ -706,15 +703,8 @@ function stayPickRender() {
 function stayPickBars() {
   var top = $('stpTop');
   if (!top) {
-    top = document.createElement('div');
-    top.id = 'stpTop'; top.className = 'snap-bar sel-top'; top.setAttribute('role', 'status');
-    top.innerHTML = '<span class="snap-bar-t">' + icon('home') + '<span><b>This was a stay</b><span class="sel-hint">Tap one of your places, or anywhere on the map for a new one.</span></span></span>' +
-      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
-    top.addEventListener('click', function (ev) {
-      var b = ev.target.closest('button');
-      if (b && b.dataset.a === 'cancel' && STP) { var i = STP.i; stayPickEnd(); openTrip(i); }
-    });
-    document.body.appendChild(top);
+    top = promptBar('stpTop', { mode: true, icon: 'home', title: 'This was a stay', text: 'Tap one of your places, or anywhere on the map for a new one.', acts: [['Cancel', 'quiet', 'cancel']],
+      on: function (a) { if (a === 'cancel' && STP) { var i = STP.i; stayPickEnd(); openTrip(i); } } });
     var bot = document.createElement('div');
     bot.id = 'stpBot'; bot.className = 'sel-bar';
     bot.innerHTML = '<div class="sel-row"><div class="sel-sum ign-sum" id="stpSum"></div><button type="button" class="btn primary" data-a="save">Make it a stay</button></div>';

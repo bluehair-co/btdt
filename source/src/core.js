@@ -41,6 +41,7 @@ var ICONS = {
   download: 'M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z',
   logo: 'M23 8c0 1.1-.9 2-2 2a1.7 1.7 0 0 1-.51-.07l-3.56 3.55c.05.16.07.34.07.52 0 1.1-.9 2-2 2s-2-.9-2-2c0-.18.02-.36.07-.52l-2.55-2.55c-.16.05-.34.07-.52.07s-.36-.02-.52-.07l-4.55 4.56c.05.16.07.33.07.51 0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2c.18 0 .35.02.51.07l4.56-4.55C8.02 9.36 8 9.18 8 9c0-1.1.9-2 2-2s2 .9 2 2c0 .18-.02.36-.07.52l2.55 2.55c.16-.05.34-.07.52-.07s.36.02.52.07l3.55-3.56A1.7 1.7 0 0 1 19 8c0-1.1.9-2 2-2s2 .9 2 2z',
   home: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',
+  sync: 'M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z',
   ticket: 'M20 12c0-1.1.9-2 2-2V6c0-1.1-.9-2-2-2H4c-1.1 0-1.99.9-1.99 2v4c1.1 0 1.99.9 1.99 2s-.89 2-2 2v4c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2v-4c-1.1 0-2-.9-2-2zm-4.42 4.8L12 14.5l-3.58 2.3 1.08-4.12-3.29-2.69 4.24-.25L12 5.8l1.54 3.95 4.24.25-3.29 2.69 1.09 4.11z',
   restaurant: 'M11 9H9V2H7v7H5V2H3v7c0 2.12 1.66 3.84 3.75 3.97V22h2.5v-9.03C11.34 12.84 13 11.12 13 9V2h-2v7zm5-3v8h2.5v8H21V2c-2.76 0-5 2.24-5 4z',
   cafe: 'M20 3H4v10c0 2.21 1.79 4 4 4h6c2.21 0 4-1.79 4-4v-3h2c1.11 0 2-.89 2-2V5c0-1.11-.89-2-2-2zm0 5h-2V5h2v3zM4 19h16v2H4z',
@@ -432,6 +433,53 @@ function haversine(a, b) {
   var h = Math.pow(Math.sin(dLa / 2), 2) + Math.cos(a[0] * r) * Math.cos(b[0] * r) * Math.pow(Math.sin(dLo / 2), 2);
   return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
 }
+// ---------- prompts over the app ----------
+// Every bar that floats over the map or the app (Sync with Google Drive, Select trips, Ignore GPS points,
+// This was a stay, Split trip, New map snap, the road-snapping pill…) is one of these, so they all look
+// and fit the same: an icon (or a spinner), a title and a line of text, and buttons on the right.
+// Wide screens: as wide as its content, centred. Phones: the full width less 12 px each side; when the
+// buttons don't fit beside the text they go on a line of their own. Never centre one with left: 50% and
+// a transform: that gives it only half the screen to fit in.
+//   promptBar(id, { icon, spin, title, text, extra, acts: [[label, class, action]], close: 'Not now',
+//                   mode: true, on: function (action, button, event) {} })
+// mode: true for the bar of a map mode (selecting, snapping…), at the top of the screen with the top bar
+// hidden; otherwise it sits just under the top bar. It is made once, then shown again with new text.
+function promptBar(id, o) {
+  var el = $(id);
+  if (!el) {
+    el = document.createElement('div');
+    el.id = id; el.setAttribute('role', 'status');
+    el.className = 'prompt' + (o.mode ? ' prompt-mode' : '') + (o.cls ? ' ' + o.cls : '');
+    el.innerHTML = '<div class="prompt-t">' + (o.spin ? '<i class="bg-spin" aria-hidden="true"></i>' : o.icon ? icon(o.icon) : '') +
+      '<span class="prompt-words"><b class="prompt-title"></b><span class="prompt-sub"></span></span></div>' +
+      '<div class="prompt-acts">' + (o.extra || '') + (o.acts || []).map(function (a) { return '<button type="button" class="btn' + (a[1] ? ' ' + a[1] : '') + '" data-a="' + a[2] + '">' + a[0] + '</button>'; }).join('') +
+      (o.close ? '<button type="button" class="icon-btn prompt-x" data-a="close" aria-label="' + esc(o.close) + '">' + icon('close') + '</button>' : '') + '</div>';
+    el.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button');
+      if (b && b.dataset.a === 'close' && !o.on) { el.hidden = true; return; }
+      if (o.on) o.on(b ? b.dataset.a : null, b, ev);
+    });
+    document.body.appendChild(el);
+  }
+  if (o.title != null || o.text != null) promptText(el, o.title, o.text);
+  el.hidden = false;
+  promptPlace(el);
+  return el;
+}
+// New words for a prompt (HTML; empty hides that line).
+function promptText(el, title, text) {
+  el = typeof el === 'string' ? $(el) : el;
+  if (!el) return;
+  if (title != null) el.querySelector('.prompt-title').innerHTML = title;
+  if (text != null) el.querySelector('.prompt-sub').innerHTML = text;
+}
+// Just under the top bar, so the date stays in view (mode prompts are at the top: the top bar is hidden).
+function promptPlace(el) {
+  if (el.classList.contains('prompt-mode')) { el.style.top = ''; return; }
+  var tb = $('topbar'), r = tb && tb.offsetParent && tb.getBoundingClientRect();
+  el.style.top = r && r.height ? Math.round(r.bottom + 8) + 'px' : '';
+}
+window.addEventListener('resize', function () { document.querySelectorAll('.prompt:not([hidden])').forEach(promptPlace); });
 function toast(text) {
   var t = $('toast'); t.textContent = text; t.hidden = false;
   clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3500);

@@ -253,7 +253,7 @@ function driveWire() {
       });
     } else {
       DRIVE.on = false; DRIVE.state = 'off'; DRIVE.file = null; DRIVE.version = null; DRIVE.at = 0; DRIVE.token = null; DRIVE.exp = 0;
-      driveSetBase(null); driveKeep(); driveShow(); $('driveBar').hidden = true;
+      driveSetBase(null); driveKeep(); driveShow(); if ($('driveBar')) $('driveBar').hidden = true;
       toast('Your rules are kept on this device. The file stays in your Google Drive.');
     }
   });
@@ -261,13 +261,10 @@ function driveWire() {
   if (sb) sb.addEventListener('click', function () { driveSync(true); });
 }
 function driveShow() {
-  var bar = $('driveBar');
-  if (bar) {
-    bar.hidden = !(DRIVE.on && DRIVE.state === 'signin' && !DEMO);
-    // Just under the top bar, so the date stays in view.
-    var tb = $('topbar'), r = tb && tb.getBoundingClientRect();
-    if (!bar.hidden && r && r.height) bar.style.top = Math.round(r.bottom + 8) + 'px';
-  }
+  if (DRIVE.on && DRIVE.state === 'signin' && !DEMO)
+    promptBar('driveBar', { icon: 'sync', title: 'Sync MyRules with Google Drive', text: 'Only your rules, never your location history.', acts: [['Sync', 'primary', 'sync']], close: 'Not now',
+      on: function (a) { if (!a) return; $('driveBar').hidden = true; if (a === 'sync') driveSync(true); } });
+  else if ($('driveBar')) $('driveBar').hidden = true;
   if ($('mrCard')) renderMyRules();
 }
 // When the app opens: sync if a token is still held, else offer the bar with Sync.
@@ -275,5 +272,3 @@ function driveStart() {
   if (!DRIVE.on || DEMO) return;
   if (DRIVE.token && DRIVE.exp - 60000 > Date.now()) driveSync(false); else { DRIVE.state = 'signin'; driveShow(); }
 }
-$('driveBarSync').addEventListener('click', function () { $('driveBar').hidden = true; driveSync(true); });
-$('driveBarClose').addEventListener('click', function () { $('driveBar').hidden = true; });

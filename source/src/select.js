@@ -31,18 +31,14 @@ function selStart() {
 function selBars() {
   var top = $('selTop');
   if (!top) {
-    top = document.createElement('div');
-    top.id = 'selTop'; top.className = 'snap-bar sel-top'; top.setAttribute('role', 'status');
-    top.innerHTML = '<span class="snap-bar-t">' + icon('select') + '<span><b>Select trips</b><span class="sel-hint"></span></span></span>' +
-      '<div class="seg" role="group" aria-label="Shape"><button type="button" data-shape="lasso">Lasso</button><button type="button" data-shape="rect">Rectangle</button></div>' +
-      '<button type="button" class="btn quiet" data-a="cancel">Cancel</button>';
-    top.addEventListener('click', function (ev) {
-      var b = ev.target.closest('button');
-      if (!b || !SEL) return;
-      if (b.dataset.shape) { SEL.shape = PREFS.selShape = b.dataset.shape; savePrefs(); selRender(); }
-      else if (b.dataset.a === 'cancel') selEnd();
-    });
-    document.body.appendChild(top);
+    top = promptBar('selTop', { mode: true, icon: 'select', title: 'Select trips',
+      extra: '<div class="seg" role="group" aria-label="Shape"><button type="button" data-shape="lasso">Lasso</button><button type="button" data-shape="rect">Rectangle</button></div>',
+      acts: [['Cancel', 'quiet', 'cancel']],
+      on: function (a, b) {
+        if (!b || !SEL) return;
+        if (b.dataset.shape) { SEL.shape = PREFS.selShape = b.dataset.shape; savePrefs(); selRender(); }
+        else if (a === 'cancel') selEnd();
+      } });
     var bot = document.createElement('div');
     bot.id = 'selBot'; bot.className = 'sel-bar';
     bot.innerHTML = '<div class="sel-list" id="selList" hidden></div><div class="sel-row"><button type="button" class="sel-sum" id="selSum" aria-expanded="false" aria-controls="selList"></button>' +
@@ -84,7 +80,7 @@ function selRender(keepList) {
   setPressed('#selTop [data-shape]', function (b) { return b.dataset.shape === SEL.shape; });
   var n = SEL.picked.length, kmT = 0;
   SEL.picked.forEach(function (i) { kmT += D.km[i]; });
-  $('selTop').querySelector('.sel-hint').textContent = SEL.shape === 'rect' ? 'Drag a rectangle over the trips. Again to add more, tap one to drop it.' : 'Draw around the trips. Again to add more, tap one to drop it.';
+  promptText('selTop', null, SEL.shape === 'rect' ? 'Drag a rectangle over the trips. Again to add more, tap one to drop it.' : 'Draw around the trips. Again to add more, tap one to drop it.');
   $('selSum').innerHTML = n ? '<b>' + tripsText(n) + '</b> · <span class="sel-km">' + dist(kmT) + '</span> <span class="sel-caret">' + (SEL.list ? 'Hide list' : 'List') + '</span>' : '<b>No trips yet</b>';
   $('selSum').setAttribute('aria-expanded', String(SEL.list && n > 0));
   $('selBot').querySelector('[data-a="clear"]').disabled = !n;
