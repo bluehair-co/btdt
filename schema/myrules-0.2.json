@@ -71,6 +71,40 @@
         "$ref": "#/$defs/gps_spot"
       }
     },
+    "splits": {
+      "type": "array",
+      "description": "Trips Timeline merged that you split into legs, cut by hand or kept as one trip. They apply whether MyRules are switched on or off.",
+      "items": {
+        "type": "object",
+        "required": ["id", "trip"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "note": { "type": "string" },
+          "trip": { "$ref": "#/$defs/tripRef", "description": "The trip as loaded, before it is split" },
+          "keep": { "const": true, "description": "Keep as one trip: no cuts, not even BT•DT's own" },
+          "split": { "const": true, "description": "Split where BT•DT suggests, even if it only offers it" },
+          "at": { "type": "array", "items": { "type": "string", "format": "date-time" }, "description": "Cuts made by hand: each at the GPS point nearest this moment (UTC)" }
+        }
+      }
+    },
+    "place_merges": {
+      "type": "array",
+      "description": "Places you merged on a place page: the stays at Google place ID from count as stays at into. They apply whether MyRules are switched on or off.",
+      "items": {
+        "type": "object",
+        "required": ["id", "from", "into"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "enabled": { "type": "boolean" },
+          "note": { "type": "string" },
+          "from": { "type": "string", "description": "Google place ID merged away" },
+          "into": { "type": "string", "description": "Google place ID it is counted as" }
+        }
+      }
+    },
     "myrules": {
       "type": "string",
       "pattern": "^0\\.[0-9]+$"

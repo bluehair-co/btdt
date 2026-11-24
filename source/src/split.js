@@ -8,8 +8,10 @@
 //   changing a lot at a stop); trips with only unsure cuts are offered (D.offer) with a Split button.
 // - Only suggest ('ask'): every trip is offered, none is split until you say so.
 // - Off: nothing is split or offered.
-// Keep as one trip (PREFS.splitKeep) and Split (PREFS.splitYes) are kept per trip, by its start time
-// in seconds. A trip a MyRules correction points at is only offered, as you have already looked at it.
+// Keep as one trip, Split and Split trip by hand are kept in MyRules splits (so they travel and sync
+// with the rest of your rules): { id, trip: { start, mode }, keep: true | split: true, at: [cut times] }.
+// Older copies in PREFS (splitKeep, splitYes, splitAt) move there the next time the trips are set up.
+// A trip a MyRules correction points at is only offered, as you have already looked at it.
 // Splitting happens on D only: what is saved stays as loaded, so turning it off brings the trips back.
 var SPLIT_MODES = { VEHICLE: 1, UNKNOWN: 1, TRAIN: 1, TRAM: 1, SUBWAY: 1, BUS: 1 };
 var SPLIT_TRIP = ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'sport', 'stype', 'smeta', 'gby', 'gconf', 'repl', 'dup', 'pathPts', 'pathT', 'pathOff'];
@@ -50,7 +52,87 @@ function splitPackType(pts, avg, near) {
 // Split by hand (PREFS.splitAt): { trip key: [times in seconds since 1970 to cut at] }, kept whatever
 // the setting. A cut is made at the GPS point nearest its time, and named after a station within
 // 300 m when the packs have one.
-function splitAtOf(key) { var a = PREFS.splitAt && PREFS.splitAt[key]; return Array.isArray(a) && a.length ? a : null; }
+// Splits apply whether MyRules are switched on or off, as they always have.
+function mrSplitRules() { return typeof mrList === 'function' ? mrList('splits').filter(function (r) { return r.id && r.enabled !== false && r.trip && r.trip.start; }) : []; }
+// Your choices for the trips in R, by trip key: { keep: [keys], yes: [keys], at: { key: [seconds] } }.
+function splitChoices(R) {
+  var o = { keep: [], yes: [], at: {} };
+  mrSplitRules().forEach(function (r) {
+    var i = mrRefIn(R, r.trip);
+    if (i < 0) return;
+    var key = splitKey(R.start[i]);
+    if (r.keep) o.keep.push(key);
+    if (r.split) o.yes.push(key);
+    if (Array.isArray(r.at)) r.at.forEach(function (s) { var t = Date.parse(s); if (isFinite(t)) (o.at[key] || (o.at[key] = [])).push(Math.round(t / 1000)); });
+  });
+  // Any not moved to MyRules yet (their trip wasn't loaded).
+  (PREFS.splitKeep || []).forEach(function (k) { o.keep.push(k); });
+  (PREFS.splitYes || []).forEach(function (k) { o.yes.push(k); });
+  var h = PREFS.splitAt || {};
+  for (var k in h) if (Array.isArray(h[k])) o.at[k] = (o.at[k] || []).concat(h[k]);
+  return o;
+}
+// Choices kept in PREFS by older versions: into MyRules, for the trips that are loaded.
+function splitMigrate(R) {
+  var p = PREFS, keys = {}, k, i, moved = 0;
+  (p.splitKeep || []).forEach(function (x) { keys[x] = 1; });
+  (p.splitYes || []).forEach(function (x) { keys[x] = 1; });
+  for (k in p.splitAt || {}) keys[k] = 1;
+  var merges = p.spotMerge && Object.keys(p.spotMerge).length;
+  if (!Object.keys(keys).length && !merges) return;
+  var byKey = {};
+  for (i = 0; i < R.start.length; i++) if (keys[splitKey(R.start[i])] && !(R.dup && R.dup[i])) byKey[splitKey(R.start[i])] = i;
+  for (k in byKey) {
+    i = byKey[k];
+    var patch = {};
+    if (splitHas(p.splitKeep, k)) patch.keep = true;
+    if (splitHas(p.splitYes, k)) patch.split = true;
+    if (p.splitAt && Array.isArray(p.splitAt[k]) && p.splitAt[k].length) patch.at = p.splitAt[k];
+    splitRulePatch(R.start[i], MODES[R.mode[i]], R.off[i], patch);
+    p.splitKeep = (p.splitKeep || []).filter(function (x) { return x !== k; });
+    p.splitYes = (p.splitYes || []).filter(function (x) { return x !== k; });
+    if (p.splitAt) delete p.splitAt[k];
+    moved++;
+  }
+  if (merges) { for (k in p.spotMerge) spotMergeAdd(k.replace(/^id:/, ''), String(p.spotMerge[k]).replace(/^id:/, '')); moved++; delete p.spotMerge; }
+  if (!moved) return;
+  ['splitKeep', 'splitYes'].forEach(function (x) { if (p[x] && !p[x].length) delete p[x]; });
+  if (p.splitAt && !Object.keys(p.splitAt).length) delete p.splitAt;
+  savePrefs();
+  mrNote('Trip splits and merged places moved into MyRules');
+}
+// The MyRules split for a trip (by its start as loaded, its type and UTC offset), changed by patch:
+// keep, split or at (cut times in seconds, added to those it has). Keep drops the others; null clears it.
+function splitRulePatch(ms, mode, off, patch) {
+  mrEnsure();
+  var L = MR.doc.splits || (MR.doc.splits = []), start = mrIsoAt(ms, off);
+  var r = L.filter(function (x) { return x && x.trip && x.trip.start === start && (!x.trip.mode || x.trip.mode === mode); })[0];
+  if (!r) { r = { id: mrNewId('split-' + start.slice(0, 10)), trip: { start: start, mode: mode } }; L.push(r); }
+  if (patch === null) { delete r.keep; delete r.split; delete r.at; }
+  else {
+    if (patch.keep) { r.keep = true; delete r.split; delete r.at; }
+    if (patch.split) { r.split = true; delete r.keep; }
+    if (patch.at) {
+      var have = (r.at || []).map(function (s) { return Math.round(Date.parse(s) / 1000); });
+      patch.at.forEach(function (s) { if (have.indexOf(s) < 0) have.push(s); });
+      r.at = have.sort(function (a, b) { return a - b; }).map(function (s) { return new Date(s * 1000).toISOString().replace('.000Z', 'Z'); });
+      delete r.keep;
+    }
+  }
+  if (!r.keep && !r.split && !(r.at && r.at.length)) MR.doc.splits = L.filter(function (x) { return x !== r; });
+  return r;
+}
+// A moment's local day number.
+function dayNumOf(ms, off) { return Math.floor((ms + (off == null || off === NO_OFF ? 0 : off) * 60000) / 864e5); }
+// The trip a split button is about (by its start as loaded): its start, type as loaded and offset.
+function splitTripAt(ms) {
+  for (var i = 0; i < D.start.length; i++) {
+    var l = legOf(i);
+    if (l && l.was.start === ms) return { ms: ms, mode: l.was.mode, off: D.off[i] };
+    if (!l && D.start[i] === ms) return { ms: ms, mode: MODES[(D.base || D).mode[i]], off: D.off[i] };
+  }
+  return null;
+}
 function splitHandCuts(R, i, at, near, auto) {
   var run = tripRun(R, i), n = run.length, out = [];
   if (n < 3) return out;
@@ -65,14 +147,16 @@ function splitHandCuts(R, i, at, near, auto) {
   return out;
 }
 function splitTrips(R) {
-  var n = R.start.length, i, set = splitSetting(), keep = PREFS.splitKeep || [], yes = PREFS.splitYes || [], hand = PREFS.splitAt || {};
+  if (MR_LOADED && !DEMO) splitMigrate(R);
+  var ch = splitChoices(R);
+  var n = R.start.length, i, set = splitSetting(), keep = ch.keep, yes = ch.yes, hand = ch.at;
   R.leg = null; R.offer = null; R.splitN = 0; R.offerN = 0;
   if (set === 'off' && !yes.length && !Object.keys(hand).length) return R;
   var near = packNear(), fixed = splitFixed(), plans = [], any = false;
   function isFixed(ms) { for (var k = 0; k < fixed.length; k++) if (Math.abs(fixed[k] - ms) <= 3 * 60000) return true; return false; }
   for (i = 0; i < n; i++) {
     plans.push(null);
-    var key = splitKey(R.start[i]), at = splitAtOf(key), cand = splitCandidate(R, i);
+    var key = splitKey(R.start[i]), at = hand[key] && hand[key].length ? hand[key] : null, cand = splitCandidate(R, i);
     if (!cand && !(at && !(R.dup && R.dup[i]) && MODES[R.mode[i]] !== 'FLYING')) continue;
     var plan = cand && set !== 'off' || cand && splitHas(yes, key) ? splitPlan(tripRun(R, i), near) : [], use;
     if (!plan.length && !at) continue;
@@ -244,11 +328,13 @@ function splitRaw(i) {
 }
 // Keep as one trip / Split: saved for this trip, then the trips are split again and its details reopen.
 function splitChoose(act, key, ms) {
-  var keep = (PREFS.splitKeep || []).filter(function (k) { return k !== key; }), yes = (PREFS.splitYes || []).filter(function (k) { return k !== key; });
-  if (act === 'keep') { keep.push(key); if (PREFS.splitAt) delete PREFS.splitAt[key]; } else yes.push(key);
-  PREFS.splitKeep = keep; PREFS.splitYes = yes;
+  var tr = splitTripAt(ms);
+  if (!tr) return;
+  ['splitKeep', 'splitYes'].forEach(function (x) { if (PREFS[x]) PREFS[x] = PREFS[x].filter(function (k) { return k !== key; }); });
+  if (PREFS.splitAt) delete PREFS.splitAt[key];
   savePrefs();
-  refreshData();
+  splitRulePatch(tr.ms, tr.mode, tr.off, act === 'keep' ? { keep: true } : { split: true });
+  mrChange((act === 'keep' ? 'Kept as one trip: ' : 'Split into legs: ') + niceDate(dayNumOf(ms, tr.off)));
   // The trip (or its first leg) starts at the same time.
   for (var i = 0; i < D.start.length; i++) if (Math.abs(D.start[i] - ms) < 1000 && !isDup(i)) { openTrip(i); break; }
   toast(act === 'keep' ? 'Kept as one trip' : 'Split into legs');
@@ -347,14 +433,17 @@ function splitHandSave() {
 }
 function splitHandSaveNow() {
   if (!SPL || !SPL.cuts.length) return;
-  var all = PREFS.splitAt || (PREFS.splitAt = {}), list = (all[SPL.key] || []).slice(), ms = SPL.ms, n = SPL.cuts.length;
+  var ms = SPL.ms, n = SPL.cuts.length, tr = splitTripAt(ms);
+  if (!tr) return;
+  var list = (PREFS.splitAt && PREFS.splitAt[SPL.key] || []).slice();
   SPL.cuts.forEach(function (k) { if (list.indexOf(SPL.t[k]) < 0) list.push(SPL.t[k]); });
-  all[SPL.key] = list.sort(function (a, b) { return a - b; });
+  if (PREFS.splitAt) delete PREFS.splitAt[SPL.key];
   PREFS.splitKeep = (PREFS.splitKeep || []).filter(function (k) { return k !== SPL.key; });
   savePrefs();
+  splitRulePatch(tr.ms, tr.mode, tr.off, { at: list });
   var t0 = SPL.t[SPL.cuts.slice().sort(function (a, b) { return a - b; })[0]] * 1000, from = D.start[SPL.i];
   splitHandEnd();
-  refreshData();
+  mrChange('Split by hand into ' + (n + 1) + ' trips: ' + niceDate(dayNumOf(ms, tr.off)));
   // The first of the new legs.
   for (var i = 0; i < D.start.length; i++) if (Math.abs(D.start[i] - from) < 1000 && !isDup(i) && D.end[i] <= t0 + 1000) { openTrip(i); break; }
   toast('Split into ' + (n + 1) + ' trips. Keep as one trip in its details undoes it.');
