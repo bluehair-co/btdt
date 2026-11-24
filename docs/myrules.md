@@ -126,7 +126,7 @@ Corrections and exceptions have to point at one trip in a way that survives a re
 { "trips": [{ "start": "2024-03-06T08:12+01:00", "mode": "VEHICLE" }, { "start": "2024-03-07T17:40+01:00", "mode": "VEHICLE" }] }
 ```
 
-- `start` matches the trip that starts within **±3 minutes** of it. That is enough to survive the small shifts from re-exporting Timeline or fixing a stale start, and small enough not to catch the next trip. If two trips fall in the window, `mode` (the type it had when the ref was made) picks one; if it is still ambiguous, the ref matches nothing and the app lists it under "Rules that matched nothing".
+- `start` matches the trip that starts within **±3 minutes** of it. That is enough to survive the small shifts from re-exporting Timeline or fixing a stale start, and small enough not to catch the next trip. If two trips fall in the window, `mode` (the type it had when the ref was made) picks one; if two of that type are still in it (legs of a split trip, a minute or two apart), the one that started in the very minute the ref names wins; if it is still ambiguous, the ref matches nothing and the app lists it under "Rules that matched nothing".
 - `day` matches every trip that day; `span` matches every trip starting inside it.
 - `trips` (a bulk edit) matches each trip it lists, each by its `start` and `mode` as above. *Select trips on the map* writes one.
 
