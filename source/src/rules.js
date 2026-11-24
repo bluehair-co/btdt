@@ -96,6 +96,12 @@ function mrRefTrips(ref) {
     for (k = mrFirstAfter(t - 3 * 60000); k < o.length && tripT0(o[k]) <= t + 3 * 60000; k++) if (!isDup(o[k])) out.push(o[k]);
     // The type the trip had in the files, not the one a correction gave it.
     if (out.length > 1 && ref.mode) out = out.filter(function (j) { return MODES[(D.base || D).mode[j]] === ref.mode; });
+    // Still two (a trip split in legs a minute or two apart): the one that started in the very minute the
+    // rule names wins (refs keep the minute, so the start is at most 59 seconds after it).
+    if (out.length > 1) {
+      var inMin = out.filter(function (j) { var dt = tripT0(j) - t; return dt >= 0 && dt < 60000; });
+      if (inMin.length === 1) out = inMin;
+    }
     return out.length === 1 ? out : [];
   }
   if (ref.span && ref.span.length === 2) {
