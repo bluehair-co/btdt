@@ -14,6 +14,9 @@ html,body{margin:0;height:100%;font:15px/1.4 system-ui,-apple-system,"Segoe UI",
 html.dark body{background:#15122F}
 #map{position:fixed;inset:0;background:#EBEAF5}
 html.dark #map{background:#15122F}
+html.print #map{background:#F2E8D9}html.print.dark #map{background:#121C52}
+#grain{position:fixed;inset:0;z-index:500;pointer-events:none;display:none;background:radial-gradient(circle,rgba(30,58,158,.10) 0.8px,transparent 1.3px) 0 0/6px 6px}
+html.print #grain{display:block}html.print.dark #grain{background:radial-gradient(circle,rgba(242,232,217,.07) 0.8px,transparent 1.3px) 0 0/6px 6px}
 .card{position:fixed;z-index:1000;background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:18px;box-shadow:0 8px 28px rgba(34,31,69,.14)}
 #top{left:10px;right:10px;top:10px;padding:10px 12px;max-width:520px}
 #top h1{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:8px}
@@ -63,6 +66,7 @@ html.dark #veil{background:#15122F}
   <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause while moving</button><button data-v="off">Hide</button></div></div>
   <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide while moving</button></div></div>
   <div class="row"><span>Move</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
+  <div class="row"><span>Look</span><div class="seg" id="segLook"><button data-v="grey" class="on">Grey</button><button data-v="print">Print</button></div></div>
   <div class="row"><span>Vector</span><div class="seg" id="segDetail"><button data-v="full" class="on">Full</button><button data-v="light">Lighter</button><button data-v="lightest">Lightest</button></div></div>
   </div>
   <div id="info">
@@ -72,6 +76,7 @@ html.dark #veil{background:#15122F}
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
     <p><b>Pause while moving</b> fades the night out before the map moves to the next trip and back in once it has arrived. <b>Hide while moving</b> does the same for the place names. <b>Move</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trips already drawn stay on the map during every move. Only when the map zooms in far past where the move started (after a long trip) do they fade out, because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
+    <p><b>Look › Print</b> recolours the current map into the Risograph inks and paper: each map piece once, as it arrives, so nothing extra runs while the map moves (the bottom right shows how long that takes per piece). If Esri doesn't allow it, the page says so and the map stays grey.</p>
     <p><b>Vector</b> only affects the vector map. <b>Lighter</b> hides the small stuff while the map moves (buildings, side streets, paths, land use, woods and parks, smaller borders), keeping land, water, main roads and country borders. <b>Lightest</b> also draws at normal instead of sharp resolution while moving. Full detail comes back once the map has arrived.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
@@ -82,6 +87,7 @@ html.dark #veil{background:#15122F}
   <div id="fps"><b>–</b>fps</div>
 </div>
 <div id="veil"></div>
+<div id="grain"></div>
 <div id="msg"></div>
 <div class="card" id="prep" role="status" aria-live="polite"><div class="spin"></div><div><b>Preparing playback</b><small id="prepTxt">Working out the flights…</small><div class="bar"><i id="prepBar"></i></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -93,7 +99,7 @@ var TRIPS = [{"m":"foot","t":1737280500000,"e":1737281286000,"km":1.1,"off":60,"
 var COL = { light: { road: '#2a78d6', air: '#eb6834', transit: '#1baf7a', foot: '#eda100', bike: '#6250d6', water: '#e87ba4' },
             dark:  { road: '#3987e5', air: '#d95926', transit: '#199e70', foot: '#c98500', bike: '#9085e9', water: '#d55181' } };
 var NAME = { road: 'Car', air: 'Flight', transit: 'Public transport', foot: 'Walking', bike: 'Cycling', water: 'Ferry' };
-var S = { map: 'esri', theme: 'light', night: 'on', labels: 'keep', fly: 'glide', detail: 'full' }, inFlight = false;
+var S = { map: 'esri', theme: 'light', night: 'on', labels: 'keep', fly: 'glide', detail: 'full', look: 'grey' }, inFlight = false;
 var $ = function (id) { return document.getElementById(id); };
 
 var map = L.map('map', { preferCanvas: true, zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([52.36, 4.88], 12);
@@ -119,9 +125,56 @@ map.createPane('sky'); map.getPane('sky').style.zIndex = 350; map.getPane('sky')
 map.createPane('gl'); map.getPane('gl').style.zIndex = 200;
 
 // ---- current map: Esri canvas tiles, light/dark with a cross-fade
+// Print look: each map piece is recoloured once as it arrives (every grey tone to an ink or
+// the paper of the Risograph picture), drawn on a canvas and kept. Nothing extra runs while the
+// map moves. It needs Esri to let the page read the pixels (CORS); if not, the grey map shows.
+function lut(stops) {
+  var out = new Uint8ClampedArray(256 * 3), xs = stops.map(function (x) { return x[0]; });
+  var cs = stops.map(function (x) { var h = x[1]; return [1, 3, 5].map(function (i) { return parseInt(h.substr(i, 2), 16); }); });
+  for (var v = 0; v < 256; v++) {
+    var t = v / 255, k = 1; while (k < xs.length - 1 && t > xs[k]) k++;
+    var f = Math.max(0, Math.min(1, (t - xs[k - 1]) / (xs[k] - xs[k - 1] || 1)));
+    for (var ch = 0; ch < 3; ch++) out[v * 3 + ch] = cs[k - 1][ch] + (cs[k][ch] - cs[k - 1][ch]) * f;
+  }
+  return out;
+}
+var LUT = {
+  light: lut([[0, '#1E3A9E'], [0.55, '#1E3A9E'], [0.80, '#B9C2E0'], [0.86, '#D3D8E8'], [0.91, '#F2E8D9'], [1, '#FBF6EC']]),
+  dark: lut([[0, '#0B1238'], [0.13, '#0E1644'], [0.28, '#17225E'], [0.31, '#1B2766'], [0.38, '#2C3B85'], [0.6, '#8E95C4'], [1, '#F2E8D9']])
+};
+var printBlocked = false, printMs = [];
+var PrintLayer = L.TileLayer.extend({
+  createTile: function (coords, done) {
+    var tile = document.createElement('canvas'), sz = this.getTileSize(), lt = this.options.lut, img = new Image();
+    tile.width = sz.x; tile.height = sz.y;
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      var g = tile.getContext('2d'); g.drawImage(img, 0, 0, sz.x, sz.y);
+      try {
+        var t0 = performance.now(), d = g.getImageData(0, 0, sz.x, sz.y), p = d.data;
+        for (var i = 0; i < p.length; i += 4) {
+          var v = (p[i] * 54 + p[i + 1] * 183 + p[i + 2] * 19) >> 8;
+          p[i] = lt[v * 3]; p[i + 1] = lt[v * 3 + 1]; p[i + 2] = lt[v * 3 + 2];
+        }
+        g.putImageData(d, 0, 0);
+        printMs.push(performance.now() - t0); if (printMs.length > 200) printMs.shift();
+      } catch (e) { if (!printBlocked) { printBlocked = true; msg('Esri does not allow recolouring its map, so the map stays grey.'); setTimeout(msg, 4000); } }
+      done(null, tile);
+    };
+    img.onerror = function (e) {
+      // Without permission the image may not load at all in CORS mode: fall back to a plain image.
+      if (!printBlocked) { printBlocked = true; msg('Esri does not allow recolouring its map, so the map stays grey.'); setTimeout(msg, 4000); }
+      var im2 = new Image(); im2.onload = function () { tile.getContext('2d').drawImage(im2, 0, 0, sz.x, sz.y); done(null, tile); }; im2.onerror = function () { done(e, tile); }; im2.src = img.src;
+    };
+    img.src = this.getTileUrl(coords);
+    return tile;
+  }
+});
 function esri(svc, pane) {
-  return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/' + svc + '/MapServer/tile/{z}/{y}/{x}',
-    { maxZoom: 19, maxNativeZoom: 16, pane: pane, attribution: 'Tiles &copy; Esri' });
+  var url = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/' + svc + '/MapServer/tile/{z}/{y}/{x}',
+    o = { maxZoom: 19, maxNativeZoom: 16, pane: pane, attribution: 'Tiles &copy; Esri' };
+  if (S.look === 'print') { o.lut = /Dark/.test(svc) ? LUT.dark : LUT.light; return new PrintLayer(url, o); }
+  return L.tileLayer(url, o);
 }
 var esriL = null, nightL = null;
 function esriOn(fade) {
@@ -342,7 +395,7 @@ function load(list, onStep) {
       if (at >= list.length) return;
       var it = list[at++]; busy++;
       var end = function () { got[it[0]] = 1; busy--; fin++; if (onStep) onStep(fin, list.length); if (fin === list.length) done(); else one(); };
-      if (it[1] === 'img') { var im = new Image(); im.onload = im.onerror = end; im.src = it[0]; } else fetch(it[0]).then(end, end);
+      if (it[1] === 'img') { var im = new Image(); if (S.look === 'print') im.crossOrigin = 'anonymous'; im.onload = im.onerror = end; im.src = it[0]; } else fetch(it[0]).then(end, end);
     }
     for (var c = 0; c < 8; c++) one();
   });
@@ -536,7 +589,7 @@ map.on('moveend', function () { if (phase !== 'draw') moving = false; });
   fr++;
   if (now - last >= 500) {
     var fps = Math.round(fr * 1000 / (now - last)); fr = 0; last = now;
-    if (moving) { low = Math.min(low, fps); $('fps').innerHTML = '<b>' + fps + '</b>fps · lowest ' + low; }
+    if (moving) { low = Math.min(low, fps); var pm = printMs.length && S.look === 'print' ? ' · ' + (printMs.reduce(function (a, b) { return a + b; }, 0) / printMs.length).toFixed(1) + ' ms a piece' : ''; $('fps').innerHTML = '<b>' + fps + '</b>fps · lowest ' + low + pm; }
   }
   requestAnimationFrame(tick);
 })(performance.now());
@@ -559,6 +612,11 @@ seg('segNight', 'night', function () { plan = []; paintNight(); });
 seg('segLabels', 'labels', function () { plan = []; });
 seg('segFly', 'fly', function () { plan = []; low = 99; });
 seg('segDetail', 'detail', function () { low = 99; });
+seg('segLook', 'look', function () {
+  low = 99; plan = []; got = {}; printBlocked = false;
+  document.documentElement.classList.toggle('print', S.look === 'print');
+  if (S.map === 'esri') { var n = !!nightL; nightTiles(false); esriOn(true); if (n) paintNight(); }
+});
 function fold(shut) { $('rows').classList.toggle('shut', shut); $('opt').setAttribute('aria-expanded', !shut); if (shut) { $('info').classList.remove('open'); $('ib').setAttribute('aria-expanded', false); } }
 $('opt').onclick = function () { fold(!$('rows').classList.contains('shut')); };
 $('ib').onclick = function () { var o = $('info').classList.toggle('open'); $('ib').setAttribute('aria-expanded', o); };
