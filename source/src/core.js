@@ -525,6 +525,7 @@ function working(text, fn) {
   var el = $('working');
   if (!WORKING.n++) WORKING.at = performance.now();
   $('workingText').textContent = text || 'Working on it…';
+  $('workingBar').hidden = true;
   workingShow(true);
   var done = false;
   function go() {
@@ -546,6 +547,15 @@ function working(text, fn) {
 // Anything that saves: the same pill, so a tap that saves never looks like nothing happened
 // while the trips are worked out again (David's rule: a spinner on every action that saves).
 function saving(fn, text) { working(text || 'Saving…', fn); }
+// The Working pill with a progress bar, for a download the app waits on (getting the map ready
+// for playback). workingBar(null) takes it away.
+function workingBar(text, frac) {
+  var bar = $('workingBar');
+  if (text === null) { bar.hidden = true; if (!WORKING.n) workingShow(false); return; }
+  $('workingText').textContent = text;
+  bar.hidden = false; bar.firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+  workingShow(true);
+}
 // The loading screen: a donut that fills with the reading progress (when the text ends in
 // "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
 // and world landmarks, each in its own colour, which the ring takes on too.

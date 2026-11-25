@@ -289,7 +289,9 @@ body:has(#playBar:not([hidden])) .map-legend { bottom: calc(var(--dock-h) + var(
 /* At night (when the map shows the dark tiles), the dark theme's colours. */
 #map.sun-dark { --m-road: var(--road-dark); --m-air: var(--air-dark); --m-transit: var(--transit-dark); --m-foot: var(--foot-dark); --m-bike: var(--bike-dark); --m-water: var(--water-dark); --m-other: var(--other-dark); --m-unknown: var(--unknown-dark); }
 /* Map panes inside a wrapper that can take a mask (see wrapPane in map.js). */
-.pane-wrap { position: absolute; pointer-events: none; }
+.pane-wrap { position: absolute; pointer-events: none; transition: opacity .3s; }
+/* Playback moves: the trip lines fade out and back in (see playMoveStart in map.js). */
+.leaflet-overlay-pane { transition: opacity .25s; }
 
 /* ---------- sheets ---------- */
 .scrim { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .35); }
@@ -839,6 +841,9 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .working .working-pill { z-index: 1001; display: flex; align-items: center; gap: var(--sp-5); animation: working-in .15s ease both; }
 .working-spin { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--bg) 35%, transparent); border-top-color: var(--bg); animation: working-spin .8s linear infinite; will-change: transform; }
 @keyframes working-spin { to { transform: rotate(360deg); } }
+.working-bar { width: 64px; height: 4px; flex: none; border-radius: 2px; background: color-mix(in srgb, var(--bg) 30%, transparent); overflow: hidden; }
+.working-bar[hidden] { display: none; }
+.working-bar i { display: block; height: 100%; width: 0; background: var(--bg); transition: width .2s; }
 @keyframes working-in { from { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .working-spin { animation-duration: 2s; } }
 

@@ -213,6 +213,8 @@ function initMap() {
   map.createPane('heat'); map.getPane('heat').style.zIndex = 380; map.getPane('heat').style.pointerEvents = 'none';
   map.createPane('sky'); map.getPane('sky').style.zIndex = 350; map.getPane('sky').style.pointerEvents = 'none';
   map.on('move zoomend resize viewreset', function () { paintSky(true); });
+  map.on('zoom', function () { moveLines(map.getZoom()); });
+  map.on('zoomanim', function (e) { moveLines(e.zoom); });
   renderer = L.canvas({ padding: 0.4, tolerance: 0 });
   pathLayer = L.layerGroup();
   ccLayer = L.layerGroup();
@@ -1741,6 +1743,103 @@ function prefetchView(v) {
     });
   }
 }
+// A move between trips in playback. The place names step aside while the map moves (fading
+// out first, then their tiles are taken off so the map has less to draw) and come back once it
+// has landed. The trip lines stay, except when the map zooms in far past where the move began
+// (after a long trip): the lines are one drawing that the map only stretches while it zooms, so
+// they would blow up across the screen. They fade out then, and back in once redrawn.
+var MOVE_FADE = 300, moveFx = { on: false, z: null, lines: false, t: 0 };
+function moveLabels() { return [map._tl && map._tl[1], night.tl && night.tl[1]].filter(Boolean); }
+function moveLabelWraps() { return ['labels', 'nightLabels'].map(function (p) { return map.getPane(p) && map.getPane(p).parentNode; }).filter(Boolean); }
+function playMoveStart() {
+  moveFx.on = true; moveFx.z = map.getZoom(); moveFx.lines = false;
+  moveLabelWraps().forEach(function (w) { w.style.opacity = 0; });
+  clearTimeout(moveFx.t);
+  moveFx.t = setTimeout(function () { if (moveFx.on) moveLabels().forEach(function (l) { if (map.hasLayer(l)) map.removeLayer(l); }); }, MOVE_FADE);
+}
+function playMoveEnd() {
+  if (!moveFx.on) return;
+  moveFx.on = false; moveFx.z = null; clearTimeout(moveFx.t);
+  moveLabels().forEach(function (l) { if (!map.hasLayer(l)) l.addTo(map); });
+  requestAnimationFrame(function () { moveLabelWraps().forEach(function (w) { w.style.opacity = ''; }); });
+  if (moveFx.lines) {
+    moveFx.lines = false;
+    requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = ''; }); });
+  }
+}
+function moveLines(z) {
+  if (!moveFx.on || moveFx.lines || moveFx.z === null || z - moveFx.z <= 1) return;
+  moveFx.lines = true; map.getPane('overlayPane').style.opacity = 0;
+}
+// Every tile a move passes through. Its path is worked out with the same maths as Leaflet's
+// flyTo (zoom out, glide, zoom in), sampled, and the tiles of each view along it listed: the base
+// layers only (the names step aside while moving), and all layers where the map lands. Fetched
+// before playback starts (with the Working pill and a progress bar) for the first three moves,
+// and while it plays for the next three.
+function flyViews(a, b) {
+  var sz = map.getSize(), from = map.project(a.c, a.z), to = map.project(b.c, a.z);
+  var w0 = Math.max(sz.x, sz.y), w1 = w0 * map.getZoomScale(a.z, b.z), u1 = to.distanceTo(from) || 1, rho = 1.42, rho2 = rho * rho;
+  function r(i) { var s1 = i ? -1 : 1, s2 = i ? w1 : w0, t1 = w1 * w1 - w0 * w0 + s1 * rho2 * rho2 * u1 * u1, b1 = 2 * s2 * rho2 * u1, bb = t1 / b1, sq = Math.sqrt(bb * bb + 1) - bb; return sq < 1e-9 ? -18 : Math.log(sq); }
+  function sinh(n) { return (Math.exp(n) - Math.exp(-n)) / 2; }
+  function cosh(n) { return (Math.exp(n) + Math.exp(-n)) / 2; }
+  var r0 = r(0), S1 = (r(1) - r0) / rho, out = [];
+  for (var k = 0; k <= 60; k++) {
+    var s = S1 * k / 60, w = w0 * (cosh(r0) / cosh(r0 + rho * s)), u = w0 * (cosh(r0) * (sinh(r0 + rho * s) / cosh(r0 + rho * s)) - sinh(r0)) / rho2;
+    out.push({ c: map.unproject(from.add(to.subtract(from).multiplyBy(u / u1)), a.z), z: map.getScaleZoom(w0 / w, a.z) });
+  }
+  return out;
+}
+function viewTiles(v, layers, out) {
+  if (!layers.length || !isFinite(v.z)) return;
+  var sz = map.getSize(), z = Math.max(0, Math.min(16, Math.round(v.z))), n = 1 << z, k = Math.pow(2, z - v.z), mid = map.project(v.c, z), half = sz.multiplyBy(k / 2);
+  var lo = mid.subtract(half).divideBy(256).floor(), hi = mid.add(half).divideBy(256).floor();
+  if ((hi.x - lo.x + 1) * (hi.y - lo.y + 1) > 120) return;
+  for (var x = lo.x; x <= hi.x; x++) for (var y = Math.max(0, lo.y); y <= Math.min(n - 1, hi.y); y++)
+    layers.forEach(function (l) { out[L.Util.template(l._url, { x: ((x % n) + n) % n, y: y, z: z })] = 1; });
+}
+// Whether view a already shows trip view v at about its zoom (then playback doesn't move).
+function viewHolds(a, v, pad) {
+  var sz = map.getSize(), pc = map.project(a.c, a.z);
+  var nw = map.unproject(pc.subtract(sz.divideBy(2)).add(pad.tl), a.z), se = map.unproject(pc.add(sz.divideBy(2)).subtract(pad.br), a.z);
+  return L.latLngBounds(nw, se).contains(v.b) && Math.abs(a.z - v.z) < 0.5;
+}
+function moveTiles(from, trips, pad) {
+  var out = {}, a = from, all = (map._tl || []).concat(night.tl || []), base = all.filter(function (l) { return moveLabels().indexOf(l) < 0; });
+  trips.forEach(function (i) {
+    var v = tripView(i, pad);
+    if (!v || viewHolds(a, v, pad)) return;
+    flyViews(a, v).forEach(function (w) { viewTiles(w, base, out); });
+    viewTiles(v, all, out);
+    a = v;
+  });
+  return Object.keys(out).filter(function (u) { return !tilesAhead[u]; });
+}
+function fetchTiles(urls, onStep) {
+  return new Promise(function (done) {
+    var at = 0, fin = 0;
+    if (!urls.length) return done();
+    function one() {
+      if (at >= urls.length) return;
+      var url = urls[at++], img = new Image();
+      tilesAhead[url] = 1;
+      img.onload = img.onerror = function () { fin++; if (onStep) onStep(fin, urls.length); if (fin === urls.length) done(); else one(); };
+      img.src = url;
+    }
+    for (var c = 0; c < 6; c++) one();
+  });
+}
+// Before playback starts: the tiles of its first three moves, with the Working pill and a
+// progress bar if it takes more than a moment. Ten seconds at most, then it plays anyway.
+function playPrepare(go) {
+  if (!map || PREFS.proj !== 'merc' || tab !== 'map' || navigator.onLine === false) return go();
+  var pad = playPad(), urls = moveTiles({ c: map.getCenter(), z: map.getZoom() }, sel.slice(visibleB, visibleB + 3), pad);
+  if (!urls.length) return go();
+  var started = false, shown = false;
+  function start() { if (started) return; started = true; clearTimeout(t1); clearTimeout(t2); if (shown) workingBar(null); if (playing) go(); }
+  var t1 = setTimeout(function () { if (!started) { shown = true; workingBar('Getting the map ready…', 0); } }, 250);
+  var t2 = setTimeout(start, 10000);
+  fetchTiles(urls, function (d, n) { if (shown) workingBar('Getting the map ready…', d / n); }).then(start);
+}
 function tilesLoading() { return !!(map._tl && map._tl.some(function (l) { return l.isLoading && l.isLoading(); })); }
 // How fast playback runs now, from 0 (holding for the map) to 1.
 function playRate(now) {
@@ -1763,16 +1862,21 @@ function followPlay() {
   if (P_cur && P_cur.i !== f.i) {
     f.i = P_cur.i;
     var v = tripView(P_cur.i, pad);
-    // Warm the tiles for the next two trips' views while this one plays.
-    for (var k = visibleB; k < Math.min(sel.length, visibleB + 2); k++) prefetchView(tripView(sel[k], pad));
+    // Fetch the tiles of the next three moves while this trip plays.
+    if (v) fetchTiles(moveTiles(v, sel.slice(visibleB, visibleB + 3), pad));
     if (v) {
       var view = L.latLngBounds(map.containerPointToLatLng(pad.tl), map.containerPointToLatLng(map.getSize().subtract(pad.br)));
       // Already in view at the zoom it would get: leave the map be rather than nudge it.
       if (!(view.contains(v.b) && Math.abs(map.getZoom() - v.z) < 0.5)) {
         prefetchView(v);
         f.flying = now; f.resume = 0;
-        map.flyToBounds(v.b, { paddingTopLeft: pad.tl, paddingBottomRight: pad.br, maxZoom: 16, easeLinearity: 0.2 });
-        map.once('moveend', function () { if (f.flying) { f.flying = 0; f.landed = performance.now(); } });
+        // The names fade out first, then the map moves.
+        playMoveStart();
+        setTimeout(function () {
+          if (!playing || playFit !== f) { playMoveEnd(); return; }
+          map.once('moveend', function () { playMoveEnd(); if (f.flying) { f.flying = 0; f.landed = performance.now(); } });
+          map.flyToBounds(v.b, { paddingTopLeft: pad.tl, paddingBottomRight: pad.br, maxZoom: 16, easeLinearity: 0.2 });
+        }, MOVE_FADE);
         return;
       }
     }
@@ -1833,6 +1937,7 @@ $('scrub').addEventListener('input', function () { stopPlay(); scrubTo(+this.val
 function stopPlay() {
   if (!playing) return;
   playing = false; cancelAnimationFrame(playRaf);
+  if (map) playMoveEnd();
   $('playBtn').innerHTML = icon('play'); $('playBtn').setAttribute('aria-label', 'Play');
   scrubLabel();
 }
@@ -1870,6 +1975,7 @@ function play() {
   if (scrubV >= 1000) scrubTo(0);
   playing = true; playFit = { i: null, flying: 0, landed: 0, resume: 0, pan: 0 };
   $('playBtn').innerHTML = icon('pause'); $('playBtn').setAttribute('aria-label', 'Pause');
+  playPrepare(function () {
   var W = playWarp(), u = warpMap(W.real, W.virt, scrubTime()), last = performance.now();
   (function frame(now) {
     if (!playing) return;
@@ -1879,6 +1985,7 @@ function play() {
     scrubTo((warpMap(W.virt, W.real, u) - T0) / (T1 - T0) * 1000);
     playRaf = requestAnimationFrame(frame);
   })(last);
+  });
 }
 // At the end of a day's playback, a trip still under way at midnight carries playback on
 // into the next day, which then plays on from that moment.
