@@ -441,12 +441,8 @@ function flightEnd() {
 }
 
 // ---- trips and playback
-var faint = L.layerGroup().addTo(map), done = L.layerGroup().addTo(map), cur = null, dot = null;
-function drawFaint() {
-  faint.clearLayers();
-  TRIPS.forEach(function (t) { L.polyline(t.p, { color: COL[S.theme][t.m], weight: 2, opacity: .3, interactive: false }).addTo(faint); });
-}
-drawFaint();
+// As in the app, a trip only appears on the map once playback draws it.
+var done = L.layerGroup().addTo(map), cur = null, dot = null;
 var i = -1, playing = false, phase = null, t0 = 0, raf = 0, moving = false;
 function pad() { var tb = $('top').getBoundingClientRect(), bb = $('bot').getBoundingClientRect(); return { tl: [30, tb.bottom + 20], br: [30, innerHeight - bb.top + 20] }; }
 function clock(ms, off) { var d = new Date(ms + off * 6e4); return d.toISOString().slice(0, 10) + ' · ' + d.toISOString().slice(11, 16); }
@@ -522,7 +518,7 @@ seg('segMap', 'map', function () { low = 99; plan = []; if (S.map === 'vector') 
 seg('segTheme', 'theme', function () { plan = [];
   document.documentElement.classList.toggle('dark', S.theme === 'dark');
   if (S.map === 'vector') vectorOn(); else esriOn(true);
-  drawFaint(); done.eachLayer(function (l) { l.setStyle({ color: COL[S.theme][l.options.m || 'bike'] }); }); paintNight();
+  done.eachLayer(function (l) { l.setStyle({ color: COL[S.theme][l.options.m || 'bike'] }); }); paintNight();
 });
 seg('segNight', 'night', function () { plan = []; paintNight(); });
 seg('segLabels', 'labels', function () { plan = []; });
