@@ -1138,7 +1138,7 @@ div.hit-row:hover { background: none; }
 .pack-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .pack-add select { max-width: 100%; }
 .pack-offer { margin: var(--sp-2) 0 var(--sp-3); }
-.pack-offer-h { margin: var(--sp-5) 0 var(--sp-1); font: 600 var(--fs-sm) var(--font); color: rgba(255, 255, 255, .85); }
+.pack-offer-h { margin: var(--sp-5) 0 var(--sp-1); font: 600 var(--fs-sm) var(--font-body); color: rgba(255, 255, 255, .85); }
 .pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: var(--sp-2); }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
 .pack-offer .lbl { flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); color: var(--on-image); }
