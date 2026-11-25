@@ -52,6 +52,7 @@ html.dark #play{color:#15122F}
     <p>Press play: the map flies from trip to trip and draws each one, like playback in the app. The trips are from the demo.</p>
     <p><b>Current</b> is today's Esri map. <b>Vector</b> is OpenFreeMap, coloured with BT•DT's indigo palette.</p>
     <p>Compare how zooming feels (sharp or blurry, smooth or jumpy), whether the trip lines stay glued to the map while it flies, and how the night side looks. With Current, night shows the dark map; with Vector, it's a shadow over the map.</p>
+    <p>Like the app, the page fetches the map for the next two trips ahead, and after a flight waits up to two seconds for the map to finish loading before it draws the trip.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
 </div>
@@ -150,7 +151,7 @@ function recolour(P) {
 }
 function vectorOn() {
   if (!base) { msg('Loading the vector map…'); fetch('https://tiles.openfreemap.org/styles/positron').then(function (r) { return r.json(); })
-    .then(function (j) { base = j; msg(); vectorOn(); }).catch(function () { msg('The vector map could not load.'); }); return; }
+    .then(function (j) { base = j; msg(); vectorOn(); var src = Object.keys(j.sources).map(function (k) { return j.sources[k]; }).filter(function (x) { return x.type === 'vector'; })[0]; if (src && src.url) fetch(src.url).then(function (r) { return r.json(); }).then(function (tj) { vtUrl = tj.tiles[0]; vtMax = tj.maxzoom || 14; }).catch(function () {}); }).catch(function () { msg('The vector map could not load.'); }); return; }
   if (!gl) {
     gl = L.maplibreGL({ style: recolour(PAL[S.theme]), pane: 'gl', attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>' }).addTo(map);
   } else gl.getMaplibreMap().setStyle(recolour(PAL[S.theme]), { diff: true });
@@ -220,6 +221,44 @@ map.on('move zoomend resize viewreset', function () {
   paintNight();
 });
 
+
+// ---- like the app: fetch the next trips' map ahead, and wait for the map after a flight
+var ahead = {}, imgs = [], vtUrl = null, vtMax = 14;
+function tripView(t, p) {
+  var b = L.latLngBounds(t.p), z = Math.min(16, map.getBoundsZoom(b, false, L.point(p.tl[0] + p.br[0], p.tl[1] + p.br[1])));
+  var c = map.unproject(map.project(b.getNorthWest(), z).add(map.project(b.getSouthEast(), z)).divideBy(2).subtract(L.point((p.tl[0] - p.br[0]) / 2, (p.tl[1] - p.br[1]) / 2)), z);
+  return { z: z, c: c };
+}
+function warm(url) { var im = new Image(); im.onload = im.onerror = function () { var k = imgs.indexOf(im); if (k >= 0) imgs.splice(k, 1); }; im.src = url; imgs.push(im); }
+function prefetch(t) {
+  var v = tripView(t, pad()), sz = map.getSize();
+  if (S.map === 'esri' && esriL) {
+    var z = Math.max(0, Math.min(16, Math.round(v.z))), n = 1 << z, mid = map.project(v.c, z);
+    var lo = mid.subtract(sz.divideBy(2)).divideBy(256).floor(), hi = mid.add(sz.divideBy(2)).divideBy(256).floor();
+    if ((hi.x - lo.x + 1) * (hi.y - lo.y + 1) > 80) return;
+    for (var x = lo.x; x <= hi.x; x++) for (var y = Math.max(0, lo.y); y <= Math.min(n - 1, hi.y); y++) {
+      var xx = ((x % n) + n) % n, key = 'e' + S.theme + z + '/' + xx + '/' + y;
+      if (ahead[key]) continue; ahead[key] = 1;
+      esriL.forEach(function (l) { warm(L.Util.template(l._url, { x: xx, y: y, z: z })); });
+    }
+  } else if (S.map === 'vector' && vtUrl) {
+    // Vector tiles are 512 px: one tile zoom below the map's zoom, data up to zoom 14.
+    var tz = Math.max(0, Math.min(vtMax, Math.round(v.z) - 1)), m = 1 << tz, mp = map.project(v.c, tz + 1);
+    var a = mp.subtract(sz.divideBy(2)).divideBy(512).floor(), b2 = mp.add(sz.divideBy(2)).divideBy(512).floor();
+    if ((b2.x - a.x + 1) * (b2.y - a.y + 1) > 60) return;
+    for (var x2 = a.x; x2 <= b2.x; x2++) for (var y2 = Math.max(0, a.y); y2 <= Math.min(m - 1, b2.y); y2++) {
+      var x3 = ((x2 % m) + m) % m, k2 = 'v' + tz + '/' + x3 + '/' + y2;
+      if (ahead[k2]) continue; ahead[k2] = 1;
+      fetch(vtUrl.replace('{z}', tz).replace('{x}', x3).replace('{y}', y2)).catch(function () {});
+    }
+  }
+}
+function mapReady() {
+  if (S.map === 'esri') return !(esriL && esriL.some(function (l) { return l.isLoading && l.isLoading(); }));
+  var g = gl && gl.getMaplibreMap(); return !g || g.areTilesLoaded();
+}
+function whenReady(fn) { var s = performance.now(); (function chk() { if (!playing) return; if (mapReady() || performance.now() - s > 2000) fn(); else setTimeout(chk, 100); })(); }
+
 // ---- trips and playback
 var faint = L.layerGroup().addTo(map), done = L.layerGroup().addTo(map), cur = null, dot = null;
 function drawFaint() {
@@ -236,15 +275,17 @@ function next() {
   var t = TRIPS[i], b = L.latLngBounds(t.p), p = pad();
   $('trip').innerHTML = '<b>' + NAME[t.m] + ' · ' + t.km.toLocaleString() + ' km</b><small>' + clock(t.t, t.off) + ' · trip ' + (i + 1) + ' of ' + TRIPS.length + '</small>';
   nowT = t.t; paintNight();
+  for (var q = 1; q <= 2; q++) prefetch(TRIPS[(i + q) % TRIPS.length]);
   var view = L.latLngBounds(map.containerPointToLatLng(p.tl), map.containerPointToLatLng(map.getSize().subtract(p.br)));
-  if (view.contains(b) && Math.abs(map.getBoundsZoom(b, false, L.point(p.tl[0] + p.br[0], p.tl[1] + p.br[1])) - map.getZoom()) < 1.5) return draw();
+  if (view.contains(b) && Math.abs(map.getBoundsZoom(b, false, L.point(p.tl[0] + p.br[0], p.tl[1] + p.br[1])) - map.getZoom()) < 1.5) return whenReady(draw);
+  prefetch(t);
   phase = 'fly'; moving = true;
   map.flyToBounds(b, { paddingTopLeft: p.tl, paddingBottomRight: p.br, maxZoom: 16, easeLinearity: 0.2 });
-  map.once('moveend', function () { if (phase === 'fly') setTimeout(draw, 250); });
+  map.once('moveend', function () { if (phase === 'fly') { phase = 'wait'; moving = false; whenReady(draw); } });
 }
 function draw() {
   var t = TRIPS[i]; phase = 'draw'; moving = true; t0 = performance.now();
-  cur = L.polyline([t.p[0]], { color: COL[S.theme][t.m], weight: 4, opacity: .95, interactive: false, m: t.m }).addTo(map);
+  cur = L.polyline([t.p[0]], { color: COL[S.theme][t.m], weight: 4, opacity: .95, interactive: false }).addTo(map);
   dot = L.circleMarker(t.p[0], { radius: 6, color: '#fff', weight: 2, fillColor: COL[S.theme][t.m], fillOpacity: 1, interactive: false }).addTo(map);
   step();
 }
