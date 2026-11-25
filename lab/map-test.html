@@ -64,6 +64,7 @@ html.dark #veil{background:#15122F}
   <div class="row"><span>Map</span><div class="seg" id="segMap"><button data-v="esri" class="on">Current</button><button data-v="vector">Vector</button></div></div>
   <div class="row"><span>Theme</span><div class="seg" id="segTheme"><button data-v="light" class="on">Light</button><button data-v="dark">Dark</button></div></div>
   <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause while moving</button><button data-v="off">Hide</button></div></div>
+  <div class="row"><span>Night edge</span><div class="seg" id="segEdge"><button data-v="soft" class="on">Soft</button><button data-v="dots">Dots</button></div></div>
   <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide while moving</button></div></div>
   <div class="row"><span>Move</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
   <div class="row"><span>Look</span><div class="seg" id="segLook"><button data-v="grey" class="on">Grey</button><button data-v="tint">Tint</button><button data-v="print">Print</button></div></div>
@@ -76,6 +77,7 @@ html.dark #veil{background:#15122F}
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
     <p><b>Pause while moving</b> fades the night out before the map moves to the next trip and back in once it has arrived. <b>Hide while moving</b> does the same for the place names. <b>Move</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trips already drawn stay on the map during every move. Only when the map zooms in far past where the move started (after a long trip) do they fade out, because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
+    <p><b>Night edge</b>: <b>Soft</b> is today's gradient between day and night. <b>Dots</b> lets the dark map through a halftone screen instead: the dots grow from nothing at dusk to solid night. It works on the light map (the dark map is dark already). While moving, the numbers at the bottom also show how long each redraw of the dots takes.</p>
     <p><b>Look › Tint</b> is the cheap way: the map stays as Esri sends it and two colour layers on top blend it into paper and ink, done by the browser as it draws, nothing per map piece. Less exact than Print, but nothing to wait for after a zoom.</p>
     <p><b>Look › Print</b> recolours the current map into the Risograph inks and paper: each map piece once, as it arrives, so nothing extra runs while the map moves (the bottom right shows how long that takes per piece). If Esri doesn't allow it, the page says so and the map stays grey.</p>
     <p><b>Vector</b> only affects the vector map. <b>Lighter</b> hides the small stuff while the map moves (buildings, side streets, paths, land use, woods and parks, smaller borders), keeping land, water, main roads and country borders. <b>Lightest</b> also draws at normal instead of sharp resolution while moving. Full detail comes back once the map has arrived.</p>
@@ -100,7 +102,7 @@ var TRIPS = [{"m":"foot","t":1737280500000,"e":1737281286000,"km":1.1,"off":60,"
 var COL = { light: { road: '#2a78d6', air: '#eb6834', transit: '#1baf7a', foot: '#eda100', bike: '#6250d6', water: '#e87ba4' },
             dark:  { road: '#3987e5', air: '#d95926', transit: '#199e70', foot: '#c98500', bike: '#9085e9', water: '#d55181' } };
 var NAME = { road: 'Car', air: 'Flight', transit: 'Public transport', foot: 'Walking', bike: 'Cycling', water: 'Ferry' };
-var S = { map: 'esri', theme: 'light', night: 'on', labels: 'keep', fly: 'glide', detail: 'full', look: 'grey' }, inFlight = false;
+var S = { map: 'esri', theme: 'light', night: 'on', edge: 'soft', labels: 'keep', fly: 'glide', detail: 'full', look: 'grey' }, inFlight = false;
 var $ = function (id) { return document.getElementById(id); };
 
 var map = L.map('map', { preferCanvas: true, zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([52.36, 4.88], 12);
@@ -119,6 +121,7 @@ function placeWrap(w) {
 function setMask(w, url) {
   ['maskImage', 'webkitMaskImage'].forEach(function (k) { w.style[k] = url ? 'url(' + url + ')' : ''; });
   ['maskSize', 'webkitMaskSize'].forEach(function (k) { w.style[k] = '100% 100%'; });
+  ['maskPosition', 'webkitMaskPosition'].forEach(function (k) { w.style[k] = ''; });
   ['maskRepeat', 'webkitMaskRepeat'].forEach(function (k) { w.style[k] = 'no-repeat'; });
 }
 wrapPane('labels', 450); wrapPane('nightBase', 210); wrapPane('nightLabels', 451);
@@ -311,10 +314,81 @@ function paintNight() {
   ctx.drawImage(sky.sm, 0, 0, w, h, -cell / 2, -cell / 2, w * cell, h * cell);
   if (useTiles) {
     gk.putImageData(mk, 0, 0); gi.putImageData(mi, 0, 0);
-    ['nightBase', 'nightLabels'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(wr); setMask(wr, sky.mk.toDataURL()); });
+    if (S.edge === 'dots') htLater(); else { htDrop(); ['nightBase', 'nightLabels'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(wr); setMask(wr, sky.mk.toDataURL()); }); }
     var lw = map.getPane('labels').parentNode; placeWrap(lw); setMask(lw, sky.mi.toDataURL());
   }
 }
+// ---- halftone night edge: the dark map shows through dots that grow from nothing at dusk to
+// solid night. The dots sit on a grid fixed to the map, so they don't crawl while it pans. The
+// mask is drawn at full size, made into a picture off the main thread (toBlob) and redrawn at
+// most every HT_GAP ms; in between, the last picture is shifted to follow the map.
+var HT_S = 6, HT_PAD = 48, HT_GAP = 150;
+// sine of the sun's height where the dots start (n = 0.02) and where night is full (n = 0.98)
+var HT_NONE = Math.sin(-0.64 * SUN_R), HT_FULL = Math.sin(-7.36 * SUN_R);
+var ht = { url: null, ox: 0, oy: 0, z: null, w: 0, h: 0, busy: false, again: false, last: 0, timer: null, cv: document.createElement('canvas'), ms: [] };
+function htWraps() { return ['nightBase', 'nightLabels'].map(function (p) { return map.getPane(p).parentNode; }); }
+function htPlace() {
+  if (!ht.url) return;
+  var o = map.getPixelBounds().min, x = ht.ox - o.x, y = ht.oy - o.y;
+  htWraps().forEach(function (w) {
+    placeWrap(w);
+    ['maskPosition', 'webkitMaskPosition'].forEach(function (k) { w.style[k] = x + 'px ' + y + 'px'; });
+    ['maskSize', 'webkitMaskSize'].forEach(function (k) { w.style[k] = ht.w + 'px ' + ht.h + 'px'; });
+  });
+}
+function htDrop() { clearTimeout(ht.timer); ht.timer = null; if (ht.url) { URL.revokeObjectURL(ht.url); ht.url = null; } ht.z = null; }
+function htLater() {
+  if (ht.z === map.getZoom()) htPlace();
+  if (ht.busy) { ht.again = true; return; }
+  var wait = HT_GAP - (performance.now() - ht.last);
+  if (ht.z !== map.getZoom() || wait <= 0) { clearTimeout(ht.timer); ht.timer = null; htDraw(); }
+  else if (!ht.timer) ht.timer = setTimeout(function () { ht.timer = null; htDraw(); }, wait);
+}
+function htDraw() {
+  if (S.edge !== 'dots' || !nightL || nowT === null) return;
+  var t0 = performance.now(), sz = map.getSize(), W = sz.x + 2 * HT_PAD, H = sz.y + 2 * HT_PAD;
+  var o = map.getPixelBounds().min, ox = Math.round(o.x) - HT_PAD, oy = Math.round(o.y) - HT_PAD, z = map.getZoom();
+  var cv = ht.cv; if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  var g = cv.getContext('2d'); g.clearRect(0, 0, W, H); g.fillStyle = '#000'; g.beginPath();
+  var s = sunAt(nowT), S2 = HT_S, RS = S2 * 0.866, j0 = Math.floor(oy / RS), j1 = Math.ceil((oy + H) / RS), i0 = Math.floor(ox / S2) - 1, i1 = Math.ceil((ox + W) / S2) + 1;
+  var cosX = [], i, j;
+  for (i = i0; i <= i1 + 1; i++) cosX.push(Math.cos(s.h0 + map.unproject([i * S2, 0], z).lng * SUN_R));
+  for (j = j0; j <= j1; j++) {
+    var wy = j * RS, lat = map.unproject([0, wy], z).lat * SUN_R, a = Math.sin(lat) * s.sd, b = Math.cos(lat) * s.cd, odd = j & 1, y = wy - oy;
+    var run = null;
+    for (i = i0; i <= i1; i++) {
+      // odd rows sit half a step over: the dots make a hexagonal screen, as in print
+      var k = i - i0, v = a + b * (odd ? (cosX[k] + cosX[k + 1]) / 2 : cosX[k]), x = i * S2 + (odd ? S2 / 2 : 0) - ox;
+      // Full night is filled as one band per row; only the twilight needs dots (and the sun's height).
+      if (v <= HT_FULL) { if (run === null) run = x; continue; }
+      if (run !== null) { g.rect(run - S2 / 2, y - RS / 2 - .5, x - run, RS + 1); run = null; }
+      if (v >= HT_NONE) continue;
+      var r = S2 * 0.62 * Math.sqrt(nightness(Math.asin(v) / SUN_R));
+      g.moveTo(x + r, y); g.arc(x, y, r, 0, 6.2832);
+    }
+    if (run !== null) g.rect(run - S2 / 2, y - RS / 2 - .5, W - run + S2, RS + 1);
+  }
+  g.fill();
+  ht.ms.push(performance.now() - t0); if (ht.ms.length > 40) ht.ms.shift();
+  ht.busy = true; ht.last = performance.now();
+  cv.toBlob(function (blob) {
+    var url = URL.createObjectURL(blob), img = new Image();
+    img.src = url;
+    (img.decode ? img.decode() : Promise.resolve()).catch(function () {}).then(function () {
+      ht.busy = false;
+      if (S.edge !== 'dots' || !nightL) { URL.revokeObjectURL(url); return; }
+      var old = ht.url; ht.url = url; ht.ox = ox; ht.oy = oy; ht.z = z; ht.w = W; ht.h = H;
+      htWraps().forEach(function (w) {
+        ['maskImage', 'webkitMaskImage'].forEach(function (k) { w.style[k] = 'url(' + url + ')'; });
+        ['maskRepeat', 'webkitMaskRepeat'].forEach(function (k) { w.style[k] = 'no-repeat'; });
+      });
+      htPlace();
+      if (old) setTimeout(function () { URL.revokeObjectURL(old); }, 500);
+      if (ht.again) { ht.again = false; htLater(); }
+    });
+  });
+}
+
 map.on('move zoomend resize viewreset', function () {
   ['labels', 'nightBase', 'nightLabels'].forEach(function (p) { placeWrap(map.getPane(p).parentNode); });
   paintNight();
@@ -613,7 +687,8 @@ map.on('moveend', function () { if (phase !== 'draw') moving = false; });
   fr++;
   if (now - last >= 500) {
     var fps = Math.round(fr * 1000 / (now - last)); fr = 0; last = now;
-    if (moving) { low = Math.min(low, fps); var pm = printMs.length && S.look === 'print' ? ' · ' + (printMs.reduce(function (a, b) { return a + b; }, 0) / printMs.length).toFixed(1) + ' ms a piece' : ''; $('fps').innerHTML = '<b>' + fps + '</b>fps · lowest ' + low + pm; }
+    if (moving) { low = Math.min(low, fps); var pm = printMs.length && S.look === 'print' ? ' · ' + (printMs.reduce(function (a, b) { return a + b; }, 0) / printMs.length).toFixed(1) + ' ms a piece' : '';
+      if (S.edge === 'dots' && ht.ms.length) pm += ' · dots ' + (ht.ms.reduce(function (a, b) { return a + b; }, 0) / ht.ms.length).toFixed(1) + ' ms'; $('fps').innerHTML = '<b>' + fps + '</b>fps · lowest ' + low + pm; }
   }
   requestAnimationFrame(tick);
 })(performance.now());
@@ -633,6 +708,7 @@ seg('segTheme', 'theme', function () { plan = []; setTimeout(function () { tintO
   done.eachLayer(function (l) { l.setStyle({ color: COL[S.theme][l.options.m || 'bike'] }); }); paintNight();
 });
 seg('segNight', 'night', function () { plan = []; paintNight(); });
+seg('segEdge', 'edge', function () { htDrop(); paintNight(); });
 seg('segLabels', 'labels', function () { plan = []; });
 seg('segFly', 'fly', function () { plan = []; low = 99; });
 seg('segDetail', 'detail', function () { low = 99; });
