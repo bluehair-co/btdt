@@ -550,11 +550,11 @@ function saving(fn, text) { working(text || 'Saving…', fn); }
 // "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
 // and world landmarks, each in its own colour, which the ring takes on too.
 var LOADER_ICONS = [
-  ['FLYING', '--m-air'], ['castle', '--accent'], ['CAR', '--m-road'], ['temple_buddhist', '--m-foot'], ['pin', '--dot'],
-  ['TRAIN', '--m-transit'], ['mosque', '--m-transit'], ['WALKING', '--m-foot'], ['church', '--m-bike'], ['pin', '--dot'],
-  ['CYCLING', '--m-bike'], ['account_balance', '--m-road'], ['FERRY', '--m-water'], ['temple_hindu', '--m-air'], ['pin', '--dot'],
-  ['BUS', '--m-road'], ['stadium', '--m-water'], ['TRAM', '--m-transit'], ['synagogue', '--m-road'], ['pin', '--dot'],
-  ['FLYING', '--m-air'], ['attractions', '--m-water'], ['WALKING', '--m-foot'], ['fort', '--accent'], ['pin', '--dot']
+  ['FLYING', '--m-air'], ['castle', '--accent'], ['CAR', '--m-road'], ['temple_buddhist', '--m-foot'], ['pin', '--danger'],
+  ['TRAIN', '--m-transit'], ['mosque', '--m-transit'], ['WALKING', '--m-foot'], ['church', '--m-bike'], ['pin', '--danger'],
+  ['CYCLING', '--m-bike'], ['account_balance', '--m-road'], ['FERRY', '--m-water'], ['temple_hindu', '--m-air'], ['pin', '--danger'],
+  ['BUS', '--m-road'], ['stadium', '--m-water'], ['TRAM', '--m-transit'], ['synagogue', '--m-road'], ['pin', '--danger'],
+  ['FLYING', '--m-air'], ['attractions', '--m-water'], ['WALKING', '--m-foot'], ['fort', '--accent'], ['pin', '--danger']
 ];
 var LOADER_R = 64, LOADER_C = 2 * Math.PI * LOADER_R;
 function loaderIcon(first) {

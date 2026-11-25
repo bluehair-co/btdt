@@ -77,7 +77,7 @@ function snapRuleRow(s) {
   bits.push('trips that follow it for ' + mrMatchMin(s) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : ''));
   if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type (turn on Other types to take them)');
   if (!snapOk(s)) bits.push('It has no line or ends, so it takes no trips');
-  return mrRuleRow('snaps', s, s.name || s.id, bits, s.mode || 'OTHER', s.mode ? modeColor(s.mode) : 'var(--off)', D ? MR_COUNT[s.id] || 0 : null);
+  return mrRuleRow('snaps', s, s.name || s.id, bits, s.mode || 'OTHER', s.mode ? modeColor(s.mode) : 'var(--map-grey)', D ? MR_COUNT[s.id] || 0 : null);
 }
 
 // ---------- making one ----------
@@ -256,7 +256,7 @@ function snapDraw(fit) {
       if (own.length < 2) continue;
       var ok = mrLineScore(i, pts) >= SN.match && !!mrSnapTrip(i, pts);
       if (ok) { on++; if ((D.base || D).mode[i] !== MODE_IDX[s.mode]) become++; } else off++;
-      L.polyline(own, snapOpt(ok ? { color: col, weight: 3, opacity: SN.main ? .35 : .25 } : { color: cssVar('--map-ghost'), weight: 2.5, opacity: .5, dashArray: '4 5' })).addTo(SN.layer);
+      L.polyline(own, snapOpt(ok ? { color: col, weight: 3, opacity: SN.main ? .35 : .25 } : { color: cssVar('--map-grey'), weight: 2.5, opacity: .5, dashArray: '4 5' })).addTo(SN.layer);
     }
     L.polyline(pts, snapOpt({ color: cssVar('--on-color'), weight: 8, opacity: .9 })).addTo(SN.layer);
     L.polyline(pts, snapOpt({ color: col, weight: 4.5, opacity: 1 })).addTo(SN.layer);
