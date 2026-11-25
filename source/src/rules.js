@@ -1384,12 +1384,12 @@ function mrRenderRules() {
   if (places.length || moves.length || merges.length) h += '<div class="sec" data-mr-tab="places"><h3>Places</h3>' + places.map(function (r) {
     if (!mrNames(r)) return mrRuleRow('places', r, r.name || r.id, driftRowText(r), 'WALKING', 'var(--m-foot)', null);
     var sub = [r.role ? (MR_LIFE[r.role] ? (mrIsPast(r) ? 'Past ' + r.role : 'Current ' + r.role) : mrKindName(r.role)) : '', r.when ? mrWhenText(r.when) : '', r.hide ? 'Hidden from pins, heatmap and places' : '', (MR_COUNT[r.id] || 0) + ' stays', driftRowText(r)].filter(Boolean).join(' · ');
-    return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? 'var(--off)' : mrLook(r).bg, null);
+    return mrRuleRow('places', r, r.name || mrKindName(r.role) || r.id, sub, mrLook(r).ic, r.hide ? 'var(--map-grey)' : mrLook(r).bg, null);
   }).join('') + (moves.length ? '<h4 class="place-h mr-grp">Places that moved</h4>' + moves.map(function (r) {
     var sub = (r.keep ? 'Google\'s location kept' : 'Where it was ' + mvWhen(r.when)) + ' · ' + mvStays(MR.on ? MR_COUNT[r.id] || 0 : 0);
-    return mrRuleRow('moves', r, r.name || r.id, sub, 'pin', r.keep ? 'var(--off)' : 'var(--rule)', null);
+    return mrRuleRow('moves', r, r.name || r.id, sub, 'pin', r.keep ? 'var(--map-grey)' : 'var(--rule)', null);
   }).join('') : '') + (merges.length ? '<h4 class="place-h mr-grp">Places merged</h4>' + merges.map(function (r) {
-    return mrRuleRow('place_merges', r, spotPidName(r.from) + ' → ' + spotPidName(r.into), 'Counted as one place, the second', 'pin', 'var(--off)', null);
+    return mrRuleRow('place_merges', r, spotPidName(r.from) + ' → ' + spotPidName(r.into), 'Counted as one place, the second', 'pin', 'var(--map-grey)', null);
   }).join('') : '') + '</div>';
   // Corrections by date (newest first) or by type (then newest first), with a heading per type.
   var csort = PREFS.corSort === 'type' ? 'type' : 'date', cgrp = null;
@@ -1412,7 +1412,7 @@ function mrRenderRules() {
     var ic = th.stay ? 'home' : th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : ign ? 'pinOff' : 'info');
     var applied = th.mode || th.name || g || th.hide != null || th.stay || ign;
     return gh + mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
-      ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : 'var(--off)', applied && D ? W.count[c.id] || 0 : null);
+      ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : 'var(--map-grey)', applied && D ? W.count[c.id] || 0 : null);
   }).join('') + '</div>';
   if (rout.length) h += '<div class="sec" data-mr-tab="routines"><h3>Routines</h3>' + rout.map(function (r) {
     var t = r.then || {}, a = mrEnd(r.from, mrEndM(r, 'from')), b = mrEnd(r.to, mrEndM(r, 'to')), ln = D && W.line && W.line[r.id], bits = [];
@@ -1427,7 +1427,7 @@ function mrRenderRules() {
     if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type' + (t.mode ? ' (turn on Always to take them)' : ''));
     if (left.gear) bits.push(fmt(left.gear) + ' left out: recorded with other gear');
     if (!a || !b) bits.push('Its from or to isn\'t a place with a position');
-    return mrRuleRow('routines', r, r.name || r.id, bits, t.mode || 'OTHER', t.mode ? modeColor(t.mode) : 'var(--off)', D ? W.count[r.id] || 0 : null);
+    return mrRuleRow('routines', r, r.name || r.id, bits, t.mode || 'OTHER', t.mode ? modeColor(t.mode) : 'var(--map-grey)', D ? W.count[r.id] || 0 : null);
   }).join('') + '</div>';
   if (snaps.length) h += '<div class="sec" data-mr-tab="snaps"><h3>Map snaps</h3>' + snaps.map(snapRuleRow).join('') + '</div>';
   // Bad GPS spots (Ignore GPS points › Every trip, here), with the corrections.
@@ -2547,7 +2547,7 @@ function mrRadiusMap(c, rad, title, done) {
     var r = +$('mrRadIn').value, n = 0;
     circle.setRadius(r);
     var np = 0;
-    dots.forEach(function (x) { var inside = x.d <= r; if (inside) { n += x.n; np++; } x.m.setStyle({ color: inside ? cssVar('--rule-strong') : cssVar('--map-grey'), fillColor: inside ? cssVar('--rule') : cssVar('--map-grey-soft'), fillOpacity: inside ? .9 : .6 }); });
+    dots.forEach(function (x) { var inside = x.d <= r; if (inside) { n += x.n; np++; } x.m.setStyle({ color: inside ? cssVar('--rule') : cssVar('--map-grey'), fillColor: inside ? cssVar('--rule') : cssVar('--map-grey-soft'), fillOpacity: inside ? .9 : .6 }); });
     $('mrRadTxt').textContent = fmt(r) + ' m';
     $('mrRadCount').textContent = fmt(np) + ' place' + (np === 1 ? '' : 's') + ' from your data inside · ' + fmt(n) + ' stay' + (n === 1 ? '' : 's');
   }
@@ -2802,10 +2802,10 @@ function mrGhostStart(draft) {
     MR_GHOST.layer = L.layerGroup().addTo(MR_GHOST.map);
   }
   function colour(r) {
-    var col = r.then && r.then.mode ? modeColor(r.then.mode) : cssVar('--map-route');
+    var col = r.then && r.then.mode ? modeColor(r.then.mode) : cssVar('--map-grey');
     // The canvas needs a real colour, not a CSS variable.
     var vm = /^var\((--[\w-]+)\)$/.exec(col);
-    return vm ? cssVar(vm[1]) || cssVar('--map-route') : col;
+    return vm ? cssVar(vm[1]) || cssVar('--map-grey') : col;
   }
   // On the main map every ghost layer goes in its pane, and a tap on one stays with it.
   function o(x) { return MR_GHOST.main ? L.Util.extend({ pane: 'mrg', renderer: MR_GHOST_R, bubblingMouseEvents: false }, x) : x; }
@@ -2869,7 +2869,7 @@ function mrGhostStart(draft) {
       pts = pts.filter(function (p) { return isFinite(p[0]) && isFinite(p[1]); });
       if (pts.length < 2) return;
       var below = lkey && !(sc[i] >= min || sc[i] >= 0 && inc[i]);
-      L.polyline(pts, o(below ? { color: cssVar('--map-ghost'), weight: 2.5, opacity: .45, dashArray: '4 5' } : { color: col, weight: 3, opacity: MR_GHOST.main ? .35 : .22 }))
+      L.polyline(pts, o(below ? { color: cssVar('--map-grey'), weight: 2.5, opacity: .45, dashArray: '4 5' } : { color: col, weight: 3, opacity: MR_GHOST.main ? .35 : .22 }))
         .on('click', function () { MR_GHOST.pick = i; MR_GHOST.osm = null; draw(); }).addTo(MR_GHOST.layer);
       bounds.extend(pts[0]); bounds.extend(pts[pts.length - 1]);
     });
@@ -3033,7 +3033,7 @@ function mrRuleLook(r) {
     return { ic: r.kind === 'strida' ? 'strida' : r.kind === 'halfbike' ? 'halfbike' : r.kind === 'cargo' ? 'cargobike' : r.kind === 'ebike' ? 'ebike' : r.mode, color: modeColor(r.mode || 'CYCLING'), kind: 'Gear period', gear: true };
   }
   var t = r.then || {};
-  return { ic: t.mode || 'OTHER', color: t.mode ? modeColor(t.mode) : 'var(--off)', kind: 'Routine', gear: false };
+  return { ic: t.mode || 'OTHER', color: t.mode ? modeColor(t.mode) : 'var(--map-grey)', kind: 'Routine', gear: false };
 }
 // The last line of Filters, drawn again each time the filters are applied.
 function mrHereLine() {

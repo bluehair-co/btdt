@@ -86,7 +86,7 @@ function ignRender() {
   IGN.layer.clearLayers();
   var o = { pane: 'mrg', renderer: IGN.r, interactive: false }, all = IGN.pts.map(function (p) { return p.ll; }), red = cssVar('--danger');
   // The trail as loaded, faint and dashed, so a spike to an ignored point still shows where it went.
-  if (n) L.polyline(all, Object.assign({ color: cssVar('--map-ghost'), weight: 2, opacity: .7, dashArray: '4 5' }, o)).addTo(IGN.layer);
+  if (n) L.polyline(all, Object.assign({ color: cssVar('--map-grey'), weight: 2, opacity: .7, dashArray: '4 5' }, o)).addTo(IGN.layer);
   L.polyline(kept, Object.assign({ color: cssVar('--on-color'), weight: 7, opacity: .9 }, o)).addTo(IGN.layer);
   L.polyline(kept, Object.assign({ color: IGN.col, weight: 3.5, opacity: 1 }, o)).addTo(IGN.layer);
   IGN.pts.forEach(function (p, k) {

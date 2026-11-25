@@ -2676,7 +2676,7 @@ function paintProj(fast) {
         }
       } else {
         ctx.fillStyle = cssVar('--on-color'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
-        ctx.fillStyle = cssVar('--pos-still'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
+        ctx.fillStyle = cssVar('--map-grey'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
       }
     }
   }
