@@ -247,6 +247,8 @@ var PREFS = {
   scrub: !window.matchMedia('(pointer: coarse)').matches && window.matchMedia('(min-width: 960px)').matches
 };
 try { Object.assign(PREFS, JSON.parse(localStorage.getItem(PREFS_KEY) || localStorage.getItem('timeliner.prefs') || '{}')); } catch (e) { /* storage unavailable */ }
+// The Equal Earth view was removed (Nov 2026): anyone who had it saved gets Mercator.
+if (PREFS.proj !== 'merc' && PREFS.proj !== 'globe') PREFS.proj = 'merc';
 // The demo turns Countries visited on for itself; your own setting is what gets saved.
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(DEMO ? Object.assign({}, PREFS, { cc: DEMO.cc }) : PREFS)); } catch (e) { /* ignore */ } }
 function applyTheme() {

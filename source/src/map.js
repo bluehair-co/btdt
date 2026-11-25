@@ -2436,16 +2436,15 @@ function setProj(v) {
   $('mapNote').textContent = PATH_NOTE + (v !== 'merc' ? ' ' + PROJ_NOTES[v] : '');
 }
 
-// ---------- Equal Earth and globe ----------
-// Leaflet only does Web Mercator, so these two are drawn on a canvas with d3-geo from the
+// ---------- Globe ----------
+// Leaflet only does Web Mercator, so the globe is drawn on a canvas with d3-geo from the
 // built-in country borders, reusing the trip list built for Leaflet.
 var PROJ_NOTES = {
-  ee: 'Equal Earth keeps every country at its true size. Drag to pan, pinch or scroll to zoom.',
   globe: 'Drag to turn the globe, pinch or scroll to zoom.'
 };
 var P = null, d3Loading = null;
 function needD3(cb) {
-  if (window.d3 && d3.geoEqualEarth) return cb();
+  if (window.d3 && d3.geoOrthographic) return cb();
   if (!d3Loading) {
     d3Loading = [];
     var s = document.createElement('script');
@@ -2454,7 +2453,7 @@ function needD3(cb) {
     s.onerror = function () {
       d3Loading = null;
       $('proj').querySelector('canvas').hidden = true;
-      $('proj').insertAdjacentHTML('beforeend', '<p class="empty" style="padding-top:40vh">The globe and Equal Earth views need an internet connection the first time. Check it and reload.</p>');
+      $('proj').insertAdjacentHTML('beforeend', '<p class="empty" style="padding-top:40vh">The globe view needs an internet connection the first time. Check it and reload.</p>');
     };
     document.head.appendChild(s);
   }
@@ -2463,7 +2462,7 @@ function needD3(cb) {
 function initProj() {
   if (!CB) decodeCountries();
   var box = $('proj'), canvas = box.querySelector('canvas');
-  P = { box: box, canvas: canvas, ctx: canvas.getContext('2d'), z: 1, gc: [8, 30], ctr: [8, 30], fitted: false, hovered: [], ver: 0, land: null };
+  P = { box: box, canvas: canvas, ctx: canvas.getContext('2d'), z: 1, gc: [8, 30], fitted: false, hovered: [], ver: 0, land: null };
   // Spherical polygons need a consistent winding: a ring that covers more than half the globe is turned around.
   P.landBy = {};
   P.land = Object.keys(CB.rings).map(function (cc) {
@@ -2495,7 +2494,7 @@ function initProj() {
       return;
     }
     if (pinch) return;
-    drag = { x: p[0], y: p[1], gc: P.gc.slice(), ctr: P.ctr.slice(), moved: false, proj: P.proj };
+    drag = { x: p[0], y: p[1], gc: P.gc.slice(), moved: false };
     canvas.setPointerCapture(ev.pointerId);
   });
   canvas.addEventListener('pointermove', function (ev) {
@@ -2513,13 +2512,8 @@ function initProj() {
       var dx = p[0] - drag.x, dy = p[1] - drag.y;
       if (!drag.moved && Math.hypot(dx, dy) < 4) return;
       if (!drag.moved) { drag.moved = true; box.classList.add('dragging'); hideTip(); setProjHovered([]); }
-      if (PREFS.proj === 'globe') {
-        var deg = 180 / Math.PI / P.proj.scale();
-        P.gc = [drag.gc[0] - dx * deg, Math.max(-89, Math.min(89, drag.gc[1] + dy * deg))];
-      } else {
-        var c = drag.proj.invert([P.w / 2 - dx, P.h / 2 - dy]);
-        if (c && isFinite(c[0])) P.ctr = [c[0], Math.max(-85, Math.min(85, c[1]))];
-      }
+      var deg = 180 / Math.PI / P.proj.scale();
+      P.gc = [drag.gc[0] - dx * deg, Math.max(-89, Math.min(89, drag.gc[1] + dy * deg))];
       if (!raf) raf = requestAnimationFrame(function () { raf = 0; paintProj(true); });
       return;
     }
@@ -2549,18 +2543,9 @@ function initProj() {
   window.addEventListener('resize', function () { if (tab === 'map' && PREFS.proj !== 'merc') paintProj(); });
 }
 function projZoom(f, at) {
-  var z = Math.max(1, Math.min(PREFS.proj === 'globe' ? 30 : 60, P.z * f));
+  var z = Math.max(1, Math.min(30, P.z * f));
   if (z === P.z) return;
-  if (PREFS.proj === 'ee') {
-    // Keep the spot under the finger or cursor where it is.
-    var before = P.proj.invert(at);
-    P.z = z; setupProj();
-    var after = before && P.proj(before);
-    if (after) {
-      var c = P.proj.invert([P.w / 2 + after[0] - at[0], P.h / 2 + after[1] - at[1]]);
-      if (c && isFinite(c[0])) P.ctr = [c[0], Math.max(-85, Math.min(85, c[1]))];
-    }
-  } else P.z = z;
+  P.z = z;
   hideTip();
   paintProj();
 }
@@ -2568,39 +2553,20 @@ function projZoom(f, at) {
 function setupProj() {
   var w = P.box.clientWidth, h = P.box.clientHeight, pad = 12, sphere = { type: 'Sphere' };
   P.w = w; P.h = h;
-  if (PREFS.proj === 'globe') {
-    var pr = d3.geoOrthographic().clipAngle(90).precision(0.3).rotate([-P.gc[0], -P.gc[1]]).fitExtent([[pad, pad + 70], [w - pad, h - pad - 120]], sphere);
-    P.s0 = pr.scale();
-    pr.scale(P.s0 * P.z).translate([w / 2, h / 2 - 20]);
-    P.proj = pr;
-  } else {
-    var pe = d3.geoEqualEarth().precision(0.3).fitExtent([[pad, pad], [w - pad, h - pad]], sphere);
-    P.s0 = pe.scale();
-    pe.scale(P.s0 * P.z).translate([w / 2, h / 2]);
-    var q = pe(P.ctr);
-    if (P.z <= 1) q = [w / 2, h / 2];
-    pe.translate([w - q[0], h - q[1]]);
-    P.proj = pe;
-  }
+  var pr = d3.geoOrthographic().clipAngle(90).precision(0.3).rotate([-P.gc[0], -P.gc[1]]).fitExtent([[pad, pad + 70], [w - pad, h - pad - 120]], sphere);
+  P.s0 = pr.scale();
+  pr.scale(P.s0 * P.z).translate([w / 2, h / 2 - 20]);
+  P.proj = pr;
 }
 function fitProj(bounds) {
   if (!bounds || !bounds.length) { P.z = 1; return; }
   var mp = { type: 'MultiPoint', coordinates: bounds.map(function (b) { return [b[1], b[0]]; }) };
-  if (PREFS.proj === 'globe') {
-    var c = d3.geoCentroid(mp);
-    if (!isFinite(c[0])) c = mp.coordinates[0];
-    var far = 0;
-    mp.coordinates.forEach(function (p) { far = Math.max(far, d3.geoDistance(c, p)); });
-    P.gc = [c[0], Math.max(-89, Math.min(89, c[1]))];
-    P.z = far >= Math.PI / 2 ? 1 : Math.max(1, Math.min(30, 0.85 / Math.max(Math.sin(far), 0.02)));
-  } else {
-    var w = P.box.clientWidth, h = P.box.clientHeight;
-    var pe = d3.geoEqualEarth().fitExtent([[12, 12], [w - 12, h - 12]], { type: 'Sphere' }), s0 = pe.scale();
-    pe.fitExtent([[40, 90], [w - 40, h - 160]], mp);
-    P.z = Math.max(1, Math.min(60, pe.scale() / s0));
-    var cc = pe.invert([w / 2, h / 2]);
-    P.ctr = cc && isFinite(cc[0]) ? cc : [8, 30];
-  }
+  var c = d3.geoCentroid(mp);
+  if (!isFinite(c[0])) c = mp.coordinates[0];
+  var far = 0;
+  mp.coordinates.forEach(function (p) { far = Math.max(far, d3.geoDistance(c, p)); });
+  P.gc = [c[0], Math.max(-89, Math.min(89, c[1]))];
+  P.z = far >= Math.PI / 2 ? 1 : Math.max(1, Math.min(30, 0.85 / Math.max(Math.sin(far), 0.02)));
 }
 function drawProj() {
   if (PREFS.proj === 'merc' || tab !== 'map') return;
@@ -2746,7 +2712,7 @@ function projHitsAt(pt) {
       for (var j = 1; j < p.length && !near; j++) {
         var a = p[j - 1], b = p[j];
         if (!a || !b) continue;
-        // A jump across the map edge (the date line on Equal Earth) isn't a real segment.
+        // A jump of half the screen isn't a real segment.
         if (Math.abs(a[0] - b[0]) > maxJump) continue;
         if (segDist({ x: pt[0], y: pt[1] }, { x: a[0], y: a[1] }, { x: b[0], y: b[1] }) <= r) near = true;
       }
