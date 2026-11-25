@@ -18,7 +18,7 @@ html.dark #map{background:#15122F}
 #top{left:10px;right:10px;top:10px;padding:10px 12px;max-width:520px}
 #top h1{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:8px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
-.row>span{font-size:13px;color:var(--muted);width:44px}
+.row>span{font-size:13px;color:var(--muted);width:46px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{font:inherit;font-size:13px;border:0;background:transparent;color:var(--ink);padding:7px 12px;min-height:34px;cursor:pointer}
 .seg button+button{border-left:1px solid var(--line)}
@@ -60,17 +60,17 @@ html.dark #veil{background:#15122F}
   <div id="rows">
   <div class="row"><span>Map</span><div class="seg" id="segMap"><button data-v="esri" class="on">Current</button><button data-v="vector">Vector</button></div></div>
   <div class="row"><span>Theme</span><div class="seg" id="segTheme"><button data-v="light" class="on">Light</button><button data-v="dark">Dark</button></div></div>
-  <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause in flight</button><button data-v="off">Hide</button></div></div>
-  <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide in flight</button></div></div>
-  <div class="row"><span>Flight</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
+  <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause while moving</button><button data-v="off">Hide</button></div></div>
+  <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide while moving</button></div></div>
+  <div class="row"><span>Move</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
   </div>
   <div id="info">
-    <p>Press play: the map flies from trip to trip and draws each one, like playback in the app. The trips are from the demo.</p>
+    <p>Press play: the map moves from trip to trip and draws each one, like playback in the app. The trips are from the demo.</p>
     <p><b>Current</b> is today's Esri map. <b>Vector</b> is OpenFreeMap, coloured with BT•DT's indigo palette.</p>
     <p>Compare how zooming feels (sharp or blurry, smooth or jumpy), whether the trip lines stay glued to the map while it flies, and how the night side looks. With Current, night shows the dark map; with Vector, it's a shadow over the map.</p>
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
-    <p><b>Pause in flight</b> fades the night out before a flight and back in after landing. <b>Hide in flight</b> does the same for the place names. <b>Flight</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trip lines stay on the map, but fade out when a flight zooms in far past where it started (after a long trip), because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
+    <p><b>Pause while moving</b> fades the night out before the map moves to the next trip and back in once it has arrived. <b>Hide while moving</b> does the same for the place names. <b>Move</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trips already drawn stay on the map during every move. Only when the map zooms in far past where the move started (after a long trip) do they fade out, because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
 </div>
