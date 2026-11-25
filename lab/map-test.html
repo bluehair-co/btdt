@@ -36,7 +36,12 @@ html.dark #play{color:#15122F}
 #fps{flex:none;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 #fps b{display:block;font-size:17px;color:var(--ink)}
 #msg{position:fixed;z-index:999;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--panel);padding:12px 16px;border-radius:12px;display:none}
-.pane-wrap{position:absolute;pointer-events:none}
+.pane-wrap{position:absolute;pointer-events:none;transition:opacity .3s}
+.opt{margin-left:auto;font:inherit;font-size:13px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:10px;padding:5px 10px;min-height:32px;cursor:pointer}
+#rows.shut{display:none}
+#veil{position:fixed;inset:0;z-index:600;background:#EBEAF5;opacity:0;pointer-events:none;transition:opacity .35s}
+html.dark #veil{background:#15122F}
+.leaflet-pane canvas{transition:opacity .3s}
 #prep{left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 18px;display:none;align-items:center;gap:14px;width:min(320px,80vw)}
 #prep.on{display:flex}#prep>div:last-child{flex:1}#prep b{display:block}#prep small{color:var(--muted);font-size:12px}
 .bar{height:6px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
@@ -50,16 +55,21 @@ html.dark #play{color:#15122F}
 <body>
 <div id="map"></div>
 <div class="card" id="top">
-  <h1>Map test <button class="ib" id="ib" aria-label="What to look for" aria-expanded="false" aria-controls="info">i</button></h1>
+  <h1>Map test <button class="ib" id="ib" aria-label="What to look for" aria-expanded="false" aria-controls="info">i</button><button class="opt" id="opt" aria-expanded="true" aria-controls="rows">Options</button></h1>
+  <div id="rows">
   <div class="row"><span>Map</span><div class="seg" id="segMap"><button data-v="esri" class="on">Current</button><button data-v="vector">Vector</button></div></div>
   <div class="row"><span>Theme</span><div class="seg" id="segTheme"><button data-v="light" class="on">Light</button><button data-v="dark">Dark</button></div></div>
-  <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="off">Hide</button></div></div>
+  <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause in flight</button><button data-v="off">Hide</button></div></div>
+  <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide in flight</button></div></div>
+  <div class="row"><span>Flight</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
+  </div>
   <div id="info">
     <p>Press play: the map flies from trip to trip and draws each one, like playback in the app. The trips are from the demo.</p>
     <p><b>Current</b> is today's Esri map. <b>Vector</b> is OpenFreeMap, coloured with BT•DT's indigo palette.</p>
     <p>Compare how zooming feels (sharp or blurry, smooth or jumpy), whether the trip lines stay glued to the map while it flies, and how the night side looks. With Current, night shows the dark map; with Vector, it's a shadow over the map.</p>
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
+    <p><b>Pause in flight</b> fades the night out before a flight and back in after landing. <b>Hide in flight</b> does the same for the place names. <b>Flight</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. <b>Options</b> folds these away while playing.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
 </div>
@@ -68,6 +78,7 @@ html.dark #play{color:#15122F}
   <div id="trip"><b>Press play</b><small>14 trips: Amsterdam, a train, flights to Vietnam</small></div>
   <div id="fps"><b>–</b>fps</div>
 </div>
+<div id="veil"></div>
 <div id="msg"></div>
 <div class="card" id="prep" role="status" aria-live="polite"><div class="spin"></div><div><b>Preparing playback</b><small id="prepTxt">Working out the flights…</small><div class="bar"><i id="prepBar"></i></div></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -79,7 +90,7 @@ var TRIPS = [{"m":"foot","t":1737280500000,"e":1737281286000,"km":1.1,"off":60,"
 var COL = { light: { road: '#2a78d6', air: '#eb6834', transit: '#1baf7a', foot: '#eda100', bike: '#6250d6', water: '#e87ba4' },
             dark:  { road: '#3987e5', air: '#d95926', transit: '#199e70', foot: '#c98500', bike: '#9085e9', water: '#d55181' } };
 var NAME = { road: 'Car', air: 'Flight', transit: 'Public transport', foot: 'Walking', bike: 'Cycling', water: 'Ferry' };
-var S = { map: 'esri', theme: 'light', night: true };
+var S = { map: 'esri', theme: 'light', night: 'on', labels: 'keep', fly: 'glide' }, inFlight = false;
 var $ = function (id) { return document.getElementById(id); };
 
 var map = L.map('map', { preferCanvas: true, zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([52.36, 4.88], 12);
@@ -192,7 +203,7 @@ var sky = { cv: document.createElement('canvas'), sm: document.createElement('ca
 map.getPane('sky').appendChild(sky.cv);
 var nowT = null;
 function paintNight() {
-  var show = S.night && nowT !== null;
+  var show = S.night !== 'off' && nowT !== null && !(inFlight && S.night === 'pause');
   var useTiles = show && S.map === 'esri' && S.theme === 'light';
   nightTiles(useTiles);
   if (!show) { sky.cv.style.display = 'none'; return; }
@@ -292,12 +303,14 @@ function flyPath(a, b) {
   return out;
 }
 function esriUrls(dark) { var b = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_' + (dark ? 'Dark' : 'Light') + '_Gray_'; return [b + 'Base/MapServer/tile/{z}/{y}/{x}', b + 'Reference/MapServer/tile/{z}/{y}/{x}']; }
-function tilesOf(v, out) {
+function tilesOf(v, out, mid0) {
+  var noLab = mid0 && S.labels === 'hide';
   var sz = map.getSize(), x, y;
   if (S.map === 'esri') {
     var tz = Math.max(0, Math.min(16, Math.round(v.z))), n = 1 << tz, k = Math.pow(2, tz - v.z), mid = map.project(v.c, tz), half = sz.multiplyBy(k / 2);
     var lo = mid.subtract(half).divideBy(256).floor(), hi = mid.add(half).divideBy(256).floor();
-    var urls = esriUrls(S.theme === 'dark'); if (S.night && S.theme === 'light') urls = urls.concat(esriUrls(true));
+    var urls = esriUrls(S.theme === 'dark'); if (S.night !== 'off' && S.theme === 'light' && !(S.night === 'pause' && mid0)) urls = urls.concat(esriUrls(true));
+    if (noLab) urls = urls.filter(function (u) { return u.indexOf('Reference') < 0; });
     for (x = lo.x; x <= hi.x; x++) for (y = Math.max(0, lo.y); y <= Math.min(n - 1, hi.y); y++) {
       var xx = ((x % n) + n) % n;
       urls.forEach(function (u) { var url = L.Util.template(u, { x: xx, y: y, z: tz }); out[url] = 'img'; });
@@ -314,10 +327,10 @@ function makePlan(start) {
   plan = []; var v = { c: map.getCenter(), z: map.getZoom() };
   for (var n = 0; n < TRIPS.length; n++) {
     var k = (start + n) % TRIPS.length, t = TRIPS[k], b = viewOf(t);
-    if (inView(v, b, t)) plan[k] = [v]; else { plan[k] = flyPath(v, b); v = b; }
+    if (inView(v, b, t)) plan[k] = [v]; else { plan[k] = S.fly === 'glide' ? flyPath(v, b) : S.fly === 'hop' ? hopPath(v, b) : [b]; v = b; }
   }
 }
-function need(ks) { var out = {}; ks.forEach(function (k) { if (plan[k]) plan[k].forEach(function (v) { tilesOf(v, out); }); }); return Object.keys(out).filter(function (u) { return !got[u]; }).map(function (u) { return [u, out[u]]; }); }
+function need(ks) { var out = {}; ks.forEach(function (k) { if (plan[k]) plan[k].forEach(function (v, n) { tilesOf(v, out, n < plan[k].length - 1); }); }); return Object.keys(out).filter(function (u) { return !got[u]; }).map(function (u) { return [u, out[u]]; }); }
 function load(list, onStep) {
   return new Promise(function (done) {
     var at = 0, busy = 0, fin = 0;
@@ -346,6 +359,82 @@ function prepareFirst(start, then) {
   });
 }
 
+
+// ---- the other ways to fly. Hop: zoom out in steps of up to three levels, glide across,
+// zoom in in steps (each step is one short animation the browser scales). Fade: cross-fade.
+function hopMid(a, b) {
+  var p = pad(), z = map.getBoundsZoom(L.latLngBounds([a.c, b.c]), false, L.point(p.tl[0] + p.br[0] + 200, p.tl[1] + p.br[1] + 200));
+  return Math.max(2, Math.min(a.z, b.z, Math.floor(z)));
+}
+function hopSteps(a, b) {
+  var zm = hopMid(a, b), st = [], z = a.z;
+  while (z - 3 > zm) { z -= 3; st.push(['z', a.c, z]); }
+  if (z > zm) st.push(['z', a.c, zm]);
+  st.push(['p', b.c, zm]);
+  z = zm; while (z + 3 < b.z) { z += 3; st.push(['z', b.c, z]); }
+  st.push(['z', b.c, b.z]);
+  return st;
+}
+function hopPath(a, b) {
+  var out = [], zm = hopMid(a, b), p0 = map.project(a.c, zm), p1 = map.project(b.c, zm);
+  hopSteps(a, b).forEach(function (s) { if (s[0] === 'z') out.push({ c: s[1], z: s[2] }); });
+  for (var k = 0; k <= 12; k++) out.push({ c: map.unproject(p0.add(p1.subtract(p0).multiplyBy(k / 12)), zm), z: zm });
+  out.push(b);
+  return out;
+}
+function hop(a, b, done) {
+  var st = hopSteps(a, b);
+  (function run() {
+    var s = st.shift();
+    if (!s || !playing) return done();
+    var c = map.getCenter(), same = s[0] === 'z' && map.getZoom() === s[2] && c.distanceTo(s[1]) < 1;
+    if (same) return run();
+    var go = false, fin = function () { if (go) return; go = true; setTimeout(run, 40); };
+    map.once('moveend', fin); setTimeout(fin, 2500);
+    if (s[0] === 'p') map.panTo(s[1], { animate: true, duration: 1.1, easeLinearity: 0.25 });
+    else map.setView(s[1], s[2], { animate: true });
+  })();
+}
+function fadeTo(b, done) {
+  $('veil').style.opacity = 1;
+  setTimeout(function () {
+    map.setView(b.c, b.z, { animate: false });
+    whenReady(function () { $('veil').style.opacity = 0; setTimeout(done, 350); });
+  }, 380);
+}
+// ---- while flying: labels and night can step aside, and come back after landing
+function setOp(el, o) { if (el) el.style.opacity = o; }
+function labelsOff() {
+  ['labels', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, 0); });
+  var g = gl && gl.getMaplibreMap(); if (g && g.getStyle()) g.getStyle().layers.forEach(function (l) { if (l.type === 'symbol') { g.setPaintProperty(l.id, 'text-opacity', 0); g.setPaintProperty(l.id, 'icon-opacity', 0); } });
+  setTimeout(function () {
+    if (!inFlight) return;
+    if (esriL && map.hasLayer(esriL[1])) map.removeLayer(esriL[1]);
+    if (nightL && map.hasLayer(nightL[1])) map.removeLayer(nightL[1]);
+    if (g && g.getStyle()) g.getStyle().layers.forEach(function (l) { if (l.type === 'symbol') g.setLayoutProperty(l.id, 'visibility', 'none'); });
+  }, 320);
+}
+function labelsOn() {
+  if (esriL && !map.hasLayer(esriL[1])) esriL[1].addTo(map);
+  if (nightL && !map.hasLayer(nightL[1])) nightL[1].addTo(map);
+  var g = gl && gl.getMaplibreMap();
+  if (g && g.getStyle()) g.getStyle().layers.forEach(function (l) { if (l.type === 'symbol') { g.setLayoutProperty(l.id, 'visibility', 'visible'); g.setPaintProperty(l.id, 'text-opacity', null); g.setPaintProperty(l.id, 'icon-opacity', null); } });
+  requestAnimationFrame(function () { ['labels', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, 1); }); });
+}
+function nightFade(o) { setOp(sky.cv, o); ['nightBase', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, o); }); }
+function flightStart(go) {
+  var wait = 0;
+  if (S.labels === 'hide') { labelsOff(); wait = 320; }
+  if (S.night === 'pause') { nightFade(0); wait = 320; }
+  setTimeout(function () { inFlight = true; if (S.night === 'pause') paintNight(); go(); }, wait);
+}
+function flightEnd() {
+  if (!inFlight) return;
+  inFlight = false;
+  if (S.labels === 'hide') labelsOn();
+  if (S.night === 'pause') { paintNight(); requestAnimationFrame(function () { nightFade(1); }); }
+}
+
 // ---- trips and playback
 var faint = L.layerGroup().addTo(map), done = L.layerGroup().addTo(map), cur = null, dot = null;
 function drawFaint() {
@@ -366,8 +455,14 @@ function next() {
   var view = L.latLngBounds(map.containerPointToLatLng(p.tl), map.containerPointToLatLng(map.getSize().subtract(p.br)));
   if (view.contains(b) && Math.abs(map.getBoundsZoom(b, false, L.point(p.tl[0] + p.br[0], p.tl[1] + p.br[1])) - map.getZoom()) < 1.5) return whenReady(draw);
   phase = 'fly'; moving = true;
-  map.flyToBounds(b, { paddingTopLeft: p.tl, paddingBottomRight: p.br, maxZoom: 16, easeLinearity: 0.2 });
-  map.once('moveend', function () { if (phase === 'fly') { phase = 'wait'; moving = false; whenReady(draw); } });
+  var from = { c: map.getCenter(), z: map.getZoom() }, to = viewOf(t);
+  var land = function () { if (phase !== 'fly') return; phase = 'wait'; moving = false; flightEnd(); whenReady(draw); };
+  flightStart(function () {
+    if (!playing) return;
+    if (S.fly === 'glide') { map.once('moveend', land); map.flyToBounds(b, { paddingTopLeft: p.tl, paddingBottomRight: p.br, maxZoom: 16, easeLinearity: 0.2 }); }
+    else if (S.fly === 'hop') hop(from, to, land);
+    else fadeTo(to, land);
+  });
 }
 function draw() {
   var t = TRIPS[i]; phase = 'draw'; moving = true; t0 = performance.now();
@@ -392,8 +487,8 @@ function setPlay(on) {
   playing = on;
   $('pi').innerHTML = on ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M7 5l12 7-12 7z"/>';
   $('play').setAttribute('aria-label', on ? 'Pause' : 'Play');
-  if (on) { low = 99; if (phase === 'draw' && cur) { t0 = performance.now() - 0; step(); } else prepareFirst((i + 1) % TRIPS.length, next); }
-  else { $('prep').classList.remove('on'); cancelAnimationFrame(raf); map.stop(); moving = false; if (cur) { map.removeLayer(cur); cur = null; } if (dot) { map.removeLayer(dot); dot = null; } phase = null; }
+  if (on) { fold(true); low = 99; if (phase === 'draw' && cur) { t0 = performance.now() - 0; step(); } else prepareFirst((i + 1) % TRIPS.length, next); }
+  else { $('prep').classList.remove('on'); $('veil').style.opacity = 0; flightEnd(); cancelAnimationFrame(raf); map.stop(); moving = false; if (cur) { map.removeLayer(cur); cur = null; } if (dot) { map.removeLayer(dot); dot = null; } phase = null; }
 }
 $('play').onclick = function () { setPlay(!playing); };
 
@@ -415,16 +510,20 @@ function seg(id, key, fn) {
   $(id).addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b || b.classList.contains('on')) return;
     $(id).querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
-    S[key] = key === 'night' ? b.dataset.v === 'on' : b.dataset.v; fn();
+    S[key] = b.dataset.v; fn();
   });
 }
 seg('segMap', 'map', function () { low = 99; plan = []; if (S.map === 'vector') { esriOff(); vectorOn(); } else { vectorOff(); esriOn(false); } paintNight(); });
-seg('segTheme', 'theme', function () {
+seg('segTheme', 'theme', function () { plan = [];
   document.documentElement.classList.toggle('dark', S.theme === 'dark');
   if (S.map === 'vector') vectorOn(); else esriOn(true);
   drawFaint(); done.eachLayer(function (l) { l.setStyle({ color: COL[S.theme][l.options.m || 'bike'] }); }); paintNight();
 });
-seg('segNight', 'night', paintNight);
+seg('segNight', 'night', function () { plan = []; paintNight(); });
+seg('segLabels', 'labels', function () { plan = []; });
+seg('segFly', 'fly', function () { plan = []; low = 99; });
+function fold(shut) { $('rows').classList.toggle('shut', shut); $('opt').setAttribute('aria-expanded', !shut); if (shut) { $('info').classList.remove('open'); $('ib').setAttribute('aria-expanded', false); } }
+$('opt').onclick = function () { fold(!$('rows').classList.contains('shut')); };
 $('ib').onclick = function () { var o = $('info').classList.toggle('open'); $('ib').setAttribute('aria-expanded', o); };
 esriOn(false);
 }
