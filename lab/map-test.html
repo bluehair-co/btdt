@@ -42,6 +42,7 @@ html.dark #play{color:#15122F}
 #veil{position:fixed;inset:0;z-index:600;background:#EBEAF5;opacity:0;pointer-events:none;transition:opacity .35s}
 html.dark #veil{background:#15122F}
 .leaflet-pane canvas{transition:opacity .3s}
+.leaflet-overlay-pane{transition:opacity .25s}
 #prep{left:50%;top:50%;transform:translate(-50%,-50%);padding:14px 18px;display:none;align-items:center;gap:14px;width:min(320px,80vw)}
 #prep.on{display:flex}#prep>div:last-child{flex:1}#prep b{display:block}#prep small{color:var(--muted);font-size:12px}
 .bar{height:6px;border-radius:3px;background:var(--line);margin-top:8px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
@@ -69,7 +70,7 @@ html.dark #veil{background:#15122F}
     <p>Compare how zooming feels (sharp or blurry, smooth or jumpy), whether the trip lines stay glued to the map while it flies, and how the night side looks. With Current, night shows the dark map; with Vector, it's a shadow over the map.</p>
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
-    <p><b>Pause in flight</b> fades the night out before a flight and back in after landing. <b>Hide in flight</b> does the same for the place names. <b>Flight</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. <b>Options</b> folds these away while playing.</p>
+    <p><b>Pause in flight</b> fades the night out before a flight and back in after landing. <b>Hide in flight</b> does the same for the place names. <b>Flight</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trip lines always fade out during a flight, because zooming would only stretch them. <b>Options</b> folds these away while playing.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
 </div>
@@ -423,12 +424,16 @@ function labelsOn() {
 }
 function nightFade(o) { setOp(sky.cv, o); ['nightBase', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, o); }); }
 function flightStart(go) {
-  var wait = 0;
+  // The trip lines are one drawing that the browser would only stretch while zooming,
+  // so they step aside for every flight and come back once redrawn.
+  map.getPane('overlayPane').style.opacity = 0;
+  var wait = 260;
   if (S.labels === 'hide') { labelsOff(); wait = 320; }
   if (S.night === 'pause') { nightFade(0); wait = 320; }
   setTimeout(function () { inFlight = true; if (S.night === 'pause') paintNight(); go(); }, wait);
 }
 function flightEnd() {
+  requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = 1; }); });
   if (!inFlight) return;
   inFlight = false;
   if (S.labels === 'hide') labelsOn();
