@@ -27,9 +27,9 @@ function ignStart(i) {
   var c = mrTripCorrection(i), set = mrIgnoreSet(c && c.then && c.then.ignore_points), pts = mrBasePoints(i), off = new Set();
   pts.forEach(function (p, k) { if (set[p.t]) off.add(k); });
   IGN = { i: i, pts: pts, off: off, was: Array.from(off).sort(function (a, b) { return a - b; }).join(), hist: [], shape: PREFS.selShape === 'rect' ? 'rect' : 'lasso',
-    km0: pathKm(pts.map(function (p) { return p.ll; })), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) || '#c25228' };
+    km0: pathKm(pts.map(function (p) { return p.ll; })), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) };
   IGN.r = L.canvas({ pane: 'mrg', padding: 0.5 });
-  IGN.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: IGN.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
+  IGN.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: IGN.r, stroke: false, fillColor: cssVar('--bg'), fillOpacity: .5, interactive: false }).addTo(map);
   IGN.layer = L.layerGroup().addTo(map);
   IGN.draw = L.layerGroup().addTo(map);
   map.dragging.disable(); map.boxZoom.disable(); map.doubleClickZoom.disable();
@@ -84,14 +84,14 @@ function ignRender() {
   $('ignBot').querySelector('[data-a="undo"]').disabled = !IGN.hist.length;
   $('ignBot').querySelector('[data-a="save"]').disabled = Array.from(IGN.off).sort(function (a, c) { return a - c; }).join() === IGN.was;
   IGN.layer.clearLayers();
-  var o = { pane: 'mrg', renderer: IGN.r, interactive: false }, all = IGN.pts.map(function (p) { return p.ll; }), red = '#c62f27';
+  var o = { pane: 'mrg', renderer: IGN.r, interactive: false }, all = IGN.pts.map(function (p) { return p.ll; }), red = cssVar('--danger');
   // The trail as loaded, faint and dashed, so a spike to an ignored point still shows where it went.
-  if (n) L.polyline(all, Object.assign({ color: '#8a8f8c', weight: 2, opacity: .7, dashArray: '4 5' }, o)).addTo(IGN.layer);
-  L.polyline(kept, Object.assign({ color: '#fff', weight: 7, opacity: .9 }, o)).addTo(IGN.layer);
+  if (n) L.polyline(all, Object.assign({ color: cssVar('--map-ghost'), weight: 2, opacity: .7, dashArray: '4 5' }, o)).addTo(IGN.layer);
+  L.polyline(kept, Object.assign({ color: cssVar('--on-color'), weight: 7, opacity: .9 }, o)).addTo(IGN.layer);
   L.polyline(kept, Object.assign({ color: IGN.col, weight: 3.5, opacity: 1 }, o)).addTo(IGN.layer);
   IGN.pts.forEach(function (p, k) {
-    if (IGN.off.has(k)) L.circleMarker(p.ll, Object.assign({ radius: 5.5, color: red, weight: 2.5, fillColor: '#fff', fillOpacity: 1 }, o)).addTo(IGN.layer);
-    else L.circleMarker(p.ll, Object.assign({ radius: 3.5, color: '#fff', weight: 1.5, fillColor: IGN.col, fillOpacity: 1 }, o)).addTo(IGN.layer);
+    if (IGN.off.has(k)) L.circleMarker(p.ll, Object.assign({ radius: 5.5, color: red, weight: 2.5, fillColor: cssVar('--on-color'), fillOpacity: 1 }, o)).addTo(IGN.layer);
+    else L.circleMarker(p.ll, Object.assign({ radius: 3.5, color: cssVar('--on-color'), weight: 1.5, fillColor: IGN.col, fillOpacity: 1 }, o)).addTo(IGN.layer);
   });
 }
 // Ignores the points ks, or brings them back when all of them are ignored already. Keeps two.
@@ -124,7 +124,7 @@ function ignMove(ev) {
   IGN.drawPts.push(p);
   ev.preventDefault();
   IGN.draw.clearLayers();
-  L.polygon(ignShape(IGN.drawPts).map(function (q) { return map.containerPointToLatLng(q); }), { pane: 'mrg', renderer: IGN.r, color: cssVar('--accent') || '#c25228', weight: 2, dashArray: '6 5', fillOpacity: .08, interactive: false }).addTo(IGN.draw);
+  L.polygon(ignShape(IGN.drawPts).map(function (q) { return map.containerPointToLatLng(q); }), { pane: 'mrg', renderer: IGN.r, color: cssVar('--accent'), weight: 2, dashArray: '6 5', fillOpacity: .08, interactive: false }).addTo(IGN.draw);
 }
 function ignUp(ev) {
   if (!IGN || !IGN.drawPts || ev.pointerId !== IGN.pid) return;

@@ -82,7 +82,7 @@ function glyph(name, x, y, s, color, rot) {
 }
 // A marker riding a track: a disc in the track's colour with a white icon, like the transport badges.
 function rider(x, y, fill, color, name, s, rot, nudge) {
-  return '<circle class="rider" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (s / 2).toFixed(1) + '" fill="' + fill + '"/>' + glyph(name, x, y + (nudge || 0) * .7, s * .66, '#fff', rot);
+  return '<circle class="rider" cx="' + x.toFixed(1) + '" cy="' + y.toFixed(1) + '" r="' + (s / 2).toFixed(1) + '" fill="' + fill + '"/>' + glyph(name, x, y + (nudge || 0) * .7, s * .66, 'var(--on-color)', rot);
 }
 function polyD(pts) { return pts.map(function (p, k) { return (k ? 'L' : 'M') + p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(''); }
 // One of the planets drawn in Figma, centred on (x, y) and s across.
@@ -724,8 +724,8 @@ function renderKinds() {
   $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stations, stops and airports BT•DT named' : '') + ', in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
-    return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:#0f7c8c">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
-      '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:#0f7c8c"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
+    return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:var(--rule)">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
+      '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:var(--rule)"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
   }).join('') +
     // Other places: the time at places without a kind, its badge flipping through kinds of place.
     '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm kind-flip" style="background:var(--m-other)">' + KIND_FLIP.map(icon).join('') + '</span><span><b>Other places</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +

@@ -60,6 +60,12 @@ Every place in the app answers one question, and a new feature goes where its qu
 
 ## Look
 
+- **Design tokens.** Every colour, font, text size, spacing step and corner rounding is a named token at the top of `source/src/app.css`. Use the token, never a raw value: `var(--fs-sm)` not `13px`, `var(--sp-4)` not `8px`, `var(--r-md)` not `10px`, `var(--rule)` not `#0f7c8c`. In JavaScript, read colours with `cssVar('--name')` (Leaflet and canvas need the actual colour) or pass `'var(--name)'` into HTML. A colour the app needs that has no token gets a new one, with a comment saying what it is for.
+  - Spacing is `--sp-N`, N steps of `--space-unit` (2px): `--sp-4` is 8px. Changing `--space-unit` makes the whole app roomier or tighter.
+  - Text sizes run `--fs-3xs` (10px) to `--fs-3xl` (20px, sheet titles); body text is `--fs-md` (14px). Corners run `--r-xs` (4px) to `--r-sheet` (22px), plus `--r-pill`.
+  - Odd one-off values (1px, 3px, 5px, chart labels at 9.5px, fluid `clamp()` sizes) stay as they are. If one starts being used in several places, make it a token.
+- **The dark theme is written once:** `:root[data-theme="dark"]` holds only the tokens that differ. `data-theme` is always `light` or `dark` (an inline script in `<head>` sets it before the page draws, and `applyTheme()` keeps it up to date), so there are no `prefers-color-scheme` copies. Give a component a themed colour by adding a token with a light and a dark value, not a dark-only rule.
+- The landing pictures (SVG art in `app.html`) keep their own colours; they are artwork, not UI.
 - Fonts: Bricolage Grotesque (titles, tagline in a thin weight) and IBM Plex Sans / Mono.
 - Icons: Google Material Icons, filled; the generic cycling icon is Material's pedal bike, with custom icons for specific gear (Strida, Halfbike, cargo bike) drawn to match it.
 - Each transport kind has its own colour token (`--m-road`, `--m-transit`, `--m-bike`, `--m-foot`, `--m-air`, `--m-water`) used everywhere: lines, icons, legends, filters.

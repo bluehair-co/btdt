@@ -19,7 +19,7 @@ function selStart() {
   if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
   SEL = { shape: PREFS.selShape === 'rect' ? 'rect' : 'lasso', picked: [], on: new Set(), list: false };
   SEL.r = L.canvas({ pane: 'mrg', padding: 0.5 });
-  SEL.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: SEL.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
+  SEL.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: SEL.r, stroke: false, fillColor: cssVar('--bg'), fillOpacity: .5, interactive: false }).addTo(map);
   SEL.layer = L.layerGroup().addTo(map);
   SEL.draw = L.layerGroup().addTo(map);
   map.dragging.disable(); map.boxZoom.disable(); map.doubleClickZoom.disable();
@@ -99,8 +99,8 @@ function selRender(keepList) {
   var parts = [];
   SEL.picked.forEach(function (i) { var h = selHit(i); if (h) parts.push(h.parts[0]); });
   if (parts.length) {
-    L.polyline(parts, { pane: 'mrg', renderer: SEL.r, color: '#fff', weight: 7, opacity: .9, interactive: false }).addTo(SEL.layer);
-    L.polyline(parts, { pane: 'mrg', renderer: SEL.r, color: cssVar('--accent') || '#c25228', weight: 3.5, opacity: 1, interactive: false }).addTo(SEL.layer);
+    L.polyline(parts, { pane: 'mrg', renderer: SEL.r, color: cssVar('--on-color'), weight: 7, opacity: .9, interactive: false }).addTo(SEL.layer);
+    L.polyline(parts, { pane: 'mrg', renderer: SEL.r, color: cssVar('--accent'), weight: 3.5, opacity: 1, interactive: false }).addTo(SEL.layer);
   }
 }
 function selHit(i) {
@@ -125,7 +125,7 @@ function selMove(ev) {
   ev.preventDefault();
   SEL.draw.clearLayers();
   var poly = selShape(SEL.pts).map(function (q) { return map.containerPointToLatLng(q); });
-  L.polygon(poly, { pane: 'mrg', renderer: SEL.r, color: cssVar('--accent') || '#c25228', weight: 2, dashArray: '6 5', fillOpacity: .08, interactive: false }).addTo(SEL.draw);
+  L.polygon(poly, { pane: 'mrg', renderer: SEL.r, color: cssVar('--accent'), weight: 2, dashArray: '6 5', fillOpacity: .08, interactive: false }).addTo(SEL.draw);
 }
 function selUp(ev) {
   if (!SEL || !SEL.pts || ev.pointerId !== SEL.pid) return;

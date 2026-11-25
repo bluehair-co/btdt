@@ -77,7 +77,7 @@ function snapRuleRow(s) {
   bits.push('trips that follow it for ' + mrMatchMin(s) + '% or more' + (left.line ? ' (' + fmt(left.line) + ' below)' : ''));
   if (left.type) bits.push(fmt(left.type) + ' left out: your files give them another type (turn on Other types to take them)');
   if (!snapOk(s)) bits.push('It has no line or ends, so it takes no trips');
-  return mrRuleRow('snaps', s, s.name || s.id, bits, s.mode || 'OTHER', s.mode ? modeColor(s.mode) : '#9aa49d', D ? MR_COUNT[s.id] || 0 : null);
+  return mrRuleRow('snaps', s, s.name || s.id, bits, s.mode || 'OTHER', s.mode ? modeColor(s.mode) : 'var(--off)', D ? MR_COUNT[s.id] || 0 : null);
 }
 
 // ---------- making one ----------
@@ -123,7 +123,7 @@ function snapTap(ll) {
   if (!st || !st.name) { toast('No station or stop of your packs near there'); return true; }
   var e = { lat: st.lat, lng: st.lng, name: st.name };
   if (SN.a && km([SN.a.lat, SN.a.lng], [e.lat, e.lng]) < 0.3) { toast('Pick another station for the other end'); return true; }
-  L.circleMarker([e.lat, e.lng], { radius: 7, color: '#fff', weight: 2, fillColor: cssVar('--accent') || '#c25228', fillOpacity: 1 }).bindTooltip(esc(e.name), { permanent: true, direction: 'top', offset: [0, -8], className: 'snap-tip' }).addTo(SN.marks);
+  L.circleMarker([e.lat, e.lng], { radius: 7, color: cssVar('--on-color'), weight: 2, fillColor: cssVar('--accent'), fillOpacity: 1 }).bindTooltip(esc(e.name), { permanent: true, direction: 'top', offset: [0, -8], className: 'snap-tip' }).addTo(SN.marks);
   if (!SN.a) { SN.a = e; snapBarText(); return true; }
   SN.b = e;
   $('snapBar').hidden = true;
@@ -205,7 +205,7 @@ function snapMapStart() {
     SN.map = map; SN.main = true;
     if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
     if (!MR_GHOST_R) MR_GHOST_R = L.svg({ pane: 'mrg' });
-    SN.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: MR_GHOST_R, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .72, interactive: false }).addTo(map);
+    SN.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: MR_GHOST_R, stroke: false, fillColor: cssVar('--bg'), fillOpacity: .72, interactive: false }).addTo(map);
     layerToggles();
   } else {
     SN.map = L.map($('snapMap'), { zoomControl: false, attributionControl: true, preferCanvas: true });
@@ -239,10 +239,10 @@ function snapDraw(fit) {
   $('snapRbV').textContent = dist(SN.rb / 1000);
   $('snapMatchV').textContent = SN.match + '%';
   SN.layer.clearLayers();
-  var s = snapDraft(), col = SN.mode ? cssVar((modeColor(SN.mode).match(/--[\w-]+/) || [''])[0]) || '#1baf7a' : '#1baf7a', bounds = L.latLngBounds([[SN.a.lat, SN.a.lng], [SN.b.lat, SN.b.lng]]);
+  var s = snapDraft(), col = SN.mode ? cssVar((modeColor(SN.mode).match(/--[\w-]+/) || [''])[0]) || cssVar('--m-transit') : cssVar('--m-transit'), bounds = L.latLngBounds([[SN.a.lat, SN.a.lng], [SN.b.lat, SN.b.lng]]);
   [SN.a, SN.b].forEach(function (e, k) {
     L.circle([e.lat, e.lng], snapOpt({ radius: k ? SN.rb : SN.ra, color: col, weight: 1.5, dashArray: '4 4', fillOpacity: .06 })).addTo(SN.layer);
-    L.circleMarker([e.lat, e.lng], snapOpt({ radius: 6, color: '#fff', weight: 2, fillColor: col, fillOpacity: 1 })).addTo(SN.layer);
+    L.circleMarker([e.lat, e.lng], snapOpt({ radius: 6, color: cssVar('--on-color'), weight: 2, fillColor: col, fillOpacity: 1 })).addTo(SN.layer);
   });
   var on = 0, off = 0, become = 0, typeOut = 0, other = 0;
   if (s) {
@@ -256,9 +256,9 @@ function snapDraw(fit) {
       if (own.length < 2) continue;
       var ok = mrLineScore(i, pts) >= SN.match && !!mrSnapTrip(i, pts);
       if (ok) { on++; if ((D.base || D).mode[i] !== MODE_IDX[s.mode]) become++; } else off++;
-      L.polyline(own, snapOpt(ok ? { color: col, weight: 3, opacity: SN.main ? .35 : .25 } : { color: '#8a8f8c', weight: 2.5, opacity: .5, dashArray: '4 5' })).addTo(SN.layer);
+      L.polyline(own, snapOpt(ok ? { color: col, weight: 3, opacity: SN.main ? .35 : .25 } : { color: cssVar('--map-ghost'), weight: 2.5, opacity: .5, dashArray: '4 5' })).addTo(SN.layer);
     }
-    L.polyline(pts, snapOpt({ color: '#fff', weight: 8, opacity: .9 })).addTo(SN.layer);
+    L.polyline(pts, snapOpt({ color: cssVar('--on-color'), weight: 8, opacity: .9 })).addTo(SN.layer);
     L.polyline(pts, snapOpt({ color: col, weight: 4.5, opacity: 1 })).addTo(SN.layer);
   }
   $('snapTxt').innerHTML = !s ? '' : '<b>' + tripsText(on) + '</b> follow the line closely enough' + (off ? ' · ' + fmt(off) + ' below, dashed' : '') + (become ? ' · ' + fmt(become) + ' would become ' + esc((LABEL[s.mode] || s.mode).toLowerCase()) : '') +
