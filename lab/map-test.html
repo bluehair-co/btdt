@@ -70,7 +70,7 @@ html.dark #veil{background:#15122F}
     <p>Compare how zooming feels (sharp or blurry, smooth or jumpy), whether the trip lines stay glued to the map while it flies, and how the night side looks. With Current, night shows the dark map; with Vector, it's a shadow over the map.</p>
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
-    <p><b>Pause in flight</b> fades the night out before a flight and back in after landing. <b>Hide in flight</b> does the same for the place names. <b>Flight</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trip lines always fade out during a flight, because zooming would only stretch them. <b>Options</b> folds these away while playing.</p>
+    <p><b>Pause in flight</b> fades the night out before a flight and back in after landing. <b>Hide in flight</b> does the same for the place names. <b>Flight</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trip lines stay on the map, but fade out when a flight zooms in far past where it started (after a long trip), because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
 </div>
@@ -423,17 +423,26 @@ function labelsOn() {
   requestAnimationFrame(function () { ['labels', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, 1); }); });
 }
 function nightFade(o) { setOp(sky.cv, o); ['nightBase', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, o); }); }
+// The trip lines are one drawing that the map only stretches while it zooms and redraws
+// after landing. Zooming in far past where the flight started (after a long trip) would blow
+// them up, so only then do they fade out, and they come back once redrawn.
+var zFrom = null, linesOut = false;
+function linesCheck(z) {
+  if (zFrom === null || linesOut || z - zFrom <= 1) return;
+  linesOut = true; map.getPane('overlayPane').style.opacity = 0;
+}
+map.on('zoom', function () { linesCheck(map.getZoom()); });
+map.on('zoomanim', function (e) { linesCheck(e.zoom); });
 function flightStart(go) {
-  // The trip lines are one drawing that the browser would only stretch while zooming,
-  // so they step aside for every flight and come back once redrawn.
-  map.getPane('overlayPane').style.opacity = 0;
-  var wait = 260;
+  zFrom = map.getZoom(); linesOut = false;
+  var wait = 0;
   if (S.labels === 'hide') { labelsOff(); wait = 320; }
   if (S.night === 'pause') { nightFade(0); wait = 320; }
   setTimeout(function () { inFlight = true; if (S.night === 'pause') paintNight(); go(); }, wait);
 }
 function flightEnd() {
-  requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = 1; }); });
+  zFrom = null;
+  if (linesOut) { linesOut = false; requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = 1; }); }); }
   if (!inFlight) return;
   inFlight = false;
   if (S.labels === 'hide') labelsOn();
