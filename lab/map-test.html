@@ -14,9 +14,9 @@ html,body{margin:0;height:100%;font:15px/1.4 system-ui,-apple-system,"Segoe UI",
 html.dark body{background:#15122F}
 #map{position:fixed;inset:0;background:#EBEAF5}
 html.dark #map{background:#15122F}
-html.print #map{background:#F2E8D9}html.print.dark #map{background:#121C52}
+html.print #map,html.tint #map{background:#F2E8D9}html.print.dark #map,html.tint.dark #map{background:#121C52}
 #grain{position:fixed;inset:0;z-index:500;pointer-events:none;display:none;background:radial-gradient(circle,rgba(30,58,158,.10) 0.8px,transparent 1.3px) 0 0/6px 6px}
-html.print #grain{display:block}html.print.dark #grain{background:radial-gradient(circle,rgba(242,232,217,.07) 0.8px,transparent 1.3px) 0 0/6px 6px}
+html.print #grain,html.tint #grain{display:block}html.print.dark #grain,html.tint.dark #grain{background:radial-gradient(circle,rgba(242,232,217,.07) 0.8px,transparent 1.3px) 0 0/6px 6px}
 .card{position:fixed;z-index:1000;background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:18px;box-shadow:0 8px 28px rgba(34,31,69,.14)}
 #top{left:10px;right:10px;top:10px;padding:10px 12px;max-width:520px}
 #top h1{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:8px}
@@ -66,7 +66,7 @@ html.dark #veil{background:#15122F}
   <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause while moving</button><button data-v="off">Hide</button></div></div>
   <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide while moving</button></div></div>
   <div class="row"><span>Move</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
-  <div class="row"><span>Look</span><div class="seg" id="segLook"><button data-v="grey" class="on">Grey</button><button data-v="print">Print</button></div></div>
+  <div class="row"><span>Look</span><div class="seg" id="segLook"><button data-v="grey" class="on">Grey</button><button data-v="tint">Tint</button><button data-v="print">Print</button></div></div>
   <div class="row"><span>Vector</span><div class="seg" id="segDetail"><button data-v="full" class="on">Full</button><button data-v="light">Lighter</button><button data-v="lightest">Lightest</button></div></div>
   </div>
   <div id="info">
@@ -76,6 +76,7 @@ html.dark #veil{background:#15122F}
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
     <p><b>Pause while moving</b> fades the night out before the map moves to the next trip and back in once it has arrived. <b>Hide while moving</b> does the same for the place names. <b>Move</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trips already drawn stay on the map during every move. Only when the map zooms in far past where the move started (after a long trip) do they fade out, because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
+    <p><b>Look › Tint</b> is the cheap way: the map stays as Esri sends it and two colour layers on top blend it into paper and ink, done by the browser as it draws, nothing per map piece. Less exact than Print, but nothing to wait for after a zoom.</p>
     <p><b>Look › Print</b> recolours the current map into the Risograph inks and paper: each map piece once, as it arrives, so nothing extra runs while the map moves (the bottom right shows how long that takes per piece). If Esri doesn't allow it, the page says so and the map stays grey.</p>
     <p><b>Vector</b> only affects the vector map. <b>Lighter</b> hides the small stuff while the map moves (buildings, side streets, paths, land use, woods and parks, smaller borders), keeping land, water, main roads and country borders. <b>Lightest</b> also draws at normal instead of sharp resolution while moving. Full detail comes back once the map has arrived.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
@@ -192,6 +193,29 @@ function nightTiles(on) {
   if (on && !nightL) { nightL = [esri('World_Dark_Gray_Base', 'nightBase'), esri('World_Dark_Gray_Reference', 'nightLabels')]; nightL.forEach(function (l) { l.addTo(map); }); }
   if (!on && nightL) { nightL.forEach(function (l) { map.removeLayer(l); }); nightL = null; setMask(map.getPane('labels').parentNode, null); }
 }
+
+// ---- Tint look: the cheap way. The map pieces stay as Esri sends them; two colour layers right above
+// them blend into paper and ink (multiply with the paper, then screen with the ink), and the place
+// names are blended and tinted too. The browser's compositor does this; nothing runs per piece.
+var tintW = null;
+function tintOn(on) {
+  if (on && !tintW) {
+    tintW = [wrapPane('tintA', 205).parentNode, wrapPane('tintB', 206).parentNode];
+    tintW.forEach(placeWrap);
+  }
+  if (!tintW) return;
+  var d = S.theme === 'dark';
+  tintW[0].style.background = on ? (d ? '#A9B8FF' : '#F2E8D9') : 'transparent';
+  tintW[0].style.mixBlendMode = on ? 'multiply' : '';
+  tintW[1].style.background = on ? (d ? '#0E1644' : '#14286E') : 'transparent';
+  // Light: lift Esri's grey a touch so the land lands on the paper colour.
+  map.getPane('tilePane').style.filter = on && !d ? 'brightness(1.08)' : '';
+  tintW[1].style.mixBlendMode = on ? 'screen' : '';
+  var lw = map.getPane('labels').parentNode;
+  lw.style.mixBlendMode = on ? (d ? 'screen' : 'multiply') : '';
+  lw.style.filter = on ? (d ? 'sepia(.5) saturate(1.4)' : 'sepia(1) saturate(4) hue-rotate(185deg) brightness(.8)') : '';
+}
+map.on('move zoomend resize viewreset', function () { if (tintW) tintW.forEach(placeWrap); });
 
 // ---- vector map: OpenFreeMap Positron, recoloured with BT•DT's palette
 var PAL = {
@@ -602,8 +626,8 @@ function seg(id, key, fn) {
     S[key] = b.dataset.v; fn();
   });
 }
-seg('segMap', 'map', function () { low = 99; plan = []; if (S.map === 'vector') { esriOff(); vectorOn(); } else { vectorOff(); esriOn(false); } paintNight(); });
-seg('segTheme', 'theme', function () { plan = [];
+seg('segMap', 'map', function () { low = 99; plan = []; setTimeout(function () { tintOn(S.look === 'tint' && S.map === 'esri'); }, 0); if (S.map === 'vector') { esriOff(); vectorOn(); } else { vectorOff(); esriOn(false); } paintNight(); });
+seg('segTheme', 'theme', function () { plan = []; setTimeout(function () { tintOn(S.look === 'tint' && S.map === 'esri'); }, 0);
   document.documentElement.classList.toggle('dark', S.theme === 'dark');
   if (S.map === 'vector') vectorOn(); else esriOn(true);
   done.eachLayer(function (l) { l.setStyle({ color: COL[S.theme][l.options.m || 'bike'] }); }); paintNight();
@@ -615,6 +639,8 @@ seg('segDetail', 'detail', function () { low = 99; });
 seg('segLook', 'look', function () {
   low = 99; plan = []; got = {}; printBlocked = false;
   document.documentElement.classList.toggle('print', S.look === 'print');
+  document.documentElement.classList.toggle('tint', S.look === 'tint');
+  tintOn(S.look === 'tint' && S.map === 'esri');
   if (S.map === 'esri') { var n = !!nightL; nightTiles(false); esriOn(true); if (n) paintNight(); }
 });
 function fold(shut) { $('rows').classList.toggle('shut', shut); $('opt').setAttribute('aria-expanded', !shut); if (shut) { $('info').classList.remove('open'); $('ib').setAttribute('aria-expanded', false); } }
