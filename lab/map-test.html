@@ -63,6 +63,7 @@ html.dark #veil{background:#15122F}
   <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="pause">Pause while moving</button><button data-v="off">Hide</button></div></div>
   <div class="row"><span>Labels</span><div class="seg" id="segLabels"><button data-v="keep" class="on">Keep</button><button data-v="hide">Hide while moving</button></div></div>
   <div class="row"><span>Move</span><div class="seg" id="segFly"><button data-v="glide" class="on">Glide</button><button data-v="hop">Hop</button><button data-v="fade">Fade</button></div></div>
+  <div class="row"><span>Vector</span><div class="seg" id="segDetail"><button data-v="full" class="on">Full</button><button data-v="light">Lighter</button><button data-v="lightest">Lightest</button></div></div>
   </div>
   <div id="info">
     <p>Press play: the map moves from trip to trip and draws each one, like playback in the app. The trips are from the demo.</p>
@@ -71,6 +72,7 @@ html.dark #veil{background:#15122F}
     <p>Before playback starts, the page works out each flight's path and downloads every map piece it will pass through, at every zoom level, for the first four flights (the progress bar). While playing, it keeps four flights ahead. After a flight it still waits up to two seconds for the map, like the app.</p>
     <p>To see how much the night costs, compare the lowest number with Night on and off (reload the page in between).</p>
     <p><b>Pause while moving</b> fades the night out before the map moves to the next trip and back in once it has arrived. <b>Hide while moving</b> does the same for the place names. <b>Move</b> changes how the map travels between trips: <b>Glide</b> is today's, <b>Hop</b> zooms out in steps, moves across and zooms in, <b>Fade</b> fades to the next trip. The trips already drawn stay on the map during every move. Only when the map zooms in far past where the move started (after a long trip) do they fade out, because zooming would only stretch them; they come back once redrawn. <b>Options</b> folds these away while playing.</p>
+    <p><b>Vector</b> only affects the vector map. <b>Lighter</b> hides the small stuff while the map moves (buildings, side streets, paths, land use, woods and parks, smaller borders), keeping land, water, main roads and country borders. <b>Lightest</b> also draws at normal instead of sharp resolution while moving. Full detail comes back once the map has arrived.</p>
     <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
   </div>
 </div>
@@ -91,7 +93,7 @@ var TRIPS = [{"m":"foot","t":1737280500000,"e":1737281286000,"km":1.1,"off":60,"
 var COL = { light: { road: '#2a78d6', air: '#eb6834', transit: '#1baf7a', foot: '#eda100', bike: '#6250d6', water: '#e87ba4' },
             dark:  { road: '#3987e5', air: '#d95926', transit: '#199e70', foot: '#c98500', bike: '#9085e9', water: '#d55181' } };
 var NAME = { road: 'Car', air: 'Flight', transit: 'Public transport', foot: 'Walking', bike: 'Cycling', water: 'Ferry' };
-var S = { map: 'esri', theme: 'light', night: 'on', labels: 'keep', fly: 'glide' }, inFlight = false;
+var S = { map: 'esri', theme: 'light', night: 'on', labels: 'keep', fly: 'glide', detail: 'full' }, inFlight = false;
 var $ = function (id) { return document.getElementById(id); };
 
 var map = L.map('map', { preferCanvas: true, zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([52.36, 4.88], 12);
@@ -422,6 +424,28 @@ function labelsOn() {
   if (g && g.getStyle()) g.getStyle().layers.forEach(function (l) { if (l.type === 'symbol') { g.setLayoutProperty(l.id, 'visibility', 'visible'); g.setPaintProperty(l.id, 'text-opacity', null); g.setPaintProperty(l.id, 'icon-opacity', null); } });
   requestAnimationFrame(function () { ['labels', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, 1); }); });
 }
+// Vector map, while moving: Lighter hides the small stuff (buildings, side streets, paths,
+// land use, woods and parks, borders below country level, road outlines), keeping land,
+// water, main roads and country borders. Lightest also draws at normal resolution instead
+// of the phone's sharp one. Everything comes back once the map has arrived.
+var SKIP = /building|landuse|landcover|park|wood|grass|housenum|poi|minor|service|path|track|pedestrian|casing|outline|bridge|tunnel|aeroway|rail|ferry|pier|ice|sand|wetland|pitch|cemetery|boundary(?!_country)|admin_sub/;
+var hiddenL = [], ratio0 = null;
+function detailOff() {
+  var g = gl && gl.getMaplibreMap();
+  if (!g || S.map !== 'vector' || S.detail === 'full' || !g.getStyle()) return;
+  g.getStyle().layers.forEach(function (l) {
+    if (l.type === 'background' || l.type === 'symbol' || !SKIP.test(l.id) || (l.layout && l.layout.visibility === 'none')) return;
+    g.setLayoutProperty(l.id, 'visibility', 'none'); hiddenL.push(l.id);
+  });
+  if (S.detail === 'lightest' && g.setPixelRatio && g.getPixelRatio() > 1) { ratio0 = g.getPixelRatio(); g.setPixelRatio(1); }
+}
+function detailOn() {
+  var g = gl && gl.getMaplibreMap();
+  if (g && g.getStyle()) hiddenL.forEach(function (id) { if (g.getLayer(id)) g.setLayoutProperty(id, 'visibility', 'visible'); });
+  hiddenL = [];
+  if (g && ratio0) g.setPixelRatio(ratio0);
+  ratio0 = null;
+}
 function nightFade(o) { setOp(sky.cv, o); ['nightBase', 'nightLabels'].forEach(function (p) { setOp(map.getPane(p).parentNode, o); }); }
 // The trip lines are one drawing that the map only stretches while it zooms and redraws
 // after landing. Zooming in far past where the flight started (after a long trip) would blow
@@ -435,6 +459,7 @@ map.on('zoom', function () { linesCheck(map.getZoom()); });
 map.on('zoomanim', function (e) { linesCheck(e.zoom); });
 function flightStart(go) {
   zFrom = map.getZoom(); linesOut = false;
+  detailOff();
   var wait = 0;
   if (S.labels === 'hide') { labelsOff(); wait = 320; }
   if (S.night === 'pause') { nightFade(0); wait = 320; }
@@ -442,6 +467,7 @@ function flightStart(go) {
 }
 function flightEnd() {
   zFrom = null;
+  detailOn();
   if (linesOut) { linesOut = false; requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = 1; }); }); }
   if (!inFlight) return;
   inFlight = false;
@@ -532,6 +558,7 @@ seg('segTheme', 'theme', function () { plan = [];
 seg('segNight', 'night', function () { plan = []; paintNight(); });
 seg('segLabels', 'labels', function () { plan = []; });
 seg('segFly', 'fly', function () { plan = []; low = 99; });
+seg('segDetail', 'detail', function () { low = 99; });
 function fold(shut) { $('rows').classList.toggle('shut', shut); $('opt').setAttribute('aria-expanded', !shut); if (shut) { $('info').classList.remove('open'); $('ib').setAttribute('aria-expanded', false); } }
 $('opt').onclick = function () { fold(!$('rows').classList.contains('shut')); };
 $('ib').onclick = function () { var o = $('info').classList.toggle('open'); $('ib').setAttribute('aria-expanded', o); };
