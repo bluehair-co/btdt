@@ -220,11 +220,11 @@ function modeOf(i) { return MODES[D.mode[i]]; }
 function tripLabel(i) { var s = D.sport && D.sport[i]; if (s && SPORTS[s]) return SPORTS[s][1]; if (D.stype && D.stype[i]) return esc(D.stype[i]); var m = modeOf(i); return LABEL[m] || m; }
 // app (where a recorded activity came from) adds a mark in the top right corner: Strava's logo for
 // Strava, a small track for any other app or device.
-var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" fill="#fff"/></svg></span>';
+var STRAVA_MARK = '<span class="strava-mark" title="From Strava"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M6.6 1.5 11 10H8.4L6.6 6.6 4.8 10H2.2zM10.3 10.6l1.2 2.4 1.2-2.4h1.9l-3.1 6-3.1-6z" style="fill:var(--on-color)"/></svg></span>';
 // Trips from a simulated file (see merge) get a "Simulated" tag wherever they are shown.
 function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
 function simTag(i) { return (isSim(i) ? '<span class="guess sim">Simulated</span>' : '') + mrTag(i) + splitTag(i); }
-var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" fill="#fff"/></svg>';
+var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" style="stroke:var(--on-color)" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" style="fill:var(--on-color)"/></svg>';
 function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
 function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
 // A ride on a cargo bike or a Halfbike shows that bike's icon.
@@ -252,12 +252,15 @@ if (PREFS.proj !== 'merc' && PREFS.proj !== 'globe') PREFS.proj = 'merc';
 // The demo turns Countries visited on for itself; your own setting is what gets saved.
 function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(DEMO ? Object.assign({}, PREFS, { cc: DEMO.cc }) : PREFS)); } catch (e) { /* ignore */ } }
 function applyTheme() {
-  if (PREFS.theme === 'system') document.documentElement.removeAttribute('data-theme');
-  else document.documentElement.setAttribute('data-theme', PREFS.theme);
+  // data-theme is always light or dark, so the CSS writes the dark theme once (see the top of app.css).
+  var t = PREFS.theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : PREFS.theme;
+  document.documentElement.setAttribute('data-theme', t);
   var meta = document.querySelector('meta[name="theme-color"]:not([media])');
   if (meta) meta.setAttribute('content', cssVar('--bg'));
 }
 function cssVar(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+// A numbered colour scale from app.css, such as --speed-1 … --speed-8.
+function tokens(prefix, n) { var a = []; for (var k = 1; k <= n; k++) a.push(cssVar(prefix + k)); return a; }
 function isDark() { return cssVar('color-scheme') === 'dark'; }
 
 // ---------- CO₂ (UK DESNZ/DEFRA 2025 factors, g CO₂e per km) ----------

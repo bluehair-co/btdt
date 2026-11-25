@@ -459,7 +459,7 @@ var SPEED_FIT = [
   { modes: ['SKIING'], bands: [3, 6, 10, 20, 30, 45, 70] },
   { sports: ['inline', 'skateboard', 'rollerski'], bands: [5, 10, 14, 18, 22, 26, 30] }
 ];
-var SPEED_COLORS = ['#d7301f', '#f46d43', '#fdae61', '#fee08b', '#a6d96a', '#1a9850', '#2b83ba', '#5e3c99'];
+var SPEED_COLORS = tokens('--speed-', 8);
 var SPEED_CELL = 10;
 var spBands = { ver: -1, d: null, bands: SPEED_BANDS };
 function speedBands() {
@@ -560,7 +560,7 @@ var HR_ZONES = [
   { n: 'Z1', name: 'Recovery', lo: 0 }, { n: 'Z2', name: 'Endurance', lo: 0.6 }, { n: 'Z3', name: 'Tempo', lo: 0.7 },
   { n: 'Z4', name: 'Threshold', lo: 0.8 }, { n: 'Z5', name: 'Maximum', lo: 0.9 }];
 // The same in both themes, on the map and in the charts: grey-blue, blue, green, amber, red.
-var HR_COLORS = ['#8a9bb0', '#2a78d6', '#1baf7a', '#eda100', '#e34948'];
+var HR_COLORS = tokens('--hr-', 5);
 // Your maximum heart rate: the one set in Preferences, or else the highest any activity held (its 99th
 // percentile, so a strap's brief spike doesn't count). Kept per import.
 var hrAuto = { d: null, v: 0, n: 0 };
@@ -1823,7 +1823,7 @@ var lineIconImg = {};
 function lineIconImage(name) {
   if (!lineIconImg[name]) {
     var im = new Image();
-    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="#fff" color="#fff">' + LINE_ICONS[name] + '</svg>');
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="48" height="48" fill="' + cssVar('--on-color') + '" color="' + cssVar('--on-color') + '">' + LINE_ICONS[name] + '</svg>');
     im.onload = function () { if (P && P.proj) paintProj(playing); };
     lineIconImg[name] = im;
   }
@@ -2159,7 +2159,7 @@ function buildCC() {
 // strength is its share of the busiest cells, then the grey levels are coloured.
 var heatDirty = true, heatData = null;
 function heatStops() {
-  return isDark() ? ['rgba(255,140,110,0)', '#a8392b', '#e2574a', '#ff9a85', '#ffe1d9'] : ['rgba(250,180,160,0)', '#f7b8a6', '#e8644f', '#b8261a', '#6d0f07'];
+  return [0, 1, 2, 3, 4].map(function (k) { return cssVar('--heat-' + k); });
 }
 var heatPalette = null, heatPalDark = null;
 function palette() {
@@ -2584,12 +2584,12 @@ function paintProj(fast) {
   if (cv.width !== Math.round(w * dpr) || cv.height !== Math.round(h * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  var path = d3.geoPath(P.proj, ctx), dark = isDark();
+  var path = d3.geoPath(P.proj, ctx);
   ctx.beginPath(); path({ type: 'Sphere' });
-  ctx.fillStyle = dark ? '#17143a' : '#e2e4f0'; ctx.fill();
+  ctx.fillStyle = cssVar('--globe-sea'); ctx.fill();
   ctx.beginPath(); path(P.grat);
-  ctx.strokeStyle = dark ? '#241f4d' : '#d2d4e4'; ctx.lineWidth = 0.5; ctx.stroke();
-  ctx.fillStyle = dark ? '#262150' : '#fffaf6'; ctx.strokeStyle = dark ? '#3d3768' : '#d6ccc4'; ctx.lineWidth = 0.6;
+  ctx.strokeStyle = cssVar('--globe-grid'); ctx.lineWidth = 0.5; ctx.stroke();
+  ctx.fillStyle = cssVar('--globe-land'); ctx.strokeStyle = cssVar('--globe-coast'); ctx.lineWidth = 0.6;
   P.land.forEach(function (polys) {
     ctx.beginPath();
     polys.forEach(function (poly) { path(poly); });
@@ -2654,12 +2654,12 @@ function paintProj(fast) {
       var pm = posMode();
       if (pm) {
         var col = cssVar(groupOf(pm).v);
-        ctx.globalAlpha = 1; ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
+        ctx.globalAlpha = 1; ctx.fillStyle = cssVar('--on-color'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
         var ic = posIc(), img = LINE_ICONS[ic] && lineIconImage(ic);
         if (img) ctx.drawImage(img, xy[0] - 8, xy[1] - 8, 16, 16);
         else {
-          ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = '#fff';
+          ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = cssVar('--on-color');
           ctx.fill(new Path2D(ICONS[ic] || ICONS[pm] || ICONS.OTHER), pm === 'CABLE' ? 'evenodd' : 'nonzero'); ctx.restore();
         }
         // The speed pill under the marker, as on the flat map.
@@ -2675,7 +2675,7 @@ function paintProj(fast) {
           ctx.fillStyle = cssVar('--fg'); ctx.fillText(txt, xy[0], ty + 0.5); ctx.restore();
         }
       } else {
-        ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
+        ctx.fillStyle = cssVar('--on-color'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 8, 0, 7); ctx.fill();
         ctx.fillStyle = cssVar('--pos-still'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 5.5, 0, 7); ctx.fill();
       }
     }

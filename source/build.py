@@ -39,6 +39,10 @@ HEAD = '''<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="See everywhere you've been on a heatmap from your Google Timeline export, Garmin, Strava or any GPX, KML, GeoJSON or FIT file: trips, flights, countries and how you get around. Free, works offline, and your files never leave your device.">
 <meta name="theme-color" content="#f7f2ee">
+<script>/* Light or dark before the page draws, so dark mode never flashes light; applyTheme() in core.js keeps it up to date. */
+(function () { var t; try { t = JSON.parse(localStorage.getItem('btdt.prefs') || '{}').theme; } catch (e) {}
+if (t !== 'light' && t !== 'dark') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+document.documentElement.setAttribute('data-theme', t); })();</script>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">

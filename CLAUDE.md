@@ -46,7 +46,7 @@ Everything is plain ES5-style JavaScript with globals, concatenated by `build.py
 | File | What it holds |
 |---|---|
 | `app.html` | All markup: landing, About and *How to get your files* modals, tabs, filters, settings, sheets, loader, the Working pill. |
-| `app.css` | All styles. Colour tokens are CSS variables (`--m-road`, `--m-transit`, `--accent`…), light and dark themes. |
+| `app.css` | All styles. Design tokens (colours, fonts, text sizes, spacing, corners) are CSS variables at the top, with the dark theme written once in `:root[data-theme="dark"]`. Use them, never raw values: see *Look* in `docs/design-rules.md`. |
 | `parser.js` | Reads every input format (Timeline.json on-device and iPhone, Takeout Records.json and Semantic Location History, Dawarich, Strava ZIP, GPX/KML/KMZ/GeoJSON/TCX/FIT) into flat typed arrays, then cleans them: GPS jumps (`cleanJumps`), stale ends (`cleanEnds`), stops, stays, cell-tower/Wi-Fi fixes (`netFixes`), places Google moved (`movedPlaces`), transport guessing (`guessMode`, `TripIndex` voting, speed profiles, corridors, stations), merged-trip splitting (`splitPlan`). |
 | `core.js` | Basics: `$`, dates, units, preferences (`PREFS`, saved in localStorage `btdt.prefs`), icons, the (i) helpers (`infoHead`, `infoBtn`, `infoBox`, `infoMore`), country lookup, the loader (`busy()`), the Working pill (`working()`), and `promptBar()`: every bar that floats over the app (see `docs/design-rules.md`). |
 | `data.js` | State (`D` trips/stays with Strava laid over, `RAW` as loaded, `M` facts, `F` filters, `sel`), loading and saving (IndexedDB), filters, imports, export (JSON/CSV), trip details. |

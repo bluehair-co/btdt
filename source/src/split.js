@@ -385,7 +385,7 @@ function splitHandStart(i) {
   if (typeof ignEnd === 'function') ignEnd();
   if (typeof selEnd === 'function') selEnd();
   splitHandEnd();
-  SPL = { i: i, key: key, ms: l ? l.was.start : D.start[i], pts: pts, t: t, cuts: [], layer: L.layerGroup().addTo(map), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) || '#c25228' };
+  SPL = { i: i, key: key, ms: l ? l.was.start : D.start[i], pts: pts, t: t, cuts: [], layer: L.layerGroup().addTo(map), col: cssVar((modeColor(MODES[D.mode[i]]).match(/--[\w-]+/) || [''])[0]) };
   layerToggles();
   promptBar('splitBar', { icon: 'split', acts: [['Undo', 'quiet', 'undo'], ['Cancel', 'quiet', 'cancel'], ['Split', 'primary', 'save']],
     on: function (a) {
@@ -399,13 +399,13 @@ function splitHandStart(i) {
 }
 function splitHandDraw() {
   SPL.layer.clearLayers();
-  L.polyline(SPL.pts, { color: '#fff', weight: 8, opacity: .9, interactive: false }).addTo(SPL.layer);
+  L.polyline(SPL.pts, { color: cssVar('--on-color'), weight: 8, opacity: .9, interactive: false }).addTo(SPL.layer);
   L.polyline(SPL.pts, { color: SPL.col, weight: 4.5, opacity: 1, interactive: false }).addTo(SPL.layer);
   SPL.pts.forEach(function (p) { L.circleMarker(p, { radius: 2.5, stroke: false, fillColor: SPL.col, fillOpacity: .9, interactive: false }).addTo(SPL.layer); });
-  [0, SPL.pts.length - 1].forEach(function (k) { L.circleMarker(SPL.pts[k], { radius: 6, color: '#fff', weight: 2, fillColor: SPL.col, fillOpacity: 1, interactive: false }).addTo(SPL.layer); });
+  [0, SPL.pts.length - 1].forEach(function (k) { L.circleMarker(SPL.pts[k], { radius: 6, color: cssVar('--on-color'), weight: 2, fillColor: SPL.col, fillOpacity: 1, interactive: false }).addTo(SPL.layer); });
   var cuts = SPL.cuts.slice().sort(function (a, b) { return a - b; });
   cuts.forEach(function (k, x) {
-    L.circleMarker(SPL.pts[k], { radius: 8, color: '#fff', weight: 2.5, fillColor: cssVar('--accent') || '#c25228', fillOpacity: 1, interactive: false })
+    L.circleMarker(SPL.pts[k], { radius: 8, color: cssVar('--on-color'), weight: 2.5, fillColor: cssVar('--accent'), fillOpacity: 1, interactive: false })
       .bindTooltip(clock(SPL.t[k] * 1000, D.off[SPL.i]), { permanent: true, direction: 'top', offset: [0, -9], className: 'snap-tip' }).addTo(SPL.layer);
   });
   var n = cuts.length;

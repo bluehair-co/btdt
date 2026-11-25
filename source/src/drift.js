@@ -296,7 +296,7 @@ function driftList() {
       '<span class="file-txt"><b>' + esc(x.name) + '</b><small>' + driftWalks(x.n) + ' · ' + driftHours(x.ms) + '</small></span>' + icon('right', 'mr-chev') + '</button></li>';
   }).concat(done.map(function (r) {
     var st = MR && MR.on && MR_DRIFT[r.id], n = st ? st.stay + st.cut : 0;
-    return '<li><button type="button" class="drift-row" data-drift-rule="' + esc(r.id) + '">' + lookBadge({ ic: 'home', bg: '#8a918c' }, true) +
+    return '<li><button type="button" class="drift-row" data-drift-rule="' + esc(r.id) + '">' + lookBadge({ ic: 'home', bg: 'var(--map-grey)' }, true) +
       '<span class="file-txt"><b>' + esc(driftName(r)) + '</b><small>' + (r.enabled === false || !MR.on ? 'Switched off' : driftWalks(n) + ' made stays') + '</small></span><span class="tag-done">Done</span>' + icon('right', 'mr-chev') + '</button></li>';
   }));
   box.innerHTML = rows.join('');
@@ -345,7 +345,7 @@ function driftStart(o) {
   var r = o.rule || o.place && o.place.drift && o.place || null;
   DR = { rule: r, place: o.place || r, c: r ? r.at.map(Number) : o.c, rad: r ? driftRad(r) : DRIFT_RAD, name: r ? driftName(r) : o.name || 'This place', off: new Set(), sel: -1, cands: [] };
   DR.r = L.canvas({ pane: 'mrg', padding: 0.5, tolerance: 6 });
-  DR.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: DR.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
+  DR.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: DR.r, stroke: false, fillColor: cssVar('--bg'), fillOpacity: .5, interactive: false }).addTo(map);
   DR.layer = L.layerGroup().addTo(map);
   map.getContainer().classList.add('drift-on');
   document.body.classList.add('sel-mode', 'drift-mode');
@@ -462,7 +462,7 @@ function driftPath(i) {
 }
 function driftDraw() {
   DR.layer.clearLayers();
-  var foot = cssVar('--m-foot') || '#eda100', acc = cssVar('--accent') || '#c25228', grey = cssVar('--muted') || '#6b6688';
+  var foot = cssVar('--m-foot'), acc = cssVar('--accent'), grey = cssVar('--muted');
   DR.circle = L.circle(DR.c, { pane: 'mrg', renderer: DR.r, radius: DR.rad, color: acc, weight: 2, dashArray: '7 5', fillColor: acc, fillOpacity: .07, interactive: false }).addTo(DR.layer);
   // A cut-back walk: only its still ends become the stay; the part where you moved stays a walk (grey).
   var onP = [], offP = [], moveP = [], sel = null;
@@ -482,10 +482,10 @@ function driftDraw() {
   if (moveP.length) L.polyline(moveP, { pane: 'mrg', renderer: DR.r, color: grey, weight: 1.6, opacity: sel ? .3 : .55, interactive: false }).addTo(DR.layer);
   if (onP.length) L.polyline(onP, { pane: 'mrg', renderer: DR.r, color: foot, weight: 2.6, opacity: sel ? .45 : .85, interactive: false }).addTo(DR.layer);
   if (sel) {
-    L.polyline(sel, { pane: 'mrg', renderer: DR.r, color: '#fff', weight: 8, opacity: .95, interactive: false }).addTo(DR.layer);
+    L.polyline(sel, { pane: 'mrg', renderer: DR.r, color: cssVar('--on-color'), weight: 8, opacity: .95, interactive: false }).addTo(DR.layer);
     L.polyline(sel, { pane: 'mrg', renderer: DR.r, color: DR.off.has(DR.sel) ? grey : acc, weight: 4, dashArray: DR.off.has(DR.sel) ? '6 5' : null, interactive: false }).addTo(DR.layer);
   }
-  L.circleMarker(DR.c, { pane: 'mrg', renderer: DR.r, radius: 5, color: '#fff', weight: 2, fillColor: acc, fillOpacity: 1, interactive: false }).addTo(DR.layer);
+  L.circleMarker(DR.c, { pane: 'mrg', renderer: DR.r, radius: 5, color: cssVar('--on-color'), weight: 2, fillColor: acc, fillOpacity: 1, interactive: false }).addTo(DR.layer);
 }
 // A tap on the map: the walk nearest it (within 14 px) is shown, and its row in the list.
 function driftTap(ev) {
@@ -658,8 +658,8 @@ function stayPickStart(i) {
   if (!map.getPane('mrg')) { map.createPane('mrg'); map.getPane('mrg').style.zIndex = 460; }
   STP = { i: i, cands: cands, spot: mid, sug: best ? best.k : null, sel: best ? best.k : 'spot' };
   STP.r = L.canvas({ pane: 'mrg', padding: 0.5 });
-  STP.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: STP.r, stroke: false, fillColor: cssVar('--bg') || '#f7f2ee', fillOpacity: .5, interactive: false }).addTo(map);
-  STP.line = L.polyline(pts, { pane: 'mrg', renderer: STP.r, color: cssVar('--m-foot') || '#c98500', weight: 4, opacity: .8, interactive: false }).addTo(map);
+  STP.dim = L.rectangle([[-89, -720], [89, 720]], { pane: 'mrg', renderer: STP.r, stroke: false, fillColor: cssVar('--bg'), fillOpacity: .5, interactive: false }).addTo(map);
+  STP.line = L.polyline(pts, { pane: 'mrg', renderer: STP.r, color: cssVar('--m-foot'), weight: 4, opacity: .8, interactive: false }).addTo(map);
   STP.layer = L.layerGroup().addTo(map);
   map.getContainer().classList.add('sel-on');
   document.body.classList.add('sel-mode');

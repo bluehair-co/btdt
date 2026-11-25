@@ -236,8 +236,8 @@ function mvDialog(key, r) {
       L.control.zoom({ position: 'topright' }).addTo(m);
       m.setView(pin, 15, { animate: false });
       addTiles(m);
-      L.circleMarker(g, { radius: 6, color: '#fff', weight: 2, fillColor: '#8a918c', fillOpacity: 1 }).addTo(m).bindTooltip('Google\'s location now');
-      var mk = L.circleMarker(pin, { radius: 9, color: '#fff', weight: 3, fillColor: '#0f7c8c', fillOpacity: 1, interactive: false }).addTo(m);
+      L.circleMarker(g, { radius: 6, color: cssVar('--on-color'), weight: 2, fillColor: cssVar('--map-grey'), fillOpacity: 1 }).addTo(m).bindTooltip('Google\'s location now');
+      var mk = L.circleMarker(pin, { radius: 9, color: cssVar('--on-color'), weight: 3, fillColor: cssVar('--rule'), fillOpacity: 1, interactive: false }).addTo(m);
       function count() {
         var f = mrDayNum($('mvFrom').value), t = mrDayNum($('mvTo').value), n = 0;
         vs.forEach(function (v) { if ((f == null || D.vday[v] >= f) && (t == null || D.vday[v] <= t)) n++; });
