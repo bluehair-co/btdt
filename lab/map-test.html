@@ -490,7 +490,7 @@ function step() {
   if (!nowT || Math.abs(tt - nowT) > 6e4) { nowT = tt; paintNight(); }
   $('trip').querySelector('small').textContent = clock(tt, t.off) + ' · trip ' + (i + 1) + ' of ' + TRIPS.length;
   if (f < 1) { raf = requestAnimationFrame(step); return; }
-  map.removeLayer(dot); cur.addTo(done); map.removeLayer(cur); cur = null; dot = null; moving = false;
+  map.removeLayer(dot); map.removeLayer(cur); done.addLayer(cur); cur = null; dot = null; moving = false;
   setTimeout(function () { if (playing) next(); }, 500);
 }
 function setPlay(on) {
