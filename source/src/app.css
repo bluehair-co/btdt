@@ -12,22 +12,22 @@
   --bike-dark: #9085e9; --water-dark: #d55181; --other-dark: #5d6961; --unknown-dark: #8e93ae;
 
   /* Surfaces and text */
-  --bg: #f7f2ee;
-  --panel: #ffffff;
-  --glass: rgba(255, 255, 255, .92);
+  --bg: #EBEAF5;
+  --panel: #F6F5FC;
+  --glass: rgba(246, 245, 252, .92);
   --fg: #221f45;
   --muted: #6b6688;
-  --line: #ebe3dc;
-  --grid: #efe9e4;
-  --chip: #f3ece6;
-  --chip-on-bg: #fde2cf;
-  --chip-on-fg: #a84a1c;
-  --accent: #c25228;
+  --line: #DCD9EC;
+  --grid: #E6E4F1;
+  --chip: #E6E4F2;
+  --chip-on-bg: #FBEBC0;
+  --chip-on-fg: #6E4E00;
+  --accent: #3D3591;
   --accent-fg: #ffffff;
   --on-color: #fff;            /* icons, text and outlines on a coloured fill, and the white casing of lines on the map */
   --danger: #c62f27;           /* Delete and Remove buttons, points to ignore */
   --error: #d0342c;            /* error messages */
-  --shadow: 0 8px 28px rgba(34, 31, 69, .14);
+  --shadow: 0 8px 28px rgba(34, 31, 69, .10);
 
   /* Transport (themed) */
   --m-road: var(--road-light); --m-air: var(--air-light); --m-transit: var(--transit-light); --m-foot: var(--foot-light);
@@ -864,7 +864,7 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 #insightsPage, #timelinePage {
   isolation: isolate;
   --veil-a: 52%; --veil-b: 82%; --veil-c: 92%;
-  --panel: rgba(255, 255, 255, .74); --glass: rgba(255, 255, 255, .82);
+  --panel: rgba(246, 245, 252, .74); --glass: rgba(246, 245, 252, .82);
 }
 #insightsPage::before, #timelinePage::before {
   content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
