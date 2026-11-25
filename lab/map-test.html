@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>BT•DT map test</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<style>
+:root{--ink:#221f45;--muted:#6b6688;--panel:rgba(246,245,252,.92);--accent:#3D3591;--gold:#FBEBC0;--gold-ink:#6E4E00;--line:#DCD9EC}
+html.dark{--ink:#F3EEFB;--muted:#B7B0D6;--panel:rgba(34,31,77,.88);--accent:#f59a5c;--gold:#4a3f1c;--gold-ink:#FFE985;--line:#3A3672}
+html,body{margin:0;height:100%;font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#EBEAF5}
+html.dark body{background:#15122F}
+#map{position:fixed;inset:0;background:#EBEAF5}
+html.dark #map{background:#15122F}
+.card{position:fixed;z-index:1000;background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:18px;box-shadow:0 8px 28px rgba(34,31,69,.14)}
+#top{left:10px;right:10px;top:10px;padding:10px 12px;max-width:520px}
+#top h1{margin:0 0 8px;font-size:16px;display:flex;align-items:center;gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.row>span{font-size:13px;color:var(--muted);width:44px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{font:inherit;font-size:13px;border:0;background:transparent;color:var(--ink);padding:7px 12px;min-height:34px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--gold);color:var(--gold-ink);font-weight:600}
+.ib{width:26px;height:26px;border-radius:50%;border:1px solid var(--muted);background:transparent;color:var(--ink);font:italic 600 13px Georgia,serif;cursor:pointer}
+#info{display:none;margin-top:8px;font-size:13px;color:var(--ink)}
+#info.open{display:block}
+#info p{margin:4px 0}
+#bot{left:10px;right:10px;bottom:14px;padding:10px 12px;display:flex;align-items:center;gap:12px;max-width:520px;margin:0 auto}
+#play{flex:none;width:46px;height:46px;border-radius:50%;border:0;background:var(--accent);color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+html.dark #play{color:#15122F}
+#trip{flex:1;min-width:0}
+#trip b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#trip small{color:var(--muted);font-size:12px}
+#fps{flex:none;text-align:right;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#fps b{display:block;font-size:17px;color:var(--ink)}
+#msg{position:fixed;z-index:999;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--panel);padding:12px 16px;border-radius:12px;display:none}
+.pane-wrap{position:absolute;pointer-events:none}
+.leaflet-control-attribution{font-size:10px}
+#bot{bottom:calc(14px + 16px)}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="card" id="top">
+  <h1>Map test <button class="ib" id="ib" aria-label="What to look for" aria-expanded="false" aria-controls="info">i</button></h1>
+  <div class="row"><span>Map</span><div class="seg" id="segMap"><button data-v="esri" class="on">Current</button><button data-v="vector">Vector</button></div></div>
+  <div class="row"><span>Theme</span><div class="seg" id="segTheme"><button data-v="light" class="on">Light</button><button data-v="dark">Dark</button></div></div>
+  <div class="row"><span>Night</span><div class="seg" id="segNight"><button data-v="on" class="on">Show</button><button data-v="off">Hide</button></div></div>
+  <div id="info">
+    <p>Press play: the map flies from trip to trip and draws each one, like playback in the app. The trips are from the demo.</p>
+    <p><b>Current</b> is today's Esri map. <b>Vector</b> is OpenFreeMap, coloured with BT•DT's indigo palette.</p>
+    <p>Compare how zooming feels (sharp or blurry, smooth or jumpy), whether the trip lines stay glued to the map while it flies, and how the night side looks. With Current, night shows the dark map; with Vector, it's a shadow over the map.</p>
+    <p>The number on the right is frames per second while things move: 60 is perfectly smooth, under 30 feels choppy. Try Light and Dark too.</p>
+  </div>
+</div>
+<div class="card" id="bot">
+  <button id="play" aria-label="Play"><svg id="pi" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5l12 7-12 7z"/></svg></button>
+  <div id="trip"><b>Press play</b><small>14 trips: Amsterdam, a train, flights to Vietnam</small></div>
+  <div id="fps"><b>–</b>fps</div>
+</div>
+<div id="msg"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://unpkg.com/@maplibre/maplibre-gl-leaflet@0.1.3/leaflet-maplibre-gl.js"></script>
+<script>
+{
+var TRIPS = [{"m":"foot","t":1737280500000,"e":1737281286000,"km":1.1,"off":60,"p":[[52.36395,4.8656],[52.36244,4.86484],[52.361,4.86415],[52.36016,4.86382],[52.35961,4.8635],[52.35908,4.86285],[52.35862,4.8644],[52.35814,4.867],[52.35766,4.86903],[52.35789,4.86876],[52.358,4.8685]]},{"m":"transit","t":1737285486000,"e":1737285750000,"km":1.1,"off":60,"p":[[52.358,4.8685],[52.35764,4.86905],[52.35882,4.86371],[52.35898,4.86309],[52.36032,4.86401],[52.36308,4.86512],[52.36395,4.8656]]},{"m":"bike","t":1737286020000,"e":1737286917000,"km":3.7,"off":60,"p":[[52.36395,4.8656],[52.36655,4.86644],[52.367,4.86875],[52.36791,4.87413],[52.36831,4.87428],[52.37193,4.87721],[52.37252,4.87781],[52.37433,4.88292],[52.37477,4.88371],[52.3741,4.88692],[52.37311,4.89211],[52.37308,4.89266],[52.37524,4.89516],[52.37771,4.89837],[52.37854,4.89942],[52.38051,4.89968],[52.3812,4.8996]]},{"m":"water","t":1737287277000,"e":1737288012000,"km":2.3,"off":60,"p":[[52.3812,4.8996],[52.38491,4.89848],[52.388,4.89759],[52.38873,4.89715],[52.3937,4.89424],[52.3961,4.89294],[52.39803,4.89222],[52.4006,4.8916]]},{"m":"water","t":1737299832000,"e":1737300605000,"km":2.3,"off":60,"p":[[52.4006,4.8916],[52.39769,4.89248],[52.39605,4.89312],[52.39456,4.89381],[52.39044,4.89623],[52.38794,4.89765],[52.38727,4.8978],[52.38256,4.89905],[52.3812,4.8996]]},{"m":"bike","t":1737300605000,"e":1737301395000,"km":3.7,"off":60,"p":[[52.3812,4.8996],[52.3786,4.89941],[52.37729,4.89774],[52.37425,4.8939],[52.37305,4.89262],[52.37392,4.88753],[52.37471,4.88378],[52.37413,4.88216],[52.37246,4.87774],[52.37214,4.87727],[52.36839,4.87428],[52.36794,4.8741],[52.36716,4.86978],[52.36653,4.86641],[52.36494,4.86594],[52.36395,4.8656]]},{"m":"bike","t":1737311700000,"e":1737312481000,"km":3.4,"off":60,"p":[[52.36395,4.8656],[52.36027,4.8638],[52.36015,4.86381],[52.36055,4.86857],[52.3608,4.871],[52.3609,4.87302],[52.36114,4.87811],[52.36163,4.879],[52.36417,4.88299],[52.3645,4.88403],[52.36604,4.88775],[52.36593,4.88799],[52.36695,4.89198],[52.36723,4.89331],[52.36633,4.89647],[52.3662,4.89659],[52.3674,4.90084],[52.3676,4.9018]]},{"m":"transit","t":1716106794000,"e":1716109967000,"km":75.3,"off":120,"p":[[52.3789,4.9003],[52.38891,4.83804],[52.36198,4.81378],[52.36058,4.81212],[52.33729,4.78338],[52.30922,4.76214],[52.304,4.7454],[52.29562,4.71955],[52.27663,4.68239],[52.26397,4.63898],[52.26323,4.63746],[52.24596,4.60506],[52.22644,4.5736],[52.21829,4.56298],[52.20505,4.54545],[52.1846,4.51517],[52.18071,4.5079],[52.16643,4.48176],[52.1458,4.45194],[52.12731,4.41881],[52.12473,4.41299],[52.11019,4.38336],[52.09075,4.35138],[52.08693,4.34617],[52.06987,4.32213],[52.04492,4.33218],[52.03945,4.33417],[52.01099,4.356],[51.99577,4.37573],[51.94178,4.4463],[51.9244,4.469]]},{"m":"air","t":1706866740000,"e":1706892029000,"km":5168.8,"off":60,"p":[[52.3092,4.7621],[52.11,5.902],[51.8999,7.0314],[51.6791,8.1501],[51.4477,9.2576],[51.2061,10.3537],[50.9543,11.4382],[50.6926,12.5107],[50.4211,13.5711],[50.1401,14.6192],[49.8498,15.6549],[49.5504,16.678],[49.2421,17.6885],[48.9251,18.6862],[48.5995,19.6712],[48.2657,20.6435],[47.9238,21.6029],[47.574,22.5496],[47.2165,23.4836],[46.8516,24.405],[46.4793,25.3138],[46.1,26.2102],[45.7137,27.0941],[45.3207,27.9659],[44.9212,28.8255],[44.5153,29.6732],[44.1032,30.509],[43.6852,31.3332],[43.2612,32.1459],[42.8316,32.9473],[42.3965,33.7376],[41.9561,34.5169],[41.5104,35.2855],[41.0597,36.0434],[40.6041,36.7911],[40.1438,37.5285],[39.6788,38.2559],[39.2094,38.9736],[38.7356,39.6817],[38.2576,40.3805],[37.7755,41.07],[37.2894,41.7506],[36.7995,42.4224],[36.3059,43.0857],[35.8086,43.7406],[35.3079,44.3873],[34.8037,45.026],[34.2963,45.6569],[33.7856,46.2802],[33.2719,46.8961],[32.7551,47.5048],[32.2355,48.1064],[31.713,48.7012],[31.1878,49.2893],[30.6599,49.8709],[30.1295,50.4461],[29.5966,51.0152],[29.0613,51.5783],[28.5237,52.1356],[27.9838,52.6872],[27.4418,53.2333],[26.8976,53.774],[26.3514,54.3096],[25.8033,54.8401],[25.2532,55.3657]]},{"m":"air","t":1706901629000,"e":1706929851000,"km":5618.6,"off":240,"p":[[25.2532,55.3657],[25.1563,56.2317],[25.0543,57.0963],[24.9473,57.9594],[24.8354,58.821],[24.7185,59.681],[24.5968,60.5393],[24.4702,61.396],[24.3388,62.2509],[24.2026,63.1039],[24.0616,63.9552],[23.916,64.8045],[23.7657,65.6519],[23.6108,66.4973],[23.4513,67.3407],[23.2873,68.182],[23.1188,69.0212],[22.9459,69.8583],[22.7686,70.6932],[22.587,71.526],[22.4011,72.3565],[22.211,73.1848],[22.0167,74.0108],[21.8183,74.8345],[21.6158,75.6559],[21.4093,76.475],[21.1988,77.2917],[20.9844,78.1062],[20.7661,78.9182],[20.5441,79.7279],[20.3182,80.5352],[20.0887,81.3402],[19.8556,82.1428],[19.6188,82.943],[19.3786,83.7408],[19.1349,84.5363],[18.8877,85.3294],[18.6373,86.1202],[18.3835,86.9086],[18.1265,87.6946],[17.8663,88.4784],[17.603,89.2599],[17.3366,90.039],[17.0672,90.8159],[16.7949,91.5906],[16.5197,92.363],[16.2416,93.1332],[15.9608,93.9012],[15.6772,94.6671],[15.3911,95.4308],[15.1023,96.1924],[14.8109,96.9519],[14.5171,97.7094],[14.2209,98.4649],[13.9223,99.2184],[13.6214,99.9699],[13.3182,100.7196],[13.0129,101.4673],[12.7054,102.2132],[12.3958,102.9573],[12.0842,103.6996],[11.7707,104.4402],[11.4552,105.179],[11.1379,105.9163],[10.8188,106.6519]]},{"m":"road","t":1707013020000,"e":1707013311000,"km":5.0,"off":420,"p":[[10.7745,106.702],[10.78931,106.71797],[10.79969,106.73093],[10.803,106.735]]},{"m":"foot","t":1707038700000,"e":1707039742000,"km":1.3,"off":420,"p":[[10.7675,106.693],[10.76832,106.69408],[10.76891,106.69469],[10.76911,106.69503],[10.76974,106.6963],[10.76996,106.69679],[10.77054,106.69741],[10.77151,106.69845],[10.77156,106.69846],[10.77233,106.69919],[10.77335,106.69999],[10.77343,106.70039],[10.77415,106.70125],[10.7745,106.702]]},{"m":"foot","t":1707136740000,"e":1707137054000,"km":0.4,"off":420,"p":[[10.7745,106.702],[10.77555,106.70121],[10.77673,106.70045],[10.77723,106.69999]]},{"m":"air","t":1707187074000,"e":1707191830000,"km":604.6,"off":420,"p":[[10.8188,106.6519],[10.9005,106.6756],[10.9822,106.6993],[11.0639,106.723],[11.1456,106.7467],[11.2273,106.7705],[11.309,106.7942],[11.3907,106.818],[11.4724,106.8418],[11.5541,106.8656],[11.6358,106.8894],[11.7175,106.9132],[11.7992,106.9371],[11.8809,106.9609],[11.9626,106.9848],[12.0442,107.0087],[12.1259,107.0326],[12.2076,107.0565],[12.2893,107.0804],[12.371,107.1044],[12.4526,107.1283],[12.5343,107.1523],[12.616,107.1763],[12.6976,107.2003],[12.7793,107.2243],[12.861,107.2483],[12.9426,107.2724],[13.0243,107.2965],[13.1059,107.3205],[13.1876,107.3446],[13.2692,107.3687],[13.3509,107.3929],[13.4325,107.417],[13.5142,107.4412],[13.5958,107.4654],[13.6775,107.4896],[13.7591,107.5138],[13.8407,107.538],[13.9224,107.5622],[14.004,107.5865],[14.0856,107.6108],[14.1672,107.6351],[14.2489,107.6594],[14.3305,107.6837],[14.4121,107.7081],[14.4937,107.7325],[14.5753,107.7568],[14.6569,107.7812],[14.7385,107.8057],[14.8201,107.8301],[14.9017,107.8546],[14.9833,107.879],[15.0649,107.9035],[15.1465,107.9281],[15.2281,107.9526],[15.3097,107.9771],[15.3913,108.0017],[15.4729,108.0263],[15.5545,108.0509],[15.6361,108.0755],[15.7176,108.1002],[15.7992,108.1249],[15.8808,108.1496],[15.9623,108.1743],[16.0439,108.199]]}];
+var COL = { light: { road: '#2a78d6', air: '#eb6834', transit: '#1baf7a', foot: '#eda100', bike: '#6250d6', water: '#e87ba4' },
+            dark:  { road: '#3987e5', air: '#d95926', transit: '#199e70', foot: '#c98500', bike: '#9085e9', water: '#d55181' } };
+var NAME = { road: 'Car', air: 'Flight', transit: 'Public transport', foot: 'Walking', bike: 'Cycling', water: 'Ferry' };
+var S = { map: 'esri', theme: 'light', night: true };
+var $ = function (id) { return document.getElementById(id); };
+
+var map = L.map('map', { preferCanvas: true, zoomControl: false, worldCopyJump: true, minZoom: 2 }).setView([52.36, 4.88], 12);
+map.attributionControl.setPrefix(false);
+
+// ---- panes held at the viewport, so a mask or canvas lines up with the screen (as in the app)
+function wrapPane(name, z) {
+  var w = L.DomUtil.create('div', 'pane-wrap', map.getPane('mapPane')); w.style.zIndex = z;
+  var p = map.createPane(name, w); p.style.pointerEvents = 'none'; placeWrap(w); return p;
+}
+function placeWrap(w) {
+  var o = map.containerPointToLayerPoint([0, 0]), sz = map.getSize();
+  w.style.left = o.x + 'px'; w.style.top = o.y + 'px'; w.style.width = sz.x + 'px'; w.style.height = sz.y + 'px';
+  w.firstChild.style.left = -o.x + 'px'; w.firstChild.style.top = -o.y + 'px';
+}
+function setMask(w, url) {
+  ['maskImage', 'webkitMaskImage'].forEach(function (k) { w.style[k] = url ? 'url(' + url + ')' : ''; });
+  ['maskSize', 'webkitMaskSize'].forEach(function (k) { w.style[k] = '100% 100%'; });
+  ['maskRepeat', 'webkitMaskRepeat'].forEach(function (k) { w.style[k] = 'no-repeat'; });
+}
+wrapPane('labels', 450); wrapPane('nightBase', 210); wrapPane('nightLabels', 451);
+map.createPane('sky'); map.getPane('sky').style.zIndex = 350; map.getPane('sky').style.pointerEvents = 'none';
+map.createPane('gl'); map.getPane('gl').style.zIndex = 200;
+
+// ---- current map: Esri canvas tiles, light/dark with a cross-fade
+function esri(svc, pane) {
+  return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/' + svc + '/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, maxNativeZoom: 16, pane: pane, attribution: 'Tiles &copy; Esri' });
+}
+var esriL = null, nightL = null;
+function esriOn(fade) {
+  var d = S.theme === 'dark', b = d ? 'World_Dark_Gray_' : 'World_Light_Gray_', old = esriL;
+  esriL = [esri(b + 'Base', 'tilePane'), esri(b + 'Reference', 'labels')];
+  esriL.forEach(function (l) { l.setOpacity(fade && old ? 0 : 1); l.addTo(map); });
+  if (old) {
+    if (fade) requestAnimationFrame(function () { requestAnimationFrame(function () {
+      esriL.forEach(function (l) { var c = l.getContainer(); if (c) c.style.transition = 'opacity .6s'; l.setOpacity(1); }); }); });
+    setTimeout(function () { old.forEach(function (l) { map.removeLayer(l); }); }, fade ? 700 : 0);
+  }
+}
+function esriOff() { if (esriL) esriL.forEach(function (l) { map.removeLayer(l); }); esriL = null; nightTiles(false); }
+function nightTiles(on) {
+  if (on && !nightL) { nightL = [esri('World_Dark_Gray_Base', 'nightBase'), esri('World_Dark_Gray_Reference', 'nightLabels')]; nightL.forEach(function (l) { l.addTo(map); }); }
+  if (!on && nightL) { nightL.forEach(function (l) { map.removeLayer(l); }); nightL = null; setMask(map.getPane('labels').parentNode, null); }
+}
+
+// ---- vector map: OpenFreeMap Positron, recoloured with BT•DT's palette
+var PAL = {
+  light: { land: '#EEEDF6', landuse: '#E8E6F2', green: '#D9E6E0', water: '#C3D8DD', building: '#E1DFED', road: '#FFFFFF', minor: '#F8F7FC', casing: '#DCD9EC', rail: '#CDC8DE', border: '#B4ADCF', label: '#5D5677', waterLabel: '#4F7F89', halo: '#F6F5FC' },
+  dark:  { land: '#1B1840', landuse: '#1E1B45', green: '#1B2B3D', water: '#163244', building: '#25214D', road: '#38326D', minor: '#2B275A', casing: '#15122F', rail: '#3A3572', border: '#4C4685', label: '#B7B0D6', waterLabel: '#77AAB4', halo: '#15122F' }
+};
+var base = null, gl = null;
+function recolour(P) {
+  var s = JSON.parse(JSON.stringify(base));
+  s.transition = { duration: 700, delay: 0 };
+  s.layers.forEach(function (l) {
+    var id = l.id.toLowerCase(), p = l.paint = l.paint || {};
+    if (l.type === 'background') { p['background-color'] = P.land; return; }
+    if (l.type === 'symbol') {
+      if (l.layout && l.layout['text-field']) { p['text-color'] = /water|ocean|sea|lake|river|marine/.test(id) ? P.waterLabel : P.label; p['text-halo-color'] = P.halo; }
+      return;
+    }
+    var k = l.type === 'fill' ? 'fill-color' : l.type === 'line' ? 'line-color' : l.type === 'fill-extrusion' ? 'fill-extrusion-color' : null;
+    if (!k) return;
+    var c = /water|ocean|river|lake|sea|marine/.test(id) ? P.water
+      : /park|wood|grass|landcover|forest|green|cemetery|pitch|nature/.test(id) ? P.green
+      : /building/.test(id) ? P.building
+      : /boundary|admin|border/.test(id) ? P.border
+      : /rail|transit/.test(id) ? P.rail
+      : /casing|outline/.test(id) ? P.casing
+      : /motorway|trunk|primary|major/.test(id) ? P.road
+      : /road|highway|street|path|bridge|tunnel|minor|service|track|transport|aeroway|runway|taxiway/.test(id) ? P.minor
+      : /landuse|residential|industrial|commercial|school|hospital|university|aerodrome/.test(id) ? P.landuse : null;
+    if (c) { p[k] = c; if (l.type === 'fill' && p['fill-outline-color']) p['fill-outline-color'] = c; }
+  });
+  return s;
+}
+function vectorOn() {
+  if (!base) { msg('Loading the vector map…'); fetch('https://tiles.openfreemap.org/styles/positron').then(function (r) { return r.json(); })
+    .then(function (j) { base = j; msg(); vectorOn(); }).catch(function () { msg('The vector map could not load.'); }); return; }
+  if (!gl) {
+    gl = L.maplibreGL({ style: recolour(PAL[S.theme]), pane: 'gl', attribution: '<a href="https://openfreemap.org" target="_blank">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/" target="_blank">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a>' }).addTo(map);
+  } else gl.getMaplibreMap().setStyle(recolour(PAL[S.theme]), { diff: true });
+}
+function vectorOff() { if (gl) { map.removeLayer(gl); gl = null; } }
+function msg(t) { var m = $('msg'); m.textContent = t || ''; m.style.display = t ? 'block' : 'none'; }
+
+// ---- the sun (formulas of SunCalc, as in the app)
+var SUN_R = Math.PI / 180;
+function sunAt(ms) {
+  var d = ms / 864e5 - 10957.5, M = SUN_R * (357.5291 + 0.98560028 * d);
+  var C = SUN_R * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  var Lg = M + C + SUN_R * 102.9372 + Math.PI, e = SUN_R * 23.4397;
+  var dec = Math.asin(Math.sin(e) * Math.sin(Lg)), ra = Math.atan2(Math.sin(Lg) * Math.cos(e), Math.cos(Lg));
+  return { sd: Math.sin(dec), cd: Math.cos(dec), h0: SUN_R * (280.16 + 360.9856235 * d) - ra };
+}
+function nightness(alt) { return Math.max(0, Math.min(1, (-alt - 0.5) / 7)); }
+var SKY = [[6, [255, 190, 90, 0]], [1.5, [255, 170, 80, .14]], [-1, [240, 130, 90, .20]], [-4, [170, 100, 150, .12]], [-8, [60, 60, 110, 0]], [-90, [0, 0, 0, 0]]];
+function skyTint(alt) {
+  if (alt >= SKY[0][0]) return SKY[0][1];
+  for (var k = 1; k < SKY.length; k++) if (alt >= SKY[k][0]) {
+    var a = SKY[k - 1], b = SKY[k], f = (a[0] - alt) / (a[0] - b[0]);
+    return [0, 1, 2, 3].map(function (n) { return a[1][n] + (b[1][n] - a[1][n]) * f; });
+  }
+  return SKY[SKY.length - 1][1];
+}
+// Paint the night for time t: with the current map, a mask shows the dark tiles where the sun is
+// down; with the vector map, a shadow is drawn over the map. Both get the twilight glow.
+var sky = { cv: document.createElement('canvas'), sm: document.createElement('canvas'), mk: document.createElement('canvas'), mi: document.createElement('canvas') };
+map.getPane('sky').appendChild(sky.cv);
+var nowT = null;
+function paintNight() {
+  var show = S.night && nowT !== null;
+  var useTiles = show && S.map === 'esri' && S.theme === 'light';
+  nightTiles(useTiles);
+  if (!show) { sky.cv.style.display = 'none'; return; }
+  var sz = map.getSize(), cell = 8, w = Math.ceil(sz.x / cell) + 1, h = Math.ceil(sz.y / cell) + 1, s = sunAt(nowT), shade = S.map === 'vector';
+  var cv = sky.cv; cv.style.display = '';
+  if (cv.width !== sz.x || cv.height !== sz.y) { cv.width = sz.x; cv.height = sz.y; }
+  L.DomUtil.setPosition(cv, map.containerPointToLayerPoint([0, 0]));
+  sky.sm.width = w; sky.sm.height = h; sky.mk.width = sky.mi.width = w; sky.mk.height = sky.mi.height = h;
+  var g = sky.sm.getContext('2d'), img = g.createImageData(w, h), px = img.data;
+  var gk = sky.mk.getContext('2d'), gi = sky.mi.getContext('2d'), mk = gk.createImageData(w, h), mi = gi.createImageData(w, h);
+  var cosH = [], x, y, NIGHT = S.theme === 'dark' ? [8, 6, 24] : [21, 18, 47], NA = S.theme === 'dark' ? .45 : .5;
+  for (x = 0; x < w; x++) cosH.push(Math.cos(s.h0 + map.containerPointToLatLng([(x + .5) * cell, 0]).lng * SUN_R));
+  for (y = 0; y < h; y++) {
+    var lat = map.containerPointToLatLng([0, (y + .5) * cell]).lat * SUN_R, a = Math.sin(lat) * s.sd, b = Math.cos(lat) * s.cd;
+    for (x = 0; x < w; x++) {
+      var alt = Math.asin(Math.max(-1, Math.min(1, a + b * cosH[x]))) / SUN_R, c = skyTint(alt), n = nightness(alt), o = (y * w + x) * 4;
+      var na = shade ? n * NA : 0, ga = c[3], al = 1 - (1 - ga) * (1 - na);
+      if (al > 0) { px[o] = (c[0] * ga + NIGHT[0] * na) / (ga + na); px[o + 1] = (c[1] * ga + NIGHT[1] * na) / (ga + na); px[o + 2] = (c[2] * ga + NIGHT[2] * na) / (ga + na); }
+      px[o + 3] = Math.round(al * 255);
+      mk.data[o + 3] = Math.round(n * 255); mi.data[o + 3] = 255 - Math.round(n * 255);
+    }
+  }
+  g.putImageData(img, 0, 0);
+  var ctx = cv.getContext('2d'); ctx.clearRect(0, 0, sz.x, sz.y); ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(sky.sm, 0, 0, w, h, -cell / 2, -cell / 2, w * cell, h * cell);
+  if (useTiles) {
+    gk.putImageData(mk, 0, 0); gi.putImageData(mi, 0, 0);
+    ['nightBase', 'nightLabels'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(wr); setMask(wr, sky.mk.toDataURL()); });
+    var lw = map.getPane('labels').parentNode; placeWrap(lw); setMask(lw, sky.mi.toDataURL());
+  }
+}
+map.on('move zoomend resize viewreset', function () {
+  ['labels', 'nightBase', 'nightLabels'].forEach(function (p) { placeWrap(map.getPane(p).parentNode); });
+  paintNight();
+});
+
+// ---- trips and playback
+var faint = L.layerGroup().addTo(map), done = L.layerGroup().addTo(map), cur = null, dot = null;
+function drawFaint() {
+  faint.clearLayers();
+  TRIPS.forEach(function (t) { L.polyline(t.p, { color: COL[S.theme][t.m], weight: 2, opacity: .3, interactive: false }).addTo(faint); });
+}
+drawFaint();
+var i = -1, playing = false, phase = null, t0 = 0, raf = 0, moving = false;
+function pad() { var tb = $('top').getBoundingClientRect(), bb = $('bot').getBoundingClientRect(); return { tl: [30, tb.bottom + 20], br: [30, innerHeight - bb.top + 20] }; }
+function clock(ms, off) { var d = new Date(ms + off * 6e4); return d.toISOString().slice(0, 10) + ' · ' + d.toISOString().slice(11, 16); }
+function next() {
+  i = (i + 1) % TRIPS.length;
+  if (i === 0) done.clearLayers();
+  var t = TRIPS[i], b = L.latLngBounds(t.p), p = pad();
+  $('trip').innerHTML = '<b>' + NAME[t.m] + ' · ' + t.km.toLocaleString() + ' km</b><small>' + clock(t.t, t.off) + ' · trip ' + (i + 1) + ' of ' + TRIPS.length + '</small>';
+  nowT = t.t; paintNight();
+  var view = L.latLngBounds(map.containerPointToLatLng(p.tl), map.containerPointToLatLng(map.getSize().subtract(p.br)));
+  if (view.contains(b) && Math.abs(map.getBoundsZoom(b, false, L.point(p.tl[0] + p.br[0], p.tl[1] + p.br[1])) - map.getZoom()) < 1.5) return draw();
+  phase = 'fly'; moving = true;
+  map.flyToBounds(b, { paddingTopLeft: p.tl, paddingBottomRight: p.br, maxZoom: 16, easeLinearity: 0.2 });
+  map.once('moveend', function () { if (phase === 'fly') setTimeout(draw, 250); });
+}
+function draw() {
+  var t = TRIPS[i]; phase = 'draw'; moving = true; t0 = performance.now();
+  cur = L.polyline([t.p[0]], { color: COL[S.theme][t.m], weight: 4, opacity: .95, interactive: false, m: t.m }).addTo(map);
+  dot = L.circleMarker(t.p[0], { radius: 6, color: '#fff', weight: 2, fillColor: COL[S.theme][t.m], fillOpacity: 1, interactive: false }).addTo(map);
+  step();
+}
+function step() {
+  if (!playing) return;
+  var t = TRIPS[i], dur = t.m === 'air' ? 4200 : 2600, f = Math.min(1, (performance.now() - t0) / dur);
+  var k = f * (t.p.length - 1), j = Math.floor(k), r = k - j, a = t.p[j], b = t.p[Math.min(j + 1, t.p.length - 1)];
+  var head = [a[0] + (b[0] - a[0]) * r, a[1] + (b[1] - a[1]) * r];
+  cur.setLatLngs(t.p.slice(0, j + 1).concat([head])); dot.setLatLng(head);
+  var tt = t.t + (t.e - t.t) * f;
+  if (!nowT || Math.abs(tt - nowT) > 6e4) { nowT = tt; paintNight(); }
+  $('trip').querySelector('small').textContent = clock(tt, t.off) + ' · trip ' + (i + 1) + ' of ' + TRIPS.length;
+  if (f < 1) { raf = requestAnimationFrame(step); return; }
+  map.removeLayer(dot); cur.addTo(done); map.removeLayer(cur); cur = null; dot = null; moving = false;
+  setTimeout(function () { if (playing) next(); }, 500);
+}
+function setPlay(on) {
+  playing = on;
+  $('pi').innerHTML = on ? '<path d="M7 5h4v14H7zM13 5h4v14h-4z"/>' : '<path d="M7 5l12 7-12 7z"/>';
+  $('play').setAttribute('aria-label', on ? 'Pause' : 'Play');
+  if (on) { low = 99; if (phase === 'draw' && cur) { t0 = performance.now() - 0; step(); } else next(); }
+  else { cancelAnimationFrame(raf); map.stop(); moving = false; if (cur) { map.removeLayer(cur); cur = null; } if (dot) { map.removeLayer(dot); dot = null; } phase = null; }
+}
+$('play').onclick = function () { setPlay(!playing); };
+
+// ---- frames per second while something moves
+var fr = 0, last = performance.now(), low = 99;
+map.on('movestart zoomstart', function () { moving = true; });
+map.on('moveend', function () { if (phase !== 'draw') moving = false; });
+(function tick(now) {
+  fr++;
+  if (now - last >= 500) {
+    var fps = Math.round(fr * 1000 / (now - last)); fr = 0; last = now;
+    if (moving) { low = Math.min(low, fps); $('fps').innerHTML = '<b>' + fps + '</b>fps · lowest ' + low; }
+  }
+  requestAnimationFrame(tick);
+})(performance.now());
+
+// ---- controls
+function seg(id, key, fn) {
+  $(id).addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b || b.classList.contains('on')) return;
+    $(id).querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+    S[key] = key === 'night' ? b.dataset.v === 'on' : b.dataset.v; fn();
+  });
+}
+seg('segMap', 'map', function () { low = 99; if (S.map === 'vector') { esriOff(); vectorOn(); } else { vectorOff(); esriOn(false); } paintNight(); });
+seg('segTheme', 'theme', function () {
+  document.documentElement.classList.toggle('dark', S.theme === 'dark');
+  if (S.map === 'vector') vectorOn(); else esriOn(true);
+  drawFaint(); done.eachLayer(function (l) { l.setStyle({ color: COL[S.theme][l.options.m || 'bike'] }); }); paintNight();
+});
+seg('segNight', 'night', paintNight);
+$('ib').onclick = function () { var o = $('info').classList.toggle('open'); $('ib').setAttribute('aria-expanded', o); };
+esriOn(false);
+}
+</script>
+</body>
+</html>
