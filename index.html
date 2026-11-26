@@ -1658,6 +1658,9 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 @media (min-width: 960px) { body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + var(--dock-h) - 44px); } }
 .tools-menu button:disabled { opacity: .5; cursor: default; }
 .tools-menu button:disabled:hover { background: none; }
+/* A badge's icon always takes the badge's ink, wherever the badge sits (lists set their own icon fill). */
+.mode-badge > .ic, .file-list .mode-badge > .ic, .data-row .mode-badge > .ic { fill: currentColor; }
+.file-list .mode-badge.sm > .ic { width: 18px; height: 18px; }
 </style>
 </head>
 <body>
