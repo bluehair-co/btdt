@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://bluehair-co.github.io/btdt/schema/myrules-0.1.json",
+  "title": "MyRules file",
+  "description": "Facts about a person's own history (gear, places, routines, corrections) applied on top of location data. Draft v0.1.",
+  "type": "object",
+  "required": [
+    "myrules"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "about": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "updated": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator": {
+          "type": "string"
+        }
+      }
+    },
+    "places": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/place"
+      }
+    },
+    "gear": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/gear"
+      }
+    },
+    "routines": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/routine"
+      }
+    },
+    "corrections": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/correction"
+      }
+    },
+    "myrules": {
+      "type": "string",
+      "pattern": "^0\\.[0-9]+$"
+    }
+  },
+  "patternProperties": {
+    "^x-": {}
+  },
+  "$defs": {
+    "date": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+    },
+    "hhmm": {
+      "type": "string",
+      "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+    },
+    "localTime": {
+      "type": "string",
+      "description": "ISO 8601 local date-time with UTC offset, minutes precision",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}(:\\d{2})?([+-]\\d{2}:\\d{2}|Z)$"
+    },
+    "ref": {
+      "type": "string",
+      "pattern": "^@[A-Za-z0-9_.-]+$",
+      "description": "Another rule's id, prefixed with @"
+    },
+    "latlng": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "mode": {
+      "type": "string",
+      "enum": [
+        "WALKING",
+        "RUNNING",
+        "CYCLING",
+        "CAR",
+        "TAXI",
+        "VEHICLE",
+        "MOTORCYCLE",
+        "BUS",
+        "TRAIN",
+        "TRAM",
+        "SUBWAY",
+        "FERRY",
+        "BOAT",
+        "FLYING",
+        "SKIING",
+        "OTHER",
+        "UNKNOWN"
+      ]
+    },
+    "when": {
+      "type": "object",
+      "properties": {
+        "from": {
+          "$ref": "#/$defs/date"
+        },
+        "to": {
+          "$ref": "#/$defs/date"
+        },
+        "days": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "mon",
+              "tue",
+              "wed",
+              "thu",
+              "fri",
+              "sat",
+              "sun"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "time": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/hhmm"
+            },
+            {
+              "$ref": "#/$defs/hhmm"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "skip": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "prefixItems": [
+              {
+                "$ref": "#/$defs/date"
+              },
+              {
+                "$ref": "#/$defs/date"
+              }
+            ],
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "tripRef": {
+      "type": "object",
+      "anyOf": [
+        {
+          "required": [
+            "start"
+          ]
+        },
+        {
+          "required": [
+            "day"
+          ]
+        },
+        {
+          "required": [
+            "span"
+          ]
+        }
+      ],
+      "properties": {
+        "start": {
+          "$ref": "#/$defs/localTime"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "day": {
+          "$ref": "#/$defs/date"
+        },
+        "span": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "$ref": "#/$defs/localTime"
+            },
+            {
+              "$ref": "#/$defs/localTime"
+            }
+          ],
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "common": {
+      "type": "object",
+      "required": [
+        "id"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_.-]+$"
+        },
+        "name": {
+          "type": "string"
+        },
+        "when": {
+          "$ref": "#/$defs/when"
+        },
+        "enabled": {
+          "type": "boolean",
+          "default": true
+        },
+        "except": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/tripRef"
+          }
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "place": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "at"
+          ]
+        },
+        {
+          "required": [
+            "google_place_id"
+          ]
+        }
+      ],
+      "properties": {
+        "role": {
+          "type": "string",
+          "examples": [
+            "home",
+            "work",
+            "school",
+            "family",
+            "friends",
+            "sport",
+            "restaurant",
+            "cafe",
+            "supermarket",
+            "store",
+            "transit"
+          ]
+        },
+        "at": {
+          "$ref": "#/$defs/latlng"
+        },
+        "radius_m": {
+          "type": "number",
+          "minimum": 10,
+          "maximum": 5000,
+          "default": 100
+        },
+        "google_place_id": {
+          "type": "string"
+        },
+        "hide": {
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "gear": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "bike",
+            "strida",
+            "halfbike",
+            "cargo",
+            "ebike",
+            "shoe",
+            "other"
+          ],
+          "default": "other"
+        },
+        "mode": {
+          "$ref": "#/$defs/mode"
+        },
+        "strava_name": {
+          "type": "string"
+        },
+        "match": {
+          "type": "object",
+          "properties": {
+            "min_km": {
+              "type": "number",
+              "minimum": 0
+            },
+            "max_km": {
+              "type": "number",
+              "minimum": 0
+            },
+            "sports": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "from": {
+              "$ref": "#/$defs/ref"
+            },
+            "to": {
+              "$ref": "#/$defs/ref"
+            },
+            "weekdays_only": {
+              "type": "boolean"
+            }
+          }
+        }
+      }
+    },
+    "snap": {
+      "anyOf": [
+        {
+          "const": "learn"
+        },
+        {
+          "type": "object",
+          "required": [
+            "polyline"
+          ],
+          "properties": {
+            "polyline": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "geojson"
+          ],
+          "properties": {
+            "geojson": {
+              "type": "string"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": [
+            "trip"
+          ],
+          "properties": {
+            "trip": {
+              "$ref": "#/$defs/tripRef"
+            }
+          },
+          "description": "Learn the line from this trip"
+        }
+      ]
+    },
+    "routine": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "required": [
+        "from",
+        "to",
+        "then"
+      ],
+      "properties": {
+        "from": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref"
+            },
+            {
+              "$ref": "#/$defs/latlng"
+            }
+          ]
+        },
+        "to": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ref"
+            },
+            {
+              "$ref": "#/$defs/latlng"
+            }
+          ]
+        },
+        "both_ways": {
+          "type": "boolean",
+          "default": false
+        },
+        "return_when": {
+          "$ref": "#/$defs/when"
+        },
+        "force": {
+          "type": "boolean",
+          "default": false
+        },
+        "then": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/mode"
+            },
+            "gear": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref"
+                },
+                {
+                  "type": "string",
+                  "description": "A gear's name as your activity files record it"
+                }
+              ]
+            },
+            "snap": {
+              "$ref": "#/$defs/snap"
+            }
+          }
+        }
+      }
+    },
+    "correction": {
+      "allOf": [
+        {
+          "$ref": "#/$defs/common"
+        }
+      ],
+      "required": [
+        "trip",
+        "then"
+      ],
+      "properties": {
+        "trip": {
+          "$ref": "#/$defs/tripRef"
+        },
+        "then": {
+          "type": "object",
+          "minProperties": 1,
+          "properties": {
+            "mode": {
+              "$ref": "#/$defs/mode"
+            },
+            "gear": {
+              "anyOf": [
+                {
+                  "$ref": "#/$defs/ref"
+                },
+                {
+                  "type": "string",
+                  "description": "A gear's name as your activity files record it"
+                }
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "hide": {
+              "type": "boolean"
+            },
+            "replace": {
+              "type": "object",
+              "required": [
+                "mode",
+                "from",
+                "to"
+              ],
+              "properties": {
+                "mode": {
+                  "$ref": "#/$defs/mode"
+                },
+                "from": {
+                  "type": "string",
+                  "description": "IATA airport code or @place"
+                },
+                "to": {
+                  "type": "string"
+                },
+                "depart": {
+                  "$ref": "#/$defs/hhmm"
+                },
+                "arrive": {
+                  "$ref": "#/$defs/hhmm"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
