@@ -310,13 +310,13 @@ function caseRenderer(m) {
   if (!m._caseR) { m.createPane('casePane').style.zIndex = 399; m._caseR = L.canvas({ pane: 'casePane', padding: 0.5 }); }
   return m._caseR;
 }
-var BIKE_INK = /^#fedf02$/i;
+var BIKE_INK = /^#fedf02$/i, BIKE_COPY = '#1E3A9E';  // always the blue ink: the copy only shows on the light (day) tiles
 function caseOn(l) { return !(tilesDark(map) || sunNight()) && l.options.opacity > 0; }
 var CasedLine = null;
 function makeCased() { return L.Polyline.extend({
   onAdd: function (m) {
     if (BIKE_INK.test(this.options.color)) {
-      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: caseRenderer(m), color: cssVar('--fg'), weight: this.options.weight + 1, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
+      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: caseRenderer(m), color: BIKE_COPY, weight: this.options.weight + 1, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
       this._case.addTo(m); this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0 });
     }
     return L.Polyline.prototype.onAdd.call(this, m);
@@ -338,7 +338,7 @@ function makeCased() { return L.Polyline.extend({
   },
   setStyle: function (st) {
     L.Polyline.prototype.setStyle.call(this, st);
-    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight + 1, color: cssVar('--fg') });
+    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight + 1, color: BIKE_COPY });
     return this;
   }
 }); }

@@ -1392,7 +1392,6 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .bar-row .track i, .gear-bar > i, .hz-bar i { -webkit-mask: radial-gradient(circle, #000 1.6px, transparent 2.1px) 0 0 / 4.5px 4.5px; mask: radial-gradient(circle, #000 1.6px, transparent 2.1px) 0 0 / 4.5px 4.5px; }
 .bar-row .track { height: 12px; }
 .hz-bar { height: 14px; }
-.rhythm .c { border-radius: 50%; }
 #timeChart rect[fill^="var"], #cctlBars, .far-art { filter: url(#riso); }
 /* Records: ticket stubs, with a perforated edge and the label set like a ticket */
 .record { position: relative; border: 1.5px solid var(--fg); border-radius: 10px; padding-right: 54px;
@@ -1436,3 +1435,35 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 #map .leaflet-control-zoom-in, #map .leaflet-control-zoom-out { display: flex; align-items: center; justify-content: center; }
 #map .leaflet-control-zoom-in svg, #map .leaflet-control-zoom-out svg { width: 18px; height: 18px; fill: currentColor; }
 .chip .ic.chip-x { width: 12px; height: 12px; margin-left: 2px; }
+/* Countries over time (v2.0): two colours in turn, one change of country to the next; the picked
+   country (and, on desktop, the one pointed at) in the yellow ink everywhere: bars, pins, legend */
+:root { --cctl-a: #2F5BD3; --cctl-b: #8E99CF; }
+:root[data-theme="dark"] { --cctl-a: #4E66C9; --cctl-b: #2B3A86; }
+.cctl-bars b { background: var(--cctl-a); }
+.cctl-bars b.a1 { background: var(--cctl-b); }
+.cctl-bars b.q { opacity: 1; background: radial-gradient(circle, var(--cctl-a) 1.3px, transparent 1.7px) 0 0 / 4px 4px; }
+.cctl-bars b.q.a1 { background-image: radial-gradient(circle, var(--cctl-b) 1.3px, transparent 1.7px); }
+.cctl-bars b.hl, .cctl-bars b.peek { background: var(--chip-on-bg); color: var(--chip-on-fg); text-shadow: none; z-index: 1; }
+.cctl-bars b.q.hl, .cctl-bars b.q.peek { background: radial-gradient(circle, var(--chip-on-bg) 1.6px, transparent 2px) 0 0 / 4px 4px; }
+.cctl-pins button { --c: var(--fg); }
+.cctl-pins button.hl, .cctl-pins button.peek { --c: #E8C400; }
+.cctl-legend button { padding: var(--sp-1) var(--sp-4); border-radius: var(--r-pill); }
+.cctl-legend button.hl { background: var(--chip-on-bg); color: var(--chip-on-fg); }
+.cctl-legend button.hl small { color: var(--chip-on-fg); }
+.cctl-legend button.peek { background: var(--grid); }
+/* Weekly rhythm as a dot screen (rhythmDot in insights.js) */
+.rhythm .c { position: relative; border-radius: 0; background: none; }
+.rhythm .c i, .rhythm-scale .rd i { position: absolute; left: 50%; top: 50%; width: calc(var(--s) * 100%); aspect-ratio: 1; border-radius: 50%; transform: translate(-50%, -50%); background: var(--fg); pointer-events: none; }
+.rhythm .c i.top::after, .rhythm-scale .rd i.top::after { content: ""; position: absolute; left: 26%; top: 22%; width: 82%; aspect-ratio: 1; border-radius: 50%; background: var(--pink); opacity: .9; }
+.rhythm { isolation: isolate; }
+.rhythm-scale .rd { position: relative; display: block; flex: none; width: 12px; height: 12px; }
+/* Records: the stub right of the perforation, with the trip's transport printed on its colour */
+.record { padding-right: 62px; }
+.record::after { right: 48px; }
+.record .stub { position: absolute; right: 0; top: 0; bottom: 0; width: 46px; display: grid; place-items: center; border-radius: 0 9px 9px 0; color: var(--badge-ink); }
+.record .stub[data-bike] { color: var(--on-bike); }
+.record .stub.day { background: var(--chip-on-bg); color: var(--chip-on-fg); }
+.record .stub .ic { width: 24px; height: 24px; }
+.record .stub .ic .ph2 { opacity: .4; }
+.rhythm .c:has(i.top) { z-index: 1; }
+.rhythm-scale .rd i { height: auto; display: block; }
