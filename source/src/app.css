@@ -213,8 +213,6 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 #proj canvas { display: block; width: 100%; height: 100%; }
 .fab { position: absolute; z-index: 20; bottom: calc(var(--dock-h) + var(--dock-gap) + 26px + var(--safe-b)); width: 52px; height: 52px; border-radius: 50%; border: 1px solid var(--line); background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); color: var(--fg); box-shadow: var(--shadow); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .fab svg { width: 24px; height: 24px; }
-.fab.left { left: 16px; }
-.fab.right { right: 16px; }
 .fab .badge { position: absolute; top: -3px; right: -3px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: var(--r-md); background: var(--accent); color: var(--accent-fg); font-size: var(--fs-2xs); font-weight: 600; display: flex; align-items: center; justify-content: center; border: 2px solid var(--panel); }
 .proj-zoom { position: absolute; z-index: 5; right: 16px; top: calc(50% - 44px); display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: var(--r-lg); overflow: hidden; background: var(--glass); box-shadow: var(--shadow); }
 .proj-zoom button { font-size: var(--fs-3xl); line-height: 1; width: 44px; height: 44px; border: 0; background: none; color: var(--fg); cursor: pointer; }
@@ -879,8 +877,6 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
   /* Playback and layers sit either side of the dock, centred on it. --dock-w is the dock's width (3 tabs). */
   :root { --dock-w: 256px; }
   .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + (var(--dock-h) + 2px - 52px) / 2); }
-  .fab.left { left: calc(50% - var(--dock-w) / 2 - 14px - 52px); }
-  .fab.right { right: calc(50% - var(--dock-w) / 2 - 14px - 52px); }
   .proj-zoom { right: auto; left: 16px; }
   .sheet.center { left: 50%; right: auto; margin-left: -230px; width: 460px; bottom: auto; top: calc(80px + var(--safe-t)); max-height: calc(100dvh - 200px); }
   .sheet-head::before { display: none; }
@@ -903,13 +899,6 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
    The dot says some trips in the filters are out of view. */
 #map .leaflet-control-zoom a.zoom-all { position: relative; display: flex; align-items: center; justify-content: center; border-top: 1px solid var(--map-grey-soft); }
 #map .leaflet-control-zoom a.zoom-all svg { width: 18px; height: 18px; fill: currentColor; }
-.zoom-all .dot, .fit-all .dot { position: absolute; top: -4px; right: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); border: 2px solid var(--panel); }
-.zoom-all .dot[hidden], .fit-all .dot[hidden] { display: none; }
-.fab.fit-all { width: 44px; height: 44px; transform: translate(-4px, -58px); }
-.fab.fit-all svg { width: 20px; height: 20px; }
-.fab.fit-all .dot { top: 0; right: 0; }
-#mapPage .fab.fit-all { display: none; }
-@media (pointer: coarse) { #mapPage .fab.fit-all { display: flex; } }
 /* Beacons: a soft halo around a dot in the trips' colour, on trips too small to see. */
 .beacon i { position: absolute; inset: 0; border-radius: 50%; cursor: pointer;
   background: radial-gradient(circle, var(--c) 0 13%, var(--on-color) 14% 20%, color-mix(in srgb, var(--c) 40%, transparent) 21% 50%, transparent 72%);
@@ -923,7 +912,6 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .sheet .kv { grid-template-columns: minmax(0, 1fr); }
 .bar-top { display: flex; align-items: center; gap: var(--sp-1); }
 .bar-top > .daynav, .bar-top > .range-label { flex: 1; min-width: 0; }
-.scrub-toggle[aria-pressed="true"] { color: var(--accent); background: var(--chip-on-bg); }
 .field-head { display: flex; align-items: baseline; justify-content: space-between; }
 .link-btn { border: 0; background: none; padding: var(--sp-1) 0; font: inherit; font-size: var(--fs-xs); font-weight: 600; color: var(--accent); cursor: pointer; }
 .step-seg { margin-top: var(--sp-3); }
@@ -1224,11 +1212,7 @@ details.when-more > summary small { font-size: 12.5px; color: var(--muted); }
 details.when-more > .sec:last-child { border-bottom: 0; }
 
 /* ---------- Map tools: a small round button above the layers button, with its menu ---------- */
-.fab.tools-fab { width: 44px; height: 44px; transform: translate(-4px, -58px); }
-.fab.tools-fab svg { width: 20px; height: 20px; }
 .fab.tools-fab[aria-expanded="true"] { color: var(--accent); background: var(--chip-on-bg); }
-@media (min-width: 960px) { .fab.tools-fab { transform: translate(60px, -4px); } }
-@media (pointer: coarse) { .fab.tools-fab { transform: translate(-4px, -110px); } }
 .tools-menu { position: fixed; z-index: 25; width: min(300px, calc(100vw - 100px)); padding: var(--sp-3); border-radius: var(--r-2xl); border: 1px solid var(--line); background: var(--panel); box-shadow: var(--shadow); display: flex; flex-direction: column; gap: var(--sp-1); }
 .tools-menu button { display: flex; align-items: center; gap: var(--sp-6); padding: var(--sp-5) var(--sp-6); border: 0; border-radius: var(--r-md); background: none; text-align: left; cursor: pointer; }
 .tools-menu button:hover, .tools-menu button:focus-visible { background: var(--grid); }
@@ -1458,7 +1442,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
   transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
 /* Pressed round buttons are printed on yellow paper */
-.scrub-toggle[aria-pressed="true"], .fab.tools-fab[aria-expanded="true"] { --paper: var(--chip-on-bg); background: transparent; }
+.fab.tools-fab[aria-expanded="true"] { --paper: var(--chip-on-bg); background: transparent; }
 /* Leaflet's zoom buttons: no paper of their own */
 #map .leaflet-control-zoom a { background-color: transparent; border-radius: 0; color: var(--fg); border-bottom: 0; }
 #map .leaflet-control-zoom a:hover { background-color: var(--grid); color: var(--fg); }
@@ -1561,7 +1545,6 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
 @media (min-width: 720px) { .ld-stamps { width: 420px; } }
 @media (prefers-reduced-motion: reduce) { .ld-stamp { animation: none; } }
 .ld-label { margin-top: var(--sp-4); }
-#map .leaflet-control-zoom a.zoom-all, #map .leaflet-control-zoom a.sel-btn { border-top: 1.5px dotted var(--edge); }
 
 
 /* ---------- The spinner (one for the whole app) ----------
@@ -1586,3 +1569,18 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
 .spin-bar { display: block; width: 100%; min-width: 160px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .spin-bar[hidden] { display: none; }
 .spin-bar i { display: block; height: 100%; width: 0; background: var(--fg); transition: width .2s; }
+
+
+/* ---------- Either side of the dock: zoom to all and the ⋮ menu ----------
+   Two small round buttons centred on the dock. Zoom to all slides in from the left on a phone (from
+   below on a desktop) only while some trips are out of view. */
+:root { --dock-w: 256px; }
+#mapPage .fab.fit-all, #mapPage .fab.tools-fab { width: 44px; height: 44px; bottom: calc(var(--dock-gap) + var(--safe-b) + (var(--dock-h) - 44px) / 2); }
+#mapPage .fab svg { width: 20px; height: 20px; }
+#mapPage .fab.tools-fab { left: auto; right: max(6px, calc(50% - var(--dock-w) / 2 - 12px - 44px)); }
+#mapPage .fab.fit-all { right: auto; left: max(6px, calc(50% - var(--dock-w) / 2 - 12px - 44px));
+  opacity: 0; pointer-events: none; transform: translateX(calc(-100% - 60px)); transition: transform .3s cubic-bezier(.3, .7, .3, 1), opacity .2s; }
+#mapPage .fab.fit-all.on { opacity: 1; pointer-events: auto; transform: none; }
+@media (min-width: 960px) { #mapPage .fab.fit-all { transform: translateY(calc(100% + 40px)); } #mapPage .fab.fit-all.on { transform: none; } }
+@media (prefers-reduced-motion: reduce) { #mapPage .fab.fit-all { transition: opacity .2s; } }
+body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + (var(--dock-h) - 44px) / 2); }

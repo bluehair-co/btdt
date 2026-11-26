@@ -51,6 +51,8 @@ def main():
         body = inner(os.path.join(root, 'assets/duotone', n + '-duotone.svg'))
         body = body.replace(' opacity="0.2"', ' class="ph2"')
         out.append(f"  {k}: '{body}'")
+    # The ⋮ button: Phosphor's dots-three bold, standing up.
+    out.append("  kebab: '<path d=\"M144,60a16,16,0,1,1-16-16A16,16,0,0,1,144,60Zm0,68a16,16,0,1,1-16-16A16,16,0,0,1,144,128Zm0,68a16,16,0,1,1-16-16A16,16,0,0,1,144,196Z\"/>'")
     for k in GEAR:
         out.append(f"  {k}: '{gear(k)}'")
     for k, n in BOLD.items():

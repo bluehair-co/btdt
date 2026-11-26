@@ -243,11 +243,13 @@
       <button type="button" class="play-close" id="playClose" aria-label="Close playback" title="Close playback"><span data-icon="close"></span></button>
     </div>
     <div class="map-legend" id="mapLegend"></div>
-    <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
-    <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
-    <button type="button" class="fab right fit-all" id="fitAllBtn" aria-label="Zoom to all trips" title="Zoom to all trips"><span data-icon="fit"></span><i class="dot" hidden></i></button>
-    <button type="button" class="fab right tools-fab" id="toolsBtn" aria-label="Map tools" title="Map tools" aria-haspopup="menu" aria-expanded="false" aria-controls="toolsMenu"><span data-icon="edit"></span></button>
-    <div class="tools-menu" id="toolsMenu" role="menu" aria-label="Map tools" hidden>
+    <!-- Either side of the dock: zoom to all (only while some trips are out of view) and the map's
+         ⋮ menu (playback, views and layers, the map tools). -->
+    <button type="button" class="fab fit-all" id="fitAllBtn" aria-label="Zoom to all trips" title="Zoom to all trips" tabindex="-1"><span data-icon="fit"></span></button>
+    <button type="button" class="fab tools-fab" id="toolsBtn" aria-label="More for the map" title="More" aria-haspopup="menu" aria-expanded="false" aria-controls="toolsMenu"><span data-icon="kebab"></span></button>
+    <div class="tools-menu" id="toolsMenu" role="menu" aria-label="More for the map" hidden>
+      <button type="button" role="menuitem" id="scrubToggle" aria-pressed="false"><span data-icon="clock"></span><span class="data-row-txt"><b>Playback</b><small>Play your trips back on a time slider</small></span></button>
+      <button type="button" role="menuitem" id="layersBtn" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span><span class="data-row-txt"><b>Views and layers</b><small>The view, line colours, heatmap and legend</small></span></button>
       <button type="button" role="menuitem" id="selNewBtn"><span data-icon="select"></span><span class="data-row-txt"><b>Select trips on the map</b><small>Draw around trips to change or export them at once</small></span></button>
       <button type="button" role="menuitem" id="snapNewBtn"><span data-icon="TRAIN"></span><span class="data-row-txt"><b>New map snap</b><small>Draw trips along one line between two stations</small></span></button>
     </div>
@@ -500,6 +502,10 @@
       <div class="info-box lines-info" id="linesInfo" hidden><p class="fine" id="mapNote"></p><p class="fine" id="speedNote"><b>Speed:</b> the average speed along each stretch of the map, from every trip in the filters that passed there (flights left out): red where you crawl or stand still, through yellow and green, to blue and purple at train speeds (when the filters show one kind of transport, the scale fits it, e.g. from an easy ride to a fast one for cycling). Thicker lines are stretches more trips went along. Speeds come from the time between GPS points; a trip with only its start and end counts at its average speed. Shows on the Mercator view.</p><p class="fine" id="hrNote"><b>Heart rate:</b> your heart rate along each stretch of the map, from every activity in the filters that recorded it, coloured by zone: grey-blue for easy, through blue, green and amber, to red near your maximum. Thicker lines are stretches more activities went along; trips without heart rate are left out. Open an activity to see its own route coloured the same way, lined up with its chart. Zones come from your maximum heart rate, which you can set in Menu › Preferences. Shows on the Mercator view.</p></div>
       <div class="seg full" role="group" aria-label="Colour lines by" id="linesSeg"><button type="button" data-lines="paths" aria-pressed="true">Transport</button><button type="button" data-lines="speed" aria-pressed="false">Speed</button><button type="button" data-lines="hr" aria-pressed="false">Heart rate</button><button type="button" data-lines="off" aria-pressed="false">Off</button></div>
       <input type="checkbox" id="layPaths" hidden><input type="checkbox" id="laySpeed" hidden><input type="checkbox" id="layHr" hidden>
+    </div>
+    <div class="sec" style="gap:0">
+      <h3 style="margin-bottom:4px">Legend</h3>
+      <label class="toggle-row"><span class="lbl">Show the legend</span><input type="checkbox" class="switch" id="layLegend"></label>
     </div>
     <div class="sec" style="gap:0">
       <h3 style="margin-bottom:4px">Heatmap</h3>
