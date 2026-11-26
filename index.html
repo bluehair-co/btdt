@@ -1623,7 +1623,9 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
    Two small round buttons centred on the dock. Zoom to all slides in from the left on a phone (from
    below on a desktop) only while some trips are out of view. */
 :root { --dock-w: 256px; }
-#mapPage .fab.fit-all, #mapPage .fab.tools-fab { width: 44px; height: 44px; bottom: calc(var(--dock-gap) + var(--safe-b) + (var(--dock-h) - 44px) / 2); }
+/* On a phone they sit just above the dock; on a desktop beside it, lined up with its top. */
+#mapPage .fab.fit-all, #mapPage .fab.tools-fab { width: 44px; height: 44px; bottom: calc(var(--dock-gap) + var(--safe-b) + var(--dock-h) + 12px); }
+@media (min-width: 960px) { #mapPage .fab.fit-all, #mapPage .fab.tools-fab { bottom: calc(var(--dock-gap) + var(--safe-b) + var(--dock-h) - 44px); } }
 #mapPage .fab svg { width: 20px; height: 20px; }
 #mapPage .fab.tools-fab { left: auto; right: max(6px, calc(50% - var(--dock-w) / 2 - 12px - 44px)); }
 #mapPage .fab.fit-all { right: auto; left: max(6px, calc(50% - var(--dock-w) / 2 - 12px - 44px));
@@ -1631,7 +1633,10 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
 #mapPage .fab.fit-all.on { opacity: 1; pointer-events: auto; transform: none; }
 @media (min-width: 960px) { #mapPage .fab.fit-all { transform: translateY(calc(100% + 40px)); } #mapPage .fab.fit-all.on { transform: none; } }
 @media (prefers-reduced-motion: reduce) { #mapPage .fab.fit-all { transition: opacity .2s; } }
-body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + (var(--dock-h) - 44px) / 2); }
+body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + var(--dock-h) + 12px); }
+@media (min-width: 960px) { body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + var(--safe-b) + var(--dock-h) - 44px); } }
+.tools-menu button:disabled { opacity: .5; cursor: default; }
+.tools-menu button:disabled:hover { background: none; }
 </style>
 </head>
 <body>
@@ -9110,7 +9115,9 @@ function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
   // The playback button (bottom left) shows or hides the time slider in the playback bar above the dock.
   $('playBar').hidden = !n || !PREFS.scrub;
-  $('scrubToggle').hidden = !n;
+  // Playback stays in the ⋮ menu but can't be picked while no trips are on the map.
+  $('scrubToggle').disabled = !n;
+  $('scrubToggle').querySelector('small').textContent = n ? 'Play your trips back on a time slider' : 'No trips on the map to play back right now';
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
   // While playback is open, everything else steps aside: only the map, the slider, the date and Close.

@@ -1540,7 +1540,9 @@ function updateTopbar() {
   var n = sel.length, one = F.dm === 'one';
   // The playback button (bottom left) shows or hides the time slider in the playback bar above the dock.
   $('playBar').hidden = !n || !PREFS.scrub;
-  $('scrubToggle').hidden = !n;
+  // Playback stays in the ⋮ menu but can't be picked while no trips are on the map.
+  $('scrubToggle').disabled = !n;
+  $('scrubToggle').querySelector('small').textContent = n ? 'Play your trips back on a time slider' : 'No trips on the map to play back right now';
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
   // While playback is open, everything else steps aside: only the map, the slider, the date and Close.
