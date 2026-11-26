@@ -1515,6 +1515,87 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .record .stub .ic .ph2 { opacity: .4; }
 .rhythm .c:has(i.top) { z-index: 1; }
 .rhythm-scale .rd i { height: auto; display: block; }
+
+/* ---------- v2.0: paper ----------
+   Everything that floats over the app is a sheet of paper left blank for the print: the paper is fed a
+   little crooked, and the ink outline and the pink block are printed slightly off it. Each sheet gets its
+   own small tilt and offsets every time it is drawn (paperize() in core.js sets --pp*, --po*, --ps*).
+   Corners are 4px. Round buttons are round paper; the map legend is a tilted slip with no print on it. */
+:root { --paper-r: 4px; }
+.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, #map .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel {
+  --paper: var(--panel); background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; isolation: isolate; border-radius: var(--paper-r); }
+.bar { position: relative; }
+.fab { border-radius: 50%; }
+.proj-zoom, .sheet, .about { overflow: visible; }
+.welcome-panel { position: relative; }
+:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel)::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
+  box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
+:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .about, .welcome-panel)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
+  transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
+/* Pressed round buttons are printed on yellow paper */
+.scrub-toggle[aria-pressed="true"], .fab.tools-fab[aria-expanded="true"] { --paper: var(--chip-on-bg); background: transparent; }
+/* Leaflet's zoom buttons: no paper of their own */
+#map .leaflet-control-zoom a { background-color: transparent; border-radius: 0; }
+#map .leaflet-control-zoom a:first-child { border-radius: var(--paper-r) var(--paper-r) 0 0; }
+#map .leaflet-control-zoom a:last-child { border-radius: 0 0 var(--paper-r) var(--paper-r); }
+#map .leaflet-control-zoom a + a, .proj-zoom button + button { border-top: 1.5px dotted var(--edge); }
+.sel-on .leaflet-control-zoom a.sel-btn { background: var(--chip-on-bg); }
+.dock button { border-radius: var(--paper-r); }
+/* Phone sheets come up from the bottom edge: the paper lies straight there and is open at the bottom */
+.sheet { border-radius: var(--paper-r) var(--paper-r) 0 0; }
+.sheet::after { border-bottom: 0; }
+@media (max-width: 959px) { .sheet { --ppr: 0deg !important; --ppx: 0px !important; --ppy: 0px !important; --por: 0deg !important; --pox: 0px !important; } }
+@media (min-width: 960px) { .sheet { border-radius: var(--paper-r); } .sheet::after { border-bottom: 1.5px solid var(--edge); } }
+/* The legend: a tilted slip of paper, no outline, no block; transport as dots with their off-print */
+.map-legend { color: var(--fg); }
+.map-legend::before { box-shadow: none; }
+.map-legend i { width: 10px; height: 10px; border-radius: 50%; box-shadow: .9px 1.4px 0 var(--offset); }
+.map-legend i[style*="m-bike"] { box-shadow: .9px 1.4px 0 #1E3A9E; }
+.map-legend i.lg-area { border-radius: 2px; box-shadow: none; }
+.map-legend .heat-scale { border-radius: var(--r-xs); box-shadow: none; }
+
+/* ---------- v2.0 Insights cards: printed sheets, with crop marks round every card and a colour bar
+   under the first card of each section ---------- */
+#insightsPage .cards { gap: 26px; }
+#insightsPage .card { position: relative; border: 0; border-radius: 2px; }
+#insightsPage .card::before { content: ""; position: absolute; inset: -10px; pointer-events: none; --cm: var(--fg);
+  background: linear-gradient(var(--cm), var(--cm)) left 0 top 10px / 6px 1px no-repeat, linear-gradient(var(--cm), var(--cm)) left 10px top 0 / 1px 6px no-repeat,
+    linear-gradient(var(--cm), var(--cm)) right 0 top 10px / 6px 1px no-repeat, linear-gradient(var(--cm), var(--cm)) right 10px top 0 / 1px 6px no-repeat,
+    linear-gradient(var(--cm), var(--cm)) left 0 bottom 10px / 6px 1px no-repeat, linear-gradient(var(--cm), var(--cm)) left 10px bottom 0 / 1px 6px no-repeat,
+    linear-gradient(var(--cm), var(--cm)) right 0 bottom 10px / 6px 1px no-repeat, linear-gradient(var(--cm), var(--cm)) right 10px bottom 0 / 1px 6px no-repeat; }
+.ins-group > .card:first-of-type::after { content: ""; position: absolute; right: 0; bottom: -14px; width: 74px; height: 8px; pointer-events: none;
+  background: linear-gradient(90deg, var(--fg) 0 12px, transparent 12px 15.5px, var(--pink) 15.5px 27.5px, transparent 27.5px 31px, var(--chip-on-bg) 31px 43px,
+    transparent 43px 46.5px, color-mix(in srgb, var(--fg) 50%, transparent) 46.5px 58.5px, transparent 58.5px 62px, color-mix(in srgb, var(--pink) 50%, transparent) 62px 74px); }
+
+/* ---------- v2.0 About (and the other landing dialogs): a sheet of paper in the print ---------- */
+.about { color: var(--fg); color-scheme: light dark; }
+:root[data-theme="dark"] .about { color-scheme: dark; }
+.about::backdrop { background: color-mix(in srgb, var(--bg) 70%, transparent); }
+.about-head h2 { font-weight: 800; }
+.about-close { color: var(--fg); }
+.about-close:hover { background: var(--grid); color: var(--fg); }
+.about-body { color: var(--fg); }
+.about-privacy { border-radius: var(--paper-r); background: color-mix(in srgb, var(--chip-on-bg) 22%, var(--panel)); border: 1.5px dashed var(--fg); }
+.about-privacy > .ic { fill: var(--fg); }
+.about .about-privacy h3 { color: var(--fg); font-family: var(--font-display); font-weight: 800; }
+.about .about-privacy p { color: var(--fg); }
+.about details { border-top: 1.5px dotted var(--fg); }
+.about summary { color: var(--fg); font-family: var(--font-display); font-weight: 800; }
+.about summary::after { border-color: var(--fg); }
+.about h3 { font-family: "IBM Plex Sans Condensed", var(--font-body); letter-spacing: .12em; color: var(--muted); }
+.about b { color: var(--fg); }
+.about a { color: var(--fg); text-decoration-color: var(--pink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.about-foot { border-top: 1.5px solid var(--line); }
+.about-maker { border-radius: var(--paper-r); background: var(--panel); border: 1.5px solid var(--fg); box-shadow: 3px 3px 0 var(--offset); }
+.about-maker:hover { background: var(--grid); }
+.about-maker small { color: var(--muted); }
+.about-credits small { color: var(--muted); }
+.about :focus-visible { outline-color: var(--fg); }
+@media (max-width: 520px) { .about { border-radius: var(--paper-r) var(--paper-r) 0 0; --ppr: 0deg !important; --ppx: 0px !important; --ppy: 0px !important; --por: 0deg !important; --pox: 0px !important; } .about::after { border-bottom: 0; } }
+:root[data-theme="dark"] .about-privacy { background: var(--grid); }
+.menu-body .data-row { border-radius: var(--paper-r); }
 </style>
 </head>
 <body>
@@ -5895,6 +5976,43 @@ function localTime(ms, zone, off) {
   return { time: clock(ms, off), date: clockDate(ms, off), label: tzLabel(off) };
 }
 
+// ---------- v2.0 paper ----------
+// Every panel that floats over the app is a sheet of paper fed a little crooked, with its ink outline
+// and pink block printed a little off it (the paper rules in app.css). Each sheet gets its own small
+// random tilt and offsets every time it appears. The tilt is kept small for big panels, so their far
+// edges move no more than about 3px.
+var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel';
+function paperize(el) {
+  function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
+  var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
+  var max = Math.min(el.classList.contains('map-legend') ? 1.3 : .7, 3 / half * 180 / Math.PI), s = el.style;
+  s.setProperty('--ppr', rnd(max) + 'deg'); s.setProperty('--ppx', rnd(1.2) + 'px'); s.setProperty('--ppy', rnd(1.2) + 'px');
+  s.setProperty('--por', rnd(max * .6) + 'deg'); s.setProperty('--pox', rnd(2) + 'px'); s.setProperty('--poy', rnd(2) + 'px');
+  s.setProperty('--psx', (3 + Math.random() * 2.5).toFixed(1) + 'px'); s.setProperty('--psy', (3 + Math.random() * 2.5).toFixed(1) + 'px');
+}
+function paperShown(el) { return !el.hidden && (!el.classList.contains('sheet') || el.classList.contains('open')) && (el.tagName !== 'DIALOG' || el.open); }
+function paperCheck(el) {
+  var on = paperShown(el);
+  if (on && !el._paperOn) requestAnimationFrame(function () { paperize(el); });
+  el._paperOn = on;
+}
+function paperWatch() {
+  document.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+  new MutationObserver(function (list) {
+    for (var k = 0; k < list.length; k++) {
+      var m = list[k];
+      if (m.type === 'attributes') { if (m.target.matches && m.target.matches(PAPER_SEL)) paperCheck(m.target); continue; }
+      for (var j = 0; j < m.addedNodes.length; j++) {
+        var n = m.addedNodes[j];
+        if (n.nodeType !== 1) continue;
+        if (n.matches(PAPER_SEL)) paperCheck(n);
+        if (n.firstElementChild) n.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+      }
+    }
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'open'] });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paperWatch); else paperWatch();
+
 // ---------- state ----------
 var D = null;   // all trips and stays (typed arrays), with Strava laid over Timeline
 var RAW = null; // the same as loaded and saved, before Strava is laid over
@@ -9633,8 +9751,8 @@ function legend() {
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
   if (PREFS.cc) {
-    h += '<span><i style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
-    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
+    h += '<span><i class="lg-area" style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
+    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i class="lg-area" style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
   }
   $('mapLegend').innerHTML = h;
   $('mapLegend').hidden = !h || !sel.length && !selV.length;
