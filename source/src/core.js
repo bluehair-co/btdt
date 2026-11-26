@@ -327,7 +327,9 @@ try { Object.assign(PREFS, JSON.parse(localStorage.getItem(PREFS_KEY) || localSt
 // The Equal Earth view was removed (Nov 2026): anyone who had it saved gets Mercator.
 if (PREFS.proj !== 'merc' && PREFS.proj !== 'globe') PREFS.proj = 'merc';
 // The demo turns Countries visited on for itself; your own setting is what gets saved.
-function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify(DEMO ? Object.assign({}, PREFS, { cc: DEMO.cc }) : PREFS)); } catch (e) { /* ignore */ } }
+// The landing stamp is dated today, written the way Preferences writes dates.
+function stampDate() { var el = $('stampDate'), n = new Date(); if (el) el.textContent = fmtDMY(n.getFullYear(), n.getMonth(), n.getDate()).toUpperCase(); }
+function savePrefs() { stampDate(); try { localStorage.setItem(PREFS_KEY, JSON.stringify(DEMO ? Object.assign({}, PREFS, { cc: DEMO.cc }) : PREFS)); } catch (e) { /* ignore */ } }
 function applyTheme() {
   // data-theme is always light or dark, so the CSS writes the dark theme once (see the top of app.css).
   var t = PREFS.theme === 'system' ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : PREFS.theme;

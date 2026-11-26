@@ -209,6 +209,7 @@ window.addEventListener('resize', function () {
   clearTimeout(resizeT);
   resizeT = setTimeout(function () { if (!D || BUILDING) return; if (tab === 'map' && map) { map.invalidateSize(); if (PREFS.heat) heatLayer.redraw(); } if (tab === 'timeline') tlLayout(); }, 150);
 });
+stampDate();
 busy('Opening your saved trips…');
 // The road packs' graph is made first (when snapping to roads is on), so the trips are drawn along
 // the roads in one go. setDataSoon works through the trips in slices, so the loader keeps moving.
