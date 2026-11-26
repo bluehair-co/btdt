@@ -2,7 +2,7 @@
 // A map snap draws your trips between two stations along one line of a station pack, to clean up
 // how their paths look. You tap the two stations on the map, pick the type (train, tram or metro,
 // one type the whole way) and the way along the tracks, and see your trips between them: solid when
-// they follow the line closely enough, dashed when not, with the accuracy slider. Saved in MyRules
+// they follow the line closely enough, dashed when not, with the accuracy slider. Saved in My Edits
 // under "snaps", both ways, with no period, days or times (that's what routines are for):
 //   { "id", "name", "mode": "TRAIN", "from": [lat, lng], "to": [lat, lng], "from_name", "to_name",
 //     "radius_m": { "from": 300, "to": 800 } (or one number for both), "line": { "polyline": "…", "name": "Along the railway via Haarlem" },
@@ -69,7 +69,7 @@ function mrApplySnaps() {
     } else if (near) MR_LEFT[near.s.id][near.why]++;
   }
 }
-// The line in MyRules' list.
+// The line in My Edits' list.
 function snapRuleRow(s) {
   var left = D && MR_LEFT[s.id] || { type: 0, line: 0 }, bits = [];
   bits.push(esc(s.from_name || 'Start') + ' ⇄ ' + esc(s.to_name || 'End'));
@@ -300,7 +300,7 @@ $('snapNewBtn').addEventListener('click', function () { snapStart(); });
 // of packLines' ways its GPS points follow best. A train's ends and points are often off by some way
 // (a late fix after a tunnel, a station a few hundred metres from where the phone woke), so its
 // points count as on a way within TRACK_KM, and it takes the way when TRACK_MIN % of them are.
-// The ways between two stations are worked out once (PK.tw), and which one each trip follows (PK.th). Applied after MyRules, also with no
+// The ways between two stations are worked out once (PK.tw), and which one each trip follows (PK.th). Applied after My Edits, also with no
 // rules file loaded; it changes the line and the distance, never the type.
 var TRACK_END_KM = 3, TRACK_KM = 0.6, TRACK_MIN = 70;
 function trackOn() { return !!PREFS.trackSnap && packCodes().length > 0; }

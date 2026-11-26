@@ -12,7 +12,7 @@
 // the straight line plus ROAD_DETOUR_KM; else, and where its points are away from the roads (side
 // streets, car parks), it keeps its own points. A trip takes the result when ROAD_MIN % of its
 // length is along the roads. That is worked out in the background, a slice at a time with a pill
-// over the map, once per trip (ROAD_CACHE, by its start and end); applied after MyRules and the
+// over the map, once per trip (ROAD_CACHE, by its start and end); applied after My Edits and the
 // tracks, it changes the line, the times along it and the distance, never the type.
 var ROAD_MODES = { CAR: 1, TAXI: 1, MOTORCYCLE: 1, BUS: 1 };
 // Buses: the data doesn't say city bus or coach, so they must fit the main roads better. Only trips of

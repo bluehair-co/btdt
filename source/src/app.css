@@ -169,7 +169,10 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 .mt-caret[aria-expanded="true"] svg { transform: rotate(90deg); }
 .mt-caret-pad { flex: none; width: 32px; }
 .mt-row .chip { font-weight: 600; }
-.chip .sw { width: 10px; height: 10px; border-radius: 3px; display: block; }
+/* Transport colour dot in a filter chip: round, with the off-print like the map legend's dots; the yellow
+   cycling dot gets a blue copy and a thin ink outline so it still shows on a selected (yellow) chip */
+.chip .sw { width: 12px; height: 12px; border-radius: 50%; display: block; flex: none; margin: 0 -1px 0 0; box-shadow: .9px 1.4px 0 var(--offset); }
+.chip .sw[style*="m-bike"] { box-shadow: 0 0 0 1.5px var(--fg), .9px 1.4px 0 #1E3A9E; }
 .mt-kids { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin: var(--sp-1) 0 var(--sp-3) 47px; padding-left: var(--sp-6); border-left: 2px solid var(--line); }
 .mt-mode { display: contents; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; background: var(--panel); }
@@ -810,6 +813,7 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .working[hidden] { display: none; }
 .def-car { display: flex; align-items: center; gap: var(--sp-5); justify-content: space-between; }
 .def-car-t { min-width: 0; }
+.def-car #defCarBtn { white-space: nowrap; flex: none; }
 .def-car-t small { display: block; color: var(--muted); }
 /* In the top layer (popover), above an open dialog; none of the popover's own box. */
 .working[popover] { width: auto; height: auto; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; overflow: visible; }
@@ -1086,6 +1090,17 @@ div.hit-row:hover { background: none; }
 .pack-add { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-4); }
 .pack-add select { max-width: 100%; }
 .pack-offer { margin: var(--sp-2) 0 var(--sp-3); }
+/* Station packs and road packs as one timeline: each header has its transport icon, a 2px ink line runs
+   from the station icon down to the road icon, and the contents under each header are indented from it */
+#packSec, #roadSec { position: relative; }
+#packSec { border-bottom: 0; }
+#roadSec { margin-top: 0; }
+.pack-head { gap: var(--sp-3); }
+.pack-head > .ic { flex: none; width: 22px; height: 22px; fill: var(--fg); }
+#packSec > :not(.pack-head), #roadSec > :not(.pack-head) { margin-left: 30px; }
+#packSec::before, #roadSec::before { content: ""; position: absolute; left: 10px; width: 2px; background: var(--fg); }
+#packSec::before { top: 38px; bottom: 0; }
+#roadSec::before { top: 0; height: 14px; }
 .pack-offer-h { margin: var(--sp-5) 0 var(--sp-1); font: 600 var(--fs-sm) var(--font-body); color: rgba(255, 255, 255, .85); }
 .pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: var(--sp-2); }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
@@ -1304,7 +1319,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .mode-badge { border-radius: 50%; border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--offset); color: var(--badge-ink); box-sizing: border-box; }
 :root[data-theme="dark"] .mode-badge { border-color: var(--bg); }
 .mode-badge.sm { border-radius: 50%; }
-.mode-badge[style*="m-bike"], .mode-badge[style*="bike-"] { color: var(--on-bike); }
+.mode-badge.bike { color: var(--on-bike); }
 .card-head h2, .card-title h2 { font-family: var(--font-display); font-weight: 800; }
 /* The map's paper grain (tintMap in map.js) */
 .map-grain { background: radial-gradient(circle, rgba(30, 58, 158, .10) .8px, transparent 1.3px) 0 0 / 6px 6px; }
@@ -1501,6 +1516,12 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .about-maker:hover { background: var(--grid); }
 .about-maker small { color: var(--muted); }
 .about-credits small { color: var(--muted); }
+/* The BlueHair mark, stamped in the inks: the logo's blue shape as a mask (bluehair-mask.png), blue ink
+   over a pink copy 1.5px down and right, a little crooked, with the grain of the riso filter */
+.about-maker .about-stamp { position: relative; display: block; flex: none; width: 44px; height: 44px; transform: rotate(-4deg); isolation: isolate; filter: url(#riso); }
+.about-maker .about-stamp::before, .about-maker .about-stamp::after { content: ""; position: absolute; inset: 0; -webkit-mask: url(bluehair-mask.png) center / contain no-repeat; mask: url(bluehair-mask.png) center / contain no-repeat; }
+.about-maker .about-stamp::before { background: var(--pink); transform: translate(1.5px, 1.5px); mix-blend-mode: multiply; }
+.about-maker .about-stamp::after { background: var(--fg); }
 .about :focus-visible { outline-color: var(--fg); }
 @media (max-width: 520px) { .about { border-radius: var(--paper-r) var(--paper-r) 0 0; --ppr: 0deg !important; --ppx: 0px !important; --ppy: 0px !important; --por: 0deg !important; --pox: 0px !important; } .about::after { border-bottom: 0; } }
 :root[data-theme="dark"] .about-privacy { background: var(--grid); }

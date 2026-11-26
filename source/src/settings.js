@@ -186,12 +186,13 @@ function buildFactors() {
   el.appendChild(note);
 }
 function co2Changed() { if (D) { dirty.insights = true; if (tab === 'insights') renderTab(); } }
-// The default car (MyRules gear, see mrDefaultCarDialog): what it is, and Set up… or Edit….
+// The default car (My Edits gear, see mrDefaultCarDialog): what it is, and Set default… or Change….
 function renderDefCar() {
   var r = mrDefaultCar(), on = r && MR && MR.on;
-  $('defCarTxt').innerHTML = r ? '<b>' + esc(r.name || 'My car') + '</b><small>' + esc([MR_KINDS[r.kind] || 'Car', r.model].filter(Boolean).join(' · ')) + (on ? '' : ' · MyRules are off') + '</small>'
+  $('defCarTxt').innerHTML = r ? '<b>' + esc(r.name || 'My car') + '</b><small>' + esc([MR_KINDS[r.kind] || 'Car', r.model].filter(Boolean).join(' · ')) + (on ? '' : ' · My Edits are off') + '</small>'
     : '<small>Not set up. Car trips without gear count as a ' + (CAR[A.car] != null && A.car !== 'petrol' ? esc(MR_KINDS[A.car].toLowerCase()) : 'petrol car') + '.</small>';
-  $('defCarBtn').textContent = r ? 'Edit…' : 'Set up…';
+  // The button sets the default, or changes the one there is; the car's name shows which one it is.
+  $('defCarBtn').textContent = r ? 'Change…' : 'Set default…';
 }
 $('defCarBtn').addEventListener('click', function () { mrDefaultCarDialog(); });
 $('occ').addEventListener('input', function () { var v = parseFloat(this.value); if (v >= 1) { A.occ = v; saveFactors(); co2Changed(); } });

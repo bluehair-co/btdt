@@ -124,7 +124,7 @@ function rematchSports(S) {
     S.sport[i] = st.sport; S.mode[i] = MODE_IDX[st.mode]; S.est[i] &= ~GUESSED; S.stype[i] = '';
   }
 }
-// The types and Strava sports there are trips of (after MyRules corrections), for M and the filters.
+// The types and Strava sports there are trips of (after My Edits corrections), for M and the filters.
 function modeStats() {
   var present = {}, sp = {}, plain = {};
   for (var i = 0; i < D.day.length; i++) {
@@ -154,11 +154,11 @@ function* setDataSteps(R) {
   rematchSports(RAW.strava);
   D = withStrava(RAW);
   yield;
-  // MyRules corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
+  // My Edits corrections change types on D, never on what is saved: D gets its own copy of RAW's fields.
   if (D === RAW) D = Object.assign({}, RAW);
   // Trips Timeline merged are split into their legs (split.js), on D only.
   D = splitTrips(D);
-  // Walks you made stays (MyRules corrections with then.stay): their stays join the stays here.
+  // Walks you made stays (My Edits corrections with then.stay): their stays join the stays here.
   D = mrStayInject(D);
   yield;
   $('app').classList.remove('no-data');
@@ -234,7 +234,7 @@ function actFrom(i) { var a = actApp(i); return a ? 'on ' + a : 'in an activity 
 // come from one, else Activities.
 function actsLabel(st) { var k = st && st.apps ? Object.keys(st.apps) : ['Strava']; return k.length === 1 && k[0] ? k[0] : 'Activities'; }
 function recName(i) { var s = D.est[i] & STRAVA && stravaInfo(i); return s && s.name || ''; }
-// A trip's title: the one a MyRules correction gives it, else its activity's name.
+// A trip's title: the one a My Edits correction gives it, else its activity's name.
 function tripName(i) { return D.mrName && D.mrName[i] ? D.mrName[i].name : recName(i); }
 // Gear kinds by name, brand or model: front-loading cargo bikes and the Halfbike.
 var CARGO_RE = /cargo|bakfiets|urban ?arrow|babboe|bullitt|long ?john|christiania|riese|\bgsd\b|douze|carqon|packster|triobike|workcycles|load ?60|load ?75|\bbakfi/i;
@@ -260,7 +260,7 @@ function buildGear() {
     if (s.info && !x.info) x.info = s.info;
     D.gear[i] = g; x.n++; x.modes[m] = (x.modes[m] || 0) + 1;
   }
-  // Gear from MyRules (see mrApplyGear): a period's gear joins Strava's when it names it, else it is
+  // Gear from My Edits (see mrApplyGear): a period's gear joins Strava's when it names it, else it is
   // a gear of its own, with the kind the rule gives.
   var before = new Uint16Array(D.gear);
   mrApplyGear(by, function (name, kind, mode) {
@@ -420,10 +420,10 @@ function apply() {
   for (k = 0; k < ord.length; k++) {
     i = ord[k];
     if (!(D.sport[i] ? F.sports.has(D.sport[i]) : modeOk[D.mode[i]]) || !F.years.has(D.year[i]) || !F.months.has(D.month[i]) || !F.dows.has(D.dow[i])) continue;
-    // Guessed types and gear MyRules filled in go together.
+    // Guessed types and gear My Edits filled in go together.
     if (F.guess === 'check') { if (!mrCheck(i)) continue; }
     else if (F.guess !== 'all' && (F.guess === 'no') === !!(D.est[i] & 4 || mrInferred(i))) continue;
-    // Trips a MyRules correction hides, and walks that became part of a stay (GPS drifts here, drift.js).
+    // Trips a My Edits correction hides, and walks that became part of a stay (GPS drifts here, drift.js).
     if (D.mrHide[i] || D.drift && D.drift[i] === 1) continue;
     if (F.src !== 'all' && !(D.est[i] & STRAVA) === (F.src === 'strava')) continue;
     // A Timeline trip a Strava activity replaced shows only when Timeline is the only source.
@@ -445,7 +445,7 @@ function apply() {
     i = D.vorder[k];
     if (!F.years.has(D.vyear[i]) || !F.months.has(D.vmonth[i]) || !F.dows.has(D.vdow[i]) || !dayOk(D.vday[i])) continue;
     if (!allCC && !F.countries.has(D.vcc[i])) continue;
-    // Stays at a place MyRules hides.
+    // Stays at a place My Edits hides.
     if (D.vhide && D.vhide[i]) continue;
     outV.push(i);
   }
@@ -796,7 +796,7 @@ function hideTip() { tipEl.hidden = true; }
 function tagPlaces() {
   var n = D.day.length, nv = D.vs.length, grid = {}, byAp = {};
   D.places = []; D.pa = new Int32Array(n); D.pb = new Int32Array(n); D.pv = new Int32Array(nv);
-  // A place you named in MyRules is a place of its own, made of exactly what is within its radius:
+  // A place you named in My Edits is a place of its own, made of exactly what is within its radius:
   // it takes nothing from the 300 m grouping around it, and gives nothing to it.
   var byRule = {}, pf = mrPlaceFinder(), rules = pf.n > 0;
   function ruled(r, name) {
@@ -860,16 +860,16 @@ function tripRoute(i) {
 function findHome() {
   if (D.home !== undefined) return D.home;
   needPlaces();
-  // Home from MyRules wins over the guess.
+  // Home from My Edits wins over the guess.
   var mh = mrHomePlace();
-  if (mh != null && mh >= 0) { D.home = mh; D.homeHow = 'your MyRules'; return mh; }
+  if (mh != null && mh >= 0) { D.home = mh; D.homeHow = 'your edits'; return mh; }
   var score = {}, best = -1, bs = 0, v, i, how = '';
   {
     for (v = 0; v < D.vs.length; v++) {
       // A stay that covers 3 am local time counts as a night there.
       var off = D.voff[v] !== NO_OFF ? D.voff[v] * 60000 : -new Date(D.vs[v]).getTimezoneOffset() * 60000;
       var s = D.vs[v] + off, e = D.ve[v] + off, night = Math.ceil((s - 3 * 36e5) / 864e5) * 864e5 + 3 * 36e5;
-      // Not a place MyRules says is something else, or a home you have left.
+      // Not a place My Edits says is something else, or a home you have left.
       var rq = D.pv[v] >= 0 && D.places[D.pv[v]].mr && mrRuleOf(D.places[D.pv[v]]);
       if (rq && rq.role && (rq.role !== 'home' || mrIsPast(rq))) continue;
       if (night <= e) score[D.pv[v]] = (score[D.pv[v]] || 0) + Math.min(30, Math.floor((e - night) / 864e5) + 1);
@@ -1253,7 +1253,7 @@ function runParser(files) {
     }
   });
 }
-// MyRules files are picked out first (see mrIsFile) and loaded on their own; the rest are location files.
+// My Edits files are picked out first (see mrIsFile) and loaded on their own; the rest are location files.
 function importFiles(list) {
   var all = Array.prototype.slice.call(list);
   Promise.all(all.map(mrIsFile)).then(function (is) {
@@ -1360,7 +1360,7 @@ $('demoBtn').addEventListener('click', function () {
     PREFS.cc = true;
     syncLayersUI();
     RAW = null;
-    // Your own MyRules don't apply to the made-up person; a file loaded during the demo does, unsaved.
+    // Your own My Edits don't apply to the made-up person; a file loaded during the demo does, unsaved.
     MR = null;
     return setDataSoon(merge(null, r.results)).then(function () {
       // The demo opens on all of its data, the whole map in view.
@@ -1424,7 +1424,7 @@ function loadSaved() {
     });
   });
 }
-// Remove from this device: MyRules changes not exported are offered for download first, then it asks.
+// Remove from this device: My Edits changes not exported are offered for download first, then it asks.
 $('forgetBtn').addEventListener('click', function () {
   if (MR && MR.changes.length) mrBeforeLosing('Remove', forgetAll);
   else mrConfirm('Remove', 0, forgetAll);

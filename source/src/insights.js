@@ -689,7 +689,7 @@ function renderPlaces() {
   }).join('');
 }
 $('placesSeg').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-m]'); if (b) { PREFS.placesM = b.dataset.m; savePrefs(); renderPlaces(); } });
-// Time by kind of place: the kinds you gave places in MyRules (home, work, restaurant…), by time
+// Time by kind of place: the kinds you gave places in My Edits (home, work, restaurant…), by time
 // stayed in the filters. Shown once at least MIN_KINDS places have a kind.
 var MIN_KINDS = 5;
 // Other places flips through places that aren't one of the kinds (nor the plain pin of a place
@@ -709,14 +709,14 @@ function renderKinds() {
     else other += h;
   }
   var keys = Object.keys(by).sort(function (a, b) { return by[b] - by[a]; }), mx = Math.max.apply(null, keys.map(function (k) { return by[k]; }).concat([other, 1]));
-  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in MyRules (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stations, stops and airports BT•DT named' : '') + ', in these filters. Give more places a kind from their page on the map.';
+  $('kindNote').textContent = 'Time you stayed at the places you gave a kind in My Edits (' + fmt(rules.length) + ' places)' + (stops ? ' and at the ' + fmt(stops) + ' stations, stops and airports BT•DT named' : '') + ', in these filters. Give more places a kind from their page on the map.';
   $('kindRows').innerHTML = keys.length ? keys.map(function (k) {
     var kd = MR_KIND[k] || [mrKindName(k), 'pin'], np = Object.keys(n[k]).length;
-    return '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm" style="background:var(--rule)">' + icon(kd[1]) + '</span><span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
+    return '<div class="bar-row kind-row"><span class="kind-l">' + badgeHtml('var(--rule)', kd[1], true) + '<span><b>' + esc(kd[0]) + '</b><small class="fine">' + fmt(np) + ' place' + (np === 1 ? '' : 's') + ' · ' + Math.round(by[k] / all * 100) + '%</small></span></span>' +
       '<div><div class="track"><i style="width:' + (by[k] / mx * 100).toFixed(1) + '%;background:var(--rule)"></i></div></div><div class="val">' + hoursLabel(by[k]).replace(/ \d+ min$/, '') + '</div></div>';
   }).join('') +
     // Other places: the time at places without a kind, its badge flipping through kinds of place.
-    '<div class="bar-row kind-row"><span class="kind-l"><span class="mode-badge sm kind-flip" style="background:var(--m-other)">' + KIND_FLIP.map(icon).join('') + '</span><span><b>Other places</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +
+    '<div class="bar-row kind-row"><span class="kind-l">' + badgeHtml('var(--m-other)', null, true, KIND_FLIP.map(icon).join('')).replace('class="mode-badge sm', 'class="mode-badge sm kind-flip') + '<span><b>Other places</b><small class="fine">No kind set · ' + Math.round(other / Math.max(all, 1e-9) * 100) + '%</small></span></span>' +
       '<div><div class="track"><i style="width:' + (other / mx * 100).toFixed(1) + '%;background:var(--m-other)"></i></div></div><div class="val">' + hoursLabel(other).replace(/ \d+ min$/, '') + '</div></div>'
     : '<p class="empty">No stays at those places in these filters.</p>';
 }
@@ -751,7 +751,7 @@ function renderGear() {
   var max = list[0].km;
   $('gearList').innerHTML = list.map(function (x) {
     var G = M.gear[x.g], d = distParts(x.km);
-    return '<button type="button" class="hit-row gear-row" data-gear="' + x.g + '"><span class="mode-badge sm" style="background:' + modeColor(G.mode) + '">' + icon(gearIcon(x.g)) + '</span>' +
+    return '<button type="button" class="hit-row gear-row" data-gear="' + x.g + '">' + badgeHtml(modeColor(G.mode), gearIcon(x.g), true) +
       '<span class="t"><b>' + esc(G.name) + '</b><small>' + gearKind(x.g) + ' · ' + fmt(x.n) + (BIKE_KIND[G.kind] || G.kind === 'shoe' ? ' activit' + (x.n === 1 ? 'y' : 'ies') : ' trip' + (x.n === 1 ? '' : 's')) + (x.guess ? ' (' + fmt(x.guess) + ' guessed)' : '') + ' · ' + (x.d0 === x.d1 ? niceDate(x.d0) : niceDate(x.d0) + ' – ' + niceDate(x.d1)) + '</small>' +
       '<i class="gear-bar"><i style="width:' + (x.km / max * 100).toFixed(1) + '%;background:' + modeColor(G.mode) + '"></i></i></span>' +
       '<span class="r num">' + d.v + '<small>' + d.u + '</small></span></button>';
@@ -1340,7 +1340,7 @@ function renderCo2() {
   var nd = Object.keys(days).length;
   $('co2Card').innerHTML = '<div class="stats" style="margin-bottom:14px">' + stat('Total', c.v, c.u, '') + stat('Per day travelled', co2(total / Math.max(1, nd)).v, co2(total / Math.max(1, nd)).u, '') + '</div>' +
     '<div class="bars">' + (G.length ? G.map(function (g) {
-      return '<div class="bar-row"><span class="mode-badge sm" style="background:' + g.color + '">' + icon(g.modes[0]) + '</span><div><div class="name"><span>' + g.label + '</span><span>' + Math.round(by[g.key] / total * 100) + '%</span></div>' +
+      return '<div class="bar-row">' + badgeHtml(g.color, g.modes[0], true) + '<div><div class="name"><span>' + g.label + '</span><span>' + Math.round(by[g.key] / total * 100) + '%</span></div>' +
         '<div class="track"><i style="width:' + (by[g.key] / max * 100).toFixed(1) + '%;background:' + g.color + '"></i></div></div><div class="val">' + co2s(by[g.key]) + '</div></div>';
     }).join('') : '<p class="empty">No emissions from these trips.</p>') + '</div>';
 }
@@ -1422,7 +1422,7 @@ function buildSpotKeys() {
   // Merges: one place under two place IDs (see mergedSpots), then the ones you made by hand.
   var root = mergedSpots(keys);
   for (v = 0; v < n; v++) keys[v] = root(keys[v]);
-  // A place you named in MyRules is one spot: every original place within its radius (see mrUnits),
+  // A place you named in My Edits is one spot: every original place within its radius (see mrUnits),
   // whatever the grouping above did with it.
   var pf = mrPlaceFinder();
   if (pf.n) for (v = 0; v < n; v++) {
@@ -1439,7 +1439,7 @@ function buildSpotKeys() {
 // side of the handover. Neighbouring shops have their visits mixed in time, so they stay apart.
 // (Checked on a real Timeline: 11 of 440 ID pairs within 25 m merge, including a place whose ID
 // changed in 2022 with 2 visits to the new ID in 2020.) Merges you make on a spot page
-// (MyRules place_merges: { id, from, into } by Google place ID, so they sync with your rules) are
+// (My Edits place_merges: { id, from, into } by Google place ID, so they sync with your rules) are
 // applied on top. The merged spot keeps the key with
 // more time there.
 var AUTO_MERGE_KM = 0.025, AUTO_MERGE_MIN = 3, AUTO_MERGE_OFF = 0.1;
@@ -1504,8 +1504,8 @@ function respot() {
   if (map && PREFS.pins) layerToggles();
 }
 function mergeSpot(from, into) { saving(function () { mergeSpotNow(from, into); }); }
-// Merges you made, from spot key to spot key ('id:' + Google place ID), from MyRules (and any older
-// ones still in PREFS). They apply whether MyRules are switched on or off.
+// Merges you made, from spot key to spot key ('id:' + Google place ID), from My Edits (and any older
+// ones still in PREFS). They apply whether My Edits are switched on or off.
 function spotMergeMap() {
   var m = {};
   if (typeof mrList === 'function') mrList('place_merges').forEach(function (r) { if (r.id && r.enabled !== false && r.from && r.into) m['id:' + r.from] = 'id:' + r.into; });
@@ -1602,7 +1602,7 @@ function spotsOf(vs) {
 }
 // A spot's name: the one Takeout gave it, Home, or the town it's in.
 function spotName(s, k) {
-  // Your own name from MyRules wins.
+  // Your own name from My Edits wins.
   var mr = mrActive('places').length && mrPlaceName(s);
   if (mr) return mr;
   if (s.name) return s.name;

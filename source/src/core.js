@@ -325,7 +325,14 @@ function isSim(i) { return !!(D.srcs && D.srcs[i] === SRC.sim); }
 function simTag(i) { return (isSim(i) ? '<span class="guess sim">Simulated</span>' : '') + mrTag(i) + splitTag(i); }
 var REC_MARK = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 12.5c2-.2 2.6-2 4.2-4.6C8.6 5.6 10 4 13 3.5" fill="none" style="stroke:var(--on-color)" stroke-width="2.2" stroke-linecap="round"/><circle cx="3" cy="12.5" r="1.9" style="fill:var(--on-color)"/></svg>';
 function recMark(app) { return app === 'Strava' ? STRAVA_MARK : '<span class="strava-mark rec-mark" title="Recorded' + (app ? ' on ' + esc(app) : '') + '">' + REC_MARK + '</span>'; }
-function badge(m, small, app, ic) { return '<span class="mode-badge' + (small ? ' sm' : '') + '" style="background:' + modeColor(m) + '">' + icon(ic || m) + (app ? recMark(app === true ? '' : app) : '') + '</span>'; }
+// The one transport or place badge: a round ring of ink on a coloured fill (--m-…, a place's colour).
+// Its icon is --badge-ink, except on the yellow cycling fill (class bike), where it is --on-bike.
+// ic: the icon's name (none for a badge that shows its own icons, inner); inner: extra HTML inside (a mark).
+function badgeHtml(bg, ic, small, inner) {
+  var bike = /m-bike|FEDF02/i.test(bg);
+  return '<span class="mode-badge' + (small ? ' sm' : '') + (bike ? ' bike' : '') + '" style="background:' + bg + '">' + (ic ? icon(ic) : '') + (inner || '') + '</span>';
+}
+function badge(m, small, app, ic) { return badgeHtml(modeColor(m), ic || m, small, app ? recMark(app === true ? '' : app) : ''); }
 // A ride on a cargo bike or a Halfbike shows that bike's icon.
 // A trip's icon: its gear's when the gear has one of its own (Halfbike, cargo bike), else its
 // sport's when the data names one with an icon (an e-bike ride), else its transport's.

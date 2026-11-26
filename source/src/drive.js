@@ -1,5 +1,5 @@
-// ---------- MyRules in Google Drive ----------
-// Keep your rules › In Google Drive (Menu › MyRules) keeps the MyRules document in one file, btdt.myrules.json,
+// ---------- My Edits in Google Drive ----------
+// Keep your rules › In Google Drive (Menu › My Edits) keeps the My Edits document in one file, BTDT-Edits.json (btdt.myrules.json before),
 // in the user's own Drive, so a laptop and a phone use the same rules. Off until turned on, and nothing
 // is fetched before that. Only the rules file goes to Drive, never location data.
 // - Sign-in: Google Identity Services, token flow in the browser (no server, no client secret), only
@@ -13,7 +13,7 @@
 //   deleted; changed on both sides, the document saved last wins (counted, and said in a toast).
 var DRIVE_CLIENT = '598451119921-pnn3e50l7g0vqburnssvjnkjl9hruuc8.apps.googleusercontent.com';
 var DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
-var DRIVE_NAME = 'btdt.myrules.json';
+var DRIVE_NAME = 'BTDT-Edits.json', DRIVE_OLD_NAME = 'btdt.myrules.json';
 var DRIVE_API = 'https://www.googleapis.com';
 var DRIVE = { on: false, file: null, version: null, at: 0, err: '', state: 'off', token: null, exp: 0, gis: null, client: null, pushT: 0, running: null, again: false, applying: false };
 (function () {
@@ -81,9 +81,21 @@ function driveFetch(path, opt) {
     return res;
   });
 }
-function driveFind() {
-  var q = encodeURIComponent("name = '" + DRIVE_NAME + "' and trashed = false");
+function driveQuery(name) {
+  var q = encodeURIComponent("name = '" + name + "' and trashed = false");
   return driveFetch('/drive/v3/files?q=' + q + '&spaces=drive&orderBy=modifiedTime%20desc&fields=files(id,version)').then(function (r) { return r.json(); }).then(function (j) { return j.files && j.files[0] || null; });
+}
+// The rules file: BTDT-Edits.json, or the btdt.myrules.json of before. An old one is renamed to the new
+// name (it keeps its id, so the next save goes there too).
+function driveFind() {
+  return driveQuery(DRIVE_NAME).then(function (f) {
+    if (f) return f;
+    return driveQuery(DRIVE_OLD_NAME).then(function (o) {
+      if (!o) return null;
+      return driveFetch('/drive/v3/files/' + o.id + '?fields=id,version', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: DRIVE_NAME }) })
+        .then(function (r) { return r.json(); }).then(function (j) { return { id: j.id || o.id, version: j.version || o.version }; }, function () { return o; });
+    });
+  });
 }
 function driveMeta(id) { return driveFetch('/drive/v3/files/' + id + '?fields=id,version,trashed').then(function (r) { return r.json(); }); }
 function driveRead(id) { return driveFetch('/drive/v3/files/' + id + '?alt=media').then(function (r) { return r.text(); }).then(function (t) { return t.trim() ? JSON.parse(t) : {}; }); }
@@ -105,7 +117,7 @@ function driveStable(x) {
   return JSON.stringify(x === undefined ? null : x);
 }
 function driveSame(a, b) { return driveStable(a) === driveStable(b); }
-// local, remote, base: MyRules documents (base may be null: never synced, both count as new).
+// local, remote, base: My Edits documents (base may be null: never synced, both count as new).
 // { doc, conflicts }. A list of rules with ids is merged rule by rule; anything else as a whole.
 function driveMerge(local, remote, base) {
   local = local || {}; remote = remote || {}; base = base || {};
@@ -188,7 +200,7 @@ function driveSync(ask) {
   }).then(function () {
     DRIVE.at = Date.now(); DRIVE.err = ''; DRIVE.state = 'ok'; driveKeep();
     if (conflicts) toast(conflicts + ' rule' + (conflicts === 1 ? ' was' : 's were') + ' changed on two devices: the one saved last was kept.');
-    else if (pill) toast(changed ? 'MyRules updated from Google Drive.' : 'MyRules are in sync with Google Drive.');
+    else if (pill) toast(changed ? 'My Edits updated from Google Drive.' : 'My Edits are in sync with Google Drive.');
   }, function (e) {
     DRIVE.state = e && e.signin ? 'signin' : 'err'; DRIVE.err = e && e.message || 'Could not sync.';
     driveKeep();
@@ -223,7 +235,7 @@ function driveBusy(on) {
   else if (WORKING.n && !--WORKING.n) setTimeout(function () { if (!WORKING.n) workingShow(false); }, Math.max(0, WORKING_MIN - (performance.now() - WORKING.at)));
 }
 
-// ---------- the switch and its line (in the MyRules card) ----------
+// ---------- the switch and its line (in the My Edits card) ----------
 function driveRow() {
   if (DEMO) return '';
   var on = DRIVE.on;
@@ -262,7 +274,7 @@ function driveWire() {
 }
 function driveShow() {
   if (DRIVE.on && DRIVE.state === 'signin' && !DEMO)
-    promptBar('driveBar', { icon: 'sync', title: 'Sync MyRules with Google Drive', text: 'Only your rules, never your location history.', acts: [['Sync', 'primary', 'sync']], close: 'Not now',
+    promptBar('driveBar', { icon: 'sync', title: 'Sync My Edits with Google Drive', text: 'Only your rules, never your location history.', acts: [['Sync', 'primary', 'sync']], close: 'Not now',
       on: function (a) { if (!a) return; $('driveBar').hidden = true; if (a === 'sync') driveSync(true); } });
   else if ($('driveBar')) $('driveBar').hidden = true;
   if ($('mrCard')) renderMyRules();
