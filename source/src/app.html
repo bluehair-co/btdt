@@ -236,6 +236,11 @@
       </div>
     </div>
 
+    <!-- Playback on its own: the date on paper top right, and a button to close playback. -->
+    <div class="play-head" id="playHead" hidden>
+      <div class="play-date"><b id="playDate"></b><small id="playSub"></small></div>
+      <button type="button" class="play-close" id="playClose" aria-label="Close playback" title="Close playback"><span data-icon="close"></span></button>
+    </div>
     <div class="map-legend" id="mapLegend"></div>
     <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>

@@ -1542,6 +1542,8 @@ $('tripBody').addEventListener('click', function (ev) {
 $('tripBack').addEventListener('click', function () { if (listBack) openList(listBack); });
 
 // ---------- top bar: day navigator or time slider ----------
+// Playback always starts closed: it takes over the map, so it is not remembered between visits.
+PREFS.scrub = false;
 var scrubV = 1000, T0 = 0, T1 = 0, playing = false, playRaf = 0, SPEEDS = [1, 2, 4, 8, 16, 32, 0.25, 0.5];
 function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.speed) + '×'; }
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
@@ -1552,6 +1554,11 @@ function updateTopbar() {
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
+  // While playback is open, everything else steps aside: only the map, the slider, the date and Close.
+  var pm = !!n && !!PREFS.scrub;
+  if (pm && $('playHead').hidden) requestAnimationFrame(function () { document.querySelectorAll('#playHead .play-date, #playHead .play-close, #playBar').forEach(paperize); });
+  document.body.classList.toggle('play-mode', pm);
+  $('playHead').hidden = !pm;
   if (n) {
     if (one) {
       // From midnight where the period starts to midnight where it ends: a day that flies
@@ -1606,6 +1613,9 @@ function syncPeriodNavs() {
       q('rangeSub').textContent = sub + (kr ? ' · ' + kr + ' filter' + (kr > 1 ? 's' : '') : '');
     }
   });
+  // The date on paper at the top of playback
+  $('playDate').textContent = one ? (F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit)) : F.dm === 'all' ? 'All time' : F.from === F.to ? dayLabel(F.from) : niceDate(F.from) + ' – ' + niceDate(F.to);
+  $('playSub').textContent = sub;
 }
 // The calendar under the navigator's date: a month at a time, Monday first. Days with
 // trips in the filters have a dot, the period on show is shaded, and Today at the bottom
@@ -2092,11 +2102,16 @@ function rollOn() {
   playFit.i = i;
   return true;
 }
-$('scrubToggle').addEventListener('click', function () {
-  PREFS.scrub = !PREFS.scrub; savePrefs();
+function setScrub(on) {
+  PREFS.scrub = on;
   // Hiding the slider shows every trip again.
   if (!PREFS.scrub) { stopPlay(); if (scrubV < 1000) scrubTo(1000); }
   updateTopbar();
+}
+$('scrubToggle').addEventListener('click', function () { setScrub(!PREFS.scrub); });
+$('playClose').addEventListener('click', function () { setScrub(false); });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && document.body.classList.contains('play-mode') && !document.querySelector('.sheet.open, dialog[open]')) setScrub(false);
 });
 $('playBtn').addEventListener('click', function () { if (playing) stopPlay(); else play(); });
 $('speedBtn').addEventListener('click', function () {

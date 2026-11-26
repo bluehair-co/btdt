@@ -1548,3 +1548,23 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 @media (max-width: 520px) { .about { border-radius: var(--paper-r) var(--paper-r) 0 0; --ppr: 0deg !important; --ppx: 0px !important; --ppy: 0px !important; --por: 0deg !important; --pox: 0px !important; } .about::after { border-bottom: 0; } }
 :root[data-theme="dark"] .about-privacy { background: var(--grid); }
 .menu-body .data-row { border-radius: var(--paper-r); }
+
+/* ---------- v2.0: playback on its own ----------
+   While playback is open on the Map, the rest of the interface steps aside: only the map, the playback
+   bar at the bottom, the date on a slip of paper top right and the round Close button beside it. */
+body.play-mode:has(#mapPage:not([hidden])) :is(.dock, .topbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu) { display: none !important; }
+body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
+.play-head { position: absolute; z-index: 26; top: calc(12px + var(--safe-t)); right: 12px; display: flex; align-items: flex-start; gap: var(--sp-5); }
+.play-head[hidden] { display: none; }
+.play-date { position: relative; display: flex; flex-direction: column; align-items: flex-end; padding: var(--sp-4) var(--sp-7); color: var(--fg); text-align: right; }
+.play-date b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); line-height: 1.2; }
+.play-date small { font-size: var(--fs-2xs); color: var(--muted); }
+.play-close { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--fg); cursor: pointer; }
+.play-close .ic { width: 20px; height: 20px; }
+.play-date, .play-close { --paper: var(--panel); isolation: isolate; border: 0; background: transparent; }
+.play-close { border-radius: 50%; }
+.play-date { border-radius: var(--paper-r); }
+:where(.play-date, .play-close)::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
+  box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
+:where(.play-date, .play-close)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
+  transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }

@@ -81,6 +81,7 @@ Every place in the app answers one question, and a new feature goes where its qu
 - Country flags are printed in the inks: one sprite, `flags.png`, made by `source/icons/flags.py` from flag-icons (MIT). `flag(cc)` returns HTML, so never put it inside `esc()`.
 - Each transport kind has its own colour token (`--m-road`, `--m-transit`, `--m-bike`, `--m-foot`, `--m-air`, `--m-water`) used everywhere: lines, icons, legends, filters. Cycling is the yellow ink; icons on it use `--on-bike`.
 - Light and dark themes (*Menu › Preferences*, or the system's). Check both.
+- **Playback is a mode of its own.** Opening playback on the Map hides everything else (top bar, dock, round buttons, legend, zoom); only the map, the playback bar at the bottom, the date on a slip of paper top right and a round Close button beside it stay. Close (or Escape) brings the rest back. Playback is not remembered between visits.
 - Phone first, desktop too: sheets slide up from the bottom on a phone and open as side panels on desktop. Every touch interaction (lasso, one-finger zoom, sliders) must work with a finger.
 - **Local settings everywhere.** Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*. Every label follows them: distances, speeds and per-distance figures (km or miles), short distances (m or ft), date order and 12/24-hour time, in results and also in form fields, their labels, info texts and examples. Nothing is hard-coded to km or to one date format. Check new UI in both kilometres and miles.
 

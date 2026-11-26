@@ -963,7 +963,7 @@ function localTime(ms, zone, off) {
 // and pink block printed a little off it (the paper rules in app.css). Each sheet gets its own small
 // random tilt and offsets every time it appears. The tilt is kept small for big panels, so their far
 // edges move no more than about 3px.
-var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel';
+var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .play-date, .play-close';
 function paperize(el) {
   function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
   var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
