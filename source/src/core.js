@@ -555,7 +555,7 @@ function promptBar(id, o) {
     el = document.createElement('div');
     el.id = id; el.setAttribute('role', 'status');
     el.className = 'prompt' + (o.mode ? ' prompt-mode' : '') + (o.cls ? ' ' + o.cls : '');
-    el.innerHTML = '<div class="prompt-t">' + (o.spin ? '<i class="bg-spin" aria-hidden="true"></i>' : o.icon ? icon(o.icon) : '') +
+    el.innerHTML = '<div class="prompt-t">' + (o.spin ? SPIN_HTML : o.icon ? icon(o.icon) : '') +
       '<span class="prompt-words"><b class="prompt-title"></b><span class="prompt-sub"></span></span></div>' +
       '<div class="prompt-acts">' + (o.extra || '') + (o.acts || []).map(function (a) { return '<button type="button" class="btn' + (a[1] ? ' ' + a[1] : '') + '" data-a="' + a[2] + '">' + a[0] + '</button>'; }).join('') +
       (o.close ? '<button type="button" class="icon-btn prompt-x" data-a="close" aria-label="' + esc(o.close) + '">' + icon('close') + '</button>' : '') + '</div>';
@@ -615,6 +615,26 @@ function runSoon(g) {
 // every save). It sits in the top layer (a popover) so an open dialog can't cover it. Its spinner and
 // fade are transform and opacity animations, which keep running while the work holds the page.
 var WORKING = { n: 0, at: 0 }, WORKING_MIN = 600;
+// The spinner, everywhere in the app: a ring with a yellow arc and its blue off-print, in the spin
+// pill (a slip of paper in the middle of the screen, with a yellow block under it; .spin-pill in
+// app.css). The Working pill is one; spinPill() puts up others that don't block the page.
+var SPIN_HTML = '<span class="spin" aria-hidden="true"><i></i><i></i></span>';
+// spinPill(id, text, frac): a spin pill with that text and, when frac is a number (0-1), a progress
+// bar under it; spinPill(id, null) takes it away.
+function spinPill(id, text, frac) {
+  var el = $(id);
+  if (text == null) { if (el) el.hidden = true; return; }
+  if (!el) {
+    el = document.createElement('div'); el.id = id; el.className = 'spin-pill spin-float'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.innerHTML = SPIN_HTML + '<span class="spin-text"><span class="spin-t"></span><span class="spin-bar" hidden><i></i></span></span>';
+    document.body.appendChild(el);
+  }
+  el.hidden = false;
+  el.querySelector('.spin-t').textContent = text;
+  var bar = el.querySelector('.spin-bar');
+  bar.hidden = frac == null;
+  if (frac != null) bar.firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+}
 function workingShow(on) {
   var el = $('working');
   el.hidden = !on;
@@ -1008,7 +1028,7 @@ function localTime(ms, zone, off) {
 // and pink block printed a little off it (the paper rules in app.css). Each sheet gets its own small
 // random tilt and offsets every time it appears. The tilt is kept small for big panels, so their far
 // edges move no more than about 3px.
-var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .play-date, .play-close';
+var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .play-date, .play-close, .spin-pill';
 function paperize(el) {
   function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
   var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
