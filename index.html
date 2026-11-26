@@ -9673,6 +9673,9 @@ function setScrub(on) {
   // Hiding the slider shows every trip again.
   if (!PREFS.scrub) { stopPlay(); if (scrubV < 1000) scrubTo(1000); }
   updateTopbar();
+  // Opening playback starts it once the view has settled (play() waits for the map tiles itself,
+  // with the spin pill if that takes a moment).
+  if (PREFS.scrub && !playing) setTimeout(function () { if (PREFS.scrub && !playing && document.body.classList.contains('play-mode')) play(); }, 350);
 }
 $('scrubToggle').addEventListener('click', function () { setScrub(!PREFS.scrub); });
 $('playClose').addEventListener('click', function () { setScrub(false); });
