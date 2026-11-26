@@ -644,7 +644,8 @@ function renderRoutes() {
   if (!list.length) { $('topRoutes').innerHTML = '<p class="empty">No trips between two different places.</p>'; return; }
   $('topRoutes').innerHTML = list.slice(0, 8).map(function (r) {
     var ms = Object.keys(r.modes).sort(function (x, y) { return r.modes[y] - r.modes[x]; });
-    return '<button type="button" class="hit-row" data-i="' + r.last + '">' + badge(ms[0], true) +
+    // v2.0: each route is also drawn as a line on a transit map, as long as its share of trips
+    return '<button type="button" class="hit-row" data-i="' + r.last + '" style="--c:' + modeColor(ms[0]) + ';--w:' + Math.max(12, r.n / list[0].n * 100).toFixed(1) + '%">' + badge(ms[0], true) +
       '<span class="t"><b>' + esc(placeLabel(r.a)) + ' ↔ ' + esc(placeLabel(r.b)) + '</b><small>' + ms.slice(0, 3).map(function (m) { return LABEL[m] || m; }).join(', ') + ' · ' + dist(r.km / r.n) + ' each way</small></span>' +
       '<span class="r num">' + fmt(r.n) + '<small>trips</small></span></button>';
   }).join('');

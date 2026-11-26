@@ -54,7 +54,7 @@
   --globe-sea: #e2e4f0; --globe-grid: #d2d4e4; --globe-land: #fffaf6; --globe-coast: #d6ccc4;
   --heat-0: rgba(250,180,160,0); --heat-1: #f7b8a6; --heat-2: #e8644f; --heat-3: #b8261a; --heat-4: #6d0f07;
   --speed-1: #d7301f; --speed-2: #f46d43; --speed-3: #fdae61; --speed-4: #fee08b; --speed-5: #a6d96a; --speed-6: #1a9850; --speed-7: #2b83ba; --speed-8: #5e3c99;
-  --hr-1: #8a9bb0; --hr-2: #2a78d6; --hr-3: #1baf7a; --hr-4: #eda100; --hr-5: #e34948;
+  --hr-1: #9AA3C8; --hr-2: #2F5BD3; --hr-3: #1F9466; --hr-4: #E8C400; --hr-5: #FF4FA0;
 
   /* Landing page and About (always on the dark picture) */
   --landing-bg: #19153a;       /* behind the landing picture and the demo bar */
@@ -836,19 +836,18 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 /* ---------- the landing picture behind Insights and Timeline ---------- */
 /* A veil of the page colour keeps text readable: lighter at the top so the sky shows,
    nearly solid lower down where the cards are. Cards and the list are frosted glass. */
-#insightsPage, #timelinePage {
-  isolation: isolate;
-  --veil-a: 52%; --veil-b: 82%; --veil-c: 92%;
-  --panel: rgba(246, 245, 252, .74); --glass: rgba(246, 245, 252, .82);
-}
+/* v2.0: the landing picture as a header at the top of Insights and Timeline. It scrolls away with the
+   page and fades into the paper; the cards below are solid. At night it's recoloured in the night blue. */
+#insightsPage, #timelinePage { isolation: isolate; }
 #insightsPage::before, #timelinePage::before {
-  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    linear-gradient(color-mix(in srgb, var(--bg) var(--veil-a), transparent), color-mix(in srgb, var(--bg) var(--veil-b), transparent) 55%, color-mix(in srgb, var(--bg) var(--veil-c), transparent)),
-    url(landing-1600.webp) 40% 30% / cover no-repeat var(--bg);
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: clamp(280px, 42vh, 460px); z-index: -1; pointer-events: none;
+  background: linear-gradient(transparent 35%, var(--bg)), url(landing-riso.webp) 32% 18% / cover no-repeat;
 }
-:root[data-theme="dark"] :is(#insightsPage, #timelinePage) { --veil-a: 35%; --veil-b: 78%; --veil-c: 90%; --panel: rgba(31, 27, 66, .6); --glass: rgba(31, 27, 66, .7); --line: rgba(255, 255, 255, .12); }
-#insightsPage .card, #timelinePage .tl-inner { backdrop-filter: blur(12px) saturate(1.2); -webkit-backdrop-filter: blur(12px) saturate(1.2); }
+:root[data-theme="dark"] :is(#insightsPage, #timelinePage)::before {
+  background: linear-gradient(rgba(18, 28, 82, .35), rgba(18, 28, 82, .55) 45%, var(--bg)), url(landing-riso.webp) 32% 18% / cover no-repeat;
+  background-blend-mode: normal, luminosity;
+}
+#insightsPage .pnav + .cards { margin-top: clamp(110px, 22vh, 240px); }
 #timelinePage .tl-inner { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r-3xl); margin: 8px max(8px, calc((100% - 760px) / 2)) calc(var(--dock-h) + var(--dock-gap) + 32px + var(--safe-b)); box-sizing: content-box; }
 
 /* ---------- wider screens ---------- */
@@ -1276,8 +1275,8 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .ins-group-h { grid-column: 1 / -1; margin: var(--sp-7) var(--sp-1) -4px; font-size: var(--fs-sm); font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 .ins-chips { display: flex; gap: var(--sp-3); overflow-x: auto; scrollbar-width: none; padding: var(--sp-4) var(--sp-1) var(--sp-1); margin: 0 -2px; }
 .ins-chips::-webkit-scrollbar { display: none; }
-.ins-chips button { flex: none; padding: var(--sp-3) var(--sp-6); border-radius: var(--r-pill); border: 1px solid var(--line); background: var(--panel); color: var(--fg); font: inherit; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
-.ins-chips button[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: var(--accent-fg); }
+.ins-chips button { flex: none; padding: var(--sp-3) var(--sp-6); border-radius: var(--r-pill); border: 2px solid var(--fg); background: var(--panel); color: var(--fg); font: inherit; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.ins-chips button[aria-pressed="true"] { background: var(--chip-on-bg); color: var(--chip-on-fg); }
 .ins-chips button[hidden] { display: none; }
 @media (min-width: 960px) { .cards .card.span { grid-column: 1 / -1; } }
 
@@ -1380,3 +1379,42 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .welcome-panel .demo-open { flex-basis: auto; color: var(--fg); background: var(--panel); border: 2px solid var(--fg); border-radius: var(--r-pill); padding: var(--sp-5) var(--sp-9); font-weight: 600; }
 .welcome-panel .demo-open span:last-child { text-decoration: none; }
 .welcome-panel .demo-open:hover { background: var(--grid); }
+/* ---------- v2.0 Insights: the cards stay plain; what they show is printed ----------
+   Big numbers get a yellow highlighter printed a little off; bars become dot screens in their ink;
+   records are ticket stubs, routes are lines on a transit map, place totals are postmarks,
+   gear is a luggage tag; charts get the ink grain (#riso in app.html). */
+.stat .value { display: inline-block; padding: 0 3px; margin-left: -3px; font-family: var(--font-display); font-weight: 800;
+  background: linear-gradient(transparent 52%, var(--chip-on-bg) 52%, var(--chip-on-bg) 88%, transparent 88%) 4px 3px / 100% 100% no-repeat; }
+:root[data-theme="dark"] .stat .value { background-image: linear-gradient(transparent 52%, rgba(254, 223, 2, .3) 52%, rgba(254, 223, 2, .3) 88%, transparent 88%); }
+.bar-row .track, .gear-bar, .hz-bar { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+.bar-row .track i, .gear-bar > i, .hz-bar i { -webkit-mask: radial-gradient(circle, #000 1.6px, transparent 2.1px) 0 0 / 4.5px 4.5px; mask: radial-gradient(circle, #000 1.6px, transparent 2.1px) 0 0 / 4.5px 4.5px; }
+.bar-row .track { height: 12px; }
+.hz-bar { height: 14px; }
+.rhythm .c { border-radius: 50%; }
+#timeChart rect[fill^="var"], #cctlBars, .far-art { filter: url(#riso); }
+/* Records: ticket stubs, with a perforated edge and the label set like a ticket */
+.record { position: relative; border: 1.5px solid var(--fg); border-radius: 10px; padding-right: 54px;
+  background: radial-gradient(circle at 100% 50%, transparent 6px, var(--panel) 6.5px) right / 50% 100% no-repeat, radial-gradient(circle at 0 50%, transparent 6px, var(--panel) 6.5px) left / 50% 100% no-repeat; }
+.record::after { content: ""; position: absolute; top: 8px; bottom: 8px; right: 40px; border-right: 2px dashed var(--fg); }
+.record .k { font-family: "IBM Plex Sans Condensed", var(--font-body); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-2xs); }
+.record .v { font-family: var(--font-display); font-weight: 800; color: var(--fg); }
+.record:hover { border-color: var(--fg); background-color: var(--grid); }
+/* Top routes: a line on a transit map, two stops, as long as its share of the trips */
+#topRoutes .hit-row .t::after { content: ""; display: block; height: 12px; margin-top: 5px; width: var(--w, 100%);
+  background: radial-gradient(circle, var(--panel) 2.6px, var(--fg) 3.2px, var(--fg) 5.4px, transparent 6px) left center / 12px 12px no-repeat,
+    radial-gradient(circle, var(--panel) 2.6px, var(--fg) 3.2px, var(--fg) 5.4px, transparent 6px) right center / 12px 12px no-repeat,
+    linear-gradient(var(--c), var(--c)) center / calc(100% - 10px) 5px no-repeat; }
+#topRoutes .r { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); }
+/* Top places: each total as a postmark, with wavy cancel lines beside it */
+#topPlaces .hit-row .r { display: grid; place-items: center; width: 60px; height: 60px; flex: none; border-radius: 50%; padding: 0; white-space: normal; line-height: 1.05;
+  border: 2px solid var(--fg); box-shadow: inset 0 0 0 3px var(--panel), inset 0 0 0 4px var(--fg); transform: rotate(-6deg); font-family: var(--font-display); font-weight: 800; font-size: var(--fs-xs); text-align: center; }
+#topPlaces .hit-row:nth-child(even) .r { transform: rotate(5deg); }
+#topPlaces .hit-row .t { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='34'%3E%3Cg fill='none' stroke='%231E3A9E' stroke-width='1.6' opacity='.35'%3E%3Cpath d='M0 7q7.5-5 15 0t15 0 15 0 15 0M0 15q7.5-5 15 0t15 0 15 0 15 0M0 23q7.5-5 15 0t15 0 15 0 15 0'/%3E%3C/g%3E%3C/svg%3E") right center / 60px 34px no-repeat; padding-right: 58px; }
+:root[data-theme="dark"] #topPlaces .hit-row .t { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='34'%3E%3Cg fill='none' stroke='%23F2E8D9' stroke-width='1.6' opacity='.3'%3E%3Cpath d='M0 7q7.5-5 15 0t15 0 15 0 15 0M0 15q7.5-5 15 0t15 0 15 0 15 0M0 23q7.5-5 15 0t15 0 15 0 15 0'/%3E%3C/g%3E%3C/svg%3E"); }
+/* Your gear: luggage tags */
+.gear-row { position: relative; margin: var(--sp-3) 0; padding-left: 30px; border: 1.5px solid var(--fg); border-radius: 4px 12px 12px 4px; background: color-mix(in srgb, var(--chip-on-bg) 22%, var(--panel));
+  clip-path: polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 70%, 0 30%); }
+.gear-row::before { content: ""; position: absolute; left: 9px; top: 50%; width: 9px; height: 9px; margin-top: -6px; border-radius: 50%; border: 1.5px solid var(--fg); background: var(--panel); }
+/* Heart rate: the fitness trend as the dotted trail of the landing picture */
+#hrFitChart path[fill="none"] { stroke-dasharray: 0 8; stroke-linecap: round; stroke-width: 5px; }
+@media (max-width: 600px) { .records { grid-template-columns: minmax(0, 1fr); } }
