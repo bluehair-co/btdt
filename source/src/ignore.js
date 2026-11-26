@@ -155,7 +155,7 @@ function ignInPoly(p, shape) {
   }
   return c;
 }
-// Save: with points newly ignored, first Just this trip or Every trip, here (a bad GPS spot in MyRules,
+// Save: with points newly ignored, first Just this trip or Every trip, here (a bad GPS spot in My Edits,
 // gps_spots: the points within GPS_SPOT_KM of these go on every trip, see mrSpotDrops), with how many
 // points and trips that would take.
 function ignSave() {
@@ -172,7 +172,7 @@ function ignSave() {
   mrAsk({
     title: 'Leave these points out where?',
     text: fmt(fresh.length) + ' GPS point' + (fresh.length === 1 ? '' : 's') + ' marked on this trip.',
-    info: 'Every trip, here leaves out the GPS points within ' + distShort(GPS_SPOT_KM * 1000) + ' of these on all your trips, and on trips you load later, except where a trip starts or ends. Use it for a spot where your phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower. It is saved in MyRules › Corrections as a bad GPS spot, which you can switch off or delete.',
+    info: 'Every trip, here leaves out the GPS points within ' + distShort(GPS_SPOT_KM * 1000) + ' of these on all your trips, and on trips you load later, except where a trip starts or ends. Use it for a spot where your phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower. It is saved in My Edits › Corrections as a bad GPS spot, which you can switch off or delete.',
     extra: '<p class="fine">Every trip, here: ' + (tn > 1 ? fmt(pn) + ' points on ' + tripsText(tn) + ' now.' : 'only this trip has points there now.') + '</p>',
     buttons: [['Just this trip', 'primary', function () { ignSaveDo([]); }], ['Every trip, here', '', function () { ignSaveDo(fresh, at); }], ['Back to the points', 'quiet', null]]
   });
@@ -197,7 +197,7 @@ function ignSaveDo(fresh, at) {
     mrChange(spot ? 'Bad GPS spot marked on ' + mrWhere(i) : 'Trip on ' + mrWhere(i) + ': ' + (n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored' : 'GPS points back'));
     openTrip(i);
   });
-  toast(spot ? 'Left out on every trip there. Switch it off or delete it in MyRules › Corrections.' : n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored. Remove edit in the trip details brings them back.' : 'All its GPS points are back.');
+  toast(spot ? 'Left out on every trip there. Switch it off or delete it in My Edits › Corrections.' : n ? fmt(n) + ' GPS point' + (n === 1 ? '' : 's') + ' ignored. Remove edit in the trip details brings them back.' : 'All its GPS points are back.');
 }
 function ignEnd() {
   if (!IGN) return;

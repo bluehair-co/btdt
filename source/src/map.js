@@ -7,7 +7,7 @@ var PATH_NOTE = 'Lines follow the GPS trail Timeline recorded for each trip. Tri
 
 // One-finger zoom on touch screens, as in Google Maps: tap, then tap again and keep the
 // finger down, and drag down to zoom in or up to zoom out, around the spot tapped. A plain
-// double tap still zooms in one step. On every Leaflet map (map, Timeline, MyRules maps).
+// double tap still zooms in one step. On every Leaflet map (map, Timeline, My Edits maps).
 if (window.L && L.Map) {
   L.Map.mergeOptions({ tapDragZoom: true });
   L.Map.TapDragZoom = L.Handler.extend({
@@ -111,7 +111,7 @@ if (window.L && L.Map) {
 function tripPath(i) {
   var a = [D.from[2 * i], D.from[2 * i + 1]], b = [D.to[2 * i], D.to[2 * i + 1]];
   if (modeOf(i) === 'FLYING' && isFinite(a[0]) && isFinite(b[0])) return greatCircle(a, b);
-  // Drawn along a MyRules routine's line (see mrApplySnaps).
+  // Drawn along a My Edits routine's line (see mrApplySnaps).
   if (D.snap && D.snap[i]) return D.snap[i].pts.slice();
   var o0 = D.pathOff[i], o1 = D.pathOff[i + 1], pts = [];
   for (var j = o0; j < o1; j++) pts.push([D.pathPts[2 * j], D.pathPts[2 * j + 1]]);
@@ -730,7 +730,7 @@ function buildPins() {
   var spots = spotsOf(inSel).sort(function (a, b) { return D.spotN[b.key] - D.spotN[a.key]; }).slice(0, PIN_MAX);
   pinSpots = spots.map(function (s) {
     var n = D.spotN[s.key], z = Math.round(Math.min(34, 20 + 4 * Math.log10(n)));
-    // A place you named in MyRules is teal, so named and unnamed pins tell apart. Your current home,
+    // A place you named in My Edits is teal, so named and unnamed pins tell apart. Your current home,
     // work and school have the sunrise colour (like the home BT•DT finds), past ones are teal, each
     // with its own icon.
     var r = mrRuleOf(s), life = r && MR_LIFE[r.role] ? r.role : '', cur = s.home || mrIsCurrent(r);
@@ -1019,7 +1019,7 @@ function highlight(i) {
     if (i != null && PREFS.proj === 'merc') {
       var pts = tripPath(i), c = groupOf(modeOf(i)).v;
       if (pts.length) {
-        // A trip drawn along a MyRules line: its own GPS points, dashed and faded, under it.
+        // A trip drawn along a My Edits line: its own GPS points, dashed and faded, under it.
         if (D.snap && D.snap[i]) { var own = mrTripPts(i); if (own.length > 1) L.polyline(own, { renderer: renderer, color: cssVar(c), weight: 2, opacity: 0.5, dashArray: '4 6', interactive: false }).addTo(hlLayer); }
         L.polyline(pts, { renderer: renderer, color: cssVar('--panel'), weight: 9, opacity: 0.9, interactive: false }).addTo(hlLayer);
         // With heart rate paths on, an activity that recorded it is coloured by zone, as its chart is.
@@ -1074,7 +1074,7 @@ function tripRows(i) {
   var nd = D.netDrop && D.netDrop[i];
   if (nd) notes.push(fmt(nd.n) + ' of its GPS points ' + (nd.n === 1 ? 'looked like a cell-tower or Wi-Fi fix' : 'looked like cell-tower or Wi-Fi fixes') + ': the phone had no GPS and put itself where a tower or router is (a spot your other trips land on too, or one far off the route and straight back). The line, distance and heatmap leave ' + (nd.n === 1 ? 'it' : 'them') + ' out' + (Math.abs(nd.km - D.km[i]) >= 0.01 ? ' (' + dist(nd.km) + ' with ' + (nd.n === 1 ? 'it' : 'them') + ')' : '') + '. Turn it off in Menu › Trip cleanup.');
   var sd = D.spotDrop && D.spotDrop[i];
-  if (sd) notes.push(fmt(sd.n) + ' of its GPS points ' + (sd.n === 1 ? 'is' : 'are') + ' at a bad GPS spot you marked, “' + esc(sd.name) + '” in MyRules, so the line, distance and heatmap leave ' + (sd.n === 1 ? 'it' : 'them') + ' out.');
+  if (sd) notes.push(fmt(sd.n) + ' of its GPS points ' + (sd.n === 1 ? 'is' : 'are') + ' at a bad GPS spot you marked, “' + esc(sd.name) + '” in My Edits, so the line, distance and heatmap leave ' + (sd.n === 1 ? 'it' : 'them') + ' out.');
   if (m === 'FLYING') notes.push('The cities are the nearest airports to where the flight started and ended.');
   else if (nGps < 3 && !(e & 16) && !isSim(i)) notes.push('Timeline kept few or no GPS points for this trip, so its line joins the start and end.');
   return { t0: t0, rows: rows, notes: notes };
@@ -1340,7 +1340,7 @@ function guessHow(i) {
 var EST_FLAGS = [[1, 'distance along the GPS trail'], [2, 'distance as a straight line'], [4, 'type guessed from speed'], [8, 'distance corrected'],
   [16, 'recorded activity'], [32, 'line from Records.json'], [64, 'made from GPS points without a trip'],
   [JUMPS, 'bad GPS points left out']];
-// What MyRules filled in, in Raw data and the exports.
+// What My Edits filled in, in Raw data and the exports.
 function mrRaw(i) {
   var g = D.mrGear && D.mrGear[i], m = D.mrMode && D.mrMode[i], n = D.mrName && D.mrName[i], o = [];
   if (m) o.push({ field: 'mode', value: MODES[D.mode[i]], was: m.was, rule: m.rule, inferred: !!m.inf });
@@ -1355,8 +1355,8 @@ function mrRaw(i) {
   return o.length ? o : null;
 }
 function mrFlags(i) {
-  return (D.mrGear && D.mrGear[i] && !D.mrGear[i].cor ? ['gear from MyRules'] : []).concat(D.mrMode && D.mrMode[i] && D.mrMode[i].inf ? ['type from a MyRules routine'] : [])
-    .concat(D.snap && D.snap[i] ? [D.snap[i].snap ? 'line from a MyRules map snap' : D.snap[i].track ? 'line along the tracks of a station pack' : D.snap[i].road ? 'line along the roads of a road pack' : 'line from a MyRules routine'] : []).concat(mrEdited(i) ? ['edited in MyRules'] : []);
+  return (D.mrGear && D.mrGear[i] && !D.mrGear[i].cor ? ['gear from My Edits'] : []).concat(D.mrMode && D.mrMode[i] && D.mrMode[i].inf ? ['type from a My Edits routine'] : [])
+    .concat(D.snap && D.snap[i] ? [D.snap[i].snap ? 'line from a My Edits map snap' : D.snap[i].track ? 'line along the tracks of a station pack' : D.snap[i].road ? 'line along the roads of a road pack' : 'line from a My Edits routine'] : []).concat(mrEdited(i) ? ['edited in My Edits'] : []);
 }
 function rawTrip(i) {
   function iso(ms) { return new Date(ms).toISOString(); }
@@ -2094,6 +2094,8 @@ function rollOn() {
   return true;
 }
 function setScrub(on) {
+  // Playback takes the whole map: a side panel or the ⋮ menu open at the time closes first.
+  if (on) { closeSheets(true); toolsMenu(false); }
   PREFS.scrub = on;
   // Hiding the slider shows every trip again.
   if (!PREFS.scrub) { stopPlay(); if (scrubV < 1000) scrubTo(1000); }
@@ -2413,7 +2415,7 @@ function heatPoints() {
       i = sel[k];
       var o0 = D.pathOff[i], o1 = D.pathOff[i + 1];
       if (D.snap && D.snap[i] && modeOf(i) !== 'FLYING') {
-        // Along its MyRules line.
+        // Along its My Edits line.
         var sp = D.snap[i];
         for (j = 0; j < sp.pts.length; j++) {
           lat.push(sp.pts[j][0]); lng.push(sp.pts[j][1]); trip.push(k); link.push(j > 0 ? 1 : 0);

@@ -69,7 +69,7 @@
           <li><b>Local times and countries</b> come from time zone data and country borders built into the app, so they work offline.</li>
           <li><b>CO₂</b> is estimated per trip from its distance and transport, with the UK government's 2025 averages.</li>
           <li>The only things fetched from the internet are the map tiles (Esri), the map and globe libraries, the fonts, the station and road packs you choose, and, only when you turn it on, Google sign-in and your rules file in Google Drive. Add the app to your home screen and it opens offline.</li>
-          <li><b>MyRules in Google Drive</b> only when you choose <i>Keep your rules › In Google Drive</i> in MyRules: BT•DT signs in with Google and keeps your rules file, nothing else, in your own Google Drive. It asks only for the files it makes itself, so it can't see the rest of your Drive. Your location history never goes there.</li>
+          <li><b>My Edits in Google Drive</b> only when you choose <i>Keep your rules › In Google Drive</i> in My Edits: BT•DT signs in with Google and keeps your rules file, nothing else, in your own Google Drive. It asks only for the files it makes itself, so it can't see the rest of your Drive. Your location history never goes there.</li>
           <li><b>Place names</b> are only looked up when you press <i>Get the name from OpenStreetMap</i> while naming a place: that place's location goes to OpenStreetMap (Nominatim and Overpass), nothing else.</li>
           <li><b>Public transport lines</b> for a routine come only from your station packs when you have one for that country (never online there). Elsewhere, and for buses and ferries, they are only looked up when you press <i>Use the line from OpenStreetMap</i> while editing it: the routine's two ends go to OpenStreetMap (Overpass), nothing else.</li>
           <li><b>Station packs</b> (railway stations, tram and metro stops and lines, per country) and <b>road packs</b> (motorways and main roads, per country, or per state or province in the United States and Canada) are downloaded from GitHub only when you choose one, after an import or in Menu › Trip cleanup. Only the country you chose goes to GitHub; the pack stays on your device and works offline.</li>
@@ -113,7 +113,7 @@
     </div>
     <div class="about-foot">
       <a class="about-maker" href="https://www.bluehair.co" target="_blank" rel="noopener">
-        <img src="bluehair-logo.png" alt="" width="44" height="44">
+        <span class="about-stamp" aria-hidden="true"></span>
         <span><b>Made by BlueHair</b><small>www.bluehair.co ↗</small></span>
       </a>
     </div>
@@ -464,7 +464,7 @@
       <div class="mode-tree" id="modeTree"></div>
       <div id="guessWrap" hidden>
         <div class="info-head"><span class="fine">Trips with a guessed type or a rule applied</span><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="guessInfo" aria-label="About guessed types" title="About guessed types"><span data-icon="info"></span></button></div>
-        <p class="fine info-box" id="guessInfo" hidden>Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and MyRules fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
+        <p class="fine info-box" id="guessInfo" hidden>Trips whose type Timeline didn't record <span class="guess">Guessed</span> get one from their speed and your other trips, and My Edits fill in <span class="guess inf">Rule applied</span> or <span class="guess inf">Map snap</span>. Trips whose type may be wrong are marked <span class="guess">Check</span>.</p>
         <div class="seg" role="group" aria-label="Trips with a guessed type or a rule applied" id="guessSeg">
           <button type="button" data-g="all" aria-pressed="true">Include</button><button type="button" data-g="no" aria-pressed="false">Leave out</button><button type="button" data-g="only" aria-pressed="false">Only these</button>
         </div>
@@ -561,22 +561,22 @@
       <div style="display:flex;flex-wrap:wrap;gap:8px">
         <button type="button" class="btn" id="exportJson">{ } Trips (JSON)</button>
         <button type="button" class="btn" id="exportCsv">Trips (CSV)</button>
-        <button type="button" class="btn" id="mrExportData" hidden>MyRules file</button>
+        <button type="button" class="btn" id="mrExportData" hidden>My Edits file</button>
       </div>
     </div>
   </div>
 </aside>
 
-<!-- Rules in these filters: opened from MyRules -->
+<!-- Rules in these filters: opened from My Edits -->
 <aside class="sheet right" id="mrHereSheet" aria-label="Rules in these filters" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrHereBack" aria-label="Back to MyRules"><span data-icon="left"></span></button><h2>Rules in these filters</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" id="mrHereBack" aria-label="Back to My Edits"><span data-icon="left"></span></button><h2>Rules in these filters</h2></div><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <p class="fine" id="mrHereLead"></p>
     <div class="sec" id="mrHereList"></div>
   </div>
 </aside>
-<aside class="sheet right" id="mrSheet" aria-label="MyRules" role="dialog">
-  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>MyRules</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About MyRules" title="About MyRules"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
+<aside class="sheet right" id="mrSheet" aria-label="My Edits" role="dialog">
+  <div class="sheet-head"><div class="head-back"><button type="button" class="icon-btn" data-back aria-label="Back to the menu"><span data-icon="left"></span></button><h2>My Edits</h2><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrIntro" aria-label="About My Edits" title="About My Edits"><span data-icon="info"></span></button></div><div class="acts"><button type="button" class="btn" id="mrSheetExport">Export</button><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body">
     <p class="fine info-box" id="mrIntro" hidden>What you know that your files don't: your gear over time, your places, your routines, and fixes to single trips. Gear periods and routines fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Rule applied</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed in Trip info shows as <span class="guess inf">Edited</span>. Switch a rule off to see your data without it.</p>
     <div id="mrCard"></div>
@@ -610,7 +610,7 @@
   <div class="sheet-head"><h2>Menu</h2><div class="acts"><button type="button" class="icon-btn" data-close aria-label="Close"><span data-icon="close"></span></button></div></div>
   <div class="sheet-body menu-body">
     <button type="button" class="data-row" data-menu="importsSheet"><span data-icon="folder"></span><span class="data-row-txt"><b>Your data</b><small id="menuSub-importsSheet"></small></span><span data-icon="right"></span></button>
-    <button type="button" class="data-row" data-menu="mrSheet"><span data-icon="flag"></span><span class="data-row-txt"><b>MyRules</b><small id="menuSub-mrSheet"></small></span><span data-icon="right"></span></button>
+    <button type="button" class="data-row" data-menu="mrSheet"><span data-icon="edit"></span><span class="data-row-txt"><b>My Edits</b><small id="menuSub-mrSheet"></small></span><span data-icon="right"></span></button>
     <button type="button" class="data-row" data-menu="cleanupSheet"><span data-icon="bolt"></span><span class="data-row-txt"><b>Trip cleanup</b><small id="menuSub-cleanupSheet"></small></span><span data-icon="right"></span></button>
     <button type="button" class="data-row" data-menu="prefsSheet"><span data-icon="gear"></span><span class="data-row-txt"><b>Preferences</b><small id="menuSub-prefsSheet"></small></span><span data-icon="right"></span></button>
     <button type="button" class="data-row" id="settingsAbout" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span><span class="data-row-txt"><b>About BT•DT</b><small>How it works, getting your files, credits</small></span><span data-icon="right"></span></button>
@@ -669,12 +669,12 @@
     </div>
     <div class="sec" id="driftSec">
       <div class="info-head"><h3>Walks that may be stays</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="driftInfo" aria-label="About walks that may be stays" title="About walks that may be stays"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="driftInfo" hidden>Indoors, your phone keeps guessing where it is, and each guess lands somewhere nearby. Timeline then records short, slow "walks" that start and end where you were sitting, or adds the time you sat still to a real walk. BT•DT looks for places where such walks keep starting and ending. Open one to see its walks on the map, choose how far around it counts, and untick the ones that were real walks. Saving makes the place a MyRules place with <i>GPS drifts here</i>: its walks become part of your stays there, and walks that only stood still at one end are cut back to the part where you moved. Nothing changes until you save, and it applies to walks loaded later too. For a place that isn't listed, use <i>Check walks here…</i> in the ⋯ menu of its place page.</p>
+      <p class="fine info-box" id="driftInfo" hidden>Indoors, your phone keeps guessing where it is, and each guess lands somewhere nearby. Timeline then records short, slow "walks" that start and end where you were sitting, or adds the time you sat still to a real walk. BT•DT looks for places where such walks keep starting and ending. Open one to see its walks on the map, choose how far around it counts, and untick the ones that were real walks. Saving makes the place a My Edits place with <i>GPS drifts here</i>: its walks become part of your stays there, and walks that only stood still at one end are cut back to the part where you moved. Nothing changes until you save, and it applies to walks loaded later too. For a place that isn't listed, use <i>Check walks here…</i> in the ⋯ menu of its place page.</p>
       <ul class="file-list drift-list" id="driftList"></ul>
       <p class="fine" id="driftNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
-      <div class="info-head"><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
+      <div class="info-head pack-head"><span data-icon="TRAIN"></span><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
       <p class="fine info-box" id="packInfo" hidden>A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine's line along the railway without going online. A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
       <ul class="file-list pack-list" id="packList" hidden></ul>
       <p class="fine" id="packNote"></p>
@@ -686,7 +686,7 @@
       <p class="fine" id="trackNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="roadSec">
-      <div class="info-head"><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
+      <div class="info-head pack-head"><span data-icon="CAR"></span><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
       <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi, motorcycle and bus trips along the roads they took, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
       <ul class="file-list pack-list" id="roadList" hidden></ul>
       <p class="fine" id="roadPackNote"></p>

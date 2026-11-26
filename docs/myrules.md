@@ -1,8 +1,8 @@
-# MyRules files — draft spec v0.2
+# My Edits files (MyRules format) — draft spec v0.2
 
 *Version 0.2, 17 Nov 2026 (0.1 plus `unless`, §3.1). BT•DT applies gear periods, places, routines (`mode`, `gear`, `snap`) and corrections (`mode`, `gear`, `name`, `hide`); §9, slices 1 to 3. `replace` corrections are read, kept and exported again, but not applied yet.*
 
-A **MyRules file** holds the things only you know about your own history: which bike you owned when, where home and work were, the train you took to work every weekday, the day Timeline got completely wrong. You load it next to your location files. BT•DT applies it on top of what it read from them, and marks everything it changed as **inferred**, so a guess never passes for a recording.
+A **My Edits file** holds the things only you know about your own history: which bike you owned when, where home and work were, the train you took to work every weekday, the day Timeline got completely wrong. You load it next to your location files. BT•DT applies it on top of what it read from them, and marks everything it changed as **inferred**, so a guess never passes for a recording.
 
 The app stays generic: nothing about any one person is built in. And because the format is open and versioned, other tools could read and write the same file.
 
@@ -107,7 +107,7 @@ A gear period applies across its whole time frame, which often catches trips it 
 - A trip matches an entry when it fits **every** part the entry has, and the rule skips it when it matches **any** entry, like a trip in `except`.
 - Unlike `except`, it follows the data: trips loaded later that match are left alone too.
 
-**In BT•DT.** In *Menu › MyRules*, the *In these filters* line says how many gear periods and routines changed the trips shown ("2 rules changed 408 of the trips shown"). *Show them* lists them, each with how many of those trips it changed and **Turn off for these trips**. That offers:
+**In BT•DT.** In *Menu › My Edits*, the *In these filters* line says how many gear periods and routines changed the trips shown ("2 rules changed 408 of the trips shown"). *Show them* lists them, each with how many of those trips it changed and **Turn off for these trips**. That offers:
 
 - **Trips like these** (the default): the date, year, month, day of the week, time of day and country filters that are on become one `unless` entry. Transport, gear, source and *Guessed* filters aren't part of it, since a rule only touches its own type, and the gear filter is often how its trips were found. When none of those filters is on, only the next choice is offered.
 - **Just these trips**: each trip shown is added to the rule's `except`, so nothing else changes.
@@ -161,14 +161,14 @@ Corrections and exceptions have to point at one trip in a way that survives a re
 
 What a place does: it names stays, decides the Home pin, and anchors routines (`"from": "@home-oudwest"`). Places don't change trips, except with `drift`.
 
-**GPS drifts here (`drift`).** Indoors the phone keeps guessing where it is, so Timeline records slow "walks" that start and end where you sat, or keeps a real walk going while you stood still at one end. A walk counts when it starts or ends inside the circle next to a stay inside it (within 15 minutes); a walk whose type you set or checked, a recorded activity, a walk in a routine, and a walk between two stays over 150 m apart are left alone. A walk that never leaves the circle and averages under 3 km/h (or lasts 5 minutes or less) becomes part of the stay next to it. A walk with a still stretch at an end inside the circle (10 minutes or more between two GPS points, beyond the time to walk between them) is cut back to the part where you moved, and those minutes join the stay; its details say *Cut back* with *Not this trip*, which adds it to `except`. It applies to walks loaded later too, and only while MyRules are on.
+**GPS drifts here (`drift`).** Indoors the phone keeps guessing where it is, so Timeline records slow "walks" that start and end where you sat, or keeps a real walk going while you stood still at one end. A walk counts when it starts or ends inside the circle next to a stay inside it (within 15 minutes); a walk whose type you set or checked, a recorded activity, a walk in a routine, and a walk between two stays over 150 m apart are left alone. A walk that never leaves the circle and averages under 3 km/h (or lasts 5 minutes or less) becomes part of the stay next to it. A walk with a still stretch at an end inside the circle (10 minutes or more between two GPS points, beyond the time to walk between them) is cut back to the part where you moved, and those minutes join the stay; its details say *Cut back* with *Not this trip*, which adds it to `except`. It applies to walks loaded later too, and only while My Edits are on.
 
 ```json
 { "id": "office-drift", "name": "Office", "at": [52.0787, 4.3356], "drift": { "radius_m": 400, "only": true },
   "except": [{ "start": "2019-01-16T09:40+01:00", "mode": "WALKING" }] }
 ```
 
-**In BT•DT.** *Menu › Trip cleanup › Walks that may be stays* lists places where such walks keep happening, and a place page's ⋯ menu has *Check walks here…*. Either opens the place's walks on the map with a radius slider and a list to untick the real ones; saving writes `drift` and `except`. A place with `drift` shows *GPS drifts here* in MyRules; for one with `only`, tapping it opens the same review, with *Remove*.
+**In BT•DT.** *Menu › Trip cleanup › Walks that may be stays* lists places where such walks keep happening, and a place page's ⋯ menu has *Check walks here…*. Either opens the place's walks on the map with a radius slider and a list to untick the real ones; saving writes `drift` and `except`. A place with `drift` shows *GPS drifts here* in My Edits; for one with `only`, tapping it opens the same review, with *Remove*.
 
 ### 5.1.1 Places that moved
 
@@ -206,11 +206,11 @@ A move with `at` wins over `keep` on the stays in its dates; of two moves, the l
 | `kind` | Bikes: `bike`, `strida`, `halfbike`, `cargo`, `ebike`. Runs and walks: `shoe`. Cars: `car`, or `petrol`, `diesel`, `hybrid`, `ev` (electric) to count that car's CO₂ instead of the car factor in *Preferences*. Motorbikes: `motorbike`, `scooter`. Boats (not ferries): `boat`, `sailboat`, `kayak`, `sup` (paddleboard). Snow sports: `skis`, `snowboard`. Any type: `other`. Picks the icon and the label in *Your gear*, as the app already does for Strava gear. |
 | `default` | `true` makes it the default of its `mode` (one per mode; BT•DT sets one for `CAR` in *Preferences › CO₂ estimates › Default car*). It needs no `when`. Every trip of that mode still without gear after corrections, routines and gear periods gets it as a guess: tagged *Default car*, counted as guessed, and its `kind` (`petrol`, `diesel`, `hybrid`, `ev`) sets the trip's CO₂. *… is right* on a trip confirms it with a correction (`"gear": "@id"`); *Confirm for a period…* adds a gear period with the same `name`. |
 | `model` | Optional make and model, for you (`"Volvo XC40"`). |
-| `assign` | `false`: gear in your list only. It fills no trips by itself; you set it on trips with *Set gear* (a correction with `"gear": "@id"`). `when`, `match` and country conditions don't apply then. Leave it out (the default) for a gear period: every trip of its `mode` without gear in the period gets it. *New gear…* in MyRules saves `"assign": false` unless *Use as default* is on. |
+| `assign` | `false`: gear in your list only. It fills no trips by itself; you set it on trips with *Set gear* (a correction with `"gear": "@id"`). `when`, `match` and country conditions don't apply then. Leave it out (the default) for a gear period: every trip of its `mode` without gear in the period gets it. *New gear…* in My Edits saves `"assign": false` unless *Use as default* is on. |
 | `mode` | The transport type it applies to (the app's own type names). The app offers gear for `CYCLING`, `RUNNING`, `WALKING`, `CAR`, `MOTORCYCLE`, `BOAT` and `SKIING`. |
 | `match` | Optional narrowing: `min_km`, `max_km`, `sports` (e.g. `["Mountain bike"]`), `from`/`to` (place ids: only rides starting or ending there), `weekdays_only`, `countries` (ISO codes such as `["ES"]`: only trips that start or end in one of them, so countries you visit later stay out). |
 
-**In BT•DT.** *New gear…* at the top of *MyRules › Gear* adds gear to your list: name, type and kind. It only becomes a gear period with *Use as default*, which asks for the period (end optional), countries and a distance limit. *Edit gear* (tap the rule) has the same fields. Both, and the period option of *Set gear*, have a *Countries* choice: *Everywhere*, *Only in* (writes `match.countries`) or *Not in* (writes an `unless` entry with only `countries`, as *Turn off for these trips* does). Switching between *Only in* and *Not in* flips the countries picked, so a rule saved as “not in every country but Spain” becomes “only in Spain” with one tap.
+**In BT•DT.** *New gear…* at the top of *My Edits › Gear* adds gear to your list: name, type and kind. It only becomes a gear period with *Use as default*, which asks for the period (end optional), countries and a distance limit. *Edit gear* (tap the rule) has the same fields. Both, and the period option of *Set gear*, have a *Countries* choice: *Everywhere*, *Only in* (writes `match.countries`) or *Not in* (writes an `unless` entry with only `countries`, as *Turn off for these trips* does). Switching between *Only in* and *Not in* flips the countries picked, so a rule saved as “not in every country but Spain” becomes “only in Spain” with one tap.
 | `strava_name` | Optional. The name this gear has in your Strava export, so a gear period and recorded Strava gear show as **one** chip in Filters instead of two. |
 
 What it does: every trip of that type inside the period **with no gear of its own** gets this gear, marked inferred. Gear recorded by Strava or another activity file is never replaced.
@@ -268,7 +268,7 @@ A routine matches trips that start within 500 m of `from` and end within 500 m o
 - **How it shows:** snapped trips and types a routine set are marked *Rule applied*; trips a map snap took are marked *Map snap*. The rules sheet says where each line came from, how many trips went another way and how many were left out for their type. A trip the routine matched but left out says why in its details, with *Edit routine*.
 - **On a wide screen** the routine dialogs (*Edit routine*, *Trips like this one*, *Same on other days?*) open as a panel on the right, and the ghosts, the line and the two ends are drawn on the main map, dimmed underneath. Closing the panel takes them off and puts the map back where it was.
 - **Editing a routine:** name, type, period, days of the week, the time it leaves, how far from its two ends a trip may start and end (`radius_m`, a slider for each end, drawn as dashed circles on the map), both ways (with its own *Back between* time window, `return_when.time`; empty uses the times there), *Always*, and the line. Tap a ghost to make that trip the line, or use the arrows; for public transport, *Use the line from OpenStreetMap*. The *Follows the line for at least* slider sets `match`; the ghosts that make the cut are drawn in the type's colour and the others dashed grey, with the counts, as you move it.
-- **From a trip:** *Group with similar trips* in the ⋯ menu of a trip's details (a trip not in a routine and not a flight, over 1 km end to end) opens the routine editor on a new routine: the trip's two ends, both ways, any day and time, its type, and its own trail as the line (`snap: { trip }`), or no line when the trip has under 5 GPS points (its routine then goes by its ends and type alone). The match slider decides which trips between those ends follow it closely enough; *Save as routine* adds it to MyRules.
+- **From a trip:** *Group with similar trips* in the ⋯ menu of a trip's details (a trip not in a routine and not a flight, over 1 km end to end) opens the routine editor on a new routine: the trip's two ends, both ways, any day and time, its type, and its own trail as the line (`snap: { trip }`), or no line when the trip has under 5 GPS points (its routine then goes by its ends and type alone). The match slider decides which trips between those ends follow it closely enough; *Save as routine* adds it to My Edits.
 - **The rules sheet** has a tab for each kind of rule you have (Gear, Places, Routines, Corrections).
 - **Seeing what it covers:** while you make a routine (*Same on other days?*) or edit one (tap it in the rules sheet), a small map shows the trips it would cover as ghost lines, with how many there are and how many would change type. It updates as you change the dates, times and options, before you save. With *Draw them along one line*, the line in use is drawn solid on top of the ghosts. For a learned line, the arrows under the map go through the different ways its trips take (trips within 150 m of each other for most of their length are one way), the way most trips take first, each drawn from its cleanest trip. The one you stop on is saved as `snap: { "trip": … }`; *Back to the recommended line* returns to `"learn"`, which is worked out again from your data.
 - **Making a routine in the app:** after you change a trip's type with *Trip info*, the app offers *Same on other days?* if you made 5 or more trips like it. Like it means the same ends within 500 m, on the same kind of day, starting within 2 hours of it. It fills in:
@@ -300,7 +300,7 @@ A correction on a day or span that sets `gear` only fills trips without recorded
 
 ### 5.4.1 Bad GPS spots
 
-`gps_spots` lists spots where the phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower that *Leave out cell-tower fixes* doesn't catch (its coordinates move a few metres over the years). GPS points within 15 m of a spot are left out of every trip, including trips loaded later, except a trip's first and last points; a trip keeps at least two points, and flights and recorded activities are left alone. It applies while MyRules are on.
+`gps_spots` lists spots where the phone keeps putting itself without GPS, such as a Wi-Fi router or a cell tower that *Leave out cell-tower fixes* doesn't catch (its coordinates move a few metres over the years). GPS points within 15 m of a spot are left out of every trip, including trips loaded later, except a trip's first and last points; a trip keeps at least two points, and flights and recorded activities are left alone. It applies while My Edits are on.
 
 ```json
 { "id": "gps-spot-2019-10-14", "name": "GPS spot from the trip on 14/10/2019", "at": [[52.369705, 4.977301]] }
@@ -310,11 +310,11 @@ A correction on a day or span that sets `gear` only fills trips without recorded
 |---|---|
 | `at` | The spots, `[lat, lng]` each. |
 
-**In BT•DT.** *Ignore GPS points* (a trip's pencil menu): after you mark points and *Save*, it asks *Just this trip* or *Every trip, here*, with how many points on how many trips the spot would take. *Every trip, here* saves the new points as one `gps_spots` rule; they show in *MyRules › Corrections* under *Bad GPS spots*, with a switch, rename and *Delete*. A trip that loses points to one says so in its details.
+**In BT•DT.** *Ignore GPS points* (a trip's pencil menu): after you mark points and *Save*, it asks *Just this trip* or *Every trip, here*, with how many points on how many trips the spot would take. *Every trip, here* saves the new points as one `gps_spots` rule; they show in *My Edits › Corrections* under *Bad GPS spots*, with a switch, rename and *Delete*. A trip that loses points to one says so in its details.
 
 ### Split trips and merged places
 
-Changes you make to how trips and places are cut up live here too, so they travel and sync with the rest of your rules. Older versions of BT•DT kept them in the browser only; they move into MyRules by themselves the next time the trips are set up (for the trips that are loaded). Both apply whether MyRules are switched on or off.
+Changes you make to how trips and places are cut up live here too, so they travel and sync with the rest of your rules. Older versions of BT•DT kept them in the browser only; they move into My Edits by themselves the next time the trips are set up (for the trips that are loaded). Both apply whether My Edits are switched on or off.
 
 `splits` holds trips Timeline merged that you looked at (see *Trips Timeline merged*). `trip` is the trip as loaded, before it is split, with its type then. One of:
 
@@ -336,7 +336,7 @@ Changes you make to how trips and places are cut up live here too, so they trave
 { "id": "merge-ah", "from": "ChIJ…a", "into": "ChIJ…b" }
 ```
 
-**In BT•DT.** Both show in *MyRules*: *Split trips* under *Corrections*, *Places merged* under *Places*, each with a switch, *Undo* (or *Separate them*) and *Delete*.
+**In BT•DT.** Both show in *My Edits*: *Split trips* under *Corrections*, *Places merged* under *Places*, each with a switch, *Undo* (or *Separate them*) and *Delete*.
 
 ### 5.5 How corrections show in the app
 
@@ -373,18 +373,18 @@ The app already shows two kinds of uncertainty: *type guessed from speed* and *S
 
 - **Data.** A new trip flag, `inferred` (next to `type guessed from speed` in the flags list), plus a per-trip list of `{ field, value, was, rule }`. Raw data and the JSON/CSV export include it.
 - **Badges.** A trip with an inferred gear, type or line says *Rule applied* (or *Map snap*) in the lists and on its gear, in the same style as the existing *Simulated* tag.
-- **Trip details.** A "From MyRules" section lists each change, like "Gear: Strida EVO (was none), from *Strida EVO, Mar 2021 to Aug 2023*". Each line has **Not this trip**, which adds the trip to the rule's `except`.
+- **Trip details.** A "From My Edits" section lists each change, like "Gear: Strida EVO (was none), from *Strida EVO, Mar 2021 to Aug 2023*". Each line has **Not this trip**, which adds the trip to the rule's `except`.
 - **Snapped lines** are drawn solid, with the original GPS points dashed and faded under them in the trip details only.
 - **Filters.** The existing *Guessed types* control becomes *Guessed and inferred*: All, Leave out, Only these. A gear period's gear gets a chip under its type like Strava gear, and when it has a `strava_name`, it shares the chip.
-- **One switch for all.** *Menu › MyRules* has a master switch. Off shows the data exactly as the files had it, which is handy for checking a rule.
+- **One switch for all.** *Menu › My Edits* has a master switch. Off shows the data exactly as the files had it, which is handy for checking a rule.
 
 ---
 
 ## 8. Loading, editing and exporting
 
-**Loading.** The file goes through the same *Load location files* button (or with a folder or ZIP). It is saved in the browser with the rest of the import, never uploaded. Loading a second MyRules file asks whether to **merge** (rules with the same `id` are replaced) or **replace**.
+**Loading.** The file goes through the same *Load location files* button (or with a folder or ZIP). It is saved in the browser with the rest of the import, never uploaded. Loading a second My Edits file asks whether to **merge** (rules with the same `id` are replaced) or **replace**.
 
-**Where it lives in the UI.** *Menu › MyRules*, with a card at the top showing the rule count and how many trips it changed. Below it, the rules by section, each with its own switch, the number of trips it changed, and a tap-through to those trips in the Timeline.
+**Where it lives in the UI.** *Menu › My Edits*, with a card at the top showing the rule count and how many trips it changed. Below it, the rules by section, each with its own switch, the number of trips it changed, and a tap-through to those trips in the Timeline.
 
 **Editing in the app writes rules.**
 
@@ -403,16 +403,16 @@ On the map, every stay within a named place's radius counts as that one place: p
 | Set a trip's type | correction with `start` |
 | *Same every weekday?* after correcting a commute (offered when 5+ similar trips exist) | routine |
 | *Not this trip* on an inferred value | entry in that rule's `except` |
-| *Turn off for these trips* in *Menu › MyRules* → *Show them*, *Trips like these* | the filters as an entry in that rule's `unless` |
+| *Turn off for these trips* in *Menu › My Edits* → *Show them*, *Trips like these* | the filters as an entry in that rule's `unless` |
 | *Turn off for these trips*, *Just these trips* | an entry per trip in that rule's `except` |
 
 The app never asks someone to type JSON. People who like files can still edit it and load it again.
 
-**Exporting.** *Export MyRules* in the card downloads the `.myrules.json`. Because it contains places like home, the export button says so: "This file includes your home and work locations." The demo gets a small example file so the feature can be tried.
+**Exporting.** *Export My Edits* in the card downloads `BTDT-Edits.json`. Because it contains places like home, the export button says so: "This file includes your home and work locations." The demo gets a small example file so the feature can be tried.
 
-### Keeping MyRules in Google Drive
+### Keeping My Edits in Google Drive
 
-*Keep your rules* in the MyRules card is *On this device* (the default) or *In Google Drive*. *In Google Drive* keeps the document in one file, `btdt.myrules.json`, in the user's own Drive, so several devices share it. BT•DT signs in with Google Identity Services and asks only for the `drive.file` scope (the files it makes itself). It syncs when the app opens (while Google's one-hour sign-in lasts; after that a bar offers *Sync*), a moment after every change, and on *Sync*. Merging is rule by rule against the copy both sides had at the last sync: a rule added or changed on one device is kept, a rule deleted on one device and unchanged on the other is deleted, and a rule changed on both keeps the version from the document saved last (`about.updated`), with a note saying how many. Sections that aren't lists of rules with ids are merged as a whole the same way. Going back to *On this device* stops syncing and leaves the file in Drive.
+*Keep your rules* in the My Edits card is *On this device* (the default) or *In Google Drive*. *In Google Drive* keeps the document in one file, `BTDT-Edits.json` (an older `btdt.myrules.json` is renamed to it), in the user's own Drive, so several devices share it. BT•DT signs in with Google Identity Services and asks only for the `drive.file` scope (the files it makes itself). It syncs when the app opens (while Google's one-hour sign-in lasts; after that a bar offers *Sync*), a moment after every change, and on *Sync*. Merging is rule by rule against the copy both sides had at the last sync: a rule added or changed on one device is kept, a rule deleted on one device and unchanged on the other is deleted, and a rule changed on both keeps the version from the document saved last (`about.updated`), with a note saying how many. Sections that aren't lists of rules with ids are merged as a whole the same way. Going back to *On this device* stops syncing and leaves the file in Drive.
 
 ### Cleaning up the corrections
 
@@ -424,23 +424,23 @@ Edits pile up over time: a trip fixed twice, a type set to what the files alread
 - **Edits that change nothing** are deleted.
 - **Bulk edits that do the same thing** are joined into one, when no other bulk edit, day or span between them touches their trips.
 
-Your trips come out exactly as before: it only changes how the edits are written down. It counts as one change (*Cleaned up corrections: 120 → 96…*), and *Undo* at the top of the rules puts the file back as it was, until anything else changes or the page reloads. It needs your trips loaded and MyRules switched on, since it checks what each edit did. Routines, places, gear periods and map snaps are left alone.
+Your trips come out exactly as before: it only changes how the edits are written down. It counts as one change (*Cleaned up corrections: 120 → 96…*), and *Undo* at the top of the rules puts the file back as it was, until anything else changes or the page reloads. It needs your trips loaded and My Edits switched on, since it checks what each edit did. Routines, places, gear periods and map snaps are left alone.
 
 ### Changes that haven't been exported
 
 The browser copy is often the only copy of rules made in the app, so the app has to keep track of what hasn't been saved anywhere else.
 
 - **What counts as a change.** Any rule written, edited, switched on or off, or deleted in the app, and any *Not this trip*, since the file was last loaded or exported. The app keeps a counter and the time of the last export, next to the saved rules. Loading the same file again doesn't count as a change.
-- **Showing it.** While there are changes, the MyRules card says *5 changes not exported* with a dot on *Export*. Exporting clears it.
-- **Remove from this device.** When there are changes, tapping *Remove from this device* first shows a step about MyRules:
-  1. "Your MyRules have 5 changes that are only on this device", with only the count. A **See the 5 changes** link opens the full list in its own sheet ("Strida EVO period added", "Not this trip on 14 Sep 2021"…), newest first, so a long list never crowds the dialog.
-  2. **Download MyRules** (the main button) exports the file. Once the download has started, the dialog moves on to the usual removal confirmation.
+- **Showing it.** While there are changes, the My Edits card says *5 changes not exported* with a dot on *Export*. Exporting clears it.
+- **Remove from this device.** When there are changes, tapping *Remove from this device* first shows a step about My Edits:
+  1. "Your My Edits have 5 changes that are only on this device", with only the count. A **See the 5 changes** link opens the full list in its own sheet ("Strida EVO period added", "Not this trip on 14 Sep 2021"…), newest first, so a long list never crowds the dialog.
+  2. **Download My Edits** (the main button) exports the file. Once the download has started, the dialog moves on to the usual removal confirmation.
   3. **Remove without saving** goes to the same confirmation, but the button there then says *Remove, and lose 5 changes*.
   4. **Cancel** removes nothing.
 
-  With no changes it goes straight to the usual confirmation, which adds a line: "Your MyRules (14 rules) will be removed too. Your exported file has all of it."
-- **Same check elsewhere.** Every other action that would drop changed rules shows the same step: *Replace* when loading another MyRules file, and importing new location files in a way that replaces the saved import, if that also replaces the context. *Merge* keeps them, so it doesn't ask.
-- **Browser storage cleared outside the app** (site data deleted, private window) can't be caught. The MyRules card says "Saved in this browser only. Export to keep a copy." until the first export, to cover this case.
+  With no changes it goes straight to the usual confirmation, which adds a line: "Your My Edits (14 rules) will be removed too. Your exported file has all of it."
+- **Same check elsewhere.** Every other action that would drop changed rules shows the same step: *Replace* when loading another My Edits file, and importing new location files in a way that replaces the saved import, if that also replaces the context. *Merge* keeps them, so it doesn't ask.
+- **Browser storage cleared outside the app** (site data deleted, private window) can't be caught. The My Edits card says "Saved in this browser only. Export to keep a copy." until the first export, to cover this case.
 
 ---
 
@@ -449,13 +449,13 @@ The browser copy is often the only copy of rules made in the app, so the app has
 1. **Slice 1: gear periods and places** (done; the smallest useful piece, and the most reliable inference). Load and save the file, the Imported data card and rules list, inferred flag and badges, trip details section with *Not this trip*, the gear assignment sheet that writes rules, export, and the Filters change.
 2. **Slice 2: corrections** (done). `mode`, `gear`, `name`, `hide`; *Trip info* in trip details writes them. `replace` comes later.
 3. **Slice 3: routines** (done). `mode`, `gear` and `snap` (learned, polyline and GeoJSON lines); *Same on other days?* after *Trip info* writes them.
-4. **Later:** publish the schema at a stable URL, a small MyRules validator page.
+4. **Later:** publish the schema at a stable URL, a small My Edits validator page.
 
 ---
 
 ## 10. Decisions (15 Nov 2026)
 
-- **Name: MyRules.** Files are `*.myrules.json`, and the version key is `"myrules"`.
+- **Name: My Edits.** Files are `*.myrules.json`, and the version key is `"myrules"`.
 - **Format: JSON only** for now. No YAML, so no parser library is needed.
 - **Gear periods never overrule recorded gear.** Strava or activity-file gear always stays. Only a correction on a single trip can change recorded gear. Gear rules have no `force`.
 - **Hidden places are not blurred** on the map. `hide` only leaves them out of pins and the heatmap.

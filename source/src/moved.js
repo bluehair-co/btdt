@@ -2,7 +2,7 @@
 // Timeline keeps one location per place, today's. When a place moves (an employer relocating) and
 // Google keeps its place ID, every old stay there shows at the new address. When a file is read,
 // movedPlaces (parser.js) puts those stays back where your phone's GPS was, when that is clear, and
-// keeps Google's location in vgoog. On top of that, MyRules moves (MR.doc.moves, one rule per place
+// keeps Google's location in vgoog. On top of that, My Edits moves (MR.doc.moves, one rule per place
 // that moved, by Google's place IDs):
 // - { google_place_ids, at, when: { from, to } }: you say where the place was then (This place
 //   moved… on its page). Its stays in those dates go to at.
@@ -160,7 +160,7 @@ function mvSpotHtml(key) {
     var n = vs.filter(function (v) { return D.mvStay && D.mvStay[v] && D.mvStay[v].rule === r.id; }).length;
     var g = mvGoogle(vs[0]), d = Array.isArray(r.at) ? km(g, r.at) : 0;
     h += '<p class="fine">You said this place was ' + dist(d) + ' from Google\'s location ' + mvWhen(r.when) +
-      (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but MyRules are switched off.') + '</p>' +
+      (on && r.enabled !== false ? ': ' + mvStays(n) + ' here are shown there.' : r.enabled === false ? ' (switched off).' : ', but My Edits are switched off.') + '</p>' +
       '<div class="mv-acts"><button type="button" class="btn" data-mv-edit="' + esc(r.id) + '" data-key="' + esc(key) + '">' + icon('edit') + 'Edit where it was</button></div>';
   });
   // Nothing to say: This place moved… is in the page's ⋯ menu (placeActs, mvCanNew).

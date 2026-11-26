@@ -929,7 +929,7 @@ var BY_SPEED = 1, BY_PROFILE = 2, BY_HISTORY = 3, BY_CORRIDOR = 4, BY_STATION = 
 //    (your commute by train, typed by Timeline on other days);
 // 5. a car guess between two stays named like railway stations is a train, and so is one with a
 //    station at one end and a train-like speed (steadyFast).
-// Strava activities and guessed flights are left as they are. MyRules corrections count in step 3
+// Strava activities and guessed flights are left as they are. My Edits corrections count in step 3
 // too, on the main thread (mrLearn).
 // only (optional): retype just the trips marked in it, leaving the others' guesses as they are (the
 // legs of a trip split where Timeline merged two, see splitTrips).

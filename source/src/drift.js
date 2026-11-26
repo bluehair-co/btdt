@@ -1,7 +1,7 @@
 // ---------- walks that may be stays (GPS drifts here) ----------
 // Indoors, a phone keeps guessing where it is (Wi-Fi, cell towers, a weak GPS fix), and each guess
 // lands somewhere nearby. Timeline then records short, slow "walks" that start and end where you sat,
-// or keeps the time you sat still at one end of a real walk. A MyRules place with drift
+// or keeps the time you sat still at one end of a real walk. A My Edits place with drift
 // ({ "radius_m": 300 }, or true for its own radius) turns those walks into what they were:
 // - a walk that never leaves the circle and is slow (under DRIFT_SLOW on average) or short (up to
 //   DRIFT_SHORT) becomes part of the stay before or after it (D.drift[i] 1: it leaves every list,
@@ -302,7 +302,7 @@ function driftList() {
   box.innerHTML = rows.join('');
   box.hidden = !rows.length;
   note.textContent = !sug ? '' : !sug.length && !done.length ? 'No places where walks look like stays.' : sug.length ? '' : 'No more places to check.';
-  if (MR && !MR.on && done.length) note.textContent = 'MyRules are switched off, so these places don\'t change any walks.';
+  if (MR && !MR.on && done.length) note.textContent = 'My Edits are switched off, so these places don\'t change any walks.';
 }
 $('driftList').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-drift-sug],[data-drift-rule]');
@@ -380,7 +380,7 @@ function driftBars() {
     bot.id = 'drBot'; bot.className = 'sel-bar dr-bar';
     bot.innerHTML = '<div class="dr-head"><label class="dr-rad"><span>Radius</span><input type="range" id="drRad" min="' + DRIFT_RAD_MIN + '" max="' + DRIFT_RAD_MAX + '" step="25" aria-label="Radius"><b class="num" id="drRadTxt"></b></label>' +
       '<div class="dr-sum"><span id="drSum"></span>' + infoBtn(id, 'About walks that may be stays', 'sm') + '<button type="button" class="link-btn" id="drAll"></button></div>' +
-      infoBox(id, 'Each walk here starts or ends at a stay inside the circle. Ticked walks that never leave the circle become part of that stay. Walks marked <i>Cut back</i> stood still at one end: only those still minutes join the stay, and the part where you moved stays a walk. Untick the walks that were real. Saving keeps this as a MyRules place with <i>GPS drifts here</i>, so walks loaded later are handled the same way.') + '</div>' +
+      infoBox(id, 'Each walk here starts or ends at a stay inside the circle. Ticked walks that never leave the circle become part of that stay. Walks marked <i>Cut back</i> stood still at one end: only those still minutes join the stay, and the part where you moved stays a walk. Untick the walks that were real. Saving keeps this as a My Edits place with <i>GPS drifts here</i>, so walks loaded later are handled the same way.') + '</div>' +
       '<div class="dr-list" id="drList"></div>' +
       '<div class="dr-legend fine"><span><i class="dr-k on"></i>Becomes a stay</span><span><i class="dr-k off"></i>Stays a walk</span><span><i class="dr-k c"></i>Radius</span></div>' +
       '<div class="dr-acts"><button type="button" class="btn quiet" id="drRemove" hidden>Remove</button><button type="button" class="btn primary" id="drSave"></button></div>';
@@ -539,7 +539,7 @@ function driftRemove() {
   if (!r) return;
   mrAsk({
     title: 'Make these walks walks again?',
-    text: 'The walks near <b>' + esc(name) + '</b> stop being part of your stays.' + (r.drift && r.drift.only ? ' The place goes from MyRules.' : ' The place keeps its name.'),
+    text: 'The walks near <b>' + esc(name) + '</b> stop being part of your stays.' + (r.drift && r.drift.only ? ' The place goes from My Edits.' : ' The place keeps its name.'),
     buttons: [['Remove', 'danger', function () {
       if (r.drift && r.drift.only) MR.doc.places = mrList('places').filter(function (x) { return x !== r; });
       else { delete r.drift; delete r.except; }
@@ -738,7 +738,7 @@ function stayPickSave() {
   if (p.mr) c.then.stay.place = p.mr;
   stayPickEnd();
   working('Making it a stay…', function () { mrChange('Walk on ' + mrWhere(i) + ' made a stay at ' + name); });
-  toast('Made a stay at ' + name + '. Undo it in MyRules › Corrections.');
+  toast('Made a stay at ' + name + '. Undo it in My Edits › Corrections.');
 }
 function stayPickEnd() {
   if (!STP) return;

@@ -2,7 +2,7 @@
 // Select trips (Views and layers, or the button under the zoom buttons): you draw an area on the map,
 // a free shape (lasso) or a rectangle, and every trip the map shows (so, the filters) that passes
 // through it is picked. Drawing again adds more; a tap on a trip, or its box in the list, drops it or
-// adds it. Change type… and Set gear… save one correction listing them all (a bulk edit, MyRules
+// adds it. Change type… and Set gear… save one correction listing them all (a bulk edit, My Edits
 // "corrections" with trip: { trips: [{ start, mode }, …] }); each trip's details can detach it.
 // ⋯ › Export trips downloads the picked trips, as JSON or CSV (the same files as Menu › Your data).
 var SEL = null, SEL_TAP_PX = 6;
@@ -205,7 +205,7 @@ function selTypeDialog() {
       return '<button type="button" role="radio" data-m="' + m + '" aria-checked="' + (m === pick) + '">' + badge(m, true) + '<span>' + esc(LABEL[m] || m) + '</span></button>';
     }).join('') + '</div><label class="field"><span>Name</span><input type="text" id="selName" placeholder="Bulk edit"></label>',
     buttons: [['Make ' + tripsText(n) + ' ' + esc(LABEL[pick] || pick), 'primary', function () { selSave(); }], ['Back to map', 'quiet', null]],
-    note: 'Saved in MyRules as one correction listing these trips, marked Edited. Each trip\'s details can detach it.',
+    note: 'Saved in My Edits as one correction listing these trips, marked Edited. Each trip\'s details can detach it.',
     after: function () {
       SEL.type = pick;
       function name() { return 'Bulk edit: ' + tripsText(n) + ' to ' + (LABEL[SEL.type] || SEL.type).toLowerCase(); }
@@ -234,19 +234,19 @@ function selSave() {
   busy('Changing ' + tripsText(n) + ' to ' + (LABEL[type] || type).toLowerCase() + '…');
   setTimeout(function () {
     try { mrChange(name); } finally { busy(''); }
-    toast(tripsText(n) + ' now ' + (LABEL[type] || type).toLowerCase() + '. Undo it in MyRules, or detach a trip in its details.');
+    toast(tripsText(n) + ' now ' + (LABEL[type] || type).toLowerCase() + '. Undo it in My Edits, or detach a trip in its details.');
   }, 60);
 }
 // Set gear…: the gear goes on the picked trips of its type (gear is for one type), in one bulk edit.
 // Recorded gear (Strava and other activity files) stays, as with any bulk edit. New gear joins your
-// gear list in MyRules (not a default).
+// gear list in My Edits (not a default).
 function selGearDialog() {
   if (!SEL || !SEL.picked.length) return;
   var n = SEL.picked.length, types = {};
   SEL.picked.forEach(function (i) { var m = MODES[D.mode[i]]; types[m] = (types[m] || 0) + 1; });
   var ms = Object.keys(types).filter(function (m) { return MR_GEAR_KINDS[m]; }).sort(function (a, b) { return types[b] - types[a]; });
   if (!ms.length) { toast('Gear is for rides, runs, walks, car, motorbike, boat and snow trips. None of these are.'); return; }
-  // Gear of those types: on your trips already, and in your list in MyRules.
+  // Gear of those types: on your trips already, and in your list in My Edits.
   var opts = [], seen = {};
   ms.forEach(function (m) {
     gearOrder().forEach(function (g) { var x = GEAR[g]; if (x.mode === m && !seen[m + '|' + x.name]) { seen[m + '|' + x.name] = 1; opts.push({ v: 'g:' + g, name: x.name, mode: m, kind: x.kind }); } });
@@ -262,7 +262,7 @@ function selGearDialog() {
       '<label class="field"><span>Type</span><select id="selGMode">' + ms.map(function (m) { return '<option value="' + m + '">' + esc(LABEL[m] || m) + '</option>'; }).join('') + '</select></label></div>' +
       '<label class="field"><span>Kind</span><select id="selGKind"></select></label></div>' +
       '<p class="fine" id="selGCount"></p><label class="field"><span>Name of the edit</span><input type="text" id="selName"></label></div>',
-    info: 'Saved in MyRules as one correction listing these trips, marked Edited; each trip’s details can detach it. Gear goes only on trips of its own type. Gear recorded by Strava or another activity file is kept.',
+    info: 'Saved in My Edits as one correction listing these trips, marked Edited; each trip’s details can detach it. Gear goes only on trips of its own type. Gear recorded by Strava or another activity file is kept.',
     buttons: [['Set gear', 'primary', function () { selGearSave(); }], ['Back to map', 'quiet', null]],
     after: function () {
       function pick() {
@@ -314,7 +314,7 @@ function selGearSave() {
   busy('Setting ' + name + ' on ' + tripsText(trips.length) + '…');
   setTimeout(function () {
     try { mrChange(label); } finally { busy(''); }
-    toast(name + ' set on ' + tripsText(trips.length) + '. Undo it in MyRules, or detach a trip in its details.');
+    toast(name + ' set on ' + tripsText(trips.length) + '. Undo it in My Edits, or detach a trip in its details.');
   }, 60);
 }
 // Export trips: the picked trips, oldest to newest, in the files Menu › Your data writes for the filters.

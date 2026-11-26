@@ -525,7 +525,7 @@ $('packOfferYes').addEventListener('click', function () {
 //   within 200 m of a railway station (their point can sit far from the platforms) or 80 m of a
 //   tram, metro or light rail stop: a Transport stop with the station's name.
 // It takes that name when Takeout gave none, its icon (plane, train, tram or metro) in teal on pins,
-// lists and its page, and counts as that kind in Time by kind of place. A MyRules rule, Home and Near
+// lists and its page, and counts as that kind in Time by kind of place. A My Edits rule, Home and Near
 // home always win. Worked out once per spot for the data shown, from all its stays.
 var STOP_TRAIN_KM = 0.2, STOP_TRAM_KM = 0.08, STOP_MAX_MS = 30 * 6e4, AIRPORT_MAX_MS = 6 * 36e5;
 var AIRPORT_KM = { 0.6: 1, 0.8: 1.5, 1: 2 };
@@ -571,7 +571,7 @@ function spotStopKey(key) {
   }
   return (D.stopOf[key] = st);
 }
-// The stop or airport a spot is, when no MyRules rule names it.
+// The stop or airport a spot is, when no My Edits rule names it.
 function spotStop(s) { return !s || s.home || s.nearHome || mrRuleOf(s) ? null : spotStopKey(s.key); }
 // How many spots are stops or airports, for Time by kind of place.
 function stopSpots() {

@@ -8,10 +8,10 @@
 //   changing a lot at a stop); trips with only unsure cuts are offered (D.offer) with a Split button.
 // - Only suggest ('ask'): every trip is offered, none is split until you say so.
 // - Off: nothing is split or offered.
-// Keep as one trip, Split and Split trip by hand are kept in MyRules splits (so they travel and sync
+// Keep as one trip, Split and Split trip by hand are kept in My Edits splits (so they travel and sync
 // with the rest of your rules): { id, trip: { start, mode }, keep: true | split: true, at: [cut times] }.
 // Older copies in PREFS (splitKeep, splitYes, splitAt) move there the next time the trips are set up.
-// A trip a MyRules correction points at is only offered, as you have already looked at it.
+// A trip a My Edits correction points at is only offered, as you have already looked at it.
 // Splitting happens on D only: what is saved stays as loaded, so turning it off brings the trips back.
 var SPLIT_MODES = { VEHICLE: 1, UNKNOWN: 1, TRAIN: 1, TRAM: 1, SUBWAY: 1, BUS: 1 };
 var SPLIT_TRIP = ['start', 'end', 'day', 'mode', 'km', 'est', 'off', 'orig', 'from', 'to', 'srcs', 'sport', 'stype', 'smeta', 'gby', 'gconf', 'repl', 'dup', 'pathPts', 'pathT', 'pathOff'];
@@ -19,7 +19,7 @@ function splitSetting() { return PREFS.split === 'ask' || PREFS.split === 'off' 
 function splitKey(ms) { return String(Math.round(ms / 1000)); }
 function splitHas(list, key) { return Array.isArray(list) && list.indexOf(key) >= 0; }
 
-// Start times (ms) of trips MyRules corrections point at.
+// Start times (ms) of trips My Edits corrections point at.
 function splitFixed() {
   var out = [];
   if (typeof mrActive === 'function') mrActive('corrections').forEach(function (c) {
@@ -52,7 +52,7 @@ function splitPackType(pts, avg, near) {
 // Split by hand (PREFS.splitAt): { trip key: [times in seconds since 1970 to cut at] }, kept whatever
 // the setting. A cut is made at the GPS point nearest its time, and named after a station within
 // 300 m when the packs have one.
-// Splits apply whether MyRules are switched on or off, as they always have.
+// Splits apply whether My Edits are switched on or off, as they always have.
 function mrSplitRules() { return typeof mrList === 'function' ? mrList('splits').filter(function (r) { return r.id && r.enabled !== false && r.trip && r.trip.start; }) : []; }
 // Your choices for the trips in R, by trip key: { keep: [keys], yes: [keys], at: { key: [seconds] } }.
 function splitChoices(R) {
@@ -65,14 +65,14 @@ function splitChoices(R) {
     if (r.split) o.yes.push(key);
     if (Array.isArray(r.at)) r.at.forEach(function (s) { var t = Date.parse(s); if (isFinite(t)) (o.at[key] || (o.at[key] = [])).push(Math.round(t / 1000)); });
   });
-  // Any not moved to MyRules yet (their trip wasn't loaded).
+  // Any not moved to My Edits yet (their trip wasn't loaded).
   (PREFS.splitKeep || []).forEach(function (k) { o.keep.push(k); });
   (PREFS.splitYes || []).forEach(function (k) { o.yes.push(k); });
   var h = PREFS.splitAt || {};
   for (var k in h) if (Array.isArray(h[k])) o.at[k] = (o.at[k] || []).concat(h[k]);
   return o;
 }
-// Choices kept in PREFS by older versions: into MyRules, for the trips that are loaded.
+// Choices kept in PREFS by older versions: into My Edits, for the trips that are loaded.
 function splitMigrate(R) {
   var p = PREFS, keys = {}, k, i, moved = 0;
   (p.splitKeep || []).forEach(function (x) { keys[x] = 1; });
@@ -99,9 +99,9 @@ function splitMigrate(R) {
   ['splitKeep', 'splitYes'].forEach(function (x) { if (p[x] && !p[x].length) delete p[x]; });
   if (p.splitAt && !Object.keys(p.splitAt).length) delete p.splitAt;
   savePrefs();
-  mrNote('Trip splits and merged places moved into MyRules');
+  mrNote('Trip splits and merged places moved into My Edits');
 }
-// The MyRules split for a trip (by its start as loaded, its type and UTC offset), changed by patch:
+// The My Edits split for a trip (by its start as loaded, its type and UTC offset), changed by patch:
 // keep, split or at (cut times in seconds, added to those it has). Keep drops the others; null clears it.
 function splitRulePatch(ms, mode, off, patch) {
   mrEnsure();
