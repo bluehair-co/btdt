@@ -1596,6 +1596,26 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 @media (max-width: 520px) { .about { border-radius: var(--paper-r) var(--paper-r) 0 0; --ppr: 0deg !important; --ppx: 0px !important; --ppy: 0px !important; --por: 0deg !important; --pox: 0px !important; } .about::after { border-bottom: 0; } }
 :root[data-theme="dark"] .about-privacy { background: var(--grid); }
 .menu-body .data-row { border-radius: var(--paper-r); }
+
+/* ---------- v2.0: playback on its own ----------
+   While playback is open on the Map, the rest of the interface steps aside: only the map, the playback
+   bar at the bottom, the date on a slip of paper top right and the round Close button beside it. */
+body.play-mode:has(#mapPage:not([hidden])) :is(.dock, .topbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu) { display: none !important; }
+body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
+.play-head { position: absolute; z-index: 26; top: calc(12px + var(--safe-t)); right: 12px; display: flex; align-items: flex-start; gap: var(--sp-5); }
+.play-head[hidden] { display: none; }
+.play-date { position: relative; display: flex; flex-direction: column; align-items: flex-end; padding: var(--sp-4) var(--sp-7); color: var(--fg); text-align: right; }
+.play-date b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); line-height: 1.2; }
+.play-date small { font-size: var(--fs-2xs); color: var(--muted); }
+.play-close { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--fg); cursor: pointer; }
+.play-close .ic { width: 20px; height: 20px; }
+.play-date, .play-close { --paper: var(--panel); isolation: isolate; border: 0; background: transparent; }
+.play-close { border-radius: 50%; }
+.play-date { border-radius: var(--paper-r); }
+:where(.play-date, .play-close)::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
+  box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
+:where(.play-date, .play-close)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
+  transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
 </style>
 </head>
 <body>
@@ -1838,6 +1858,11 @@ details.when-more > .sec:last-child { border-bottom: 0; }
       </div>
     </div>
 
+    <!-- Playback on its own: the date on paper top right, and a button to close playback. -->
+    <div class="play-head" id="playHead" hidden>
+      <div class="play-date"><b id="playDate"></b><small id="playSub"></small></div>
+      <button type="button" class="play-close" id="playClose" aria-label="Close playback" title="Close playback"><span data-icon="close"></span></button>
+    </div>
     <div class="map-legend" id="mapLegend"></div>
     <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
@@ -5981,7 +6006,7 @@ function localTime(ms, zone, off) {
 // and pink block printed a little off it (the paper rules in app.css). Each sheet gets its own small
 // random tilt and offsets every time it appears. The tilt is kept small for big panels, so their far
 // edges move no more than about 3px.
-var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel';
+var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .play-date, .play-close';
 function paperize(el) {
   function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
   var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
@@ -8994,6 +9019,8 @@ $('tripBody').addEventListener('click', function (ev) {
 $('tripBack').addEventListener('click', function () { if (listBack) openList(listBack); });
 
 // ---------- top bar: day navigator or time slider ----------
+// Playback always starts closed: it takes over the map, so it is not remembered between visits.
+PREFS.scrub = false;
 var scrubV = 1000, T0 = 0, T1 = 0, playing = false, playRaf = 0, SPEEDS = [1, 2, 4, 8, 16, 32, 0.25, 0.5];
 function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.speed) + '×'; }
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
@@ -9004,6 +9031,11 @@ function updateTopbar() {
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
+  // While playback is open, everything else steps aside: only the map, the slider, the date and Close.
+  var pm = !!n && !!PREFS.scrub;
+  if (pm && $('playHead').hidden) requestAnimationFrame(function () { document.querySelectorAll('#playHead .play-date, #playHead .play-close, #playBar').forEach(paperize); });
+  document.body.classList.toggle('play-mode', pm);
+  $('playHead').hidden = !pm;
   if (n) {
     if (one) {
       // From midnight where the period starts to midnight where it ends: a day that flies
@@ -9058,6 +9090,9 @@ function syncPeriodNavs() {
       q('rangeSub').textContent = sub + (kr ? ' · ' + kr + ' filter' + (kr > 1 ? 's' : '') : '');
     }
   });
+  // The date on paper at the top of playback
+  $('playDate').textContent = one ? (F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit)) : F.dm === 'all' ? 'All time' : F.from === F.to ? dayLabel(F.from) : niceDate(F.from) + ' – ' + niceDate(F.to);
+  $('playSub').textContent = sub;
 }
 // The calendar under the navigator's date: a month at a time, Monday first. Days with
 // trips in the filters have a dot, the period on show is shaded, and Today at the bottom
@@ -9544,11 +9579,16 @@ function rollOn() {
   playFit.i = i;
   return true;
 }
-$('scrubToggle').addEventListener('click', function () {
-  PREFS.scrub = !PREFS.scrub; savePrefs();
+function setScrub(on) {
+  PREFS.scrub = on;
   // Hiding the slider shows every trip again.
   if (!PREFS.scrub) { stopPlay(); if (scrubV < 1000) scrubTo(1000); }
   updateTopbar();
+}
+$('scrubToggle').addEventListener('click', function () { setScrub(!PREFS.scrub); });
+$('playClose').addEventListener('click', function () { setScrub(false); });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && document.body.classList.contains('play-mode') && !document.querySelector('.sheet.open, dialog[open]')) setScrub(false);
 });
 $('playBtn').addEventListener('click', function () { if (playing) stopPlay(); else play(); });
 $('speedBtn').addEventListener('click', function () {
