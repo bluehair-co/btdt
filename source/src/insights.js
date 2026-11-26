@@ -934,7 +934,7 @@ function renderRecords() {
   var h = items.filter(function (x) { return best[x[0]]; }).map(function (x) {
     var r = best[x[0]];
     var m = modeOf(r.i), mc = modeColor(m);
-    return '<button type="button" class="record" data-i="' + r.i + '"><span class="stub" style="background:' + mc + '"' + (/^#fedf02$/i.test(mc) ? ' data-bike' : '') + '>' + icon(m) + '</span><span class="k">' + x[2] + '</span><span class="v">' + x[3](r) + '</span><span class="s">' + esc(tripRoute(r.i)) + ' · ' + niceDate(D.day[r.i]) + '</span></button>';
+    return '<button type="button" class="record" data-i="' + r.i + '"><span class="stub" style="background:' + mc + '"' + (/m-bike|^#fedf02$/i.test(mc) ? ' data-bike' : '') + '>' + icon(m) + '</span><span class="k">' + x[2] + '</span><span class="v">' + x[3](r) + '</span><span class="s">' + esc(tripRoute(r.i)) + ' · ' + niceDate(D.day[r.i]) + '</span></button>';
   }).join('');
   if (bd) h += '<button type="button" class="record" data-day="' + bd + '"><span class="stub day">' + icon('calendar') + '</span><span class="k">Furthest in a day</span><span class="v">' + dist(byDay[bd].km) + '</span><span class="s">' + longDate(+bd) + '</span></button>';
   if (bn) h += '<button type="button" class="record" data-day="' + bn + '"><span class="stub day">' + icon('calendar') + '</span><span class="k">Most trips in a day</span><span class="v">' + fmt(byDay[bn].n) + '</span><span class="s">' + longDate(+bn) + '</span></button>';
