@@ -16,40 +16,18 @@ function renderInsights() {
   renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderKinds(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
   insGroups();
 }
-// Sections: the cards in groups (Scores first, then Overview, Places, Countries, Fitness, CO₂), with
-// a chip for each under the sticky top bar. A group with no card showing is hidden with its chip; on
-// a wide screen, the last card of a group that would sit alone in its row takes the whole row.
+// Sections: the cards in groups (Scores first, then Overview, Places, Countries, Fitness, CO₂), each
+// under its own heading. A group with no card showing is hidden; on a wide screen, the last card of a
+// group that would sit alone in its row takes the whole row.
 function insGroups() {
   $('insightsPage').querySelectorAll('.ins-group').forEach(function (g) {
     var cards = [].slice.call(g.querySelectorAll(':scope > .card')).filter(function (c) { return !c.hidden; });
     g.hidden = !cards.length;
-    var chip = document.querySelector('[data-ig-go="' + g.dataset.ig + '"]');
-    if (chip) chip.hidden = g.hidden;
     var half = cards.filter(function (c) { return !c.classList.contains('wide'); });
     cards.forEach(function (c) { c.classList.remove('span'); });
     if (half.length % 2) half[half.length - 1].classList.add('span');
   });
-  insSpy();
 }
-function insSpy() {
-  var page = $('insightsPage'), bar = page.querySelector('.pnav'), top = bar.getBoundingClientRect().bottom + 24, cur = 'scores';
-  page.querySelectorAll('.ins-group:not([hidden]) > .ins-group-h').forEach(function (h) { if (h.getBoundingClientRect().top <= top) cur = h.parentNode.dataset.ig; });
-  // At the very end of the page the last group counts, even when it is too short to reach the top.
-  if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) { var hs = page.querySelectorAll('.ins-group:not([hidden]) > .ins-group-h'); if (hs.length) cur = hs[hs.length - 1].parentNode.dataset.ig; }
-  $('insChips').querySelectorAll('[data-ig-go]').forEach(function (b) {
-    var on = b.dataset.igGo === cur;
-    if ((b.getAttribute('aria-pressed') === 'true') !== on) { b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (on && b.scrollIntoView) b.parentNode.scrollTo({ left: b.offsetLeft - 16, behavior: 'smooth' }); }
-  });
-}
-$('insightsPage').addEventListener('scroll', function () { insSpy(); }, { passive: true });
-$('insChips').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-ig-go]');
-  if (!b) return;
-  var page = $('insightsPage'), g = page.querySelector('[data-ig="' + b.dataset.igGo + '"]'), t = g && (g.querySelector('.ins-group-h') || g.querySelector('.card'));
-  if (!t) return;
-  var bar = page.querySelector('.pnav');
-  page.scrollTo({ top: b.dataset.igGo === 'scores' ? 0 : page.scrollTop + t.getBoundingClientRect().top - bar.getBoundingClientRect().bottom - 12, behavior: 'smooth' });
-});
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
   for (j = 0; j < n; j++) {
