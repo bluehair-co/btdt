@@ -52,7 +52,7 @@
   --map-grey: #8a918c;         /* grey on the map and in MyRules: GPS points left out, routes with no type, the playback dot standing still, rules that are hidden or kept */
   --map-grey-soft: #b9bfbb;    /* a point outside a place radius, the lines between the zoom buttons */
   --globe-sea: #e2e4f0; --globe-grid: #d2d4e4; --globe-land: #fffaf6; --globe-coast: #d6ccc4;
-  --heat-0: rgba(250,180,160,0); --heat-1: #f7b8a6; --heat-2: #e8644f; --heat-3: #b8261a; --heat-4: #6d0f07;
+  --heat-0: rgba(254,223,2,0); --heat-1: #FEDF02; --heat-2: #FF4FA0; --heat-3: #8C3AA6; --heat-4: #1E3A9E;  /* the three inks: yellow, pink, overprinted on blue */
   --speed-1: #d7301f; --speed-2: #f46d43; --speed-3: #fdae61; --speed-4: #fee08b; --speed-5: #a6d96a; --speed-6: #1a9850; --speed-7: #2b83ba; --speed-8: #5e3c99;
   --hr-1: #9AA3C8; --hr-2: #2F5BD3; --hr-3: #1F9466; --hr-4: #E8C400; --hr-5: #FF4FA0;
 
@@ -120,7 +120,7 @@
   --tag-inf-fg: #8FE6BF; --tag-inf-bg: #163F4A;
   --sun-rise: #e8a23a; --sun-set: #a99bff;
   --globe-sea: #17143a; --globe-grid: #241f4d; --globe-land: #262150; --globe-coast: #3d3768;
-  --heat-0: rgba(255,140,110,0); --heat-1: #a8392b; --heat-2: #e2574a; --heat-3: #ff9a85; --heat-4: #ffe1d9;
+  --heat-0: rgba(78,102,201,0); --heat-1: #4E66C9; --heat-2: #FF72B4; --heat-3: #FEDF02; --heat-4: #FBF6EC;  /* on night paper: blue, pink, yellow, paper */
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -799,23 +799,9 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .loader[hidden] { display: none; }
 @keyframes ld-show { from { opacity: 0; } }
 .ld-box { display: flex; flex-direction: column; align-items: center; gap: var(--sp-9); padding: var(--sp-8); }
-.ld-donut { --c: var(--accent); position: relative; width: 148px; height: 148px; }
-.ld-ring { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-.ld-track { fill: none; stroke: var(--line); stroke-width: 9; }
-.ld-arc { fill: none; stroke: var(--c); stroke-width: 9; stroke-linecap: round; transition: stroke-dashoffset .35s ease, stroke .5s ease; }
-.ld-donut.spin .ld-ring { animation: ld-spin 1.1s linear infinite; }
-@keyframes ld-spin { to { transform: rotate(270deg); } }
-.ld-disc { position: absolute; inset: 22px; border-radius: 50%; background: color-mix(in srgb, var(--c) 14%, transparent); transition: background .5s ease; }
-.ld-ico { position: absolute; inset: 0; display: grid; place-items: center; }
-.ld-ico .ic { width: 56px; height: 56px; fill: var(--c); transition: fill .5s ease; }
-.ld-ico.out { animation: ld-out .18s ease-in forwards; }
-.ld-ico.in { animation: ld-in .42s .12s cubic-bezier(.3, 1.6, .5, 1) both; }
-@keyframes ld-out { to { opacity: 0; transform: scale(.5) translateY(8px); } }
-@keyframes ld-in { from { opacity: 0; transform: scale(.4) translateY(-10px); } }
 .ld-label { text-align: center; min-height: 46px; max-width: min(90vw, 420px); }
 .ld-t { font-weight: 500; overflow-wrap: anywhere; }
 .ld-p { font: 500 var(--fs-sm) var(--font-mono); color: var(--muted); }
-@media (prefers-reduced-motion: reduce) { .ld-ico.in, .ld-ico.out { animation: none; } .ld-donut.spin .ld-ring { animation-duration: 3s; } }
 .toast { position: fixed; z-index: 70; left: 0; right: 0; margin: 0 auto; width: max-content; top: calc(16px + var(--safe-t)); max-width: min(560px, calc(100% - 32px)); box-sizing: border-box; background: var(--fg); color: var(--bg); border-radius: var(--r-lg); padding: var(--sp-5) var(--sp-7); font-size: var(--fs-sm); box-shadow: var(--shadow); }
 /* Working on it: a clear veil that takes taps while a slow change runs, and a pill with a spinner. */
 .working { position: fixed; inset: 0; z-index: 1000; cursor: progress; }
@@ -1425,12 +1411,6 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 /* The loading screen, printed: the icon on a full-colour badge (ink ring, pink offset), a dotted
    track like the trail in the picture, the progress in the badge's ink */
 .loader { background: color-mix(in srgb, var(--bg) 96%, transparent); }
-.ld-track { stroke: var(--fg); stroke-width: 5; stroke-dasharray: 0 12.5; stroke-linecap: round; opacity: .35; }
-.ld-arc { stroke-width: 10; }
-.ld-disc { inset: 24px; background: var(--c); border: 2px solid var(--edge); box-shadow: 4px 4px 0 var(--offset); transition: background .5s ease; }
-:root[data-theme="dark"] .ld-disc { border-color: var(--bg); }
-.ld-ico .ic { width: 50px; height: 50px; fill: var(--ic, var(--badge-ink)); }
-.ld-ico .ic .ph2 { opacity: .4; }
 .ld-t { font-family: var(--font-display); font-weight: 800; }
 #map .leaflet-control-zoom-in, #map .leaflet-control-zoom-out { display: flex; align-items: center; justify-content: center; }
 #map .leaflet-control-zoom-in svg, #map .leaflet-control-zoom-out svg { width: 18px; height: 18px; fill: currentColor; }
@@ -1554,9 +1534,13 @@ details.when-more > .sec:last-child { border-bottom: 0; }
    bar at the bottom, the date on a slip of paper top right and the round Close button beside it. */
 body.play-mode:has(#mapPage:not([hidden])) :is(.dock, .topbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu) { display: none !important; }
 body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
-.play-head { position: absolute; z-index: 26; top: calc(12px + var(--safe-t)); right: 12px; display: flex; align-items: flex-start; gap: var(--sp-5); }
+.play-head { position: absolute; z-index: 26; top: calc(12px + var(--safe-t)); left: 12px; right: 12px; display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-5); pointer-events: none; }
+.play-head > * { pointer-events: auto; }
 .play-head[hidden] { display: none; }
-.play-date { position: relative; display: flex; flex-direction: column; align-items: flex-end; padding: var(--sp-4) var(--sp-7); color: var(--fg); text-align: right; }
+/* The date: a slip of paper top left, like the map legend: no outline, no block */
+.play-date { position: relative; display: flex; flex-direction: column; align-items: flex-start; padding: var(--sp-4) var(--sp-7); color: var(--fg); text-align: left; }
+.play-date::before { box-shadow: none !important; }
+.play-date::after { display: none !important; }
 .play-date b { font-family: var(--font-display); font-weight: 800; font-size: var(--fs-lg); line-height: 1.2; }
 .play-date small { font-size: var(--fs-2xs); color: var(--muted); }
 .play-close { position: relative; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: var(--fg); cursor: pointer; }
@@ -1568,3 +1552,19 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
   box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
 :where(.play-date, .play-close)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
   transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
+
+
+/* ---------- v2.0 loading screen: stamps ----------
+   No spinner: stamps land one after another on the paper, each with its own shape, ink and icon,
+   at new random places every round, then the page clears and they start again (busy() in core.js). */
+.ld-stamps { position: relative; width: min(320px, 78vw); aspect-ratio: 1; transition: opacity .35s ease; }
+.ld-stamps.clear { opacity: 0; }
+.ld-stamp { position: absolute; width: 38%; aspect-ratio: 1; transform: translate(-50%, -50%) rotate(var(--r)); animation: ld-stamp .55s cubic-bezier(.3, .7, .3, 1) both; }
+.ld-stamp svg { display: block; width: 100%; height: 100%; overflow: visible; }
+@keyframes ld-stamp {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(calc(var(--r) + 6deg)) scale(1.55); }
+  55% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--r)) scale(.94); }
+  100% { opacity: 1; transform: translate(-50%, -50%) rotate(var(--r)) scale(1); } }
+@media (min-width: 720px) { .ld-stamps { width: 420px; } }
+@media (prefers-reduced-motion: reduce) { .ld-stamp { animation: none; } }
+.ld-label { margin-top: var(--sp-4); }

@@ -656,44 +656,89 @@ function workingBar(text, frac) {
   bar.hidden = false; bar.firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
   workingShow(true);
 }
-// The loading screen: a donut that fills with the reading progress (when the text ends in
-// "· 42%"; otherwise, or once it reaches 100%, an arc spins) around an icon that keeps changing between transport, a pin
-// and world landmarks, each in its own colour, which the ring takes on too.
-var LOADER_ICONS = [
-  ['FLYING', '--m-air'], ['castle', '--accent'], ['CAR', '--m-road'], ['windmill', '--m-foot'], ['pin', '--pink'],
-  ['TRAIN', '--m-transit'], ['mosque', '--m-transit'], ['WALKING', '--m-foot'], ['lighthouse', '--m-bike'], ['pin', '--pink'],
-  ['CYCLING', '--m-bike'], ['museum', '--m-road'], ['FERRY', '--m-water'], ['mountains', '--m-air'], ['pin', '--pink'],
-  ['BUS', '--m-road'], ['church', '--m-water'], ['TRAM', '--m-transit'], ['synagogue', '--m-road'], ['pin', '--pink'],
-  ['FLYING', '--m-air'], ['palm', '--m-transit'], ['WALKING', '--m-foot'], ['bridge', '--accent'], ['tent', '--m-bike'], ['pin', '--pink']
+// The loading screen: no spinner. Stamps land one after another on the paper, each with its own
+// shape, ink and icon (transport and world landmarks), at new random places every round, close
+// together like a well-used passport page; then the page clears and a new round starts. The text
+// under them says what is being read, with the percentage when the text ends in "· 42%".
+var STAMPS = [
+  ['circle', '--fg', 'castle', 'BEEN THERE', 'DONE THAT'], ['oval', '--m-air', 'FLYING', 'DEPARTED', 'time'],
+  ['hex', '--m-transit', 'TRAIN', 'TRANSIT'], ['postage', '--fg', 'lighthouse', 'BT•DT'],
+  ['rect', '--m-road', 'CYCLING', 'TRIPS', 'ON THE ROAD'], ['circle', '--m-foot', 'mountains', 'ON FOOT', 'SUMMITS'],
+  ['date', '--m-water', 'FERRY', 'ARRIVED', 'date'], ['hex', '--pink', 'palm', 'LAYOVER'],
+  ['circle', '--m-transit', 'windmill', 'WELCOME', 'COME AGAIN'], ['oval', '--fg', 'bridge', 'CROSSED', 'date'],
+  ['hex', '--m-road', 'tent', 'CAMPED'], ['postage', '--fg', 'church', 'POSTE']
 ];
-var LOADER_R = 64, LOADER_C = 2 * Math.PI * LOADER_R;
-function loaderIcon(first) {
-  var el = $('busy'), donut = el.querySelector('.ld-donut'), item = LOADER_ICONS[busy.i % LOADER_ICONS.length];
-  donut.style.setProperty('--c', 'var(' + item[1] + ')');
-  donut.style.setProperty('--ic', item[1] === '--m-bike' ? 'var(--on-bike)' : 'var(--badge-ink)');
-  var old = donut.querySelector('.ld-ico:not(.out)'), n = document.createElement('div');
-  n.className = 'ld-ico' + (first ? '' : ' in'); n.innerHTML = icon(item[0]);
-  donut.appendChild(n);
-  if (old) { old.classList.add('out'); setTimeout(function () { old.remove(); }, 250); }
+var stampN = 0;
+function stampSvg(st) {
+  var kind = st[0], c = 'var(' + st[1] + ')', u = 'st' + (++stampN), a = st[3], b = st[4] || '';
+  var n = new Date();
+  if (b === 'time') b = fmtHM(n.getHours(), n.getMinutes());
+  if (b === 'date') b = fmtDMY(n.getFullYear(), n.getMonth(), n.getDate()).toUpperCase();
+  function ic(x, y, s, soft) { return '<g transform="translate(' + (x - s / 2) + ' ' + (y - s / 2) + ') scale(' + s / 256 + ')" style="fill:' + c + '">' + (PH[st[2]] || '').replace(/class="ph2"/g, 'opacity="' + (soft || .35) + '"') + '</g>'; }
+  function txt(x, y, size, t, font, extra) { return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="' + size + '" style="fill:' + c + ';font-family:' + font + '"' + (extra || '') + '>' + esc(t) + '</text>'; }
+  var cond = '\'IBM Plex Sans Condensed\',sans-serif;font-weight:600', disp = 'var(--font-display);font-weight:800', mono = 'var(--font-mono);font-weight:500';
+  function arc(r, t, top) {
+    var d = top ? 'M' + (60 - r) + ' 60A' + r + ' ' + r + ' 0 0 1 ' + (60 + r) + ' 60' : 'M' + (60 - r) + ' 60A' + r + ' ' + r + ' 0 0 0 ' + (60 + r) + ' 60', id = u + (top ? 't' : 'b');
+    return '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="10" letter-spacing="2.5" style="fill:' + c + ';font-family:' + cond + '"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + esc(t) + '</textPath></text>';
+  }
+  var g = '', ln = 'fill="none" style="stroke:' + c + '"';
+  if (kind === 'circle') g = '<circle cx="60" cy="60" r="55" stroke-width="4" ' + ln + '/><circle cx="60" cy="60" r="46" stroke-width="1.5" ' + ln + '/>' + arc(37, a, true) + arc(44, b, false) + ic(60, 62, 40) +
+    '<path d="M14 60l3-2 3 2-3 2zM100 60l3-2 3 2-3 2z" style="fill:' + c + '"/>';
+  else if (kind === 'oval') g = '<ellipse cx="60" cy="60" rx="57" ry="40" stroke-width="3.5" ' + ln + '/><ellipse cx="60" cy="60" rx="50" ry="33" stroke-width="1.2" ' + ln + '/>' +
+    txt(60, 45, 10, a, cond, ' letter-spacing="2.5"') + ic(60, 62, 24) + txt(60, 86, 9, b, mono);
+  else if (kind === 'rect') g = '<rect x="6" y="28" width="108" height="64" rx="4" stroke-width="3.5" ' + ln + '/><rect x="12" y="34" width="96" height="52" rx="2" stroke-width="1.2" ' + ln + '/>' +
+    ic(34, 60, 30) + txt(76, 60, 17, a, disp) + txt(76, 75, 8, b, cond, ' letter-spacing="1.5"');
+  else if (kind === 'hex') {
+    var hx = function (r) { var p = []; for (var k = 0; k < 6; k++) p.push((60 + r * Math.cos((30 + 60 * k) * Math.PI / 180)).toFixed(1) + ',' + (60 + r * Math.sin((30 + 60 * k) * Math.PI / 180)).toFixed(1)); return p.join(' '); };
+    g = '<polygon points="' + hx(54) + '" stroke-width="4" stroke-linejoin="round" ' + ln + '/><polygon points="' + hx(46) + '" stroke-width="1.2" stroke-linejoin="round" ' + ln + '/>' + ic(60, 54, 40) + txt(60, 88, 10, a, cond, ' letter-spacing="2.5"');
+  } else if (kind === 'postage') g = '<rect x="14" y="10" width="92" height="100" style="fill:var(--chip-on-bg)"/><rect x="14" y="10" width="92" height="100" fill="none" stroke-width="7" stroke-dasharray="0 9" stroke-linecap="round" style="stroke:var(--bg)"/>' +
+    '<rect x="22" y="18" width="76" height="84" stroke-width="1.5" fill="none" style="stroke:var(--on-bike)"/>' + ic(60, 54, 44, .25).replace('fill:' + c, 'fill:var(--on-bike)') + txt(60, 94, 13, a, disp).replace('fill:' + c, 'fill:var(--on-bike)');
+  else if (kind === 'date') g = '<circle cx="60" cy="60" r="44" stroke-width="3" ' + ln + '/><path d="M10 52h18M10 60h18M10 68h18M92 52h18M92 60h18M92 68h18" stroke-width="2" style="stroke:' + c + '"/>' +
+    txt(60, 48, 9, a, cond, ' letter-spacing="2"') + txt(60, 68, b.length > 8 ? 12 : 16, b, disp) + ic(60, 84, 16);
+  return '<svg viewBox="0 0 120 120" aria-hidden="true"><g filter="url(#stampInk)">' + g + '</g></svg>';
+}
+// Places for a round: close together, overlapping a little, never piled on one spot.
+function stampSpots(n) {
+  var out = [];
+  for (var k = 0; k < n; k++) {
+    var best = null, bestD = -1;
+    for (var t = 0; t < 40; t++) {
+      var p = [22 + Math.random() * 56, 22 + Math.random() * 56], d = 99;
+      out.forEach(function (q) { d = Math.min(d, Math.hypot(p[0] - q[0], p[1] - q[1])); });
+      if (d >= 24) { best = p; break; }
+      if (d > bestD) { bestD = d; best = p; }
+    }
+    out.push(best);
+  }
+  return out;
+}
+function stampRound() {
+  var box = $('busy').querySelector('.ld-stamps'), kinds = STAMPS.slice().sort(function () { return Math.random() - .5; }).slice(0, 7), spots = stampSpots(kinds.length), k = 0;
+  box.classList.remove('clear'); box.innerHTML = '';
+  var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function put() {
+    var el = document.createElement('div'), st = kinds[k];
+    el.className = 'ld-stamp';
+    el.style.left = spots[k][0] + '%'; el.style.top = spots[k][1] + '%';
+    el.style.setProperty('--r', ((Math.random() * 2 - 1) * 14).toFixed(1) + 'deg');
+    el.innerHTML = stampSvg(st);
+    box.appendChild(el); k++;
+  }
+  if (still) { while (k < kinds.length) put(); return; }
+  put();
+  busy.t = setInterval(function () {
+    if (k < kinds.length) { put(); return; }
+    clearInterval(busy.t);
+    busy.t = setTimeout(function () { box.classList.add('clear'); busy.t = setTimeout(stampRound, 400); }, 900);
+  }, 600);
 }
 function busy(text) {
   var el = $('busy');
-  if (!text) { el.hidden = true; clearInterval(busy.t); busy.t = null; return; }
-  // At 100% the file is read but still being worked through, so the arc spins from there on.
+  if (!text) { el.hidden = true; clearInterval(busy.t); clearTimeout(busy.t); busy.t = null; return; }
   var m = /^(.*?)\s*·\s*(\d+)%$/.exec(text), pct = m && +m[2] < 100 ? +m[2] : null;
-  var arc = el.querySelector('.ld-arc'), donut = el.querySelector('.ld-donut');
   el.querySelector('.ld-t').textContent = (m ? m[1] : text).replace(/…$/, '') + (m ? '' : '…');
   el.querySelector('.ld-p').textContent = pct === null ? '' : pct + '%';
-  donut.classList.toggle('spin', pct === null);
-  arc.style.strokeDashoffset = LOADER_C * (pct === null ? 0.72 : 1 - pct / 100);
-  if (el.hidden) {
-    el.hidden = false;
-    busy.i = Math.floor(Math.random() * LOADER_ICONS.length);
-    donut.querySelectorAll('.ld-ico').forEach(function (x) { x.remove(); });
-    loaderIcon(true);
-    clearInterval(busy.t);
-    busy.t = setInterval(function () { busy.i++; loaderIcon(); }, 900);
-  }
+  if (el.hidden) { el.hidden = false; clearInterval(busy.t); clearTimeout(busy.t); stampRound(); }
 }
 
 // ---------- countries ----------
@@ -967,7 +1012,7 @@ var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .t
 function paperize(el) {
   function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
   var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
-  var max = Math.min(el.classList.contains('map-legend') ? 1.3 : .7, 3 / half * 180 / Math.PI), s = el.style;
+  var max = Math.min(el.matches('.map-legend, .play-date') ? 1.3 : .7, 3 / half * 180 / Math.PI), s = el.style;
   s.setProperty('--ppr', rnd(max) + 'deg'); s.setProperty('--ppx', rnd(1.2) + 'px'); s.setProperty('--ppy', rnd(1.2) + 'px');
   s.setProperty('--por', rnd(max * .6) + 'deg'); s.setProperty('--pox', rnd(2) + 'px'); s.setProperty('--poy', rnd(2) + 'px');
   s.setProperty('--psx', (3 + Math.random() * 2.5).toFixed(1) + 'px'); s.setProperty('--psy', (3 + Math.random() * 2.5).toFixed(1) + 'px');
