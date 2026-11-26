@@ -1512,7 +1512,9 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 /* Pressed round buttons are printed on yellow paper */
 .scrub-toggle[aria-pressed="true"], .fab.tools-fab[aria-expanded="true"] { --paper: var(--chip-on-bg); background: transparent; }
 /* Leaflet's zoom buttons: no paper of their own */
-#map .leaflet-control-zoom a { background-color: transparent; border-radius: 0; }
+#map .leaflet-control-zoom a { background-color: transparent; border-radius: 0; color: var(--fg); border-bottom: 0; }
+#map .leaflet-control-zoom a:hover { background-color: var(--grid); color: var(--fg); }
+.sel-on #map .leaflet-control-zoom a.sel-btn, .sel-on .leaflet-control-zoom a.sel-btn { color: var(--chip-on-fg); }
 #map .leaflet-control-zoom a:first-child { border-radius: var(--paper-r) var(--paper-r) 0 0; }
 #map .leaflet-control-zoom a:last-child { border-radius: 0 0 var(--paper-r) var(--paper-r); }
 #map .leaflet-control-zoom a + a, .proj-zoom button + button { border-top: 1.5px dotted var(--edge); }
@@ -1611,6 +1613,7 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
 @media (min-width: 720px) { .ld-stamps { width: 420px; } }
 @media (prefers-reduced-motion: reduce) { .ld-stamp { animation: none; } }
 .ld-label { margin-top: var(--sp-4); }
+#map .leaflet-control-zoom a.zoom-all, #map .leaflet-control-zoom a.sel-btn { border-top: 1.5px dotted var(--edge); }
 </style>
 </head>
 <body>
