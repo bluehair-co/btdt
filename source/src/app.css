@@ -684,13 +684,17 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
   position: fixed; inset: 0; overflow: hidden; container-type: size; pointer-events: none;
 }
 .welcome-art > * {
-  /* The picture covers the screen; on narrow screens it keeps the traveller and the sun in view. */
-  --sw: max(100cqw, 100cqh * 1.7778);
-  --sh: calc(var(--sw) / 1.7778);
+  /* The picture covers the screen in two layers cut along the cliff. On wide screens they line up as
+     one picture; on narrower ones the cliff slides so the traveller stands about a third of the way in,
+     and the valley behind slides further, so the sun stays in view at about three quarters. */
+  --sw: max(100cqw, 100cqh * 1.7768);
+  --sh: calc(var(--sw) / 1.7768);
   --sy: max(0px, (var(--sh) - 100cqh) * .3);
-  --bx: max(0px, min(var(--sw) * .41 - 50cqw, var(--sw) - 100cqw));
+  --fx: max(0px, min(var(--sw) * .40 - 50cqw, var(--sw) * .335 - 30cqw, var(--sw) - 100cqw));
+  --bx: max(var(--fx), min(var(--sw) * .58 - 75cqw, var(--sw) - 100cqw));
 }
 .welcome-art .stage { position: absolute; left: calc(0px - var(--bx)); top: calc(0px - var(--sy)); width: var(--sw); height: var(--sh); }
+.welcome-art .stage.fg { left: calc(0px - var(--fx)); }
 .welcome-art img { display: block; width: 100%; height: 100%; }
 /* The name as a passport stamp, pressed into the empty sky: top right, or top centre on phones. */
 .welcome-stamp { position: absolute; margin: 0; top: calc(14px + var(--safe-t)); right: clamp(16px, 7vw, 140px); width: clamp(170px, 17vw, 270px);

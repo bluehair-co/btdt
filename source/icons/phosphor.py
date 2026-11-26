@@ -33,7 +33,7 @@ BOLD = {
 }
 # Gear icons drawn to match the duotone set (source/icons/gear/<name>.svg, exported from Figma):
 # the solid shapes in one ink, the soft fill (opacity 0.2) as the second, drawn underneath.
-GEAR = ['halfbike', 'strida']
+GEAR = ['halfbike', 'strida', 'cargobike']
 def gear(name):
     body = inner(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gear', name + '.svg'))
     soft, solid = [], []
