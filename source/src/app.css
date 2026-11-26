@@ -816,14 +816,8 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 /* In the top layer (popover), above an open dialog; none of the popover's own box. */
 .working[popover] { width: auto; height: auto; margin: 0; border: 0; padding: 0; background: transparent; color: inherit; overflow: visible; }
 .working[popover]::backdrop { display: none; }
-.working .working-pill { z-index: 1001; display: flex; align-items: center; gap: var(--sp-5); animation: working-in .15s ease both; }
-.working-spin { width: 16px; height: 16px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--bg) 35%, transparent); border-top-color: var(--bg); animation: working-spin .8s linear infinite; will-change: transform; }
 @keyframes working-spin { to { transform: rotate(360deg); } }
-.working-bar { width: 64px; height: 4px; flex: none; border-radius: 2px; background: color-mix(in srgb, var(--bg) 30%, transparent); overflow: hidden; }
-.working-bar[hidden] { display: none; }
-.working-bar i { display: block; height: 100%; width: 0; background: var(--bg); transition: width .2s; }
 @keyframes working-in { from { opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .working-spin { animation-duration: 2s; } }
 
 /* ---------- the landing picture behind Insights and Timeline ---------- */
 /* A veil of the page colour keeps text readable: lighter at the top so the sky shows,
@@ -1201,8 +1195,6 @@ body.sel-mode .dock, body.sel-mode .topbar, body.sel-mode .playbar, body.sel-mod
 /* Making a map snap: the same, with its bar at the top. */
 body.snap-mode .dock, body.snap-mode .topbar, body.snap-mode .playbar, body.snap-mode #mapPage .fab, body.snap-mode .map-legend, body.snap-mode #map .leaflet-top, body.snap-mode .prompt:not(.prompt-mode), body.snap-mode .tools-menu { display: none !important; }
 body.sel-mode .sel-bar { bottom: calc(16px + var(--safe-b)); }
-.bg-spin { width: 14px; height: 14px; flex: none; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--fg) 20%, transparent); border-top-color: var(--accent); animation: working-spin .8s linear infinite; }
-@media (prefers-reduced-motion: reduce) { .bg-spin { animation-duration: 2s; } }
 .mv-map { height: 240px; border-radius: var(--r-md); border: 1px solid var(--line); }
 .mv-acts { display: flex; flex-wrap: wrap; gap: var(--sp-4); margin-top: var(--sp-4); }
 .info-head:has(> .place-h) { margin: var(--sp-9) 0 var(--sp-2); }
@@ -1453,16 +1445,16 @@ details.when-more > .sec:last-child { border-bottom: 0; }
    own small tilt and offsets every time it is drawn (paperize() in core.js sets --pp*, --po*, --ps*).
    Corners are 4px. Round buttons are round paper; the map legend is a tilted slip with no print on it. */
 :root { --paper-r: 4px; }
-.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, #map .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel {
+.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, #map .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .spin-pill {
   --paper: var(--panel); background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; isolation: isolate; border-radius: var(--paper-r); }
 .bar { position: relative; }
 .fab { border-radius: 50%; }
 .proj-zoom, .sheet, .about { overflow: visible; }
 .welcome-panel { position: relative; }
-:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel)::before {
+:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .spin-pill)::before {
   content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
   box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
-:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .about, .welcome-panel)::after {
+:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .about, .welcome-panel, .spin-pill)::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
   transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
 /* Pressed round buttons are printed on yellow paper */
@@ -1570,3 +1562,27 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
 @media (prefers-reduced-motion: reduce) { .ld-stamp { animation: none; } }
 .ld-label { margin-top: var(--sp-4); }
 #map .leaflet-control-zoom a.zoom-all, #map .leaflet-control-zoom a.sel-btn { border-top: 1.5px dotted var(--edge); }
+
+
+/* ---------- The spinner (one for the whole app) ----------
+   A spin pill: a slip of paper in the middle of the screen, printed like every panel but with a
+   yellow block under it, holding the spinner (a faint ink ring with a yellow arc and the arc's blue
+   off-print, like the cycling line), the text and, when there is one, a progress bar. The Working
+   pill (#working, with a veil that takes taps) is one; spinPill() in core.js makes the others. */
+.spin-pill { position: fixed; z-index: 1001; left: 50%; top: 50%; translate: -50% -50%; width: max-content; max-width: min(440px, calc(100vw - 48px)); box-sizing: border-box;
+  display: flex; align-items: center; gap: var(--sp-7); padding: var(--sp-6) var(--sp-9) var(--sp-6) var(--sp-7); color: var(--fg); font-size: var(--fs-md); font-weight: 500;
+  --offset: var(--chip-on-bg); animation: working-in .15s ease both; }
+.spin-pill[hidden] { display: none; }
+.spin-float { z-index: 60; pointer-events: none; }
+.spin-text { display: flex; flex-direction: column; gap: var(--sp-3); min-width: 0; }
+.spin { position: relative; width: 40px; height: 40px; flex: none; }
+.spin i { position: absolute; inset: 0; border-radius: 50%; border: 5px solid transparent; animation: working-spin .9s linear infinite; will-change: transform; }
+.spin i:first-child { left: 1px; top: 1.6px; right: -1px; bottom: -1.6px; border-top-color: var(--fg); border-right-color: var(--fg); }
+.spin i:last-child { border-color: color-mix(in srgb, var(--fg) 14%, transparent); border-top-color: var(--chip-on-bg); border-right-color: var(--chip-on-bg); }
+:root[data-theme="dark"] .spin i:first-child { display: none; }
+.prompt .spin { width: 22px; height: 22px; }
+.prompt .spin i { border-width: 3px; }
+@media (prefers-reduced-motion: reduce) { .spin i { animation-duration: 2.4s; } }
+.spin-bar { display: block; width: 100%; min-width: 160px; height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.spin-bar[hidden] { display: none; }
+.spin-bar i { display: block; height: 100%; width: 0; background: var(--fg); transition: width .2s; }

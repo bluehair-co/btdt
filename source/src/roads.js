@@ -255,15 +255,11 @@ function roadRun(todo) {
   }
   setTimeout(slice, 0);
 }
-// The pill over the map, with a spinner: how far the snapping is (done of all), or a text alone;
+// The spin pill in the middle of the screen: how far the snapping is (done of all), or a text alone;
 // nothing hides it.
 function roadPill(done, all, text) {
-  var el = $('roadPill');
-  if (done == null && !text) { if (el) el.hidden = true; return; }
-  el = promptBar('roadPill', { spin: true, cls: 'prompt-slim', extra: '<div class="dl-bar"><i></i></div>' });
-  promptText(el, null, esc(text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all)));
-  el.querySelector('.dl-bar').hidden = done == null;
-  if (done != null) el.querySelector('.dl-bar i').style.width = Math.round(100 * done / Math.max(1, all)) + '%';
+  if (done == null && !text) { spinPill('roadPill', null); return; }
+  spinPill('roadPill', text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all), done == null ? null : done / Math.max(1, all));
 }
 // Loads the road pack with the pill up, then applies the rules again.
 var ROAD_WAIT = false;
