@@ -311,7 +311,7 @@ var CasedLine = null;
 function makeCased() { return L.Polyline.extend({
   onAdd: function (m) {
     if (BIKE_INK.test(this.options.color)) {
-      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: caseRenderer(m), color: cssVar('--fg'), weight: this.options.weight, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
+      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: caseRenderer(m), color: cssVar('--fg'), weight: this.options.weight + 1, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
       this._case.addTo(m); this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0 });
     }
     return L.Polyline.prototype.onAdd.call(this, m);
@@ -320,9 +320,20 @@ function makeCased() { return L.Polyline.extend({
     if (this._case && m.hasLayer(this._case)) m.removeLayer(this._case);
     return L.Polyline.prototype.onRemove.call(this, m);
   },
+  // Playback draws the trip being played point by point: its copy follows.
+  setLatLngs: function (ll) {
+    L.Polyline.prototype.setLatLngs.call(this, ll);
+    if (this._case) this._case.setLatLngs(ll);
+    return this;
+  },
+  addLatLng: function (ll, ring) {
+    L.Polyline.prototype.addLatLng.call(this, ll, ring);
+    if (this._case) this._case.setLatLngs(this.getLatLngs());
+    return this;
+  },
   setStyle: function (st) {
     L.Polyline.prototype.setStyle.call(this, st);
-    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight, color: cssVar('--fg') });
+    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight + 1, color: cssVar('--fg') });
     return this;
   }
 }); }
