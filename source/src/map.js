@@ -184,11 +184,39 @@ function setMask(w, url) {
   ['maskSize', 'webkitMaskSize'].forEach(function (k) { w.style[k] = '100% 100%'; });
   ['maskRepeat', 'webkitMaskRepeat'].forEach(function (k) { w.style[k] = 'no-repeat'; });
 }
+// v2.0: Esri's grey map recoloured into the print's paper and blue ink, cheaply: two flat layers
+// over the tiles, one multiplied (the paper) and one screened (the ink), done by the graphics chip
+// with no work per tile. The place names get the ink too. The night side of a day's playback has
+// its own pair, under the same mask as its dark tiles.
+var TINT = { light: ['#F2E8D9', '#14286E'], dark: ['#A9B8FF', '#0E1644'] };
+function tintPair(m, a, b) {
+  var ws = [wrapPane(m, a, b === 'tintB' ? 206 : 211).parentNode, wrapPane(m, b, b === 'tintB' ? 207 : 212).parentNode];
+  ws[0].style.mixBlendMode = 'multiply'; ws[1].style.mixBlendMode = 'screen';
+  return ws;
+}
+function paintTint(ws, dark) { var c = TINT[dark ? 'dark' : 'light']; ws[0].style.background = c[0]; ws[1].style.background = c[1]; if (ws[2]) ws[2].classList.toggle('dark', dark); }
+function inkLabels(w, dark) {
+  w.style.mixBlendMode = dark ? 'screen' : 'multiply';
+  w.style.filter = dark ? 'sepia(.5) saturate(1.4)' : 'sepia(1) saturate(4) hue-rotate(185deg) brightness(.8)';
+}
+function tintMap(m, dark) {
+  if (!m._tint) {
+    m._tint = tintPair(m, 'tintA', 'tintB');
+    // and a fine dot texture over the map, like the grain of the paper
+    var g = wrapPane(m, 'grain', 208).parentNode; g.className += ' map-grain'; m._tint.push(g);
+    m.on('move zoomend resize viewreset', function () { m._tint.forEach(function (w) { placeWrap(m, w); }); });
+  }
+  paintTint(m._tint, dark);
+  // Light: lift Esri's grey a touch, so the land lands on the paper colour.
+  m.getPane('tilePane').style.filter = dark ? '' : 'brightness(1.08)';
+  inkLabels(m.getPane('labels').parentNode, dark);
+}
 function addTiles(m, fade) {
   var dark = tilesDark(m), svc = dark ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base', old = m._tl;
   if (!m.getPane('labels')) wrapPane(m, 'labels', 450);
   var op = fade && old ? 0 : 1;
   m._tlDark = dark;
+  tintMap(m, dark);
   m._tl = [
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri', opacity: op }),
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc.replace('_Base', '_Reference') + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'labels', opacity: op })
@@ -269,6 +297,31 @@ function renderMapTab() {
 }
 // Transport colours as the map shows them: read from the map, which takes the light theme's
 // colours while a day's playback puts light tiles under dark mode.
+// Cycling is printed in the yellow ink, which needs a thin ink casing to read on the light map
+// (not on the dark tiles at night). The casing is a second line under the trip, added, removed and
+// faded with it.
+var BIKE_INK = /^#fedf02$/i;
+function caseOn(l) { return !(tilesDark(map) || sunNight()) && l.options.opacity > 0; }
+var CasedLine = null;
+function makeCased() { return L.Polyline.extend({
+  onAdd: function (m) {
+    if (BIKE_INK.test(this.options.color)) {
+      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: this.options.renderer, color: cssVar('--fg'), weight: this.options.weight + 2.5, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
+      this._case.addTo(m); this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0 });
+    }
+    return L.Polyline.prototype.onAdd.call(this, m);
+  },
+  onRemove: function (m) {
+    if (this._case && m.hasLayer(this._case)) m.removeLayer(this._case);
+    return L.Polyline.prototype.onRemove.call(this, m);
+  },
+  setStyle: function (st) {
+    L.Polyline.prototype.setStyle.call(this, st);
+    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight + 2.5, color: cssVar('--fg') });
+    return this;
+  }
+}); }
+function casedLine(pts, o) { CasedLine = CasedLine || makeCased(); return new CasedLine(pts, o); }
 function groupColor(g) { return getComputedStyle($('map')).getPropertyValue(g.v).trim() || cssVar(g.v); }
 function buildPaths() {
   pathLayer.clearLayers(); hlLayer.clearLayers(); hits = []; lines = []; groupLines = []; hovered = []; curLine = null; carryLine = null;
@@ -290,7 +343,7 @@ function buildPaths() {
     var h = { i: i, k: k, parts: [pts], bb: bb, w: LINE_W, color: colors[groupOf(m).key] };
     hits.push(h);
     if (!many) {
-      h.line = L.polyline(pts, { renderer: renderer, color: h.color, weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
+      h.line = casedLine(pts, { renderer: renderer, color: h.color, weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
       pathLayer.addLayer(h.line);
       lines[k] = h.line;
     }
@@ -309,7 +362,7 @@ function buildGroups(limit) {
   var by = {};
   hits.forEach(function (h) { if (h.k < limit) (by[h.color] || (by[h.color] = [])).push(h.parts[0]); });
   Object.keys(by).forEach(function (c) {
-    var l = L.polyline(by[c], { renderer: renderer, color: c, weight: LINE_W - 0.5, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
+    var l = casedLine(by[c], { renderer: renderer, color: c, weight: LINE_W - 0.5, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
     pathLayer.addLayer(l); groupLines.push(l);
   });
 }
@@ -1673,13 +1726,13 @@ function scrubTo(v) {
   if (map) {
     if (curLine) { pathLayer.removeLayer(curLine); curLine = null; }
     if (cur && cur.pts.length > 1) {
-      curLine = L.polyline(cur.pts, { renderer: renderer, color: groupColor(groupOf(modeOf(cur.i))), weight: LINE_W + 2, opacity: 1, interactive: false });
+      curLine = casedLine(cur.pts, { renderer: renderer, color: groupColor(groupOf(modeOf(cur.i))), weight: LINE_W + 2, opacity: 1, interactive: false });
       pathLayer.addLayer(curLine);
     }
     // The trip carried over from the day before stays drawn once it has ended.
     var cdone = !!carry && scrubV < 1000 && t >= D.end[carry.i];
     if (cdone && !carryLine) {
-      carryLine = L.polyline(tripPath(carry.i), { renderer: renderer, color: groupColor(groupOf(modeOf(carry.i))), weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
+      carryLine = casedLine(tripPath(carry.i), { renderer: renderer, color: groupColor(groupOf(modeOf(carry.i))), weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
       pathLayer.addLayer(carryLine);
     } else if (!cdone && carryLine) { pathLayer.removeLayer(carryLine); carryLine = null; }
     if (P_pos) {
@@ -2118,7 +2171,12 @@ function nightness(alt) { return Math.max(0, Math.min(1, (-alt - 0.5) / 7)); }
 var night = { tl: null };
 function nightTiles(on) {
   if (on && !night.tl) {
-    if (!map.getPane('nightBase')) { wrapPane(map, 'nightBase', 210); wrapPane(map, 'nightLabels', 451); }
+    if (!map.getPane('nightBase')) {
+      wrapPane(map, 'nightBase', 210); wrapPane(map, 'nightLabels', 451);
+      night.tint = tintPair(map, 'nightTintA', 'nightTintB'); paintTint(night.tint, true);
+      inkLabels(map.getPane('nightLabels').parentNode, true);
+    }
+    night.tint.forEach(function (w) { w.style.display = ''; });
     var u = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_';
     night.tl = [
       L.tileLayer(u + 'Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'nightBase' }),
@@ -2128,6 +2186,7 @@ function nightTiles(on) {
   } else if (!on && night.tl) {
     night.tl.forEach(function (l) { map.removeLayer(l); });
     night.tl = null;
+    if (night.tint) night.tint.forEach(function (w) { w.style.display = 'none'; });
     setMask(map.getPane('labels').parentNode, null);
   }
 }
@@ -2186,7 +2245,8 @@ function paintSky(force) {
     }
   }
   gk.putImageData(mk, 0, 0); gi.putImageData(mi, 0, 0);
-  ['nightBase', 'nightLabels'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(map, wr); setMask(wr, sky.mk.toDataURL()); });
+  var mk = sky.mk.toDataURL();
+  ['nightBase', 'nightLabels', 'nightTintA', 'nightTintB'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(map, wr); setMask(wr, mk); });
   var lw = map.getPane('labels').parentNode;
   placeWrap(map, lw); setMask(lw, sky.mi.toDataURL());
   g.putImageData(img, 0, 0);

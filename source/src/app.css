@@ -1365,3 +1365,12 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .mode-badge.sm { border-radius: 50%; }
 .mode-badge[style*="m-bike"], .mode-badge[style*="bike-"] { color: var(--on-bike); }
 .card-head h2, .card-title h2 { font-family: var(--font-display); font-weight: 800; }
+/* The map's paper grain (tintMap in map.js) */
+.map-grain { background: radial-gradient(circle, rgba(30, 58, 158, .10) .8px, transparent 1.3px) 0 0 / 6px 6px; }
+.map-grain.dark { background: radial-gradient(circle, rgba(242, 232, 217, .07) .8px, transparent 1.3px) 0 0 / 6px 6px; }
+/* The playback marker: a transport badge (round, ink ring, pink offset); its speed in a solid ink pill */
+.pos-dot { border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--offset); }
+:root[data-theme="dark"] .pos-dot, #map.sun-dark .pos-dot { border-color: var(--bg); }
+.pos-dot.moving { width: 32px; height: 32px; color: var(--badge-ink); }
+.pos-dot.moving[style*="bike"], .pos-dot.moving[style*="FEDF02"] { color: var(--on-bike); }
+.pos-speed { top: 36px; background: var(--fg); color: var(--bg); border: 0; box-shadow: none; }
