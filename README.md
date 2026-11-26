@@ -40,7 +40,7 @@ Free, no account, no tracking. Works on Android, iPhone, Mac and PC, and install
    - **iPhone:** in Google Maps, tap your profile picture → Settings → Personal content → *Export Timeline data*.
    - **Older Google Takeout:** if you downloaded Location History from takeout.google.com before Timeline moved onto phones, `Records.json` and the *Semantic Location History* folder work too, on their own or together with `Timeline.json`.
 2. **Open [bluehair-co.github.io/btdt](https://bluehair-co.github.io/btdt/)** and tap *Load location files* (or *Load a whole folder* on a computer).
-3. **Explore.** Switch between Map, Insights and Timeline, pick a day, week, month or year, and use the layers button to turn the heatmap, countries and places on or off.
+3. **Explore.** Switch between Map, Insights and Timeline, pick a day, week, month or year, and use the map's ⋮ button › *Views and layers* to turn the heatmap, countries, places and the legend on or off.
 4. **Keep it.** Your last import is saved in the browser, so the app opens with it next time. Choose *Add to Home screen* (phone) or *Install* (desktop browser) to use it like an app, offline.
 
 Want to look around first? Tap *Try the demo* under the Load button: it opens three made-up years of someone living in Amsterdam, with holidays on four continents, plus the runs, road rides, Halfbike loops (in Amsterdam and on a week in Sofia) and hikes they recorded on Strava, with heart rate. Nothing is saved, and *Exit demo* takes you back.

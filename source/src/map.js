@@ -254,7 +254,6 @@ function initMap() {
   beaconLayer = L.layerGroup().addTo(map);
   map.on('zoomend moveend', buildBeacons);
   map.on('moveend resize', syncAllDot);
-  if (map.zoomControl) addZoomAll(map.zoomControl.getContainer());
   if (map.zoomControl) {
     var zc = map.zoomControl.getContainer();
     zc.querySelector('.leaflet-control-zoom-in').innerHTML = icon('plus');
@@ -814,23 +813,15 @@ function fitAll(all) {
 }
 
 // ---------- zoom to all, and beacons on trips too small to see ----------
-// The zoom to all button sits under the zoom buttons (a round button above the layers button on
-// touch screens, which have no zoom buttons) and fits every trip in the filters. A dot on it says
-// some of them are out of view.
+// The zoom to all button sits left of the dock and slides in only while some of the trips in the
+// filters are out of view (from the left on a phone, from below on a desktop); it fits them all.
 function zoomAll() {
   if (PREFS.proj !== 'merc') { if (P) { P.fitted = false; drawProj(); } return; }
   fitAll(true);
 }
 var allView = null;
-function addZoomAll(bar) {
-  var a = L.DomUtil.create('a', 'zoom-all', bar);
-  a.href = '#'; a.setAttribute('role', 'button'); a.title = 'Zoom to all trips'; a.setAttribute('aria-label', 'Zoom to all trips');
-  a.innerHTML = icon('fit') + '<i class="dot" hidden></i>';
-  L.DomEvent.disableClickPropagation(a);
-  L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); zoomAll(); });
-}
-// Map tools: a round button above the layers button with a small menu of what you can do on the
-// map (Select trips on the map, New map snap); each item closes the menu and starts its tool.
+// The ⋮ button right of the dock: a small menu with Playback, Views and layers, Select trips on the
+// map and New map snap; each item closes the menu and does its thing.
 function toolsMenu(open) {
   var menu = $('toolsMenu'), r = $('toolsBtn').getBoundingClientRect();
   menu.hidden = !open;
@@ -863,12 +854,10 @@ function outOfView() {
   return false;
 }
 function syncAllDot() {
-  var out = outOfView();
-  document.querySelectorAll('.zoom-all .dot, #fitAllBtn .dot').forEach(function (d) { d.hidden = !out; });
-  document.querySelectorAll('.zoom-all, #fitAllBtn').forEach(function (b) {
-    b.title = out ? 'Zoom to all trips (some are out of view)' : 'Zoom to all trips';
-    b.setAttribute('aria-label', b.title);
-  });
+  var b = $('fitAllBtn'), out = outOfView();
+  b.classList.toggle('on', out);
+  b.tabIndex = out ? 0 : -1;
+  b.setAttribute('aria-hidden', out ? 'false' : 'true');
 }
 // A beacon marks trips too small to see at this zoom with nothing you can see around them, such
 // as a walk on holiday when you filter to walks. Trips are grouped into squares of BEACON_CELL
@@ -2318,7 +2307,7 @@ function legend() {
     if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i class="lg-area" style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
   }
   $('mapLegend').innerHTML = h;
-  $('mapLegend').hidden = !h || !sel.length && !selV.length;
+  $('mapLegend').hidden = PREFS.legend === false || !h || !sel.length && !selV.length;
 }
 
 // ---------- countries visited ----------
@@ -2585,7 +2574,7 @@ function syncLayersUI() {
   setPressed('#heatSrc button', function (b) { return b.dataset.src === PREFS.heatSrc; });
   setPressed('#heatBy button', function (b) { return b.dataset.by === heatBy(); });
   document.querySelector('#heatBy [data-by="paths"]').disabled = PREFS.heatSrc === 'stays';
-  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('layHeat').checked = PREFS.heat; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
+  $('layPaths').checked = PREFS.paths; $('laySpeed').checked = PREFS.speedPaths; $('layHr').checked = !!PREFS.hrPaths; $('laySquares').checked = PREFS.squares; $('layHeat').checked = PREFS.heat; $('layLegend').checked = PREFS.legend !== false; $('layCC').checked = PREFS.cc; $('layPins').checked = PREFS.pins;
   setPressed('#linesSeg button', function (b) { return b.dataset.lines === linesMode(); });
   $('heatOpts').hidden = !PREFS.heat;
   $('heatSize').value = PREFS.heatSize; $('heatGain').value = PREFS.heatGain;
@@ -2628,6 +2617,7 @@ $('linesSeg').addEventListener('click', function (ev) {
 $('layHr').addEventListener('change', function () { colouredPaths('hrPaths', this.checked); });
 $('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
+$('layLegend').addEventListener('change', function () { PREFS.legend = this.checked; layersChanged(); });
 $('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
 $('layPins').addEventListener('change', function () { PREFS.pins = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); layersChanged(); });
 $('heatSrc').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-src]'); if (b) { PREFS.heatSrc = b.dataset.src; layersChanged(); } });
