@@ -14,6 +14,10 @@ DUO = {
     'home': 'house', 'work': 'briefcase', 'school': 'graduation-cap', 'family': 'users-three', 'friends': 'users',
     'basketball': 'basketball', 'restaurant': 'fork-knife', 'cafe': 'coffee', 'cart': 'shopping-cart', 'store': 'storefront',
     'ticket': 'ticket', 'pin': 'map-pin', 'eyeSlash': 'eye-slash', 'flag': 'flag',
+    # landmarks for the loading screen and the Other places badge
+    'castle': 'castle-turret', 'church': 'church', 'mosque': 'mosque', 'synagogue': 'synagogue', 'museum': 'bank',
+    'lighthouse': 'lighthouse', 'windmill': 'windmill', 'mountains': 'mountains', 'palm': 'tree-palm', 'bridge': 'bridge',
+    'tent': 'tent', 'park': 'park', 'city': 'buildings',
 }
 BOLD = {
     'more': 'dots-three', 'split': 'scissors', 'select': 'lasso', 'undo': 'arrow-counter-clockwise', 'chart': 'chart-bar',

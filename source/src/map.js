@@ -297,16 +297,21 @@ function renderMapTab() {
 }
 // Transport colours as the map shows them: read from the map, which takes the light theme's
 // colours while a day's playback puts light tiles under dark mode.
-// Cycling is printed in the yellow ink, which needs a thin ink casing to read on the light map
-// (not on the dark tiles at night). The casing is a second line under the trip, added, removed and
-// faded with it.
+// Cycling is printed in the yellow ink, which needs some ink to read on the light map (not on the
+// dark tiles at night): a copy of the line in blue ink, printed a little off register under it, like
+// the pink offset of panels. The copies are drawn on their own canvas in a pane below the lines,
+// shifted by CSS, and added, removed and faded with their trips.
+function caseRenderer(m) {
+  if (!m._caseR) { m.createPane('casePane').style.zIndex = 399; m._caseR = L.canvas({ pane: 'casePane', padding: 0.5 }); }
+  return m._caseR;
+}
 var BIKE_INK = /^#fedf02$/i;
 function caseOn(l) { return !(tilesDark(map) || sunNight()) && l.options.opacity > 0; }
 var CasedLine = null;
 function makeCased() { return L.Polyline.extend({
   onAdd: function (m) {
     if (BIKE_INK.test(this.options.color)) {
-      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: this.options.renderer, color: cssVar('--fg'), weight: this.options.weight + 2.5, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
+      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: caseRenderer(m), color: cssVar('--fg'), weight: this.options.weight, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
       this._case.addTo(m); this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0 });
     }
     return L.Polyline.prototype.onAdd.call(this, m);
@@ -317,7 +322,7 @@ function makeCased() { return L.Polyline.extend({
   },
   setStyle: function (st) {
     L.Polyline.prototype.setStyle.call(this, st);
-    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight + 2.5, color: cssVar('--fg') });
+    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight, color: cssVar('--fg') });
     return this;
   }
 }); }
@@ -1817,12 +1822,13 @@ function playMoveEnd() {
   requestAnimationFrame(function () { moveLabelWraps().forEach(function (w) { w.style.opacity = ''; }); });
   if (moveFx.lines) {
     moveFx.lines = false;
-    requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = ''; }); });
+    requestAnimationFrame(function () { requestAnimationFrame(function () { linePanes().forEach(function (p) { p.style.opacity = ''; }); }); });
   }
 }
+function linePanes() { return [map.getPane('overlayPane'), map.getPane('casePane')].filter(Boolean); }
 function moveLines(z) {
   if (!moveFx.on || moveFx.lines || moveFx.z === null || z - moveFx.z <= 1) return;
-  moveFx.lines = true; map.getPane('overlayPane').style.opacity = 0;
+  moveFx.lines = true; linePanes().forEach(function (p) { p.style.opacity = 0; });
 }
 // Every tile a move passes through. Its path is worked out with the same maths as Leaflet's
 // flyTo (zoom out, glide, zoom in), sampled, and the tiles of each view along it listed: the base

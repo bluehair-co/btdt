@@ -707,7 +707,7 @@ $('placesSeg').addEventListener('click', function (ev) { var b = ev.target.close
 var MIN_KINDS = 5;
 // Other places flips through places that aren't one of the kinds (nor the plain pin of a place
 // without one), 2 s each: see .kind-flip.
-var KIND_FLIP = ['attractions', 'castle', 'stadium', 'account_balance', 'temple_buddhist', 'earth'];
+var KIND_FLIP = ['castle', 'windmill', 'lighthouse', 'museum', 'mountains', 'city'];
 function renderKinds() {
   var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard'), stops = stopSpots();
   el.hidden = rules.length + stops < MIN_KINDS;
