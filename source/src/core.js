@@ -957,3 +957,40 @@ function localTime(ms, zone, off) {
   } catch (e) { /* unknown zone: fall through */ }
   return { time: clock(ms, off), date: clockDate(ms, off), label: tzLabel(off) };
 }
+
+// ---------- v2.0 paper ----------
+// Every panel that floats over the app is a sheet of paper fed a little crooked, with its ink outline
+// and pink block printed a little off it (the paper rules in app.css). Each sheet gets its own small
+// random tilt and offsets every time it appears. The tilt is kept small for big panels, so their far
+// edges move no more than about 3px.
+var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel';
+function paperize(el) {
+  function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
+  var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
+  var max = Math.min(el.classList.contains('map-legend') ? 1.3 : .7, 3 / half * 180 / Math.PI), s = el.style;
+  s.setProperty('--ppr', rnd(max) + 'deg'); s.setProperty('--ppx', rnd(1.2) + 'px'); s.setProperty('--ppy', rnd(1.2) + 'px');
+  s.setProperty('--por', rnd(max * .6) + 'deg'); s.setProperty('--pox', rnd(2) + 'px'); s.setProperty('--poy', rnd(2) + 'px');
+  s.setProperty('--psx', (3 + Math.random() * 2.5).toFixed(1) + 'px'); s.setProperty('--psy', (3 + Math.random() * 2.5).toFixed(1) + 'px');
+}
+function paperShown(el) { return !el.hidden && (!el.classList.contains('sheet') || el.classList.contains('open')) && (el.tagName !== 'DIALOG' || el.open); }
+function paperCheck(el) {
+  var on = paperShown(el);
+  if (on && !el._paperOn) requestAnimationFrame(function () { paperize(el); });
+  el._paperOn = on;
+}
+function paperWatch() {
+  document.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+  new MutationObserver(function (list) {
+    for (var k = 0; k < list.length; k++) {
+      var m = list[k];
+      if (m.type === 'attributes') { if (m.target.matches && m.target.matches(PAPER_SEL)) paperCheck(m.target); continue; }
+      for (var j = 0; j < m.addedNodes.length; j++) {
+        var n = m.addedNodes[j];
+        if (n.nodeType !== 1) continue;
+        if (n.matches(PAPER_SEL)) paperCheck(n);
+        if (n.firstElementChild) n.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+      }
+    }
+  }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'open'] });
+}
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', paperWatch); else paperWatch();

@@ -2299,8 +2299,8 @@ function legend() {
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
   if (PREFS.cc) {
-    h += '<span><i style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
-    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
+    h += '<span><i class="lg-area" style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
+    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i class="lg-area" style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
   }
   $('mapLegend').innerHTML = h;
   $('mapLegend').hidden = !h || !sel.length && !selV.length;
