@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Make the app icons in ../static/ from the BT•DT icons in Figma ("BTDT Icons").
+"""Make the app icons in ../static/ (v2.0: the printed pin, icon.svg, drawn by Claude).
 
   python3 source/icons/make_icons.py
 
-icon-source.png (1024 x 1024) is the "BTDT Mobile Icon" frame exported at 4x: the pin on
-the contour-line background, full bleed, so the platforms round its corners themselves.
-The pin and its glow sit inside the centre circle of 80% that Android keeps for maskable
-icons, so one picture serves every size.
+icon-source.png (1024 x 1024) is icon.svg drawn in Chrome: a pink pin with a yellow middle and its
+blue outline printed off register, on paper, full bleed, so the platforms round its corners
+themselves. icon-maskable-source.png is the same with the pin inside the centre circle of 80% that
+Android keeps for maskable icons.
 
-favicon.svg is the "BTDT Browser Icon" frame (just the pin, with a thin dark outline that
-keeps it visible on light and dark browser tabs) on a transparent background, and
+favicon.svg is just the pin (no paper or grain, so it stays crisp at 16 px), and
 favicon-source.png is that SVG drawn at 512 x 512, for the PNG and ICO tab icons.
 """
 import os
@@ -20,8 +19,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'static')
 
 
-def square(size):
-    return Image.open(os.path.join(HERE, 'icon-source.png')).convert('RGB').resize((size, size), Image.LANCZOS)
+def square(size, name='icon-source.png'):
+    im = Image.open(os.path.join(HERE, name)).convert('RGB').resize((size, size), Image.LANCZOS)
+    return im.quantize(colors=48, method=Image.Quantize.MEDIANCUT)
 
 
 def tab_pin(size):
@@ -31,7 +31,7 @@ def tab_pin(size):
 def main():
     for s in (192, 512):
         square(s).save(os.path.join(OUT, 'icon-%d.png' % s), optimize=True)
-        square(s).save(os.path.join(OUT, 'icon-maskable-%d.png' % s), optimize=True)
+        square(s, 'icon-maskable-source.png').save(os.path.join(OUT, 'icon-maskable-%d.png' % s), optimize=True)
     square(180).save(os.path.join(OUT, 'apple-touch-icon.png'), optimize=True)
     # Browser tabs get just the pin.
     shutil.copy(os.path.join(HERE, 'favicon.svg'), os.path.join(OUT, 'favicon.svg'))

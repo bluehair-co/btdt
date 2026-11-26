@@ -1374,3 +1374,9 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .pos-dot.moving { width: 32px; height: 32px; color: var(--badge-ink); }
 .pos-dot.moving[style*="bike"], .pos-dot.moving[style*="FEDF02"] { color: var(--on-bike); }
 .pos-speed { top: 36px; background: var(--fg); color: var(--bg); border: 0; box-shadow: none; }
+/* Phosphor icons: the soft second shape of the duotone icons, like a second, lighter ink */
+.ic .ph2 { opacity: .22; }
+.mode-badge .ic .ph2, .pos-dot .ic .ph2 { opacity: .4; }
+/* Country flags, printed in the inks (flag() in core.js) */
+.flag { display: inline-block; width: 1.33em; height: 1em; vertical-align: -.14em; border: 1px solid var(--fg); border-radius: 2px; box-sizing: border-box;
+  background: url(flags.png) 0 0 no-repeat; }
