@@ -1409,7 +1409,7 @@ function mrRenderRules() {
     if (ign) bits.push(fmt(ign) + ' GPS point' + (ign === 1 ? '' : 's') + ' ignored');
     if (th.replace) bits.push('Replace: not applied in this version of BT•DT');
     var x = MR_COR && MR_COR.filter(function (y) { return y.c === c; })[0], first = x && x.trips.length ? x.trips[0] : null;
-    var ic = th.stay ? 'home' : th.hide ? 'shield' : th.mode || (g ? 'CYCLING' : ign ? 'pinOff' : 'info');
+    var ic = th.stay ? 'home' : th.hide ? 'eyeSlash' : th.mode || (g ? 'CYCLING' : ign ? 'pinOff' : 'info');
     var applied = th.mode || th.name || g || th.hide != null || th.stay || ign;
     return gh + mrRuleRow('corrections', c, when || c.id, (bits.join(' · ') || 'Nothing to change') + (first != null ? ' · <button type="button" class="link-btn" data-mr-trip="' + first + '">Open trip</button>' : '') + (t.trips && x && x.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(c.id) + '">List its trips</button>' : ''),
       ic, th.mode ? modeColor(th.mode) : g ? modeColor('CYCLING') : 'var(--map-grey)', applied && D ? W.count[c.id] || 0 : null);
@@ -2382,14 +2382,14 @@ function mrRoutineDialog(r, isNew) {
 var MR_ROLES = [['', 'A place'], ['home', 'Home'], ['work', 'Work'], ['school', 'School'], ['family', 'Family'], ['friends', 'Friends'], ['sport', 'Sport'],
   ['restaurant', 'Restaurant'], ['cafe', 'Bar / café'], ['supermarket', 'Supermarket'], ['store', 'Store'], ['entertainment', 'Entertainment'], ['transit', 'Transport stop'], ['airport', 'Airport']];
 // Each kind of place: its name and icon, for pins, the places list and Time by kind of place.
-var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'home'], friends: ['Friends', 'friends'], sport: ['Sport', 'basketball'],
+var MR_KIND = { home: ['Home', 'home'], work: ['Work', 'work'], school: ['School', 'school'], family: ['Family', 'family'], friends: ['Friends', 'friends'], sport: ['Sport', 'basketball'],
   restaurant: ['Restaurant', 'restaurant'], cafe: ['Bar / café', 'cafe'], supermarket: ['Supermarket', 'cart'], store: ['Store', 'store'], entertainment: ['Entertainment', 'ticket'], transit: ['Transport stop', 'BUS'], airport: ['Airport', 'FLYING'] };
 function mrKindName(role) { return MR_KIND[role] ? MR_KIND[role][0] : role ? role.charAt(0).toUpperCase() + role.slice(1) : ''; }
 // How a place looks wherever it's shown (pins, lists, its page): the icon of its kind, in the sunrise
 // colour when it's your current home, work or school, teal when you named it, grey otherwise.
 function mrLook(r, home) {
   var ic = r && MR_KIND[r.role] ? MR_KIND[r.role][1] : home ? 'home' : 'pin';
-  return { ic: r && r.hide ? 'shield' : ic, bg: home || mrIsCurrent(r) ? 'var(--accent)' : r ? 'var(--rule)' : 'var(--m-other)' };
+  return { ic: r && r.hide ? 'eyeSlash' : ic, bg: home || mrIsCurrent(r) ? 'var(--accent)' : r ? 'var(--rule)' : 'var(--m-other)' };
 }
 function spotLook(s) {
   var st = spotStop(s);

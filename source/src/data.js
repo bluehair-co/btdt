@@ -581,7 +581,7 @@ function syncFilterUI() {
   syncExport();
 }
 
-// The filters in use, as chips at the top of Filters, each with ✕ to put that filter back to everything.
+// The filters in use, as chips at the top of Filters, each with a cross to put that filter back to everything.
 // The period isn't one: the navigator and When show it.
 function listText(xs, max, many) { return xs.length <= max ? xs.join(', ') : many(xs.length); }
 function activeChips() {
@@ -605,7 +605,7 @@ function activeChips() {
 function renderActiveChips() {
   var box = $('activeChips'), list = activeChips();
   box.hidden = !list.length;
-  box.innerHTML = list.map(function (c) { return '<button type="button" class="chip on-chip" data-clear="' + c[0] + '" aria-label="Clear ' + esc(c[1]) + '">' + esc(c[1]) + '<span aria-hidden="true">✕</span></button>'; }).join('');
+  box.innerHTML = list.map(function (c) { return '<button type="button" class="chip on-chip" data-clear="' + c[0] + '" aria-label="Clear ' + esc(c[1]) + '">' + esc(c[1]) + icon('close', 'chip-x') + '</button>'; }).join('');
   // More about when: closed unless one of its filters is in use (and then it opens once).
   var when = list.filter(function (c) { return /^(years|months|dows|hours)$/.test(c[0]); });
   $('whenMoreSub').textContent = when.length ? when.map(function (c) { return c[1]; }).join(' · ') : ymFilters() ? 'Years, months, days of the week, time of day' : calFilters() ? 'Days of the week, time of day' : 'Time of day';

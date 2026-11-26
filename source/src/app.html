@@ -8,12 +8,14 @@
     <p class="demo-msg"><span class="wide-only">You’re exploring a demo: made-up data from three years of someone living in Amsterdam.</span><span class="narrow-only">Demo with made-up data</span></p>
   </div>
 
+  <!-- The ink grain of printed charts (v2.0): tiny gaps in the ink, as in a print -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="riso" x="-2%" y="-2%" width="104%" height="104%"><feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="1" seed="3" result="g"/><feColorMatrix in="g" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.6" result="h"/><feComposite in="SourceGraphic" in2="h" operator="in"/></filter></svg>
   <!-- Welcome: shown until location files are loaded -->
   <section class="welcome" id="welcome" aria-labelledby="welcomeTitle">
     <div class="welcome-art">
-      <div class="stage bg"><img src="landing-bg-2752.webp" srcset="landing-bg-1600.webp 1600w, landing-bg-2752.webp 2752w" sizes="max(100vw, 179vh)" alt="" decoding="async" fetchpriority="high"></div>
-      <div class="stage fg"><img src="landing-fg-2752.webp" srcset="landing-fg-1600.webp 1600w, landing-fg-2752.webp 2752w" sizes="max(100vw, 179vh)" alt="" decoding="async" fetchpriority="high"></div>
-      <h1 id="welcomeTitle" class="welcome-tagline">been there<span class="dot">·</span><br>done that</h1>
+      <div class="stage bg"><img src="landing-bg-1672.webp" srcset="landing-bg-1000.webp 1000w, landing-bg-1672.webp 1672w" sizes="max(100vw, 178vh)" alt="" decoding="async" fetchpriority="high"></div>
+      <div class="stage fg"><img src="landing-fg-1672.webp" srcset="landing-fg-1000.webp 1000w, landing-fg-1672.webp 1672w" sizes="max(100vw, 178vh)" alt="" decoding="async" fetchpriority="high"></div>
+      <h1 id="welcomeTitle" class="welcome-stamp"><span class="visually-hidden">BT•DT: been there, done that</span><svg class="stamp-svg" viewBox="0 0 240 240" aria-hidden="true" focusable="false"><defs><filter id="stw" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3" result="warp"/><feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/><feMorphology in="ink" operator="dilate" radius="0.45" result="fat"/><feGaussianBlur in="fat" stdDeviation="0.5" result="ink"/><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="9" result="grain"/><feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3.2 2.45" result="holes"/><feComposite in="ink" in2="holes" operator="in" result="ink"/><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="7" result="blot"/><feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.45" result="blotA"/><feComposite in="ink" in2="blotA" operator="in" result="ink"/></filter><linearGradient id="tgw" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#777"/></linearGradient><filter id="tbw"><feGaussianBlur stdDeviation="6"/></filter><mask id="tmw" maskUnits="userSpaceOnUse" x="-20" y="-20" width="280" height="280"><rect x="-20" y="-20" width="280" height="280" fill="url(#tgw)"/><circle cx="200" cy="38" r="22" fill="#000" filter="url(#tbw)"/></mask></defs><g mask="url(#tmw)"><g filter="url(#stw)"><g><circle cx="120" cy="120" r="113" fill="none" stroke="#24379A" stroke-width="5"/><circle cx="120" cy="120" r="104" fill="none" stroke="#24379A" stroke-width="1.6"/><path id="topw" d="M38,120 A82,82 0 0,1 202,120" fill="none"/><path id="botw" d="M25,120 A95,95 0 0,0 215,120" fill="none"/><text font-family="'IBM Plex Sans Condensed',sans-serif" font-weight="600" font-size="19" letter-spacing="4" fill="#24379A" style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:4px;fill:#24379A"><textPath href="#topw" startOffset="50%" text-anchor="middle">BEEN THERE</textPath></text><text font-family="'IBM Plex Sans Condensed',sans-serif" font-weight="600" font-size="19" letter-spacing="4" fill="#24379A" style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:4px;fill:#24379A"><textPath href="#botw" startOffset="50%" text-anchor="middle">DONE THAT</textPath></text><polygon points="33.0,115.0 34.9,119.5 39.7,119.8 36.0,123.0 37.1,127.7 33.0,125.2 28.9,127.7 30.0,123.0 26.3,119.8 31.1,119.5" fill="#24379A"/><polygon points="207.0,115.0 208.9,119.5 213.7,119.8 210.0,123.0 211.1,127.7 207.0,125.2 202.9,127.7 204.0,123.0 200.3,119.8 205.1,119.5" fill="#24379A"/><circle cx="120" cy="120" r="68" fill="none" stroke="#24379A" stroke-width="2"/><g transform="translate(110.0 68.0) scale(0.8333333333333334)"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="#24379A"/></g><text x="120" y="128" text-anchor="middle" font-family="'Bricolage Grotesque',sans-serif" font-weight="800" font-size="40" letter-spacing="-0.5" fill="#24379A" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.5px;fill:#24379A">BT•DT</text><rect x="66" y="140" width="108" height="24" rx="2" fill="none" stroke="#24379A" stroke-width="2"/><text x="120" y="157.5" text-anchor="middle" font-family="'IBM Plex Sans Condensed',sans-serif" font-weight="600" font-size="14" letter-spacing="1.5" fill="#24379A" style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:14px;letter-spacing:1.5px;fill:#24379A" id="stampDate" textLength="98" lengthAdjust="spacingAndGlyphs"></text></g></g></g></svg></h1>
     </div>
     <div class="welcome-panel">
       <p>See where you've been and how you get around. Your files are read on this device and never uploaded.</p>
@@ -96,7 +98,9 @@
           <li>Sunrise and sunset worked out with the formulas of <a href="https://github.com/mourner/suncalc" target="_blank" rel="noopener">SunCalc</a> <small>BSD 2-Clause</small></li>
           <li>Time zone names from the <a href="https://www.iana.org/time-zones" target="_blank" rel="noopener">IANA tz database</a> <small>Public domain</small></li>
           <li>CO₂ factors from the <a href="https://www.gov.uk/government/collections/government-conversion-factors-for-company-reporting" target="_blank" rel="noopener">UK government's conversion factors</a> <small>Open Government Licence v3.0</small></li>
-          <li>Icons from Google's <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Material Icons</a> <small>Apache License 2.0</small></li>
+          <li>Icons from <a href="https://phosphoricons.com" target="_blank" rel="noopener">Phosphor Icons</a> <small>MIT License</small></li>
+          <li>More icons from Google's <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Material Icons</a> <small>Apache License 2.0</small></li>
+          <li>Country flags from <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a>, printed in BT•DT's inks <small>MIT License</small></li>
           <li>Landing picture made with <a href="https://gemini.google.com" target="_blank" rel="noopener">Google Gemini</a> <small>AI-generated</small></li>
           <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
         </ul>
@@ -233,6 +237,11 @@
       </div>
     </div>
 
+    <!-- Playback on its own: the date on paper top right, and a button to close playback. -->
+    <div class="play-head" id="playHead" hidden>
+      <div class="play-date"><b id="playDate"></b><small id="playSub"></small></div>
+      <button type="button" class="play-close" id="playClose" aria-label="Close playback" title="Close playback"><span data-icon="close"></span></button>
+    </div>
     <div class="map-legend" id="mapLegend"></div>
     <button type="button" class="fab left scrub-toggle" id="scrubToggle" aria-label="Show playback" aria-pressed="false" title="Playback"><span data-icon="clock"></span></button>
     <button type="button" class="fab right" id="layersBtn" aria-label="Views and layers" aria-controls="layersSheet" aria-expanded="false"><span data-icon="layers"></span></button>
@@ -259,7 +268,6 @@
             <button type="button" class="icon-btn pnav-settings" data-open-settings aria-label="Menu" aria-controls="settingsSheet"><span data-icon="menu"></span></button>
           </div>
           <div class="seg full step-seg" role="group" aria-label="Step by" data-pn="step" hidden><button type="button" data-step="day" aria-pressed="true">Day</button><button type="button" data-step="week" aria-pressed="false">Week</button><button type="button" data-step="month" aria-pressed="false">Month</button><button type="button" data-step="year" aria-pressed="false">Year</button></div>
-          <nav class="ins-chips" id="insChips" aria-label="Insights sections"><button type="button" data-ig-go="scores" aria-pressed="true">Scores</button><button type="button" data-ig-go="overview" aria-pressed="false">Overview</button><button type="button" data-ig-go="places" aria-pressed="false">Places</button><button type="button" data-ig-go="countries" aria-pressed="false">Countries</button><button type="button" data-ig-go="fitness" aria-pressed="false">Fitness</button><button type="button" data-ig-go="co2" aria-pressed="false">CO₂</button></nav>
         </div>
       <div class="cards">
         <div class="ins-group" data-ig="scores">
@@ -700,7 +708,13 @@
 <div id="tip" class="tip" hidden></div>
 <div id="busy" class="loader" role="status" aria-live="polite" hidden>
   <div class="ld-box">
-    <div class="ld-donut"><div class="ld-disc"></div><svg class="ld-ring" viewBox="0 0 148 148" aria-hidden="true"><circle class="ld-track" cx="74" cy="74" r="64"/><circle class="ld-arc" cx="74" cy="74" r="64" stroke-dasharray="402.12" stroke-dashoffset="402.12"/></svg></div>
+    <div class="ld-stamps" aria-hidden="true"></div>
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><filter id="stampInk" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="4" result="n"/>
+      <feColorMatrix in="n" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.7 1.55" result="m"/>
+      <feComposite in="SourceGraphic" in2="m" operator="in" result="t"/>
+      <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="2" seed="9" result="w"/>
+      <feDisplacementMap in="t" in2="w" scale="2.2" xChannelSelector="R" yChannelSelector="G"/></filter></defs></svg>
     <div class="ld-label"><div class="ld-t"></div><div class="ld-p"></div></div>
   </div>
 </div>

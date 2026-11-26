@@ -4,10 +4,12 @@
   pip install numpy opencv-python-headless pillow
   python3 source/landing/make_layers.py
 
-- landing-fg-*.webp: the cliff, the hiker, the bike and the city behind them, on transparency.
+- landing-fg-*.webp: the cliff, the hiker, the bike, the city and the trees behind them, on transparency.
 - landing-bg-*.webp: everything else (sky, sun, valley), with the area behind the cliff filled in.
+- landing-riso.webp: the whole picture (the Insights and Timeline header).
 
-The cut is the shape in cut.svg, drawn by hand in Figma over landing-source.webp. On wide
+The picture is the v2.0 Risograph print (landing-riso-source.webp, 1672 x 941); the cut is the
+shape in cut-riso.svg, drawn by David in Figma over it. On wide
 screens the two layers line up exactly as the original picture. On narrower ones the page
 slides the background further left than the cliff, so the hiker and the sun both fit.
 The fill behind the cliff is a plain inpaint: only its edges ever show.
@@ -20,8 +22,9 @@ from PIL import Image, ImageDraw
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, '..', 'static')
-SRC = os.path.join(HERE, 'landing-source.webp')  # 2752 x 1536
-CUT = os.path.join(HERE, 'cut.svg')
+SRC = os.path.join(HERE, 'landing-riso-source.webp')  # 1672 x 941
+CUT = os.path.join(HERE, 'cut-riso.svg')
+WIDTHS = (1672, 1000)
 SS = 4  # supersampling for a smooth edge
 
 
@@ -49,7 +52,7 @@ def main():
     h, w = im.shape[:2]
     alpha = cut_mask((w, h))
     # Background: fill the cliff's area (grown a little, so no rim is left) from its surroundings.
-    grow = cv2.dilate((alpha > 8).astype(np.uint8) * 255, np.ones((15, 15), np.uint8))
+    grow = cv2.dilate((alpha > 8).astype(np.uint8) * 255, np.ones((9, 9), np.uint8))
     small = cv2.resize(im, (w // 2, h // 2), interpolation=cv2.INTER_AREA)
     hole = cv2.resize(grow, (w // 2, h // 2), interpolation=cv2.INTER_NEAREST)
     fill = cv2.inpaint(cv2.cvtColor(small, cv2.COLOR_RGB2BGR), hole, 12, cv2.INPAINT_TELEA)
@@ -57,7 +60,8 @@ def main():
     k = cv2.GaussianBlur(grow, (0, 0), 3).astype(float)[..., None] / 255
     bg = Image.fromarray((im * (1 - k) + fill * k).astype(np.uint8))
     fg = Image.fromarray(np.dstack([im, alpha]), 'RGBA')
-    for width in (2752, 1600):
+    Image.fromarray(im).save(os.path.join(OUT, 'landing-riso.webp'), quality=82, method=6)
+    for width in WIDTHS:
         size = (width, round(h * width / w))
         bg.resize(size, Image.LANCZOS).save(os.path.join(OUT, 'landing-bg-%d.webp' % width), quality=80, method=6)
         fg.resize(size, Image.LANCZOS).save(os.path.join(OUT, 'landing-fg-%d.webp' % width), quality=86, method=6)

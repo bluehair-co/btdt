@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Build BT•DT (Been There · Done That) into dist/: one self-contained index.html plus the PWA files.
 
-  python3 build.py
+  python3 build.py            the app, into dist/
+  python3 build.py --preview  a preview of the next version, into dist-preview/ (copied to v2/ in the
+                              repository): no offline mode, kept out of search, marked as a preview
 
 The page is assembled from src/ (styles, markup, parser and app scripts) and the
 place data (airports, time zones, country borders, towns) kept from v1.0.
@@ -9,6 +11,7 @@ place data (airports, time zones, country borders, towns) kept from v1.0.
 import os
 import re
 import shutil
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'src')
@@ -38,7 +41,7 @@ HEAD = '''<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="See everywhere you've been on a heatmap from your Google Timeline export, Garmin, Strava or any GPX, KML, GeoJSON or FIT file: trips, flights, countries and how you get around. Free, works offline, and your files never leave your device.">
-<meta name="theme-color" content="#f7f2ee">
+<meta name="theme-color" content="#F2E8D9">
 <script>/* Light or dark before the page draws, so dark mode never flashes light; applyTheme() in core.js keeps it up to date. */
 (function () { var t; try { t = JSON.parse(localStorage.getItem('btdt.prefs') || '{}').theme; } catch (e) {}
 if (t !== 'light' && t !== 'dark') t = window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -77,27 +80,45 @@ document.documentElement.setAttribute('data-theme', t); })();</script>
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <link rel="stylesheet" href="''' + LEAFLET + '''leaflet.min.css">
 '''
 
 
+PREVIEW_TAG = ('<a href="../" style="position:fixed;z-index:2000;right:10px;top:calc(10px + env(safe-area-inset-top,0px));'
+               'padding:3px 10px;border-radius:999px;background:#FEDF02;color:#1E3A9E;border:2px solid #1E3A9E;'
+               'font:600 12px/1.4 \'IBM Plex Sans\',sans-serif;text-decoration:none" title="Back to the current app">v2.0 preview</a>\n')
+
+
 def main():
+    preview = '--preview' in sys.argv
+    dist = DIST + '-preview' if preview else DIST
     js = '\n'.join(read(n) for n in JS)
     html = (HEAD + '<style>\n' + read('app.css') + '</style>\n</head>\n<body>\n' + read('app.html') +
             place_data() + '\n<script id="parser">\n' + read('parser.js') + '</script>\n' +
             '<script src="' + LEAFLET + 'leaflet.min.js"></script>\n' +
             '<script>\n(function () {\n' + js + '\n})();\n</script>\n</body>\n</html>\n')
-    os.makedirs(DIST, exist_ok=True)
-    with open(os.path.join(DIST, 'index.html'), 'w', encoding='utf-8') as f:
+    if preview:
+        # Same origin as the live app, so it sees the same saved trips and settings. No service worker:
+        # it would share (and clear) the live app's offline caches.
+        reg = "navigator.serviceWorker.register('sw.js')"
+        if reg not in html:
+            raise SystemExit('Service worker registration not found')
+        html = html.replace(reg, 'Promise.resolve()')
+        html = html.replace('<meta name="robots" content="index, follow">', '<meta name="robots" content="noindex, nofollow">')
+        html = html.replace('<link rel="manifest" href="manifest.webmanifest">', '')
+        html = html.replace('<title>', '<title>Preview · ', 1)
+        html = html.replace('<body>\n', '<body>\n' + PREVIEW_TAG, 1)
+    os.makedirs(dist, exist_ok=True)
+    with open(os.path.join(dist, 'index.html'), 'w', encoding='utf-8') as f:
         f.write(html)
     for name in os.listdir(os.path.join(HERE, 'static')):
         src = os.path.join(HERE, 'static', name)
         if os.path.isdir(src):
-            shutil.copytree(src, os.path.join(DIST, name), dirs_exist_ok=True)
-        else:
-            shutil.copy(src, os.path.join(DIST, name))
-    print('Wrote dist/index.html (%d KB)' % (len(html.encode('utf-8')) // 1024))
+            shutil.copytree(src, os.path.join(dist, name), dirs_exist_ok=True)
+        elif not (preview and name in ('sw.js', 'robots.txt', 'sitemap.xml')):
+            shutil.copy(src, os.path.join(dist, name))
+    print('Wrote %s/index.html (%d KB)' % (os.path.basename(dist), len(html.encode('utf-8')) // 1024))
 
 
 if __name__ == '__main__':

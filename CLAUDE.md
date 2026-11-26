@@ -7,8 +7,8 @@ BT•DT (Been There · Done That) is a browser app (installable PWA) that reads 
 - User-facing overview: `README.md`. How the data is read and cleaned, in depth: `source/README.md`. MyRules format: `docs/myrules.md`.
 - Design and UX rules: `docs/design-rules.md`. Read it before any UI change.
 - How the project got here: `docs/history.md`.
-- Rollback points: the `v1.0` branch holds the app as it was before the UX overhaul of 20–21 Nov 2026 (PRs #222–#225), and the `v1.9` branch the app as it was before the v2.0 style overhaul (26 Nov 2026). To roll back, restore `main`'s published files from that branch in a PR; only do this when David asks.
-- **v2.0 (the Risograph print style)** is built on the `v2.0` branch and previewed at https://bluehair-co.github.io/btdt/v2/: `python3 source/build.py --preview` writes `source/dist-preview/` (no service worker, kept out of search, a *v2.0 preview* tag), which is copied into `v2/` on `main` in its own PR. The live app switches to v2.0 only when David says so.
+- Rollback points: the `v1.0` branch holds the app as it was before the UX overhaul of 20–21 Nov 2026 (PRs #222–#225), and the `v1.9` branch the app as it was before the v2.0 style overhaul. To roll back, restore `main`'s published files from that branch in a PR; only do this when David asks.
+- **v2.0 (the Risograph print style) is live** since 26 Nov 2026: paper, three inks, panels as paper with the off-print (see *Look* in `docs/design-rules.md`). It was built on the `v2.0` branch, which is now merged; work on `main` again. For a big change David wants to try before it goes live, `python3 source/build.py --preview` writes `source/dist-preview/` (no service worker, kept out of search, a preview tag), which can be copied into a folder such as `v2/` on `main` in its own PR.
 - Where things live in the UI (Filters, *Menu*, map sheet, *Map tools*, trip and place pages): the *One home per job* section and the patterns table in `docs/design-rules.md`. Put new features where that table says.
 
 ## Standing rules from David

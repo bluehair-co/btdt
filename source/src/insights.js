@@ -16,40 +16,18 @@ function renderInsights() {
   renderSummary(); renderFar(); renderSplit(); renderRhythm(); renderTime(); renderRoutes(); renderPlaces(); renderKinds(); renderSquares(); renderGear(); renderHeart(); renderRecords(); renderCountries(); renderCo2();
   insGroups();
 }
-// Sections: the cards in groups (Scores first, then Overview, Places, Countries, Fitness, CO₂), with
-// a chip for each under the sticky top bar. A group with no card showing is hidden with its chip; on
-// a wide screen, the last card of a group that would sit alone in its row takes the whole row.
+// Sections: the cards in groups (Scores first, then Overview, Places, Countries, Fitness, CO₂), each
+// under its own heading. A group with no card showing is hidden; on a wide screen, the last card of a
+// group that would sit alone in its row takes the whole row.
 function insGroups() {
   $('insightsPage').querySelectorAll('.ins-group').forEach(function (g) {
     var cards = [].slice.call(g.querySelectorAll(':scope > .card')).filter(function (c) { return !c.hidden; });
     g.hidden = !cards.length;
-    var chip = document.querySelector('[data-ig-go="' + g.dataset.ig + '"]');
-    if (chip) chip.hidden = g.hidden;
     var half = cards.filter(function (c) { return !c.classList.contains('wide'); });
     cards.forEach(function (c) { c.classList.remove('span'); });
     if (half.length % 2) half[half.length - 1].classList.add('span');
   });
-  insSpy();
 }
-function insSpy() {
-  var page = $('insightsPage'), bar = page.querySelector('.pnav'), top = bar.getBoundingClientRect().bottom + 24, cur = 'scores';
-  page.querySelectorAll('.ins-group:not([hidden]) > .ins-group-h').forEach(function (h) { if (h.getBoundingClientRect().top <= top) cur = h.parentNode.dataset.ig; });
-  // At the very end of the page the last group counts, even when it is too short to reach the top.
-  if (page.scrollTop + page.clientHeight >= page.scrollHeight - 4) { var hs = page.querySelectorAll('.ins-group:not([hidden]) > .ins-group-h'); if (hs.length) cur = hs[hs.length - 1].parentNode.dataset.ig; }
-  $('insChips').querySelectorAll('[data-ig-go]').forEach(function (b) {
-    var on = b.dataset.igGo === cur;
-    if ((b.getAttribute('aria-pressed') === 'true') !== on) { b.setAttribute('aria-pressed', on ? 'true' : 'false'); if (on && b.scrollIntoView) b.parentNode.scrollTo({ left: b.offsetLeft - 16, behavior: 'smooth' }); }
-  });
-}
-$('insightsPage').addEventListener('scroll', function () { insSpy(); }, { passive: true });
-$('insChips').addEventListener('click', function (ev) {
-  var b = ev.target.closest('[data-ig-go]');
-  if (!b) return;
-  var page = $('insightsPage'), g = page.querySelector('[data-ig="' + b.dataset.igGo + '"]'), t = g && (g.querySelector('.ins-group-h') || g.querySelector('.card'));
-  if (!t) return;
-  var bar = page.querySelector('.pnav');
-  page.scrollTo({ top: b.dataset.igGo === 'scores' ? 0 : page.scrollTop + t.getBoundingClientRect().top - bar.getBoundingClientRect().bottom - 12, behavior: 'smooth' });
-});
 function renderSummary() {
   var n = sel.length, kmT = 0, h = 0, days = {}, places = {}, cc = {}, j, i;
   for (j = 0; j < n; j++) {
@@ -459,6 +437,15 @@ $('splitSeg').addEventListener('click', function (ev) { var b = ev.target.closes
 
 // Ten steps of the accent colour, from faint (1) to full (10); 0 is empty.
 var HEAT_STEPS = 10, HEAT_LEVELS = Array.from({ length: HEAT_STEPS }, function (_, k) { return k + 1; });
+// v2.0: the rhythm grids are a dot screen: the busier the hour, the bigger its dot, up to dots
+// that run into their neighbours; the busiest hours get a pink dot printed over them.
+function rhythmDot(level) {
+  var sz = level ? 0.36 + 1.24 * (level - 1) / (HEAT_STEPS - 1) : 0.14;
+  return '<i style="--s:' + sz.toFixed(2) + '"' + (level === HEAT_STEPS ? ' class="top"' : '') + '></i>';
+}
+function rhythmScale(a, b) {
+  return '<div class="rhythm-scale">' + a + HEAT_LEVELS.map(function (l) { return '<span class="rd">' + rhythmDot(l) + '</span>'; }).join('') + b + '</div>';
+}
 function heatColor(level) { return level ? 'color-mix(in srgb, var(--accent) ' + Math.round(14 + 86 * (level - 1) / (HEAT_STEPS - 1)) + '%, var(--grid))' : 'var(--grid)'; }
 // Levels by decile of the non-empty values, so a few very busy cells don't wash out the rest.
 function heatLevels(vals) {
@@ -475,10 +462,10 @@ function renderRhythm() {
   for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? fmtHour(k, true) : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
     h += '<div class="d">' + DOW[d] + '</div>';
-    for (k = 0; k < 24; k++) h += '<div class="c" data-d="' + d + '" data-h="' + k + '" data-n="' + c[d][k] + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
+    for (k = 0; k < 24; k++) h += '<div class="c" data-d="' + d + '" data-h="' + k + '" data-n="' + c[d][k] + '">' + rhythmDot(level(c[d][k])) + '</div>';
   });
   $('rhythm').innerHTML = '<div class="rhythm" role="img" aria-label="Trips by day of the week and hour">' + h + '</div>' +
-    '<div class="rhythm-scale">Fewer' + HEAT_LEVELS.map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More trips</div>';
+    rhythmScale('Fewer', 'More trips');
 }
 function rhythmTip(ev) {
   var c = ev.target.closest('.c[data-d]');
@@ -644,7 +631,8 @@ function renderRoutes() {
   if (!list.length) { $('topRoutes').innerHTML = '<p class="empty">No trips between two different places.</p>'; return; }
   $('topRoutes').innerHTML = list.slice(0, 8).map(function (r) {
     var ms = Object.keys(r.modes).sort(function (x, y) { return r.modes[y] - r.modes[x]; });
-    return '<button type="button" class="hit-row" data-i="' + r.last + '">' + badge(ms[0], true) +
+    // v2.0: each route is also drawn as a line on a transit map, as long as its share of trips
+    return '<button type="button" class="hit-row" data-i="' + r.last + '" style="--c:' + modeColor(ms[0]) + ';--w:' + Math.max(12, r.n / list[0].n * 100).toFixed(1) + '%">' + badge(ms[0], true) +
       '<span class="t"><b>' + esc(placeLabel(r.a)) + ' ↔ ' + esc(placeLabel(r.b)) + '</b><small>' + ms.slice(0, 3).map(function (m) { return LABEL[m] || m; }).join(', ') + ' · ' + dist(r.km / r.n) + ' each way</small></span>' +
       '<span class="r num">' + fmt(r.n) + '<small>trips</small></span></button>';
   }).join('');
@@ -679,9 +667,9 @@ function renderPlaces() {
     $('topPlaces').innerHTML = list.slice(0, 10).map(function (s) {
       var cc = countryAt(s.lat, s.lng), r = mrRuleOf(s), nm = spotName(s), plain = /^Spot in /.test(nm);
       var kind = r && MR_KIND[r.role], st = !r && spotStop(s);
-      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? st.kind : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', (flag(cc) ? flag(cc) + ' ' : '') + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
+      var sub = [plain ? spotHint(s) : '', kind && nm !== MR_KIND[r.role][0] ? MR_KIND[r.role][0] : st ? st.kind : '', byN ? hoursLabel(s.h).replace(/ \d+ min$/, '') : '', '\u0001' + ccName(cc), byN ? '' : fmt(s.n) + ' stay' + (s.n > 1 ? 's' : '')].filter(Boolean);
       return '<button type="button" class="hit-row" data-spot="' + esc(s.key) + '">' + lookBadge(spotLook(s), true) +
-        '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')) + '</small></span>' +
+        '<span class="t"><b>' + esc(nm) + '</b><small>' + esc(sub.join(' · ')).replace('\u0001', flag(cc) ? flag(cc) + ' ' : '') + '</small></span>' +
         '<span class="r num">' + (byN ? fmt(s.n) + '<small>visit' + (s.n > 1 ? 's' : '') + '</small>' : hoursLabel(s.h).replace(/ \d+ min$/, '')) + '</span></button>';
     }).join('');
     return;
@@ -706,7 +694,7 @@ $('placesSeg').addEventListener('click', function (ev) { var b = ev.target.close
 var MIN_KINDS = 5;
 // Other places flips through places that aren't one of the kinds (nor the plain pin of a place
 // without one), 2 s each: see .kind-flip.
-var KIND_FLIP = ['attractions', 'castle', 'stadium', 'account_balance', 'temple_buddhist', 'earth'];
+var KIND_FLIP = ['castle', 'windmill', 'lighthouse', 'museum', 'mountains', 'city'];
 function renderKinds() {
   var rules = mrActive('places').filter(function (r) { return r.role && Array.isArray(r.at); }), el = $('kindCard'), stops = stopSpots();
   el.hidden = rules.length + stops < MIN_KINDS;
@@ -923,10 +911,11 @@ function renderRecords() {
   ];
   var h = items.filter(function (x) { return best[x[0]]; }).map(function (x) {
     var r = best[x[0]];
-    return '<button type="button" class="record" data-i="' + r.i + '"><span class="k">' + icon(x[1]) + x[2] + '</span><span class="v">' + x[3](r) + '</span><span class="s">' + esc(tripRoute(r.i)) + ' · ' + niceDate(D.day[r.i]) + '</span></button>';
+    var m = modeOf(r.i), mc = modeColor(m);
+    return '<button type="button" class="record" data-i="' + r.i + '"><span class="stub" style="background:' + mc + '"' + (/m-bike|^#fedf02$/i.test(mc) ? ' data-bike' : '') + '>' + icon(m) + '</span><span class="k">' + x[2] + '</span><span class="v">' + x[3](r) + '</span><span class="s">' + esc(tripRoute(r.i)) + ' · ' + niceDate(D.day[r.i]) + '</span></button>';
   }).join('');
-  if (bd) h += '<button type="button" class="record" data-day="' + bd + '"><span class="k">' + icon('calendar') + 'Furthest in a day</span><span class="v">' + dist(byDay[bd].km) + '</span><span class="s">' + longDate(+bd) + '</span></button>';
-  if (bn) h += '<button type="button" class="record" data-day="' + bn + '"><span class="k">' + icon('calendar') + 'Most trips in a day</span><span class="v">' + fmt(byDay[bn].n) + '</span><span class="s">' + longDate(+bn) + '</span></button>';
+  if (bd) h += '<button type="button" class="record" data-day="' + bd + '"><span class="stub day">' + icon('calendar') + '</span><span class="k">Furthest in a day</span><span class="v">' + dist(byDay[bd].km) + '</span><span class="s">' + longDate(+bd) + '</span></button>';
+  if (bn) h += '<button type="button" class="record" data-day="' + bn + '"><span class="stub day">' + icon('calendar') + '</span><span class="k">Most trips in a day</span><span class="v">' + fmt(byDay[bn].n) + '</span><span class="s">' + longDate(+bn) + '</span></button>';
   $('records').innerHTML = h;
 }
 // Days between records: when you were last seen in a country and next seen in the same
@@ -1061,7 +1050,7 @@ function renderCountries() {
   $('ccNote').textContent = list.length ? fmt(list.length) + ' countr' + (list.length === 1 ? 'y' : 'ies') + (passed ? ' (' + fmt(passed) + ' only passed through)' : '') + ', by days you were there. Days between your records count too when you were in the same country before and after. Flights count only where they took off and landed. A stop of under a day between other countries is a short stop, or a layover when you flew in and out (with a visit when you went over ' + dist(5) + ' from the airport).' : '';
   var max = list.length ? list[0].n : 1;
   $('ccList').innerHTML = list.length ? list.map(function (c) {   // always every country, never cut short
-    return '<div class="hit-row" style="cursor:default"><span class="flag" aria-hidden="true" style="font-size:22px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
+    return '<div class="hit-row" style="cursor:default"><span aria-hidden="true" style="font-size:18px;width:28px;text-align:center">' + (flag(c.cc) || '·') + '</span>' +
       '<span class="t"><b>' + esc(ccName(c.cc)) + '</b>' + (c.kind ? ' <span class="cc-stop">' + (c.kind === 'layover' ? icon('FLYING') : '') + stopText(c) + ' · ' + duration(c.stopMs) + '</span>' : '') + '<small>' + (c.first === c.last ? niceDate(c.first) : niceDate(c.first) + ' – ' + niceDate(c.last)) + '</small><span class="meter" style="display:block;margin-top:6px"><i style="width:' + (c.n / max * 100).toFixed(1) + '%' + (many ? ';background:' + c.color : '') + '"></i></span></span>' +
       '<span class="r num">' + fmt(c.n) + '<small>day' + (c.n > 1 ? 's' : '') + '</small></span></div>';
   }).join('') : '<p class="empty">No countries in this selection.</p>';
@@ -1152,10 +1141,10 @@ function renderCcTimeline(list, perDay, visits) {
   var stops = visits.filter(function (x) { return x.short && byCc[x.cc] && x.p1 >= lo && x.p0 < hi + 1; });
   var runsS = runsOf(true), runsM = runsOf(false), guess = ccGuesses(lo, hi, runsM, byCc, list);
   function withGuess(runs) { return runs.concat(guess).sort(function (a, b) { return a.d0 - b.d0; }); }
-  CT = { lo: lo, hi: hi, span: hi - lo + 1, runsS: withGuess(runsS), runsM: withGuess(runsM), runs: null, split: null, stops: stops, list: list, byCc: byCc, fit: true, ppd: 1, on: null };
+  CT = { lo: lo, hi: hi, span: hi - lo + 1, runsS: withGuess(runsS), runsM: withGuess(runsM), runs: null, split: null, stops: stops, list: list, byCc: byCc, fit: true, ppd: 1, on: null, hl: CT && CT.hl && byCc[CT.hl] ? CT.hl : null };
   $('cctlInfo').textContent = '';
   $('cctlLegend').innerHTML = list.map(function (c) {
-    return '<button type="button" data-cc="' + c.cc + '"><span class="cctl-sw" style="background:' + c.color + '"></span>' + (flag(c.cc) ? flag(c.cc) + ' ' : '') + esc(ccName(c.cc)) + ' <small>' + (c.guessOnly ? 'guessed only' : fmt(c.n) + ' day' + (c.n > 1 ? 's' : '')) + (c.kind ? ' · ' + stopText(c).toLowerCase() : '') + '</small></button>';
+    return '<button type="button" data-cc="' + c.cc + '" class="' + (CT.hl === c.cc ? 'hl' : '') + '">' + (flag(c.cc) ? flag(c.cc) + ' ' : '') + esc(ccName(c.cc)) + ' <small>' + (c.guessOnly ? 'guessed only' : fmt(c.n) + ' day' + (c.n > 1 ? 's' : '')) + (c.kind ? ' · ' + stopText(c).toLowerCase() : '') + '</small></button>';
   }).join('');
   cctlFit();
 }
@@ -1180,15 +1169,20 @@ function cctlDraw() {
   var ppd = CT.ppd, W = CT.span * ppd, h = [], split = ppd >= CCTL_SPLIT;
   if (split !== CT.split) { CT.split = split; CT.runs = split ? CT.runsS : CT.runsM; if (CT.on) CT.on = { cc: CT.on.cc, r: null }; }
   $('cctlTrack').style.width = W + 'px';
+  // v2.0: the bars take two colours in turn, changing at every change of country (a colour per
+  // country gets messy with many); the country picked (CT.hl) is printed in yellow everywhere.
+  var alt = 0, prev = null;
   CT.runs.forEach(function (r, k) {
     var x = (r.d0 - CT.lo) * ppd, w = (r.d1 - r.d0 + 1) * ppd, pw = w / r.parts.length;
     r.parts.forEach(function (cc, p) {
       var c = CT.byCc[cc], n = r.d1 - r.d0 + 1, lab = '';
+      if (prev !== null && cc !== prev) alt = 1 - alt;
+      prev = cc;
       if (pw >= 150 && r.parts.length === 1) lab = '<span class="f">' + flag(cc) + '</span>' + esc(ccName(cc)) + ' · ' + fmt(n) + ' day' + (n > 1 ? 's' : '');
       else if (pw >= 44 && r.parts.length === 1) lab = '<span class="f">' + flag(cc) + '</span>' + fmt(n) + 'd';
       else if (pw >= 24) lab = '<span class="f">' + flag(cc) + '</span>';
       if (r.guess) lab = pw >= 44 ? '<span class="f">' + flag(cc) + '</span>≈' + fmt(n) + 'd' : pw >= 24 ? '<span class="f">' + flag(cc) + '</span>' : '';
-      h.push('<b data-r="' + k + '" data-p="' + p + '" class="' + (r.guess ? 'q ' : '') + (pw >= 6 ? 'g ' : '') + (CT.on && (CT.on.cc === cc && (CT.on.r == null && CT.on.s == null || CT.on.r === k && CT.on.p === p)) ? 'on' : '') + '" style="left:' + (x + p * pw).toFixed(2) + 'px;width:' + Math.max(pw, 1).toFixed(2) + 'px;background:' + c.color + '">' + lab + '</b>');
+      h.push('<b data-r="' + k + '" data-p="' + p + '" data-cc="' + cc + '" class="a' + alt + (r.guess ? ' q' : '') + (pw >= 6 ? ' g' : '') + (CT.hl === cc ? ' hl' : '') + '" style="left:' + (x + p * pw).toFixed(2) + 'px;width:' + Math.max(pw, 1).toFixed(2) + 'px">' + lab + '</b>');
     });
   });
   $('cctlBars').innerHTML = h.join('');
@@ -1206,15 +1200,18 @@ function cctlDraw() {
   order.forEach(function (k) {
     var x = CT.stops[k], px = ((x.p0 + x.p1) / 2 - CT.lo) * ppd, must = x.layover || CT.byCc[x.cc].kind, lane = airside(x) ? placedLow : placed;
     if (airside(x) && ppd < CCTL_MONTHS) return;   // true layovers only once months show
-    if (!must && lane.some(function (q) { return Math.abs(q - px) < 20; })) return;
-    lane.push(px); keep[k] = 1;
+    if (lane.some(function (q) { return Math.abs(q.x - px) < 20 && (!must || q.cc === x.cc); })) return;
+    // Pins that must show but would sit on top of each other step aside, so none hides another.
+    var at = px;
+    while (lane.some(function (q) { return Math.abs(q.x - at) < 20; })) at += 22;
+    lane.push({ x: at, cc: x.cc }); keep[k] = at;
   });
   function pin(x, k) {
     var c = CT.byCc[x.cc], low = airside(x);
-    return '<button type="button" data-s="' + k + '" class="' + (low ? 'dot' : 'pent') + (x.layover ? ' air' : '') + (CT.on && CT.on.s === k ? ' on' : '') + '" style="left:' + (((x.p0 + x.p1) / 2 - CT.lo) * ppd).toFixed(1) + 'px;--c:' + c.color.replace(/^repeating.*?,(var\(--cc\d\)).*$/, '$1') + '" aria-label="' + esc(ccName(x.cc)) + ' ' + stopKind(x) + '">' + (low ? '' : '<i></i>') + '<span>' + (flag(x.cc) || '·') + '</span></button>';
+    return '<button type="button" data-s="' + k + '" data-cc="' + x.cc + '" class="' + (low ? 'dot' : 'pent') + (x.layover ? ' air' : '') + (CT.hl === x.cc ? ' hl' : '') + '" style="left:' + (typeof keep[k] === 'number' ? keep[k] : ((x.p0 + x.p1) / 2 - CT.lo) * ppd).toFixed(1) + 'px" aria-label="' + esc(ccName(x.cc)) + ' ' + stopKind(x) + '">' + (low ? '' : '<i></i>') + '<span>' + (flag(x.cc) || '·') + '</span></button>';
   }
-  $('cctlPins').innerHTML = CT.stops.map(function (x, k) { return keep[k] && !airside(x) ? pin(x, k) : ''; }).join('');
-  $('cctlPinsLow').innerHTML = CT.stops.map(function (x, k) { return keep[k] && airside(x) ? pin(x, k) : ''; }).join('');
+  $('cctlPins').innerHTML = CT.stops.map(function (x, k) { return (k in keep) && !airside(x) ? pin(x, k) : ''; }).join('');
+  $('cctlPinsLow').innerHTML = CT.stops.map(function (x, k) { return (k in keep) && airside(x) ? pin(x, k) : ''; }).join('');
   setPressed('#cctlCard .card-head .seg button', function (b) { return b.id === 'cctlFit' && CT.fit; });
   $('cctlOut').disabled = CT.fit; $('cctlIn').disabled = ppd >= Math.max(CCTL_MAX, cctlFitPpd()) * 0.999;
   cctlAxis();
@@ -1253,30 +1250,47 @@ function cctlAxis() {
   $('cctlAxis').innerHTML = ticks.map(function (t) { return '<i class="' + (t.major ? 'major' : '') + '" style="left:' + t.x.toFixed(1) + 'px"></i>'; }).join('') +
     shown.map(function (t) { return '<span class="' + (t.major ? 'major' : '') + '" style="left:' + t.x.toFixed(1) + 'px">' + esc(t.text) + '</span>'; }).join('');
 }
+function cctlHl(cc, toggle) {
+  if (toggle && CT.hl === cc) cc = null;
+  CT.hl = cc;
+  $('cctlCard').querySelectorAll('[data-cc]').forEach(function (e) { e.classList.toggle('hl', !!cc && e.dataset.cc === cc); });
+  return !!cc;
+}
+// Desktop: pointing at a stretch, a pin or a country in the list shows where that country is,
+// until the pointer leaves; a click keeps it.
+(function () {
+  var card = $('cctlCard'), fine = window.matchMedia && matchMedia('(hover: hover)').matches;
+  if (!fine) return;
+  card.addEventListener('mouseover', function (ev) {
+    var e = ev.target.closest('[data-cc]');
+    if (!CT || !e || !card.contains(e)) return;
+    card.querySelectorAll('[data-cc]').forEach(function (x) { x.classList.toggle('peek', x.dataset.cc === e.dataset.cc); });
+  });
+  card.addEventListener('mouseleave', function () { card.querySelectorAll('.peek').forEach(function (x) { x.classList.remove('peek'); }); });
+  card.addEventListener('mouseout', function (ev) { if (!ev.relatedTarget || !ev.relatedTarget.closest || !ev.relatedTarget.closest('[data-cc]')) card.querySelectorAll('.peek').forEach(function (x) { x.classList.remove('peek'); }); });
+})();
 function cctlRange(a, b) { return a === b ? niceDate(a) : niceDate(a) + ' – ' + niceDate(b); }
 function cctlSay(r, p) {
   var run = CT.runs[r], cc = run.parts[p], c = CT.byCc[cc], n = run.d1 - run.d0 + 1, others = run.parts.filter(function (x) { return x !== cc; });
   CT.on = { cc: cc, r: r, p: p };
+  if (!cctlHl(cc, true)) { $('cctlInfo').textContent = ''; return; }
   if (run.guess) {
     var g = run.guess;
-    $('cctlInfo').innerHTML = '<span class="cctl-sw" style="background:' + c.color + ';opacity:.5;vertical-align:-1px"></span> <b>' + flag(cc) + ' ' + esc(ccName(cc)) + '</b>, probably · ' + cctlRange(run.d0, run.d1) +
+    $('cctlInfo').innerHTML = '<b>' + flag(cc) + ' ' + esc(ccName(cc)) + '</b>, probably · ' + cctlRange(run.d0, run.d1) +
       ' · no records between ' + niceDate(g.from) + ' in ' + flag(g.a) + ' ' + esc(ccName(g.a)) + ' and ' + niceDate(g.to) + ' in ' + flag(g.b) + ' ' + esc(ccName(g.b)) + ' <span class="fine" style="display:inline">(not in the day counts)</span>';
-    $('cctlBars').querySelectorAll('b').forEach(function (b) { b.classList.toggle('on', +b.dataset.r === r && +b.dataset.p === p); });
     return;
   }
-  $('cctlInfo').innerHTML = '<span class="cctl-sw" style="background:' + c.color + ';vertical-align:-1px"></span> <b>' + flag(cc) + ' ' + esc(ccName(cc)) + '</b> · ' + cctlRange(run.d0, run.d1) +
+  $('cctlInfo').innerHTML = '<b>' + flag(cc) + ' ' + esc(ccName(cc)) + '</b> · ' + cctlRange(run.d0, run.d1) +
     (others.length ? ' · also ' + others.map(function (x) { return flag(x) + ' ' + esc(ccName(x)); }).join(', ') + ' that day' : ' · ' + fmt(n) + ' day' + (n > 1 ? 's' : '')) +
     ' <span class="fine" style="display:inline">(' + fmt(c.n) + ' in total)</span>';
-  $('cctlBars').querySelectorAll('b').forEach(function (b) { b.classList.toggle('on', +b.dataset.r === r && +b.dataset.p === p); });
 }
 function cctlPinClick(ev) {
   var b = ev.target.closest('button[data-s]');
   if (!b || !CT) return;
   var k = +b.dataset.s, x = CT.stops[k], c = CT.byCc[x.cc];
   CT.on = { cc: x.cc, r: null, s: k };
-  $('cctlBars').querySelectorAll('b.on').forEach(function (y) { y.classList.remove('on'); });
-  $('cctlTrack').querySelectorAll('.cctl-pins button').forEach(function (y) { y.classList.toggle('on', +y.dataset.s === k); });
-  $('cctlInfo').innerHTML = '<span class="cctl-sw" style="background:' + c.color + ';vertical-align:-1px"></span> <b>' + flag(x.cc) + ' ' + esc(ccName(x.cc)) + '</b> · ' + stopKind(x) + ' of ' + duration(x.ms) + (x.layover ? (x.visit ? ', up to ' + dist(x.away) + ' from the airport' : ', at the airport') : '') + ' · ' + clock(x.t0, x.off, true) + ' – ' + clock(x.t1, x.off, Math.floor(x.p1) !== Math.floor(x.p0));
+  if (!cctlHl(x.cc, true)) { $('cctlInfo').textContent = ''; return; }
+  $('cctlInfo').innerHTML = '<b>' + flag(x.cc) + ' ' + esc(ccName(x.cc)) + '</b> · ' + stopKind(x) + ' of ' + duration(x.ms) + (x.layover ? (x.visit ? ', up to ' + dist(x.away) + ' from the airport' : ', at the airport') : '') + ' · ' + clock(x.t0, x.off, true) + ' – ' + clock(x.t1, x.off, Math.floor(x.p1) !== Math.floor(x.p0));
 }
 $('cctlPins').addEventListener('click', cctlPinClick);
 $('cctlPinsLow').addEventListener('click', cctlPinClick);
@@ -1286,8 +1300,8 @@ $('cctlLegend').addEventListener('click', function (ev) {
   if (!b || !CT) return;
   var cc = b.dataset.cc, c = CT.byCc[cc], sc = $('cctlScroll');
   CT.on = { cc: cc, r: null };
-  $('cctlBars').querySelectorAll('b').forEach(function (x) { x.classList.toggle('on', CT.runs[+x.dataset.r].parts[+x.dataset.p] === cc); });
-  $('cctlInfo').innerHTML = '<span class="cctl-sw" style="background:' + c.color + ';vertical-align:-1px"></span> <b>' + flag(cc) + ' ' + esc(ccName(cc)) + '</b> · ' + fmt(c.n) + ' day' + (c.n > 1 ? 's' : '') + (c.first === c.last ? ' · ' + niceDate(c.first) : ' · first ' + niceDate(c.first) + ', last ' + niceDate(c.last));
+  if (!cctlHl(cc, true)) { $('cctlInfo').textContent = ''; return; }
+  $('cctlInfo').innerHTML = '<b>' + flag(cc) + ' ' + esc(ccName(cc)) + '</b> · ' + fmt(c.n) + ' day' + (c.n > 1 ? 's' : '') + (c.first === c.last ? ' · ' + niceDate(c.first) : ' · first ' + niceDate(c.first) + ', last ' + niceDate(c.last));
   var x = (c.first - CT.lo) * CT.ppd;
   if (x < sc.scrollLeft || x > sc.scrollLeft + sc.clientWidth - 20) sc.scrollLeft = x - 20;
 });
@@ -1623,10 +1637,10 @@ function presenceGrid(c) {
   for (k = 0; k < 24; k++) h += '<div class="h">' + (k % 6 === 0 ? fmtHour(k, true) : '') + '</div>';
   DOW_ORDER.forEach(function (d) {
     h += '<div class="d">' + DOW[d] + '</div>';
-    for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + fmtHour(k) + ': ' + hoursLabel(c[d][k] / 60) + '" style="background:' + heatColor(level(c[d][k])) + '"></div>';
+    for (k = 0; k < 24; k++) h += '<div class="c" title="' + DOW_LONG[d] + 's ' + fmtHour(k) + ': ' + hoursLabel(c[d][k] / 60) + '">' + rhythmDot(level(c[d][k])) + '</div>';
   });
   return '<div class="rhythm" role="img" aria-label="Time there by day of the week and hour">' + h + '</div>' +
-    '<div class="rhythm-scale">Less' + HEAT_LEVELS.map(function (l) { return '<i style="background:' + heatColor(l) + '"></i>'; }).join('') + 'More time there</div>';
+    rhythmScale('Less', 'More time there');
 }
 function visitRow(v) {
   return '<div class="hit-row"><span class="t"><b>' + longDate(D.vday[v]) + '</b><small>' + clock(D.vs[v], D.voff[v]) + '–' + clock(D.ve[v], D.voff[v]) + '</small></span><span class="r num">' + duration(D.ve[v] - D.vs[v]) + '</span></div>';

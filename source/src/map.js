@@ -184,11 +184,39 @@ function setMask(w, url) {
   ['maskSize', 'webkitMaskSize'].forEach(function (k) { w.style[k] = '100% 100%'; });
   ['maskRepeat', 'webkitMaskRepeat'].forEach(function (k) { w.style[k] = 'no-repeat'; });
 }
+// v2.0: Esri's grey map recoloured into the print's paper and blue ink, cheaply: two flat layers
+// over the tiles, one multiplied (the paper) and one screened (the ink), done by the graphics chip
+// with no work per tile. The place names get the ink too. The night side of a day's playback has
+// its own pair, under the same mask as its dark tiles.
+var TINT = { light: ['#F2E8D9', '#14286E'], dark: ['#A9B8FF', '#0E1644'] };
+function tintPair(m, a, b) {
+  var ws = [wrapPane(m, a, b === 'tintB' ? 206 : 211).parentNode, wrapPane(m, b, b === 'tintB' ? 207 : 212).parentNode];
+  ws[0].style.mixBlendMode = 'multiply'; ws[1].style.mixBlendMode = 'screen';
+  return ws;
+}
+function paintTint(ws, dark) { var c = TINT[dark ? 'dark' : 'light']; ws[0].style.background = c[0]; ws[1].style.background = c[1]; if (ws[2]) ws[2].classList.toggle('dark', dark); }
+function inkLabels(w, dark) {
+  w.style.mixBlendMode = dark ? 'screen' : 'multiply';
+  w.style.filter = dark ? 'sepia(.5) saturate(1.4)' : 'sepia(1) saturate(4) hue-rotate(185deg) brightness(.8)';
+}
+function tintMap(m, dark) {
+  if (!m._tint) {
+    m._tint = tintPair(m, 'tintA', 'tintB');
+    // and a fine dot texture over the map, like the grain of the paper
+    var g = wrapPane(m, 'grain', 208).parentNode; g.className += ' map-grain'; m._tint.push(g);
+    m.on('move zoomend resize viewreset', function () { m._tint.forEach(function (w) { placeWrap(m, w); }); });
+  }
+  paintTint(m._tint, dark);
+  // Light: lift Esri's grey a touch, so the land lands on the paper colour.
+  m.getPane('tilePane').style.filter = dark ? '' : 'brightness(1.08)';
+  inkLabels(m.getPane('labels').parentNode, dark);
+}
 function addTiles(m, fade) {
   var dark = tilesDark(m), svc = dark ? 'Canvas/World_Dark_Gray_Base' : 'Canvas/World_Light_Gray_Base', old = m._tl;
   if (!m.getPane('labels')) wrapPane(m, 'labels', 450);
   var op = fade && old ? 0 : 1;
   m._tlDark = dark;
+  tintMap(m, dark);
   m._tl = [
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, attribution: 'Tiles &copy; Esri', opacity: op }),
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/' + svc.replace('_Base', '_Reference') + '/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'labels', opacity: op })
@@ -227,6 +255,11 @@ function initMap() {
   map.on('zoomend moveend', buildBeacons);
   map.on('moveend resize', syncAllDot);
   if (map.zoomControl) addZoomAll(map.zoomControl.getContainer());
+  if (map.zoomControl) {
+    var zc = map.zoomControl.getContainer();
+    zc.querySelector('.leaflet-control-zoom-in').innerHTML = icon('plus');
+    zc.querySelector('.leaflet-control-zoom-out').innerHTML = icon('minus');
+  }
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
   posMarker._mode = null;
@@ -269,6 +302,47 @@ function renderMapTab() {
 }
 // Transport colours as the map shows them: read from the map, which takes the light theme's
 // colours while a day's playback puts light tiles under dark mode.
+// Cycling is printed in the yellow ink, which needs some ink to read on the light map (not on the
+// dark tiles at night): a copy of the line in blue ink, printed a little off register under it, like
+// the pink offset of panels. The copies are drawn on their own canvas in a pane below the lines,
+// shifted by CSS, and added, removed and faded with their trips.
+function caseRenderer(m) {
+  if (!m._caseR) { m.createPane('casePane').style.zIndex = 399; m._caseR = L.canvas({ pane: 'casePane', padding: 0.5 }); }
+  return m._caseR;
+}
+var BIKE_INK = /^#fedf02$/i, BIKE_COPY = '#1E3A9E';  // always the blue ink: the copy only shows on the light (day) tiles
+function caseOn(l) { return !(tilesDark(map) || sunNight()) && l.options.opacity > 0; }
+var CasedLine = null;
+function makeCased() { return L.Polyline.extend({
+  onAdd: function (m) {
+    if (BIKE_INK.test(this.options.color)) {
+      if (!this._case) this._case = L.polyline(this._latlngs, { renderer: caseRenderer(m), color: BIKE_COPY, weight: this.options.weight + 1, opacity: 0, lineCap: 'round', lineJoin: 'round', interactive: false });
+      this._case.addTo(m); this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0 });
+    }
+    return L.Polyline.prototype.onAdd.call(this, m);
+  },
+  onRemove: function (m) {
+    if (this._case && m.hasLayer(this._case)) m.removeLayer(this._case);
+    return L.Polyline.prototype.onRemove.call(this, m);
+  },
+  // Playback draws the trip being played point by point: its copy follows.
+  setLatLngs: function (ll) {
+    L.Polyline.prototype.setLatLngs.call(this, ll);
+    if (this._case) this._case.setLatLngs(ll);
+    return this;
+  },
+  addLatLng: function (ll, ring) {
+    L.Polyline.prototype.addLatLng.call(this, ll, ring);
+    if (this._case) this._case.setLatLngs(this.getLatLngs());
+    return this;
+  },
+  setStyle: function (st) {
+    L.Polyline.prototype.setStyle.call(this, st);
+    if (this._case) this._case.setStyle({ opacity: caseOn(this) ? this.options.opacity : 0, weight: this.options.weight + 1, color: BIKE_COPY });
+    return this;
+  }
+}); }
+function casedLine(pts, o) { CasedLine = CasedLine || makeCased(); return new CasedLine(pts, o); }
 function groupColor(g) { return getComputedStyle($('map')).getPropertyValue(g.v).trim() || cssVar(g.v); }
 function buildPaths() {
   pathLayer.clearLayers(); hlLayer.clearLayers(); hits = []; lines = []; groupLines = []; hovered = []; curLine = null; carryLine = null;
@@ -290,7 +364,7 @@ function buildPaths() {
     var h = { i: i, k: k, parts: [pts], bb: bb, w: LINE_W, color: colors[groupOf(m).key] };
     hits.push(h);
     if (!many) {
-      h.line = L.polyline(pts, { renderer: renderer, color: h.color, weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
+      h.line = casedLine(pts, { renderer: renderer, color: h.color, weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
       pathLayer.addLayer(h.line);
       lines[k] = h.line;
     }
@@ -309,7 +383,7 @@ function buildGroups(limit) {
   var by = {};
   hits.forEach(function (h) { if (h.k < limit) (by[h.color] || (by[h.color] = [])).push(h.parts[0]); });
   Object.keys(by).forEach(function (c) {
-    var l = L.polyline(by[c], { renderer: renderer, color: c, weight: LINE_W - 0.5, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
+    var l = casedLine(by[c], { renderer: renderer, color: c, weight: LINE_W - 0.5, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
     pathLayer.addLayer(l); groupLines.push(l);
   });
 }
@@ -1468,6 +1542,8 @@ $('tripBody').addEventListener('click', function (ev) {
 $('tripBack').addEventListener('click', function () { if (listBack) openList(listBack); });
 
 // ---------- top bar: day navigator or time slider ----------
+// Playback always starts closed: it takes over the map, so it is not remembered between visits.
+PREFS.scrub = false;
 var scrubV = 1000, T0 = 0, T1 = 0, playing = false, playRaf = 0, SPEEDS = [1, 2, 4, 8, 16, 32, 0.25, 0.5];
 function speedText() { return ({ 0.25: '¼', 0.5: '½' }[PREFS.speed] || PREFS.speed) + '×'; }
 function dayLabel(d) { var x = dayToDate(d); return DOW[x.getUTCDay()] + ' ' + fmtDMY(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate()); }
@@ -1478,6 +1554,11 @@ function updateTopbar() {
   $('scrubToggle').hidden = !n;
   $('scrubToggle').setAttribute('aria-pressed', PREFS.scrub ? 'true' : 'false');
   $('scrubToggle').setAttribute('aria-label', PREFS.scrub ? 'Hide playback' : 'Show playback');
+  // While playback is open, everything else steps aside: only the map, the slider, the date and Close.
+  var pm = !!n && !!PREFS.scrub;
+  if (pm && $('playHead').hidden) requestAnimationFrame(function () { document.querySelectorAll('#playHead .play-date, #playHead .play-close, #playBar').forEach(paperize); });
+  document.body.classList.toggle('play-mode', pm);
+  $('playHead').hidden = !pm;
   if (n) {
     if (one) {
       // From midnight where the period starts to midnight where it ends: a day that flies
@@ -1532,6 +1613,9 @@ function syncPeriodNavs() {
       q('rangeSub').textContent = sub + (kr ? ' · ' + kr + ' filter' + (kr > 1 ? 's' : '') : '');
     }
   });
+  // The date on paper at the top of playback
+  $('playDate').textContent = one ? (F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit)) : F.dm === 'all' ? 'All time' : F.from === F.to ? dayLabel(F.from) : niceDate(F.from) + ' – ' + niceDate(F.to);
+  $('playSub').textContent = sub;
 }
 // The calendar under the navigator's date: a month at a time, Monday first. Days with
 // trips in the filters have a dot, the period on show is shaded, and Today at the bottom
@@ -1673,13 +1757,13 @@ function scrubTo(v) {
   if (map) {
     if (curLine) { pathLayer.removeLayer(curLine); curLine = null; }
     if (cur && cur.pts.length > 1) {
-      curLine = L.polyline(cur.pts, { renderer: renderer, color: groupColor(groupOf(modeOf(cur.i))), weight: LINE_W + 2, opacity: 1, interactive: false });
+      curLine = casedLine(cur.pts, { renderer: renderer, color: groupColor(groupOf(modeOf(cur.i))), weight: LINE_W + 2, opacity: 1, interactive: false });
       pathLayer.addLayer(curLine);
     }
     // The trip carried over from the day before stays drawn once it has ended.
     var cdone = !!carry && scrubV < 1000 && t >= D.end[carry.i];
     if (cdone && !carryLine) {
-      carryLine = L.polyline(tripPath(carry.i), { renderer: renderer, color: groupColor(groupOf(modeOf(carry.i))), weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
+      carryLine = casedLine(tripPath(carry.i), { renderer: renderer, color: groupColor(groupOf(modeOf(carry.i))), weight: LINE_W, opacity: lineOp(), lineCap: 'round', lineJoin: 'round', interactive: false });
       pathLayer.addLayer(carryLine);
     } else if (!cdone && carryLine) { pathLayer.removeLayer(carryLine); carryLine = null; }
     if (P_pos) {
@@ -1764,12 +1848,13 @@ function playMoveEnd() {
   requestAnimationFrame(function () { moveLabelWraps().forEach(function (w) { w.style.opacity = ''; }); });
   if (moveFx.lines) {
     moveFx.lines = false;
-    requestAnimationFrame(function () { requestAnimationFrame(function () { map.getPane('overlayPane').style.opacity = ''; }); });
+    requestAnimationFrame(function () { requestAnimationFrame(function () { linePanes().forEach(function (p) { p.style.opacity = ''; }); }); });
   }
 }
+function linePanes() { return [map.getPane('overlayPane'), map.getPane('casePane')].filter(Boolean); }
 function moveLines(z) {
   if (!moveFx.on || moveFx.lines || moveFx.z === null || z - moveFx.z <= 1) return;
-  moveFx.lines = true; map.getPane('overlayPane').style.opacity = 0;
+  moveFx.lines = true; linePanes().forEach(function (p) { p.style.opacity = 0; });
 }
 // Every tile a move passes through. Its path is worked out with the same maths as Leaflet's
 // flyTo (zoom out, glide, zoom in), sampled, and the tiles of each view along it listed: the base
@@ -1922,6 +2007,18 @@ function posIcon(m, ic) {
   if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
   return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(ic || m) + '</div><span class="pos-speed" hidden></span>', iconSize: [30, 30], iconAnchor: [15, 15] });
 }
+// Phosphor icons as images, for the canvas of the other map views (in the colour given).
+var phIconImg = {};
+function phIconImage(name, color) {
+  var k = name + color;
+  if (!phIconImg[k]) {
+    var im = new Image();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="48" height="48" fill="' + color + '">' + PH[name].replace(/class="ph2"/g, 'opacity=".4"') + '</svg>');
+    im.onload = function () { if (P && P.proj) paintProj(playing); };
+    phIconImg[k] = im;
+  }
+  return phIconImg[k].complete && phIconImg[k].naturalWidth ? phIconImg[k] : null;
+}
 // The line-drawn gear icons as images, for the canvas of the other map views.
 var lineIconImg = {};
 function lineIconImage(name) {
@@ -2005,11 +2102,16 @@ function rollOn() {
   playFit.i = i;
   return true;
 }
-$('scrubToggle').addEventListener('click', function () {
-  PREFS.scrub = !PREFS.scrub; savePrefs();
+function setScrub(on) {
+  PREFS.scrub = on;
   // Hiding the slider shows every trip again.
   if (!PREFS.scrub) { stopPlay(); if (scrubV < 1000) scrubTo(1000); }
   updateTopbar();
+}
+$('scrubToggle').addEventListener('click', function () { setScrub(!PREFS.scrub); });
+$('playClose').addEventListener('click', function () { setScrub(false); });
+document.addEventListener('keydown', function (e) {
+  if (e.key === 'Escape' && document.body.classList.contains('play-mode') && !document.querySelector('.sheet.open, dialog[open]')) setScrub(false);
 });
 $('playBtn').addEventListener('click', function () { if (playing) stopPlay(); else play(); });
 $('speedBtn').addEventListener('click', function () {
@@ -2118,7 +2220,12 @@ function nightness(alt) { return Math.max(0, Math.min(1, (-alt - 0.5) / 7)); }
 var night = { tl: null };
 function nightTiles(on) {
   if (on && !night.tl) {
-    if (!map.getPane('nightBase')) { wrapPane(map, 'nightBase', 210); wrapPane(map, 'nightLabels', 451); }
+    if (!map.getPane('nightBase')) {
+      wrapPane(map, 'nightBase', 210); wrapPane(map, 'nightLabels', 451);
+      night.tint = tintPair(map, 'nightTintA', 'nightTintB'); paintTint(night.tint, true);
+      inkLabels(map.getPane('nightLabels').parentNode, true);
+    }
+    night.tint.forEach(function (w) { w.style.display = ''; });
     var u = 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_';
     night.tl = [
       L.tileLayer(u + 'Base/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, maxNativeZoom: 16, pane: 'nightBase' }),
@@ -2128,6 +2235,7 @@ function nightTiles(on) {
   } else if (!on && night.tl) {
     night.tl.forEach(function (l) { map.removeLayer(l); });
     night.tl = null;
+    if (night.tint) night.tint.forEach(function (w) { w.style.display = 'none'; });
     setMask(map.getPane('labels').parentNode, null);
   }
 }
@@ -2186,7 +2294,8 @@ function paintSky(force) {
     }
   }
   gk.putImageData(mk, 0, 0); gi.putImageData(mi, 0, 0);
-  ['nightBase', 'nightLabels'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(map, wr); setMask(wr, sky.mk.toDataURL()); });
+  var mk = sky.mk.toDataURL();
+  ['nightBase', 'nightLabels', 'nightTintA', 'nightTintB'].forEach(function (p) { var wr = map.getPane(p).parentNode; placeWrap(map, wr); setMask(wr, mk); });
   var lw = map.getPane('labels').parentNode;
   placeWrap(map, lw); setMask(lw, sky.mi.toDataURL());
   g.putImageData(img, 0, 0);
@@ -2205,8 +2314,8 @@ function legend() {
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
   if (PREFS.cc) {
-    h += '<span><i style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
-    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
+    h += '<span><i class="lg-area" style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
+    if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i class="lg-area" style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
   }
   $('mapLegend').innerHTML = h;
   $('mapLegend').hidden = !h || !sel.length && !selV.length;
@@ -2763,7 +2872,7 @@ function paintProj(fast) {
         var col = cssVar(groupOf(pm).v);
         ctx.globalAlpha = 1; ctx.fillStyle = cssVar('--on-color'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
-        var ic = posIc(), img = LINE_ICONS[ic] && lineIconImage(ic);
+        var ic = posIc(), img = LINE_ICONS[ic] ? lineIconImage(ic) : PH[ic] || PH[pm] ? phIconImage(PH[ic] ? ic : pm, cssVar(/^#fedf02$/i.test(col) ? '--on-bike' : '--badge-ink')) : null;
         if (img) ctx.drawImage(img, xy[0] - 8, xy[1] - 8, 16, 16);
         else {
           ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = cssVar('--on-color');
