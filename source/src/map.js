@@ -255,6 +255,11 @@ function initMap() {
   map.on('zoomend moveend', buildBeacons);
   map.on('moveend resize', syncAllDot);
   if (map.zoomControl) addZoomAll(map.zoomControl.getContainer());
+  if (map.zoomControl) {
+    var zc = map.zoomControl.getContainer();
+    zc.querySelector('.leaflet-control-zoom-in').innerHTML = icon('plus');
+    zc.querySelector('.leaflet-control-zoom-out').innerHTML = icon('minus');
+  }
   heatLayer = new HeatLayer();
   posMarker = L.marker([0, 0], { icon: posIcon(null), interactive: false, keyboard: false, zIndexOffset: 1000 });
   posMarker._mode = null;
@@ -1992,6 +1997,18 @@ function posIcon(m, ic) {
   if (!m) return L.divIcon({ className: '', html: '<div class="pos-dot still"></div>', iconSize: [16, 16], iconAnchor: [8, 8] });
   return L.divIcon({ className: '', html: '<div class="pos-dot moving" style="background:' + modeColor(m) + '">' + icon(ic || m) + '</div><span class="pos-speed" hidden></span>', iconSize: [30, 30], iconAnchor: [15, 15] });
 }
+// Phosphor icons as images, for the canvas of the other map views (in the colour given).
+var phIconImg = {};
+function phIconImage(name, color) {
+  var k = name + color;
+  if (!phIconImg[k]) {
+    var im = new Image();
+    im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="48" height="48" fill="' + color + '">' + PH[name].replace(/class="ph2"/g, 'opacity=".4"') + '</svg>');
+    im.onload = function () { if (P && P.proj) paintProj(playing); };
+    phIconImg[k] = im;
+  }
+  return phIconImg[k].complete && phIconImg[k].naturalWidth ? phIconImg[k] : null;
+}
 // The line-drawn gear icons as images, for the canvas of the other map views.
 var lineIconImg = {};
 function lineIconImage(name) {
@@ -2840,7 +2857,7 @@ function paintProj(fast) {
         var col = cssVar(groupOf(pm).v);
         ctx.globalAlpha = 1; ctx.fillStyle = cssVar('--on-color'); ctx.beginPath(); ctx.arc(xy[0], xy[1], 15, 0, 7); ctx.fill();
         ctx.fillStyle = col; ctx.beginPath(); ctx.arc(xy[0], xy[1], 12, 0, 7); ctx.fill();
-        var ic = posIc(), img = LINE_ICONS[ic] && lineIconImage(ic);
+        var ic = posIc(), img = LINE_ICONS[ic] ? lineIconImage(ic) : PH[ic] || PH[pm] ? phIconImage(PH[ic] ? ic : pm, cssVar(/^#fedf02$/i.test(col) ? '--on-bike' : '--badge-ink')) : null;
         if (img) ctx.drawImage(img, xy[0] - 8, xy[1] - 8, 16, 16);
         else {
           ctx.save(); ctx.translate(xy[0] - 8, xy[1] - 8); ctx.scale(16 / 24, 16 / 24); ctx.fillStyle = cssVar('--on-color');

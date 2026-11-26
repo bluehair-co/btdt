@@ -18,6 +18,7 @@ DUO = {
     'castle': 'castle-turret', 'church': 'church', 'mosque': 'mosque', 'synagogue': 'synagogue', 'museum': 'bank',
     'lighthouse': 'lighthouse', 'windmill': 'windmill', 'mountains': 'mountains', 'palm': 'tree-palm', 'bridge': 'bridge',
     'tent': 'tent', 'park': 'park', 'city': 'buildings',
+    'OTHER': 'circle', 'sunrise': 'sun-horizon', 'sunset': 'sun-horizon', 'globe': 'globe-hemisphere-east',
 }
 BOLD = {
     'more': 'dots-three', 'split': 'scissors', 'select': 'lasso', 'undo': 'arrow-counter-clockwise', 'chart': 'chart-bar',
@@ -28,7 +29,7 @@ BOLD = {
     'sync': 'arrows-clockwise', 'bolt': 'lightning', 'ruler': 'ruler', 'edit': 'pencil-simple', 'hide': 'eye-slash',
     'groupWork': 'circles-three', 'info': 'info', 'help': 'question', 'shield': 'shield', 'left2': 'caret-double-left',
     'right2': 'caret-double-right', 'clock': 'clock', 'zoomOut': 'magnifying-glass-minus', 'zoomIn': 'magnifying-glass-plus',
-    'sun': 'sun', 'night': 'moon',
+    'sun': 'sun', 'night': 'moon', 'pinOff': 'gps-slash', 'map': 'map-trifold', 'plus': 'plus', 'minus': 'minus',
 }
 def inner(path):
     s = open(path).read()
