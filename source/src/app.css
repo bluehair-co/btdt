@@ -6,26 +6,31 @@
    The design system page mirrors these names. */
 :root {
   /* Transport colours, both themes (the map uses the light set by day, the dark set at night) */
-  --road-light: #2a78d6; --air-light: #eb6834; --transit-light: #1baf7a; --foot-light: #eda100;
-  --bike-light: #6250d6; --water-light: #e87ba4; --other-light: #9aa49d; --unknown-light: #6e7491;
-  --road-dark: #3987e5; --air-dark: #d95926; --transit-dark: #199e70; --foot-dark: #c98500;
-  --bike-dark: #9085e9; --water-dark: #d55181; --other-dark: #5d6961; --unknown-dark: #8e93ae;
+  --road-light: #2F5BD3; --air-light: #E8418A; --transit-light: #1F9466; --foot-light: #C85A1A;
+  --bike-light: #FEDF02; --water-light: #7444B5; --other-light: #9aa49d; --unknown-light: #6e7491;
+  --road-dark: #7F9CFF; --air-dark: #FF72B4; --transit-dark: #3DCB8E; --foot-dark: #FFA45C;
+  --bike-dark: #FEDF02; --water-dark: #B48DFF; --other-dark: #8a948d; --unknown-dark: #8e93ae;
 
-  /* Surfaces and text */
-  --bg: #EBEAF5;
-  --panel: #F6F5FC;
-  --glass: rgba(246, 245, 252, .92);
-  --fg: #221f45;
-  --muted: #6b6688;
-  --line: #DCD9EC;
-  --grid: #E6E4F1;
-  --chip-on-bg: #FBEBC0;
-  --chip-on-fg: #6E4E00;
-  --accent: #3D3591;
-  --accent-fg: #ffffff;
-  --on-color: #fff;            /* icons, text and outlines on a coloured fill, and the white casing of lines on the map */
-  --danger: #c62f27;           /* Delete and Remove buttons, error messages, points to ignore, the playback dot */
-  --shadow: 0 8px 28px rgba(34, 31, 69, .10);
+  /* Surfaces and text: v2.0 is printed in three inks (blue, pink, yellow) on paper, like the landing picture */
+  --bg: #F2E8D9;               /* the paper */
+  --panel: #FBF6EC;
+  --glass: rgba(251, 246, 236, .94);
+  --fg: #1E3A9E;               /* the blue ink */
+  --muted: #5A6496;
+  --line: #D9CDBB;
+  --grid: #EADFCB;
+  --chip-on-bg: #FEDF02;       /* selected: the yellow ink */
+  --chip-on-fg: #1E3A9E;
+  --accent: #1E3A9E;
+  --accent-fg: #FBF6EC;
+  --on-color: #FBF6EC;         /* icons, text and outlines on a coloured fill, and the casing of lines on the map */
+  --on-bike: #1E3A9E;          /* icons on the yellow cycling fill, where paper colour wouldn't read */
+  --danger: #C8283A;           /* Delete and Remove buttons, error messages, points to ignore, the playback dot */
+  --pink: #FF4FA0;             /* the pink ink: marks and highlights */
+  --edge: var(--fg);           /* the ink edge of everything that floats over the app */
+  --offset: #FC8EB4;           /* and its pink block, printed a little off register */
+  --shadow: 4px 4px 0 var(--offset);
+  --badge-ink: #FBF6EC;        /* icons on transport and place badges */
 
   /* Transport (themed) */
   --m-road: var(--road-light); --m-air: var(--air-light); --m-transit: var(--transit-light); --m-foot: var(--foot-light);
@@ -34,10 +39,10 @@
   --cc-air: var(--m-road); --cc1: var(--m-road); --cc2: var(--m-air); --cc3: var(--m-transit); --cc4: var(--m-foot);
   --cc5: var(--m-water); --cc6: #008300; --cc7: var(--m-bike); --cc8: #e34948;
   --rule: #0f7c8c;             /* MyRules: its icon, named places, place radius */
-  --check: #c98a00; --check-bg: #fff8e6;            /* "Check" box for guessed types */
-  --tag-guess-fg: #8a5a00; --tag-guess-bg: #fff1cc; /* Guessed */
-  --tag-sim-fg: #1f4f8a; --tag-sim-bg: #dde9fb;     /* Simulated */
-  --tag-inf-fg: #0b6672; --tag-inf-bg: #d9f1f3;     /* Inferred */
+  --check: #B89400; --check-bg: #FFF8D6;            /* "Check" box for guessed types */
+  --tag-guess-fg: #6B5300; --tag-guess-bg: #FDF0A0; /* Guessed */
+  --tag-sim-fg: #1E3A9E; --tag-sim-bg: #DCE3F7;     /* Simulated */
+  --tag-inf-fg: #126447; --tag-inf-bg: #D3EEE2;     /* Inferred */
   --sun-rise: #d98a1c; --sun-set: #6a55b0;          /* playback: sunrise and sunset */
   --strava: #fc4c02;           /* Strava's brand orange */
   --rec-mark: #34405a;         /* "Recorded on" mark */
@@ -102,15 +107,17 @@
 }
 /* The dark theme: only what differs from the light one. */
 :root[data-theme="dark"] {
-  --bg: #15122f; --panel: #1f1b42; --glass: rgba(31, 27, 66, .92); --fg: #f3eefb; --muted: #aaa3c8; --line: #2f2a58; --grid: #29244f; --chip-on-bg: #4a2f3d; --chip-on-fg: #ffc59a; --accent: #f59a5c; --accent-fg: #22122a; --danger: #ff6b5e;
-  --shadow: 0 8px 28px rgba(5, 3, 20, .55);
+  --bg: #121C52; --panel: #1B2766; --glass: rgba(27, 39, 102, .94); --fg: #F2E8D9; --muted: #A9B0D8; --line: #2E3C86; --grid: #24317A;
+  --chip-on-bg: #FEDF02; --chip-on-fg: #121C52; --accent: #FF72B4; --accent-fg: #121C52; --danger: #FF7A85; --on-bike: #121C52;
+  --pink: #FF72B4; --edge: #3F51A8; --badge-ink: #121C52; --offset: rgba(255, 114, 180, .55);
   --m-road: var(--road-dark); --m-air: var(--air-dark); --m-transit: var(--transit-dark); --m-foot: var(--foot-dark);
   --m-bike: var(--bike-dark); --m-water: var(--water-dark); --m-other: var(--other-dark); --m-unknown: var(--unknown-dark);
+  --rule: #2FB5C4;
   --cc8: #e66767;
-  --check: #e0a92e; --check-bg: #2b220c;
-  --tag-guess-fg: #ffd27a; --tag-guess-bg: #3d2e0a;
-  --tag-sim-fg: #a9cbff; --tag-sim-bg: #14284a;
-  --tag-inf-fg: #8fe0e8; --tag-inf-bg: #0f3439;
+  --check: #FEDF02; --check-bg: #2A2F4A;
+  --tag-guess-fg: #FEDF02; --tag-guess-bg: #3A3A2A;
+  --tag-sim-fg: #B9C8FF; --tag-sim-bg: #22327A;
+  --tag-inf-fg: #8FE6BF; --tag-inf-bg: #163F4A;
   --sun-rise: #e8a23a; --sun-set: #a99bff;
   --globe-sea: #17143a; --globe-grid: #241f4d; --globe-land: #262150; --globe-coast: #3d3768;
   --heat-0: rgba(255,140,110,0); --heat-1: #a8392b; --heat-2: #e2574a; --heat-3: #ff9a85; --heat-4: #ffe1d9;
@@ -1330,3 +1337,31 @@ details.when-more > .sec:last-child { border-bottom: 0; }
   body.drift-mode .dr-bar { left: auto; right: 16px; transform: none; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 400px; max-height: none; }
   body.drift-mode .prompt-mode { left: 0; right: 432px; }
 }
+
+/* ---------- v2.0: the print ----------
+   Everything that floats over the app (bars, map buttons, sheets, menus, prompts, the dock, the pill)
+   gets the ink edge; its --shadow is the pink block printed a little off register. Cards that sit on
+   the page (Insights, Timeline) keep a plain line and no shadow. */
+.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .mr-dlg, .toast, .sel-bar, .tools-menu, .more-menu, .prompt,
+.leaflet-tooltip.trip-tip, .proj-tip, .tip, .map-legend, #map .leaflet-control-zoom, .split-menu { border: 2px solid var(--edge); }
+.sheet { border: 2px solid var(--edge); border-bottom: 0; }
+#map .leaflet-control-zoom { box-shadow: var(--shadow); }
+/* Controls: outlined in ink, selected in the yellow ink */
+.btn { border-width: 2px; border-color: var(--fg); font-weight: 600; }
+.btn.primary { border-color: var(--accent); }
+.btn.quiet { border-color: transparent; }
+.btn.danger { border-color: var(--danger); }
+.chip, .seg { border-width: 2px; border-color: var(--fg); }
+.chip[aria-pressed="true"], .chip[aria-pressed="mixed"] { border-color: var(--fg); }
+:root[data-theme="dark"] .chip[aria-pressed="true"] { border-color: var(--chip-on-bg); }
+.seg button + button { border-left: 2px solid var(--fg); }
+.seg button { color: var(--fg); }
+.seg button[aria-pressed="true"] { color: var(--chip-on-fg); }
+.switch { box-shadow: inset 0 0 0 2px var(--fg); }
+.switch:checked { box-shadow: none; }
+/* Transport and place badges: round, ringed, with a small pink offset */
+.mode-badge { border-radius: 50%; border: 2px solid var(--edge); box-shadow: 2px 2px 0 var(--offset); color: var(--badge-ink); box-sizing: border-box; }
+:root[data-theme="dark"] .mode-badge { border-color: var(--bg); }
+.mode-badge.sm { border-radius: 50%; }
+.mode-badge[style*="m-bike"], .mode-badge[style*="bike-"] { color: var(--on-bike); }
+.card-head h2, .card-title h2 { font-family: var(--font-display); font-weight: 800; }
