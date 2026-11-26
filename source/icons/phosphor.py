@@ -31,6 +31,16 @@ BOLD = {
     'right2': 'caret-double-right', 'clock': 'clock', 'zoomOut': 'magnifying-glass-minus', 'zoomIn': 'magnifying-glass-plus',
     'sun': 'sun', 'night': 'moon', 'pinOff': 'gps-slash', 'map': 'map-trifold', 'plus': 'plus', 'minus': 'minus',
 }
+# Gear icons drawn to match the duotone set (source/icons/gear/<name>.svg, exported from Figma):
+# the solid shapes in one ink, the soft fill (opacity 0.2) as the second, drawn underneath.
+GEAR = ['halfbike', 'strida']
+def gear(name):
+    body = inner(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'gear', name + '.svg'))
+    soft, solid = [], []
+    for p in re.findall(r'<path[^>]*/>', body):
+        if 'opacity="0.2"' in p: soft.append(p.replace(' opacity="0.2"', '').replace(' fill="black"', '').replace('/>', ' class="ph2"/>'))
+        else: solid.append(p.replace(' fill="black"', ''))
+    return ''.join(soft + solid)
 def inner(path):
     s = open(path).read()
     return s[s.index('>') + 1:s.rindex('</svg>')].strip()
@@ -41,6 +51,8 @@ def main():
         body = inner(os.path.join(root, 'assets/duotone', n + '-duotone.svg'))
         body = body.replace(' opacity="0.2"', ' class="ph2"')
         out.append(f"  {k}: '{body}'")
+    for k in GEAR:
+        out.append(f"  {k}: '{gear(k)}'")
     for k, n in BOLD.items():
         out.append(f"  {k}: '{inner(os.path.join(root, 'assets/bold', n + '-bold.svg'))}'")
     block = ('// PHOSPHOR START (written by source/icons/phosphor.py; Phosphor Icons, MIT)\nvar PH = {\n' + ',\n'.join(out) + '\n};\n// PHOSPHOR END')
@@ -51,5 +63,5 @@ def main():
     else:
         s = s.replace('function icon(name, cls) {', block + '\nfunction icon(name, cls) {', 1)
     open(core, 'w').write(s)
-    print(len(DUO) + len(BOLD), 'icons')
+    print(len(DUO) + len(GEAR) + len(BOLD), 'icons')
 main()
