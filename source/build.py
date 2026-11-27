@@ -80,14 +80,14 @@ document.documentElement.setAttribute('data-theme', t); })();</script>
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
 <link rel="stylesheet" href="''' + LEAFLET + '''leaflet.min.css">
 '''
 
 
 PREVIEW_TAG = ('<a href="../" style="position:fixed;z-index:2000;right:10px;top:calc(10px + env(safe-area-inset-top,0px));'
                'padding:3px 10px;border-radius:999px;background:#FEDF02;color:#1E3A9E;border:2px solid #1E3A9E;'
-               'font:600 12px/1.4 \'IBM Plex Sans\',sans-serif;text-decoration:none" title="Back to the current app">v2.0 preview</a>\n')
+               'font:600 12px/1.4 Archivo,sans-serif;text-decoration:none" title="Back to the current app">v2.0 preview</a>\n')
 
 
 def main():
