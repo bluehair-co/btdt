@@ -1150,7 +1150,8 @@ div.hit-row:hover { background: none; }
 .cp-part > :not(.pack-head) { margin-left: 30px; }
 .pack-head { gap: var(--sp-3); }
 .pack-head > .ic { flex: none; width: 22px; height: 22px; fill: var(--fg); }
-#packPart::before { content: ""; position: absolute; left: 10px; top: 30px; bottom: -14px; width: 2px; background: var(--fg); }
+#packPart::before, #roadSec::before { content: ""; position: absolute; left: 10px; top: 30px; bottom: -14px; width: 2px; background: var(--fg); }
+#roadSec::before { bottom: 0; }
 #roadSec { margin-top: var(--sp-6); }
 .cp-on[hidden] { display: none; }
 .cp-status { display: flex; align-items: center; gap: var(--sp-5); margin: var(--sp-5) 0 var(--sp-3); }
@@ -1778,7 +1779,7 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
 :root[data-theme="dark"] .dock button:nth-child(3n)[aria-current="page"]::before { filter: url(#inkDry5); }
 
 /* Country packs: room between the switch's note, the packs and Add a country. */
-#trackNote:not(:empty), #roadNote:not(:empty) { margin: var(--sp-2) 0 var(--sp-6); }
+#trackNote:not(:empty), #roadNote:not(:empty) { margin-top: var(--sp-2); margin-bottom: var(--sp-6); }
 .cp-on .pack-list { margin: var(--sp-5) 0; }
 .cp-on .pack-add { margin-top: var(--sp-6); }
 
