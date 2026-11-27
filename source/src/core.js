@@ -750,32 +750,24 @@ function stampSpots(n) {
   return out;
 }
 function stampRound() {
-  var box = $('busy').querySelector('.ld-stamps'), kinds = STAMPS.slice().sort(function () { return Math.random() - .5; }).slice(0, 7), spots = stampSpots(kinds.length), k = 0;
-  box.classList.remove('clear'); box.innerHTML = '';
-  var still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function put() {
-    var el = document.createElement('div'), st = kinds[k];
-    el.className = 'ld-stamp';
-    el.style.left = spots[k][0] + '%'; el.style.top = spots[k][1] + '%';
-    el.style.setProperty('--r', ((Math.random() * 2 - 1) * 14).toFixed(1) + 'deg');
-    el.innerHTML = stampSvg(st);
-    box.appendChild(el); k++;
-  }
-  if (still) { while (k < kinds.length) put(); return; }
-  put();
-  busy.t = setInterval(function () {
-    if (k < kinds.length) { put(); return; }
-    clearInterval(busy.t);
-    busy.t = setTimeout(function () { box.classList.add('clear'); busy.t = setTimeout(stampRound, 400); }, 900);
-  }, 600);
+  var box = $('busy').querySelector('.ld-stamps'), kinds = STAMPS.slice().sort(function () { return Math.random() - .5; }).slice(0, 7), spots = stampSpots(kinds.length);
+  box.classList.remove('clear');
+  // All seven at once: CSS lands them one after another and clears the page (app.css, ld-s0…6), so
+  // the loop goes on even while the app is too busy to run any code. Each new round, when there is a
+  // moment for it, gets new stamps and places.
+  box.innerHTML = kinds.map(function (st, k) {
+    return '<div class="ld-stamp ld-s' + k + '" style="left:' + spots[k][0] + '%;top:' + spots[k][1] + '%;--r:' + ((Math.random() * 2 - 1) * 14).toFixed(1) + 'deg">' + stampSvg(st) + '</div>';
+  }).join('');
+  var first = box.firstElementChild;
+  if (first) first.addEventListener('animationiteration', function () { if (!$('busy').hidden) stampRound(); }, { once: true });
 }
 function busy(text) {
   var el = $('busy');
-  if (!text) { el.hidden = true; clearInterval(busy.t); clearTimeout(busy.t); busy.t = null; return; }
+  if (!text) { el.hidden = true; return; }
   var m = /^(.*?)\s*·\s*(\d+)%$/.exec(text), pct = m && +m[2] < 100 ? +m[2] : null;
   el.querySelector('.ld-t').textContent = (m ? m[1] : text).replace(/…$/, '') + (m ? '' : '…');
   el.querySelector('.ld-p').textContent = pct === null ? '' : pct + '%';
-  if (el.hidden) { el.hidden = false; clearInterval(busy.t); clearTimeout(busy.t); stampRound(); }
+  if (el.hidden) { el.hidden = false; stampRound(); }
 }
 
 // ---------- countries ----------
