@@ -856,15 +856,12 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
      the top bar moves over into the space left of it. */
   .sheet.right { left: auto; right: 16px; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 360px; max-height: none; transform: translateX(12px); }
   .sheet.right.open { transform: none; }
-  body:has(#layersSheet.open) :is(.topbar, .playbar) { left: calc((100% - 376px) / 2); }
   /* Filters is the same full-height panel on the left, where its button sits in the top bar;
      the top bar moves over into the space right of it, narrowing when it has to. */
   /* Imported data opens in the same place, from the top of the filters. */
   :is(#filtersSheet, #importsSheet, #mrHereSheet) { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
   :is(#filtersSheet, #importsSheet, #mrHereSheet).open { transform: none; }
-  body:has(:is(#filtersSheet, #importsSheet, #mrHereSheet).open) :is(.topbar, .playbar) { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
   /* Settings is a right-hand panel like Views and layers, opened from the right of the top bar. */
-  body:has(#settingsSheet.open) :is(.topbar, .playbar) { left: calc((100% - 376px) / 2); }
   /* The zoom buttons on the left move out from under the filters panel. */
   #map .leaflet-top.leaflet-left, .proj-zoom { transition: left .2s ease; }
   body:has(:is(#filtersSheet, #importsSheet, #mrHereSheet).open) #map .leaflet-top.leaflet-left { left: 436px; }
@@ -1095,15 +1092,22 @@ div.hit-row:hover { background: none; }
 .pack-offer { margin: var(--sp-2) 0 var(--sp-3); }
 /* Station packs and road packs as one timeline: each header has its transport icon, a 2px ink line runs
    from the station icon down to the road icon, and the contents under each header are indented from it */
-#packSec, #roadSec { position: relative; }
-#packSec { border-bottom: 0; }
-#roadSec { margin-top: 0; }
+/* Country packs: Stations and Roads, each with its icon, joined by a line from the train icon down to
+   the car icon; what's under each header is indented from the line. */
+.cp-part { position: relative; }
+.cp-part > :not(.pack-head) { margin-left: 30px; }
 .pack-head { gap: var(--sp-3); }
 .pack-head > .ic { flex: none; width: 22px; height: 22px; fill: var(--fg); }
-#packSec > :not(.pack-head), #roadSec > :not(.pack-head) { margin-left: 30px; }
-#packSec::before, #roadSec::before { content: ""; position: absolute; left: 10px; width: 2px; background: var(--fg); }
-#packSec::before { top: 38px; bottom: 0; }
-#roadSec::before { top: 0; height: 14px; }
+#packPart::before { content: ""; position: absolute; left: 10px; top: 30px; bottom: -14px; width: 2px; background: var(--fg); }
+#roadSec { margin-top: var(--sp-6); }
+.cp-on[hidden] { display: none; }
+.cp-status { display: flex; align-items: center; gap: var(--sp-5); margin: var(--sp-5) 0 var(--sp-3); }
+.cp-status[hidden] { display: none; }
+.cp-status .spin { width: 26px; height: 26px; }
+.cp-status .spin i { border-width: 3.5px; }
+.cp-status .spin[hidden] { display: none; }
+#cpDlg select { width: 100%; margin: var(--sp-3) 0; }
+#cpDlg .pack-head h2 { margin: 0; }
 .pack-offer-h { margin: var(--sp-5) 0 var(--sp-1); font: 600 var(--fs-sm) var(--font-body); color: rgba(255, 255, 255, .85); }
 .pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: var(--sp-2); }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
@@ -1641,3 +1645,26 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 .mr-dlg-body { max-height: calc(100vh - 48px); overflow-y: auto; padding: var(--sp-10); box-sizing: border-box; }
 .mr-dlg-body > p { margin: 0 0 var(--sp-5); }
 .map-legend, .play-date { --bleed: 0px; }
+
+/* ---------- Side panels on a desktop: everything else moves into the space left ----------
+   With a panel open on the left (Filters, Your data) or the right (Menu, Views and layers, …), the top
+   bar, the dock with the buttons beside it, the playback bar and the Insights and Timeline pages centre
+   themselves in the remaining space, narrowing if they must. Insights drops to one column when that
+   space gets too narrow for two. */
+@media (min-width: 960px) {
+  body { --side-l: 0px; --side-r: 0px; }
+  body:has(:is(#filtersSheet, #importsSheet, #mrHereSheet).open) { --side-l: 436px; }
+  body:has(.sheet.right.open:not(#importsSheet):not(#mrHereSheet)) { --side-r: 376px; }
+  .topbar, .playbar, .dock { left: calc(var(--side-l) + (100% - var(--side-l) - var(--side-r)) / 2); transition: left .2s ease, width .2s ease; }
+  .topbar, .playbar { width: min(560px, calc(100% - var(--side-l) - var(--side-r) - 24px)); }
+  #mapPage .fab.fit-all { left: calc(var(--side-l) + (100% - var(--side-l) - var(--side-r)) / 2 - var(--dock-w) / 2 - 12px - 44px); }
+  #mapPage .fab.tools-fab { right: calc(var(--side-r) + (100% - var(--side-l) - var(--side-r)) / 2 - var(--dock-w) / 2 - 12px - 44px); }
+  #insightsPage, #timelinePage { box-sizing: border-box; padding-left: var(--side-l); padding-right: var(--side-r); transition: padding .2s ease; }
+  .page-inner { container-type: inline-size; }
+}
+@container (max-width: 720px) {
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .cards .wide, .cards .span { grid-column: auto; }
+}
+/* The hover card for trips on the map is a slip of paper too (it stays fixed to the pointer). */
+.tip.paper { position: fixed; border-radius: var(--paper-r); }

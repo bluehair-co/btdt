@@ -354,13 +354,16 @@ function trackSettings() {
   var el = $('trackSnap');
   if (!el) return;
   el.checked = !!PREFS.trackSnap;
-  el.disabled = !packCodes().length;
   var n = 0;
   if (D && D.mrTrack) D.mrTrack.forEach(function (x) { if (x) n++; });
-  $('trackNote').textContent = !packCodes().length ? 'Add a country first.' : PREFS.trackSnap ? (D ? tripsText(n) + ' drawn along the railway.' : '') : '';
+  $('trackNote').textContent = PREFS.trackSnap && packCodes().length && D ? tripsText(n) + ' drawn along the railway.' : '';
+  cpDone('rail', $('trackNote').textContent);
 }
 $('trackSnap').addEventListener('change', function () {
   var on = this.checked;
+  $('packOn').hidden = !on;
+  // On with no pack yet: pick a country first (the dialog downloads it and snaps).
+  if (on && !packCodes().length) { PREFS.trackSnap = true; savePrefs(); cpOpen('rail'); return; }
   working(on ? 'Snapping train trips to the tracks…' : 'Taking train trips off the tracks…', function () {
     PREFS.trackSnap = on; savePrefs();
     mrReapply();

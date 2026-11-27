@@ -648,7 +648,9 @@ function working(text, fn) {
   if (!WORKING.n++) WORKING.at = performance.now();
   $('workingText').textContent = text || 'Working on it…';
   $('workingBar').hidden = true;
-  workingShow(true);
+  // The Country packs dialog shows its own work (the snapping after a download) instead of the pill.
+  var cp = $('cpDlg');
+  if (cp && cp.open && typeof cpStatus === 'function') cpStatus(text || 'Working on it…', null, true); else workingShow(true);
   var done = false;
   function go() {
     if (done) return;
