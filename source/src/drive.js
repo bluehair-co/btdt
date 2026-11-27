@@ -76,7 +76,7 @@ function driveFetch(path, opt) {
   opt.headers = Object.assign({ Authorization: 'Bearer ' + DRIVE.token }, opt.headers || {});
   return fetch(DRIVE_API + path, opt).then(function (res) {
     if (res.status === 401) { DRIVE.token = null; DRIVE.exp = 0; driveKeep(); throw Object.assign(new Error('Sign in to sync'), { signin: true }); }
-    if (res.status === 404) throw Object.assign(new Error('The rules file is no longer in your Drive.'), { gone: true });
+    if (res.status === 404) throw Object.assign(new Error('The My Edits file is no longer in your Drive.'), { gone: true });
     if (!res.ok) throw new Error('Google Drive answered ' + res.status + '.');
     return res;
   });
@@ -199,7 +199,7 @@ function driveSync(ask) {
     });
   }).then(function () {
     DRIVE.at = Date.now(); DRIVE.err = ''; DRIVE.state = 'ok'; driveKeep();
-    if (conflicts) toast(conflicts + ' rule' + (conflicts === 1 ? ' was' : 's were') + ' changed on two devices: the one saved last was kept.');
+    if (conflicts) toast(conflicts + ' edit' + (conflicts === 1 ? ' was' : 's were') + ' changed on two devices: the one saved last was kept.');
     else if (pill) toast(changed ? 'My Edits updated from Google Drive.' : 'My Edits are in sync with Google Drive.');
   }, function (e) {
     DRIVE.state = e && e.signin ? 'signin' : 'err'; DRIVE.err = e && e.message || 'Could not sync.';
@@ -244,11 +244,11 @@ function driveRow() {
     : DRIVE.state === 'signin' ? 'Sign in again to sync.'
     : DRIVE.state === 'err' ? esc(DRIVE.err)
     : DRIVE.at ? 'Synced at ' + clock(DRIVE.at, null, Date.now() - DRIVE.at > 20 * 3600000) + '.' : 'Connecting…';
-  return '<div class="mr-drive"><div class="mr-drive-head"><b>Keep your rules</b>' + infoBtn('driveInfo', 'About where your rules are kept') + '</div>' +
-    '<div class="seg full" id="driveWhere" role="group" aria-label="Keep your rules">' +
+  return '<div class="sec mr-drive"><div class="mr-drive-head"><h3>Keep your edits</h3>' + infoBtn('driveInfo', 'About where your edits are kept') + '</div>' +
+    '<div class="seg full" id="driveWhere" role="group" aria-label="Keep your edits">' +
     '<button type="button" data-w="local" aria-pressed="' + !on + '">On this device</button><button type="button" data-w="drive" aria-pressed="' + on + '">In Google Drive</button></div>' +
-    '<p class="fine mr-drive-what">Only your rules: gear, place names, routines and your fixes to trips. Your location history always stays on this device.</p>' +
-    infoBox('driveInfo', '<b>On this device</b> keeps your rules in this browser only; use Export to keep a copy or move them. <b>In Google Drive</b> keeps them in one file in your own Google Drive, so your phone and computer use the same rules: choose it on each device and sign in with the same Google account. BT•DT asks only for the files it makes itself, so it can’t see the rest of your Drive. Each change you make is saved there a moment later; rules from your other devices come in when you open the app or tap Sync. If the same rule was changed on two devices, the one saved last is kept. Google’s sign-in lasts an hour; after that, tap Sync. Going back to On this device stops syncing and leaves the file in your Drive.') +
+    '<p class="fine mr-drive-what">' + (on ? 'Only the edits shown below are saved separately. Your location history always stays on this device.' : 'Saved on this browser only. Export to keep a copy.') + '</p>' +
+    infoBox('driveInfo', '<b>On this device</b> keeps your edits in this browser only; use Export to keep a copy or move them. <b>In Google Drive</b> keeps them in one file in your own Google Drive, so your phone and computer use the same edits: choose it on each device and sign in with the same Google account. BT•DT asks only for the files it makes itself, so it can’t see the rest of your Drive. Each change you make is saved there a moment later; edits from your other devices come in when you open the app or tap Sync. If the same edit was changed on two devices, the one saved last is kept. Google’s sign-in lasts an hour; after that, tap Sync. Going back to On this device stops syncing and leaves the file in your Drive.') +
     // On this device, the card above already says where the rules are and offers Export.
     (on ? '<div class="mr-drive-st"><small id="driveTxt">' + t + '</small><button type="button" class="btn" id="driveSyncBtn"' + (DRIVE.state === 'sync' ? ' disabled' : '') + '>Sync</button></div>' : '<small id="driveTxt" hidden>' + t + '</small>') + '</div>';
 }
@@ -266,7 +266,7 @@ function driveWire() {
     } else {
       DRIVE.on = false; DRIVE.state = 'off'; DRIVE.file = null; DRIVE.version = null; DRIVE.at = 0; DRIVE.token = null; DRIVE.exp = 0;
       driveSetBase(null); driveKeep(); driveShow(); if ($('driveBar')) $('driveBar').hidden = true;
-      toast('Your rules are kept on this device. The file stays in your Google Drive.');
+      toast('Your edits are kept on this device. The file stays in your Google Drive.');
     }
   });
   var sb = $('driveSyncBtn');
@@ -274,7 +274,7 @@ function driveWire() {
 }
 function driveShow() {
   if (DRIVE.on && DRIVE.state === 'signin' && !DEMO)
-    promptBar('driveBar', { icon: 'sync', title: 'Sync My Edits with Google Drive', text: 'Only your rules, never your location history.', acts: [['Sync', 'primary', 'sync']], close: 'Not now',
+    promptBar('driveBar', { icon: 'sync', title: 'Sync My Edits with Google Drive', text: 'Only your edits, never your location history.', acts: [['Sync', 'primary', 'sync']], close: 'Not now',
       on: function (a) { if (!a) return; $('driveBar').hidden = true; if (a === 'sync') driveSync(true); } });
   else if ($('driveBar')) $('driveBar').hidden = true;
   if ($('mrCard')) renderMyRules();

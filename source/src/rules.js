@@ -341,7 +341,7 @@ function mrSnapped(i) { return !!(D.mrSnap && D.mrSnap[i] && D.snap && D.snap[i]
 function mrRoaded(i) { return !!(D.mrRoad && D.mrRoad[i] && D.snap && D.snap[i] === D.mrRoad[i]); }
 function mrTracked(i) { return !!(D.mrTrack && D.mrTrack[i] && D.snap && D.snap[i]); }
 function mrRuleOther(i) { var sn = mrSnapped(i); return !!(D.drift && D.drift[i] || D.mrGear && D.mrGear[i] && !D.mrGear[i].cor && !D.mrGear[i].def || !sn && (D.mrMode && D.mrMode[i] && D.mrMode[i].inf || D.snap && D.snap[i] && !D.snap[i].track && !D.snap[i].road)); }
-function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRoaded(i) ? '<span class="guess inf" title="Drawn along the roads of your road pack">On the roads</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Rule applied</span>' : '') + (D.mrGear && D.mrGear[i] && D.mrGear[i].def ? '<span class="guess" title="Guessed: your default car">Default car</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
+function mrTag(i) { return !D ? '' : (mrEdited(i) ? '<span class="guess inf">Edited</span>' : '') + (mrSnapped(i) ? '<span class="guess inf">Map snap</span>' : '') + (mrTracked(i) ? '<span class="guess inf" title="Drawn along the railway of your station packs">On the tracks</span>' : '') + (mrRoaded(i) ? '<span class="guess inf" title="Drawn along the roads of your road pack">On the roads</span>' : '') + (mrRuleOther(i) ? '<span class="guess inf">Bulk edit</span>' : '') + (D.mrGear && D.mrGear[i] && D.mrGear[i].def ? '<span class="guess" title="Guessed: your default car">Default car</span>' : '') + (mrCheck(i) ? '<span class="guess">Check</span>' : ''); }
 function mrCheck(i) { return !!(D.chk && D.chk[i] >= 0); }
 
 // Corrections, ready to apply: the switched-on ones that point at trips, those on a day or span
@@ -1026,6 +1026,16 @@ function mrChange(text, trip) {
 }
 // A change kept with its description and saved (and synced), without working the trips out again.
 function mrNote(text) {
+  // A new edit while My Edits are off switches them on again: the new edit and all the others apply
+  // and show (mrChange works the trips out again right after this).
+  if (!MR.on) {
+    MR.on = true;
+    if ($('workingText')) {
+      $('workingText').textContent = 'Applying My Edits…'; workingShow(true);
+      if (!WORKING.n) setTimeout(function () { if (!WORKING.n) workingShow(false); }, 700);
+    }
+    setTimeout(function () { if (typeof renderImports === 'function') renderImports(); mrRenderRules(); }, 0);
+  }
   MR.changes.push({ t: Date.now(), text: text });
   MR.doc.about = Object.assign({}, MR.doc.about, { updated: new Date().toISOString(), generator: 'BT•DT' });
   mrSave();
@@ -1189,7 +1199,7 @@ function mrImport(files) {
         ['Replace', '', function () { mrBeforeLosing('Replace', function () { mrUse(doc, name, false); }); }],
         ['Cancel', 'quiet', null]
       ],
-      note: 'Merge keeps your rules and adds the new ones; a rule with the same id is replaced.'
+      note: 'Merge keeps your edits and adds the new ones; an edit with the same id is replaced.'
     });
   }).catch(function (e) { setStatus('My Edits: ' + (e && e.message || e), true); });
 }
@@ -1213,7 +1223,7 @@ function mrMergeDocs(a, b) {
 function mrCount(doc) {
   var n = 0;
   MR_SECTIONS.forEach(function (s) { n += (doc[s] || []).length; });
-  return n + ' rule' + (n === 1 ? '' : 's');
+  return n + ' edit' + (n === 1 ? '' : 's');
 }
 
 // ---------- dialogs ----------
@@ -1273,7 +1283,7 @@ function mrBeforeLosing(what, go) {
   var many = n + ' change' + (n === 1 ? '' : 's');
   mrAsk({
     title: 'Save your edits first?',
-    text: 'Your edits have <b>' + many + '</b> made in the app that are only on this device. ' + (what === 'Remove' ? 'Removing your data deletes them too.' : 'Replacing your rules deletes them.'),
+    text: 'Your edits have <b>' + many + '</b> made in the app that are only on this device. ' + (what === 'Remove' ? 'Removing your data deletes them too.' : 'Replacing your edits deletes them.'),
     extra: '<button type="button" class="btn quiet" id="mrSeeChanges" aria-expanded="false">See the ' + many + '</button><ul class="mr-changes" id="mrChangeList" hidden>' +
       MR.changes.slice().reverse().map(function (c) { return '<li>' + esc(c.text) + ' <span class="fine">' + niceDate(Math.floor((c.t - new Date(c.t).getTimezoneOffset() * 60000) / 864e5)) + '</span></li>'; }).join('') + '</ul>',
     buttons: [
@@ -1298,7 +1308,7 @@ function mrConfirm(what, lost, go) {
       title: what === 'Remove' ? 'Remove your data from this device?' : 'Replace your edits?',
       text: what === 'Remove' ? 'Your trips, stays' + (MR ? ' and My Edits (' + r + ')' : '') + ' will be deleted from this browser. Your original files are not affected.' : 'Your ' + r + ' will be replaced by the new file.',
       buttons: [[(what === 'Remove' ? 'Remove' : 'Replace') + (lost ? ', and lose ' + lost + ' change' + (lost === 1 ? '' : 's') : ''), 'danger', go], ['Cancel', 'quiet', null]],
-      note: lost ? '' : MR && MR.exported ? 'Your exported My Edits file has all of your rules.' : ''
+      note: lost ? '' : MR && MR.exported ? 'Your exported My Edits file has all of your edits.' : ''
     });
   }, 0);
 }
@@ -1307,24 +1317,23 @@ function mrConfirm(what, lost, go) {
 function renderMyRules() {
   var el = $('mrCard');
   if (!el) return;
-  // Export sits in the My Edits header and in Your data, with a dot while changes aren't exported.
   var unsaved = MR && MR.changes.length;
-  $('mrSheetExport').hidden = $('mrExportData').hidden = !MR;
-  $('mrSheetExport').innerHTML = icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '');
-  $('mrSheetExport').classList.add('mr-export');
+  $('mrExportData').hidden = !MR;
+  var intro = infoBox('mrIntro', 'What you know that your files don\'t: your gear over time, your places, your routines, and fixes to trips. Gear periods, routines and other bulk edits fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Bulk edit</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed on its own in Trip info shows as <span class="guess inf">Edited</span>. Switch an edit off to see your data without it.');
   if (!MR) {
-    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Rule applied</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>.myrules.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About My Edits') + '</p>' + (DEMO ? '' : '<div class="mr-card mr-card-drive">' + driveRow() + '</div>');
+    el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Bulk edit</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>BTDT-Edits.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About My Edits') + '</p>' + (DEMO ? '' : driveRow());
     driveWire();
     return;
   }
-  var nGear = 0, nEd = 0, n = MR.changes.length;
+  var nGear = 0, nEd = 0;
   if (D) for (var i = 0; i < D.day.length; i++) { if (mrInferred(i)) nGear++; if (mrEdited(i)) nEd++; }
-  el.innerHTML = '<div class="mr-card"><div class="mr-card-head"><span class="mr-ic">' + icon('edit') + '</span><span class="file-txt"><b>' + esc(MR.name) + '</b><small>' + mrCount(MR.doc) + '</small></span>' +
-    '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply My Edits"' + (MR.on ? ' checked' : '') + '></div>' +
-    '<p class="fine" style="margin:8px 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + (nEd ? ', ' + tripsText(nEd) + ' edited' : '') + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
-    '<span class="fine mr-unsaved">' + (DRIVE.on && DRIVE.at ? '' : n ? n + ' change' + (n === 1 ? '' : 's') + ' not exported' : !MR.exported && !DEMO ? 'Saved in this browser only. Export to keep a copy.' : '') + '</span></div>' +
-    '<p class="fine" style="margin-top:8px">The exported file includes your places, such as home.</p>' + driveRow() + '</div>';
+  // The card: the edits, on or off. Where they're kept, and Export, sit under it.
+  el.innerHTML = '<div class="mr-card"><div class="mr-card-head"><span class="mr-ic">' + icon('edit') + '</span><span class="file-txt"><b>' + esc(MR.name) + ' ' + infoBtn('mrIntro', 'About My Edits') + '</b><small>' + mrCount(MR.doc) + '</small></span>' +
+    '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply My Edits"' + (MR.on ? ' checked' : '') + '></div>' + intro +
+    '<p class="fine" style="margin:8px 0 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + (nEd ? ', ' + tripsText(nEd) + ' edited' : '') + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p></div>' +
+    driveRow() +
+    (DEMO ? '' : '<div class="mr-export-row"><button type="button" class="btn mr-export" id="mrSheetExport">' + icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '') + '</button>' +
+      '<span class="fine mr-unsaved">' + (DRIVE.on && DRIVE.at ? '' : unsaved ? unsaved + ' change' + (unsaved === 1 ? '' : 's') + ' not exported' : '') + '</span></div>');
   driveWire();
   $('mrOn').addEventListener('change', function () { var on = this.checked; working(on ? 'Applying My Edits…' : 'Switching My Edits off…', function () { MR.on = on; mrSave(); mrReapply(); }); });
 }
@@ -1362,11 +1371,12 @@ function mrUnlessTags(r) {
 function mrRenderRules() {
   var h = '';
   var newGear = '<button type="button" class="btn mr-add" data-mr-newgear>New gear…</button>';
-  if (!MR) { $('mrBody').innerHTML = '<p class="fine">No rules yet.</p><div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div></div>'; return; }
+  if (!MR) { $('mrBody').innerHTML = '<p class="fine">No edits yet.</p><div class="sec" data-mr-tab="gear"><div class="sec-head"><h3>Gear</h3>' + newGear + '</div></div>'; return; }
   // Switched off, no rule changes anything: say so where the rules are, with the switch at hand.
   // Off: the counts, left-out trips and lines the rules would have.
   var W = MR.on || !MR_WOULD ? { count: MR_COUNT, left: MR_LEFT, line: D && D.mrLine } : MR_WOULD;
-  if (!MR.on) h += '<p class="fine mr-warn">' + infoMore('My Edits are switched off.', 'None of these rules change your trips. Routines and corrections show how many trips they would change.', 'About switched-off rules') + ' <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>';
+  // Switched off: the edits are hidden (they change nothing), with the switch at hand.
+  if (!MR.on) { $('mrBody').innerHTML = '<p class="fine mr-warn">' + infoMore('My Edits are switched off, so they\'re hidden.', 'None of your edits change your trips while they\'re off. If you edit a trip now, My Edits switch on again, with all your edits.', 'About switched-off edits') + ' <button type="button" class="link-btn" id="mrSwitchOn">Switch them on</button></p>'; return; }
   if (D && MR.on) h += mrCleanBar();
   if (MR_AMB) h += '<p class="fine mr-warn">' + infoMore(tripsText(MR_AMB) + ' fit two gear periods equally well, so they got no gear.', 'Narrow one of the periods (a shorter period, or a distance limit) to pick one.') + '</p>';
   var gear = mrList('gear'), places = mrList('places'), moves = mrList('moves'), cor = mrList('corrections'), rout = mrList('routines'), snaps = mrList('snaps'), spots = mrList('gps_spots'), splits = mrList('splits'), merges = mrList('place_merges');
@@ -1445,21 +1455,25 @@ function mrRenderRules() {
     var t = r.trip && r.trip.start ? mrRefWhen(r.trip.start) : r.id;
     return mrRuleRow('splits', r, t + (r.trip && r.trip.mode ? ' · ' + (LABEL[r.trip.mode] || r.trip.mode).toLowerCase() : ''), bits.join(' · '), r.keep ? 'undo' : 'split', 'var(--muted)', null);
   }).join('') + '</div>';
-  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length && !spots.length && !splits.length && !merges.length) h = '<p class="fine">No rules yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
-  // Tabs, one per kind of rule that has any, so a long list is easy to browse.
-  var tabs = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length + merges.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length + spots.length + splits.length]].filter(function (t) { return t[2] || t[3]; });
-  if (tabs.length > 1) {
-    if (!tabs.some(function (t) { return t[0] === MR_TAB; })) MR_TAB = tabs[0][0];
-    h = '<div class="seg full mr-tabs" role="tablist">' + tabs.map(function (t) {
-      return '<button type="button" role="tab" data-mr-tabbtn="' + t[0] + '" aria-selected="' + (t[0] === MR_TAB) + '" aria-pressed="' + (t[0] === MR_TAB) + '">' + t[1] + ' <span class="n">' + fmt(t[2]) + '</span></button>';
-    }).join('') + '</div>' + h;
-  }
+  if (!gear.length && !places.length && !moves.length && !cor.length && !rout.length && !snaps.length && !spots.length && !splits.length && !merges.length) h = '<p class="fine">No edits yet. Edit a trip (its type, title or gear) to make one, or add gear here.</p>' + h;
+  // One accordion per kind of edit that has any, so a long list is easy to browse; which are open is kept.
+  var groups = [['gear', 'Gear', gear.length, 1], ['places', 'Places', places.length + moves.length + merges.length], ['routines', 'Routines', rout.length], ['snaps', 'Map snaps', snaps.length], ['corrections', 'Corrections', cor.length + spots.length + splits.length]].filter(function (t) { return t[2] || t[3]; });
   var body = $('mrBody');
   body.innerHTML = h;
-  body.classList.toggle('mr-tabbed', tabs.length > 1);
-  if (tabs.length > 1) body.querySelectorAll('[data-mr-tab]').forEach(function (el) { el.hidden = el.dataset.mrTab !== MR_TAB; });
+  body.classList.toggle('mr-acc-on', groups.length > 1);
+  if (groups.length > 1) groups.forEach(function (t) {
+    var secs = body.querySelectorAll('[data-mr-tab="' + t[0] + '"]');
+    if (!secs.length) return;
+    var d = document.createElement('details');
+    d.className = 'mr-acc'; d.dataset.mrAcc = t[0]; d.open = !!MR_OPEN[t[0]];
+    d.innerHTML = '<summary><span class="mr-acc-t">' + t[1] + '</span><span class="n">' + fmt(t[2]) + '</span>' + icon('down') + '</summary>';
+    secs[0].parentNode.insertBefore(d, secs[0]);
+    secs.forEach(function (x) { d.appendChild(x); });
+    d.addEventListener('toggle', function () { MR_OPEN[t[0]] = d.open; });
+  });
 }
-var MR_TAB = 'routines';
+var MR_OPEN = {};
+
 // When a correction is about: its trip's start, its day, the start of its span, its first trip.
 function mrCorTime(c) {
   var t = c.trip || {}, v = t.start || t.day || t.span && t.span[0] || t.trips && t.trips[0] && t.trips[0].start;
@@ -1605,9 +1619,9 @@ function mrCleanAsk() {
       var kinds = {};
       $('mrDlgExtra').querySelectorAll('[data-clean]').forEach(function (el) { if (el.checked) kinds[el.dataset.clean] = 1; });
       if (!Object.keys(kinds).length) return;
-      working('Cleaning up your rules…', function () { mrCleanDo(plan, kinds); });
+      working('Cleaning up your edits…', function () { mrCleanDo(plan, kinds); });
     }], ['Cancel', 'quiet', null]],
-    note: 'You can undo it from the top of your rules until you change anything else or reload the page.'
+    note: 'You can undo it from the top of your edits until you change anything else or reload the page.'
   });
 }
 function mrCleanDo(plan, kinds) {
@@ -1633,7 +1647,7 @@ function mrCleanBar() {
   if (MR_CLEAN && MR.doc.about && MR.doc.about.updated === MR_CLEAN.stamp) return '<p class="fine mr-warn">' + esc(MR_CLEAN.text) + '. <button type="button" class="link-btn" id="mrCleanUndo">Undo</button></p>';
   var plan = mrCleanPlan(), n = plan.items.length;
   if (!n) return '';
-  return '<p class="fine mr-warn mr-clean-bar">' + infoMore('Some corrections can be written more simply.', 'Cleaning up joins several edits on one trip, turns a type your files already had into Type checked, and deletes edits on trips not in your data. Your trips stay the same, and you can undo it.', 'About Clean up rules') + ' <button type="button" class="link-btn" id="mrCleanBtn">Clean up rules</button></p>';
+  return '<p class="fine mr-warn mr-clean-bar">' + infoMore('Some corrections can be written more simply.', 'Cleaning up joins several edits on one trip, turns a type your files already had into Type checked, and deletes edits on trips not in your data. Your trips stay the same, and you can undo it.', 'About Clean up edits') + ' <button type="button" class="link-btn" id="mrCleanBtn">Clean up edits</button></p>';
 }
 $('mrBody').addEventListener('click', function (ev) {
   var cs = ev.target.closest('[data-cor-sort]');
@@ -1641,10 +1655,6 @@ $('mrBody').addEventListener('click', function (ev) {
   if (ev.target.closest('#mrCleanBtn')) { mrCleanAsk(); return; }
   if (ev.target.closest('#mrCleanUndo')) { working('Undoing the clean-up…', mrCleanUndo); return; }
   if (ev.target.closest('#mrSwitchOn')) { working('Applying My Edits…', function () { MR.on = true; mrSave(); mrReapply(); mrRenderRules(); renderImports(); }); return; }
-  var t = ev.target.closest('[data-mr-tabbtn]');
-  if (!t) return;
-  MR_TAB = t.dataset.mrTabbtn;
-  mrRenderRules();
 });
 $('mrBody').addEventListener('click', function (ev) { if (ev.target.closest('[data-mr-newgear]')) mrGearRuleDialog(); });
 $('mrBody').addEventListener('change', function (ev) {
@@ -1653,7 +1663,7 @@ $('mrBody').addEventListener('change', function (ev) {
   var r = mrById(id);
   if (!r) return;
   var on = ev.target.checked;
-  working(on ? 'Applying the rule…' : 'Switching the rule off…', function () {
+  working(on ? 'Applying the bulk edit…' : 'Switching the bulk edit off…', function () {
     if (on) delete r.enabled; else r.enabled = false;
     mrChange((on ? 'Switched on: ' : 'Switched off: ') + (r.name || r.id));
   });
@@ -1684,14 +1694,14 @@ $('mrBody').addEventListener('click', function (ev) {
   if (!b) return;
   var p = b.dataset.mrDel.split(':'), sec = p[0], id = p.slice(1).join(':'), r = mrById(id);
   mrAsk({
-    title: 'Delete this rule?', text: esc(r && (r.name || r.id) || id) + ' will be removed from your edits.',
+    title: 'Delete this edit?', text: esc(r && (r.name || r.id) || id) + ' will be removed from your edits.',
     buttons: [['Delete', 'danger', function () {
       MR.doc[sec] = mrList(sec).filter(function (x) { return x.id !== id; });
       mrChange('Deleted: ' + (r && (r.name || r.id) || id));
     }], ['Cancel', 'quiet', null]]
   });
 });
-$('mrSheetExport').addEventListener('click', mrExport);
+$('mrCard').addEventListener('click', function (ev) { if (ev.target.closest('#mrSheetExport')) mrExport(); });
 $('mrExportData').addEventListener('click', mrExport);
 
 // ---------- trip details ----------
@@ -1706,7 +1716,7 @@ function mrTripBlock(i) {
   function src(id, field) {
     var r = mrById(id), one = r && r.trip && r.trip.start, bulk = r && r.trip && Array.isArray(r.trip.trips);
     if (bulk) return '<div class="fine">From the bulk edit <i>' + esc(r.name || r.id) + '</i> (' + tripsText(r.trip.trips.length) + ') · <button type="button" class="link-btn" data-mr-act="detach" data-r="' + esc(id) + '" data-t="' + i + '">Detach this trip</button>' + (r.trip.trips.length > 1 ? ' · <button type="button" class="link-btn" data-mr-trips="' + esc(id) + '">List its trips</button>' : '') + '</div>';
-    return '<div class="fine">' + (one ? 'Set for this trip' : r && r.trip ? 'From the correction for ' + esc(r.trip.day || (r.trip.span || []).join(' – ')) : 'From the rule <i>' + esc(r ? r.name || r.id : id) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) +
+    return '<div class="fine">' + (one ? 'Set for this trip' : r && r.trip ? 'From the correction for ' + esc(r.trip.day || (r.trip.span || []).join(' – ')) : 'From the bulk edit <i>' + esc(r ? r.name || r.id : id) + '</i>' + (r && r.when ? ', ' + esc(mrWhenText(r.when)) : '')) +
       (field ? ' · <button type="button" class="link-btn" data-mr-act="undo" data-f="' + field + '" data-r="' + esc(id) + '" data-t="' + i + '">Undo</button>' : '') + '</div>';
   }
   var ms0 = D.mrStay && D.mrStay[i];
@@ -1891,7 +1901,7 @@ function mrRemoveEdits(i) {
       toast(eds.length > 1 ? 'Edits removed.' : 'Edit removed.');
       openTrip(i);
     }], ['Cancel', 'quiet', null]],
-    note: 'It goes back to what your files say. Rules like routines and gear periods still apply.'
+    note: 'It goes back to what your files say. Bulk edits like routines and gear periods still apply.'
   });
 }
 function mrDropAction(c, field) {
@@ -2051,7 +2061,7 @@ function mrGearDialog(i) {
       mrCcRow({ how: 'all', list: [] }) +
       '<span class="mr-dates">Only trips under <input type="number" id="mrMax" min="0" step="any" style="width:5em" aria-label="Maximum distance in ' + distUnit() + '"> ' + distUnit() + ' (optional)</span>' +
       '<small class="fine" id="mrCountTxt"></small><small class="fine">Gear recorded by Strava or another activity file is never replaced by a period.</small></span></span></label></div>',
-    buttons: [['Save rule', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
+    buttons: [['Save bulk edit', 'primary', function () { mrSaveGear(i); }], ['Cancel', 'quiet', null]],
     after: function () {
       var sel = $('mrG');
       function prefill() {
@@ -2064,7 +2074,7 @@ function mrGearDialog(i) {
       function count() {
         var f = mrDayNum($('mrFrom').value), t = mrDayNum($('mrTo').value), mx = distSave(parseFloat($('mrMax').value)), cs = mrCcRead(), c = 0;
         for (var j = 0; j < D.day.length; j++) if (D.mode[j] === D.mode[i] && mrCcFits(cs, j) && (!D.gear[j] || D.mrGear[j] && !(mrById(D.mrGear[j].rule) || {}).trip) && !isDup(j) && (f == null || D.day[j] >= f) && (t == null || D.day[j] <= t) && !(mx > 0 && D.km[j] > mx)) c++;
-        $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Rule applied</span>, unless a narrower rule covers them.';
+        $('mrCountTxt').innerHTML = '<b class="num">' + fmt(c) + '</b> ' + esc((LABEL[mode] || mode).toLowerCase()) + ' ' + (c === 1 ? 'trip' : 'trips') + ' in that period have no recorded gear. They get this one, marked <span class="guess inf">Bulk edit</span>, unless a narrower bulk edit covers them.';
       }
       sel.addEventListener('change', prefill);
       document.querySelectorAll('input[name="mrScope"]').forEach(function (r) {
@@ -2266,7 +2276,7 @@ function mrGearRuleDialog(r) {
       if (def) { if (!mrDatesInto(r)) return; delete r.assign; }
       else { r.assign = false; delete r.when; }
       r.name = name; r.mode = $('mrGMode').value; r.kind = $('mrGKind').value;
-      if (isNew) { r = Object.assign({ id: mrNewId(name) }, r); mrEnsure(); (MR.doc.gear || (MR.doc.gear = [])).push(r); MR_TAB = 'gear'; }
+      if (isNew) { r = Object.assign({ id: mrNewId(name) }, r); mrEnsure(); (MR.doc.gear || (MR.doc.gear = [])).push(r); MR_OPEN.gear = true; }
       var match = Object.assign({}, r.match);
       if (m > 0 && def) match.max_km = m; else delete match.max_km;
       if (Object.keys(match).length) r.match = match; else delete r.match;
@@ -2638,7 +2648,7 @@ function mrOfferRoutine(i, mode) {
       '<label class="mr-opt"><input type="checkbox" id="mrRSnap"' + (MR_RAIL[mode] ? ' checked' : '') + '><span><b>Draw them along one line</b><small class="fine">From one of these trips, or from OpenStreetMap for public transport. Trips that don\'t follow it closely enough keep their own.</small></span></label></div>',
     buttons: [['Make a routine', 'primary', function () { mrSaveRoutine(i, mode, x, A, B); }], ['Not now', 'quiet', null]],
     after: function () { mrGhostStart(function () { return mrOfferDraft(i, mode, x, A, B); }); },
-    note: 'Saved in My Edits. What it fills in is marked Rule applied, and you can leave out any trip.'
+    note: 'Saved in My Edits. What it fills in is marked Bulk edit, and you can leave out any trip.'
   });
 }
 // ---------- a routine's trips as ghosts ----------
@@ -3042,14 +3052,14 @@ function mrHereLine() {
   L.forEach(function (x) { x.trips.forEach(function (i) { all[i] = 1; }); });
   var n = Object.keys(all).length;
   sec.hidden = !L.length;
-  if (L.length) $('mrHereTxt').innerHTML = '<b>' + L.length + ' rule' + (L.length === 1 ? '' : 's') + '</b> changed ' + fmt(n) + ' of the trips shown.';
+  if (L.length) $('mrHereTxt').innerHTML = '<b>' + L.length + ' bulk edit' + (L.length === 1 ? '' : 's') + '</b> changed ' + fmt(n) + ' of the trips shown.';
   if (openId === 'mrHereSheet') mrRenderHere(L);
 }
 function mrRenderHere(L) {
   L = L || mrHere();
   var shown = {};
   for (var j = 0; j < sel.length; j++) { var m = MODES[D.mode[sel[j]]]; shown[m] = (shown[m] || 0) + 1; }
-  $('mrHereLead').textContent = filterText() + ' · ' + tripsText(sel.length) + '. ' + (L.length ? 'The rules below changed some of them. Turning one off here keeps it for every other trip.' : 'No gear period or routine changed any of them.');
+  $('mrHereLead').textContent = filterText() + ' · ' + tripsText(sel.length) + '. ' + (L.length ? 'The bulk edits below changed some of them. Turning one off here keeps it for every other trip.' : 'No gear period or routine changed any of them.');
   $('mrHereList').innerHTML = L.map(function (x) {
     var r = x.r, lk = mrRuleLook(r), n = x.trips.length;
     var what = lk.gear ? 'Gear on <b class="num">' + fmt(n) + '</b> of the ' + fmt(shown[r.mode] || n) + ' ' + esc((LABEL[r.mode] || r.mode || '').toLowerCase()) + ' trips shown' : 'Matched <b class="num">' + fmt(n) + '</b> of the trips shown';
@@ -3074,14 +3084,14 @@ function mrTurnOffHere(id) {
   var noun = lk.gear && r.mode === 'CYCLING' ? 'rides' : 'trips', what = n === 1 ? noun.replace(/s$/, '') : noun;
   var chips = fc.words.map(function (w) { return '<span class="chip" aria-pressed="true" style="pointer-events:none">' + esc(w) + '</span>'; }).join(' ');
   var extra = '<div class="mr-form">' + (fc.cond ? '<p class="fine mr-here-f">Your filters: ' + chips + '</p>' +
-    '<label class="mr-opt"><input type="radio" name="mrOffHow" value="cond" checked><span><b>' + (noun === 'rides' ? 'Rides' : 'Trips') + ' like these: ' + esc(mrUnlessText(fc.cond)) + '</b><small class="fine">Saved on the rule as “not on ' + esc(mrUnlessText(fc.cond)) + '”. ' + (noun === 'rides' ? 'Rides' : 'Trips') + ' loaded later follow it too.</small></span></label>' : '') +
-    '<label class="mr-opt"><input type="radio" name="mrOffHow" value="trips"' + (fc.cond ? '' : ' checked') + '><span><b>Just ' + (n === 1 ? 'this ' : 'these ') + fmt(n) + ' ' + what + '</b><small class="fine">Saved as the rule\'s exceptions, one per ' + what.replace(/s$/, '') + '. Nothing else changes.</small></span></label></div>';
+    '<label class="mr-opt"><input type="radio" name="mrOffHow" value="cond" checked><span><b>' + (noun === 'rides' ? 'Rides' : 'Trips') + ' like these: ' + esc(mrUnlessText(fc.cond)) + '</b><small class="fine">Saved on the bulk edit as “not on ' + esc(mrUnlessText(fc.cond)) + '”. ' + (noun === 'rides' ? 'Rides' : 'Trips') + ' loaded later follow it too.</small></span></label>' : '') +
+    '<label class="mr-opt"><input type="radio" name="mrOffHow" value="trips"' + (fc.cond ? '' : ' checked') + '><span><b>Just ' + (n === 1 ? 'this ' : 'these ') + fmt(n) + ' ' + what + '</b><small class="fine">Saved as the bulk edit\'s exceptions, one per ' + what.replace(/s$/, '') + '. Nothing else changes.</small></span></label></div>';
   mrAsk({
     title: 'Turn off ' + name + ' for these trips?',
-    text: lk.gear ? 'It gave gear to <b>' + fmt(n) + '</b> ' + what + ' in what the filters show now. They\'ll have no gear, unless another rule fits them.'
-      : 'It matched <b>' + fmt(n) + '</b> ' + what + ' in what the filters show now. They\'ll be as your files have them, unless another rule fits them.',
+    text: lk.gear ? 'It gave gear to <b>' + fmt(n) + '</b> ' + what + ' in what the filters show now. They\'ll have no gear, unless another bulk edit fits them.'
+      : 'It matched <b>' + fmt(n) + '</b> ' + what + ' in what the filters show now. They\'ll be as your files have them, unless another bulk edit fits them.',
     extra: extra,
-    note: (fc.cond ? 'Transport and gear filters aren\'t part of it: the rule only touches ' + esc((LABEL[lk.gear ? r.mode : (r.then || {}).mode] || 'its own type').toLowerCase()) + ' anyway. ' : 'No date, day, time or country filter is on, so only the trips themselves can be saved. ') + 'Undo it from the rule in My Edits.',
+    note: (fc.cond ? 'Transport and gear filters aren\'t part of it: the bulk edit only touches ' + esc((LABEL[lk.gear ? r.mode : (r.then || {}).mode] || 'its own type').toLowerCase()) + ' anyway. ' : 'No date, day, time or country filter is on, so only the trips themselves can be saved. ') + 'Undo it from the bulk edit in My Edits.',
     buttons: [['Turn off for ' + fmt(n) + ' ' + what, 'primary', function () {
       var how = (document.querySelector('input[name=mrOffHow]:checked') || {}).value;
       if (how === 'cond' && fc.cond) {

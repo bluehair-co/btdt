@@ -1729,3 +1729,27 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
 :root[data-theme="dark"] .dock button[aria-current="page"]::before { mix-blend-mode: normal; filter: url(#inkDry3); }
 :root[data-theme="dark"] .dock button:nth-child(3n+2)[aria-current="page"]::before { filter: url(#inkDry4); }
 :root[data-theme="dark"] .dock button:nth-child(3n)[aria-current="page"]::before { filter: url(#inkDry5); }
+
+/* Country packs: room between the switch's note, the packs and Add a country. */
+#trackNote:not(:empty), #roadNote:not(:empty) { margin: var(--sp-2) 0 var(--sp-6); }
+.cp-on .pack-list { margin: var(--sp-5) 0; }
+.cp-on .pack-add { margin-top: var(--sp-6); }
+
+/* My Edits: where they're kept, and Export, under the card (not in it). */
+.sec.mr-drive { margin-top: var(--sp-8); padding-top: 0; border-top: 0; }
+.mr-drive-head h3 { margin: 0; }
+.mr-export-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-5); margin: var(--sp-6) 0 var(--sp-4); }
+.mr-card-head .file-txt b .info-btn { vertical-align: middle; margin-left: var(--sp-1); }
+/* The kinds of edits as accordions. */
+.mr-acc { border-top: 1.5px dotted var(--fg); }
+.mr-acc:last-of-type { border-bottom: 1.5px dotted var(--fg); }
+.mr-acc > summary { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-6) var(--sp-2); cursor: pointer; list-style: none; font-stretch: 80%; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; font-size: var(--fs-sm); color: var(--fg); }
+.mr-acc > summary::-webkit-details-marker { display: none; }
+.mr-acc > summary:hover { background: var(--hover); }
+.mr-acc > summary .n { font-stretch: 88%; font-variant-numeric: tabular-nums; color: var(--muted); letter-spacing: 0; }
+.mr-acc > summary .ic { margin-left: auto; width: 18px; height: 18px; fill: currentColor; transition: transform .15s; }
+.mr-acc[open] > summary .ic { transform: rotate(180deg); }
+.mr-acc > .sec { margin-top: 0; padding-top: 0; border-top: 0; }
+.mr-acc-on .mr-acc .sec > h3 { display: none; }
+.mr-acc-on .mr-acc .sec + .sec > h3 { display: block; }
+.mr-acc > summary + .sec > .sec-head h3 { display: none; } .mr-acc > summary + .sec > .sec-head { justify-content: flex-end; }
