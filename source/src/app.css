@@ -1682,3 +1682,40 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 }
 /* The hover card for trips on the map is a slip of paper too (it stays fixed to the pointer). */
 .tip.paper { position: fixed; border-radius: var(--paper-r); }
+
+/* ---------- Print: fields, hover, bigger titles ---------- */
+/* Fields (text, number, date, search, drop-downs) are printed like a tax form: a pale, grainy print of
+   the ink with no outline. Focus prints a bar of the ink down the left (yellow stays for what's chosen). */
+:root { --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='1.6'%20numOctaves='2'%20seed='4'/%3E%3CfeColorMatrix%20values='0%200%200%200%200.984%200%200%200%200%200.965%200%200%200%200%200.925%200%200%200%206%20-4.4'/%3E%3C/filter%3E%3Crect%20width='120'%20height='120'%20filter='url(%23g)'/%3E%3C/svg%3E"); --tint: color-mix(in srgb, var(--fg) 11%, transparent); --tint-hi: color-mix(in srgb, var(--fg) 17%, transparent); }
+:root[data-theme="dark"] { --grain: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Cfilter%20id='g'%3E%3CfeTurbulence%20type='fractalNoise'%20baseFrequency='1.6'%20numOctaves='2'%20seed='4'/%3E%3CfeColorMatrix%20values='0%200%200%200%200.106%200%200%200%200%200.153%200%200%200%200%200.4%200%200%200%206%20-4.4'/%3E%3C/filter%3E%3Crect%20width='120'%20height='120'%20filter='url(%23g)'/%3E%3C/svg%3E"); --tint: color-mix(in srgb, var(--fg) 12%, transparent); --tint-hi: color-mix(in srgb, var(--fg) 19%, transparent); }
+input[type="text"], input[type="date"], input[type="number"], input[type="search"], input[type="time"], input:not([type]), select, textarea {
+  background: var(--grain), var(--tint); border: 0; border-radius: 3px; box-shadow: none; color: var(--fg); }
+:is(input[type="text"], input[type="date"], input[type="number"], input[type="search"], input[type="time"], input:not([type]), select, textarea):focus,
+:is(input[type="text"], input[type="date"], input[type="number"], input[type="search"], input[type="time"], input:not([type]), select, textarea):focus-visible {
+  outline: none; background: var(--grain), var(--tint-hi); box-shadow: inset 4px 0 0 var(--fg); }
+select { appearance: none; -webkit-appearance: none; padding-right: 34px; background: var(--chev) no-repeat right 12px center / 14px 14px, var(--grain), var(--tint); }
+select:focus, select:focus-visible { background: var(--chev) no-repeat right 12px center / 14px 14px, var(--grain), var(--tint-hi); }
+:root { --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%231E3A9E' d='M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z'/%3E%3C/svg%3E"); }
+:root[data-theme="dark"] { --chev: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath fill='%23F2E8D9' d='M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z'/%3E%3C/svg%3E"); }
+.tl-search input[type="search"] { background: var(--grain), var(--tint), var(--glass); }
+
+/* Hover: everything you can tap gets the same pale, grainy print of the ink under it. On tabs and
+   segmented controls it sits where the yellow stamp would go, askew like it. */
+:root { --hover: var(--grain), var(--tint); }
+.icon-btn:hover, .mt-caret:hover, .quick button:hover, .daynav .date-btn:hover, .cal-day:hover:not(.on), .hit-row:hover, .tl-trip:hover,
+.tl-search-clear:hover, .tools-menu button:hover, .tools-menu button:focus-visible, .more-menu > button:hover, .more-menu > a:hover,
+.split-menu button:hover, .about-close:hover, .about-maker:hover, .welcome-panel .demo-open:hover, #map .leaflet-control-zoom a:hover,
+.record:hover, .data-row:hover, .chip:not([aria-pressed="true"]):hover, .btn:not(.primary):not(:disabled):hover, .mr-edit:hover { background: var(--hover); }
+.btn:hover { border-color: var(--fg); }
+.data-row:hover { border-color: var(--fg); }
+.tools-menu button:disabled:hover { background: none; }
+.seg button:not([aria-pressed="true"]):not([disabled]):hover::before { content: ""; position: absolute; inset: 3px 2px 1px 4px; z-index: -1; background: var(--hover); border-radius: 2px; transform: rotate(-1.2deg) translate(1.5px, 1px); }
+.seg button:nth-child(3n+2):not([aria-pressed="true"]):hover::before { transform: rotate(.9deg) translate(-1px, 1px); }
+.seg button:nth-child(3n):not([aria-pressed="true"]):hover::before { transform: rotate(-.6deg) translate(1px, -.5px); }
+.dock button:not([aria-current="page"]):hover { background: var(--hover); }
+
+/* Bigger, bolder titles, and the date in the top bar printed like one (no trips and distance under it). */
+.sheet-head h2, .about-head h2 { font-size: 26px; }
+.card-head h2, .card-title h2 { font-size: 24px; }
+.daynav .date-btn b, .summary-pill b { font-family: var(--font-display); font-weight: 850; font-stretch: 112%; font-size: 21px; line-height: 1.1; letter-spacing: -.01em; }
+.daynav .date-btn small, .summary-pill small { display: none; }
