@@ -975,6 +975,13 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .cctl-pins.low { top: 70px; }
 .cctl-pins button { position: absolute; top: 1px; width: 22px; height: 24px; margin-left: -11px; padding: 0; border: 0; background: none; font-size: var(--fs-xs); line-height: 1; cursor: pointer; }
 .cctl-pins button span { position: relative; }
+/* The flag in a pin at half size; close together, a pin is a small mark without one (its country
+   picked below shows it in full again). */
+.cctl-pins button .flag { font-size: .5em; vertical-align: .35em; }
+.cctl-pins button.pent.mini:not(.hl):not(.peek) { width: 12px; height: 13px; margin-left: -6px; top: 12px; }
+.cctl-pins.low button.dot.mini:not(.hl):not(.peek) { top: 8px; width: 12px; height: 12px; margin-left: -6px; }
+.cctl-pins button.mini:not(.hl):not(.peek) span { display: none; }
+.cctl-pins.low button.dot.mini:not(.hl):not(.peek)::after { height: 52px; }
 /* Got out (layover with a visit, short stop): a downward pentagon above the strip. */
 .cctl-pins button.pent > i { position: absolute; inset: 0; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); }
 .cctl-pins button.pent span { top: -3px; }
