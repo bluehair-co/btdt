@@ -1596,6 +1596,7 @@ function syncPeriodNavs() {
     if (q('badge')) { q('badge').hidden = !k; q('badge').textContent = k; }
     if (one) {
       q('label').textContent = F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit);
+      q('label').classList.toggle('big', F.unit === 'year');
       q('sub').textContent = sub;
       q('pick').setAttribute('aria-label', (F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit)) + '. Pick a day');
       q('prev').disabled = !nd.length || nd[0] >= p0;
@@ -1603,6 +1604,7 @@ function syncPeriodNavs() {
       q('prev').setAttribute('aria-label', 'Previous ' + F.unit + ' with trips');
       q('next').setAttribute('aria-label', 'Next ' + F.unit + ' with trips');
     } else {
+      q('rangeMain').classList.toggle('big', F.dm === 'all');
       q('rangeMain').textContent = F.dm === 'all' ? 'All time' : F.from === F.to ? dayLabel(F.from) : niceDate(F.from) + ' – ' + niceDate(F.to);
       q('rangeSub').textContent = sub + (kr ? ' · ' + kr + ' filter' + (kr > 1 ? 's' : '') : '');
     }

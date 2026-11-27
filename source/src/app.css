@@ -1717,7 +1717,9 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
 /* Bigger, bolder titles, and the date in the top bar printed like one (no trips and distance under it). */
 .sheet-head h2, .about-head h2 { font-size: 26px; }
 .card-head h2, .card-title h2 { font-size: 24px; }
-.daynav .date-btn b, .summary-pill b { font-family: var(--font-display); font-weight: 850; font-stretch: 112%; font-size: 21px; line-height: 1.1; letter-spacing: -.01em; }
+.daynav .date-btn b, .summary-pill b { font-family: var(--font-display); font-weight: 850; font-stretch: 112%; font-size: 17px; line-height: 1.1; letter-spacing: -.01em; }
+/* A year or All time is short: printed bigger. */
+.daynav .date-btn b.big, .summary-pill b.big { font-size: 21px; }
 .daynav .date-btn small, .summary-pill small { display: none; }
 
 /* The main navigation (the dock): the open tab is stamped in the dry yellow ink, like the tabs. */

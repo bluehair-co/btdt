@@ -1765,7 +1765,9 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
 /* Bigger, bolder titles, and the date in the top bar printed like one (no trips and distance under it). */
 .sheet-head h2, .about-head h2 { font-size: 26px; }
 .card-head h2, .card-title h2 { font-size: 24px; }
-.daynav .date-btn b, .summary-pill b { font-family: var(--font-display); font-weight: 850; font-stretch: 112%; font-size: 21px; line-height: 1.1; letter-spacing: -.01em; }
+.daynav .date-btn b, .summary-pill b { font-family: var(--font-display); font-weight: 850; font-stretch: 112%; font-size: 17px; line-height: 1.1; letter-spacing: -.01em; }
+/* A year or All time is short: printed bigger. */
+.daynav .date-btn b.big, .summary-pill b.big { font-size: 21px; }
 .daynav .date-btn small, .summary-pill small { display: none; }
 
 /* The main navigation (the dock): the open tab is stamped in the dry yellow ink, like the tabs. */
@@ -9368,6 +9370,7 @@ function syncPeriodNavs() {
     if (q('badge')) { q('badge').hidden = !k; q('badge').textContent = k; }
     if (one) {
       q('label').textContent = F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit);
+      q('label').classList.toggle('big', F.unit === 'year');
       q('sub').textContent = sub;
       q('pick').setAttribute('aria-label', (F.unit === 'day' ? dayLabel(F.one) : periodLabel(F.one, F.unit)) + '. Pick a day');
       q('prev').disabled = !nd.length || nd[0] >= p0;
@@ -9375,6 +9378,7 @@ function syncPeriodNavs() {
       q('prev').setAttribute('aria-label', 'Previous ' + F.unit + ' with trips');
       q('next').setAttribute('aria-label', 'Next ' + F.unit + ' with trips');
     } else {
+      q('rangeMain').classList.toggle('big', F.dm === 'all');
       q('rangeMain').textContent = F.dm === 'all' ? 'All time' : F.from === F.to ? dayLabel(F.from) : niceDate(F.from) + ' – ' + niceDate(F.to);
       q('rangeSub').textContent = sub + (kr ? ' · ' + kr + ' filter' + (kr > 1 ? 's' : '') : '');
     }
