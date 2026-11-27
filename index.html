@@ -1495,16 +1495,16 @@ details.when-more > .sec:last-child { border-bottom: 0; }
    own small tilt and offsets every time it is drawn (paperize() in core.js sets --pp*, --po*, --ps*).
    Corners are 4px. Round buttons are round paper; the map legend is a tilted slip with no print on it. */
 :root { --paper-r: 4px; }
-.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, #map .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .spin-pill {
+.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, #map .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .spin-pill, .paper {
   --paper: var(--panel); background: transparent; border: 0; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; isolation: isolate; border-radius: var(--paper-r); }
 .bar { position: relative; }
 .fab { border-radius: 50%; }
 .proj-zoom, .sheet, .about { overflow: visible; }
 .welcome-panel { position: relative; }
-:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .spin-pill)::before {
-  content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
+:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .spin-pill, .paper)::before {
+  content: ""; position: absolute; inset: calc(-1 * var(--bleed, 3px)); z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
   box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
-:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .about, .welcome-panel, .spin-pill)::after {
+:where(.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .about, .welcome-panel, .spin-pill, .paper)::after {
   content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
   transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
 /* Pressed round buttons are printed on yellow paper */
@@ -1597,7 +1597,7 @@ body.play-mode .playbar { bottom: calc(16px + var(--safe-b)) !important; }
 .play-date, .play-close { --paper: var(--panel); isolation: isolate; border: 0; background: transparent; }
 .play-close { border-radius: 50%; }
 .play-date { border-radius: var(--paper-r); }
-:where(.play-date, .play-close)::before { content: ""; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
+:where(.play-date, .play-close)::before { content: ""; position: absolute; inset: calc(-1 * var(--bleed, 3px)); z-index: -1; border-radius: inherit; pointer-events: none; background: var(--paper);
   box-shadow: var(--psx, 4px) var(--psy, 4px) 0 var(--offset); transform: translate(var(--ppx, 0px), var(--ppy, 0px)) rotate(var(--ppr, 0deg)); }
 :where(.play-date, .play-close)::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; border: 1.5px solid var(--edge);
   transform: translate(var(--pox, 0px), var(--poy, 0px)) rotate(var(--por, 0deg)); }
@@ -1681,6 +1681,15 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 /* The line between a panel's head and its body: a printed dotted rule, a little out of true. */
 .sheet-head, .about-head { position: relative; border-bottom: 0 !important; }
 .sheet-head::after, .about-head::after { content: ""; position: absolute; left: var(--sp-6); right: var(--sp-6); bottom: 0; border-bottom: 1.5px dotted var(--edge); transform: translate(var(--dx, 1.5px), 0) rotate(var(--dr, -.25deg)); pointer-events: none; }
+
+/* Any other panel, dialog or block on paper just takes the class "paper" (and is added to nothing
+   else). The paper reaches --bleed (3px) past the printed outline, so the misregistration shows. */
+.paper { position: relative; }
+.mr-dlg.paper { overflow: visible; padding: 0; border-radius: var(--paper-r); }
+.mr-dlg-body { max-height: calc(100vh - 48px); overflow-y: auto; padding: var(--sp-10); box-sizing: border-box; }
+.mr-dlg-body > p { margin: 0 0 var(--sp-5); }
+.fab, .play-close { --bleed: 2px; }
+.map-legend, .play-date { --bleed: 0px; }
 </style>
 </head>
 <body>
@@ -2281,14 +2290,14 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
     <div class="mr-rad-btns"><button type="button" class="btn quiet" id="mrRadCancel">Cancel</button><button type="button" class="btn primary" id="mrRadSave">Save radius</button></div>
   </div>
 </dialog>
-<dialog class="mr-dlg" id="mrDlg" aria-labelledby="mrDlgTitle">
+<dialog class="mr-dlg paper" id="mrDlg" aria-labelledby="mrDlgTitle"><div class="mr-dlg-body">
   <div class="info-head"><h2 id="mrDlgTitle"></h2><button type="button" id="mrDlgInfoBtn" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrDlgInfo" aria-label="More about this" title="More about this"><span data-icon="info"></span></button></div>
   <p id="mrDlgText"></p>
   <p class="fine info-box" id="mrDlgInfo" hidden></p>
   <div id="mrDlgExtra"></div>
   <div class="mr-dlg-btns" id="mrDlgBtns"></div>
   <p class="fine" id="mrDlgNote"></p>
-</dialog>
+</div></dialog>
 
 
 <!-- Menu: the gear opens it; each row opens a page with a back arrow -->
@@ -6155,7 +6164,7 @@ function localTime(ms, zone, off) {
 // and pink block printed a little off it (the paper rules in app.css). Each sheet gets its own small
 // random tilt and offsets every time it appears. The tilt is kept small for big panels, so their far
 // edges move no more than about 3px.
-var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .play-date, .play-close, .spin-pill';
+var PAPER_SEL = '.dock, .fab, .proj-zoom, .bar, .cal-pop, .playbar, .sel-bar, .tools-menu, .more-menu, .prompt, .split-menu, .leaflet-control-zoom, .sheet, .map-legend, .about, .welcome-panel, .play-date, .play-close, .spin-pill, .paper';
 function paperize(el) {
   function rnd(a) { return ((Math.random() * 2 - 1) * a).toFixed(2); }
   var r = el.getBoundingClientRect(), half = Math.max(r.width, r.height) / 2 || 200;
