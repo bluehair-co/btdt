@@ -233,6 +233,10 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 .seg.full { display: flex; width: 100%; }
 .seg button[disabled] { opacity: .4; cursor: default; }
 .seg.full button { flex: 1; }
+/* Theme: three options of the same width, each with its icon */
+#themeSeg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+#themeSeg button { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-3); }
+#themeSeg .ic { width: 18px; height: 18px; flex: none; fill: currentColor; }
 .quick { display: flex; gap: var(--sp-1); }
 .quick button { font-size: var(--fs-xs); color: var(--accent); background: none; border: 0; padding: var(--sp-2) var(--sp-4); border-radius: 6px; cursor: pointer; }
 .quick button:hover { background: var(--grid); }
@@ -2356,7 +2360,7 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
     <button type="button" class="data-row" id="settingsAbout" aria-haspopup="dialog" aria-controls="about"><span data-icon="info"></span><span class="data-row-txt"><b>About BT•DT</b><small>How it works, getting your files, credits</small></span><span data-icon="right"></span></button>
     <div class="sec">
       <h3>Theme</h3>
-      <div class="seg" role="group" aria-label="Theme" id="themeSeg"><button type="button" data-t="system" aria-pressed="true">System</button><button type="button" data-t="light" aria-pressed="false">Light</button><button type="button" data-t="dark" aria-pressed="false">Dark</button></div>
+      <div class="seg" role="group" aria-label="Theme" id="themeSeg"><button type="button" data-t="system" aria-pressed="true"><span data-icon="themeSystem"></span>System</button><button type="button" data-t="light" aria-pressed="false"><span data-icon="sun"></span>Light</button><button type="button" data-t="dark" aria-pressed="false"><span data-icon="night"></span>Dark</button></div>
     </div>
   </div>
 </aside>
@@ -5387,6 +5391,8 @@ var PH = {
   zoomOut: '<path d="M156,112a12,12,0,0,1-12,12H80a12,12,0,0,1,0-24h64A12,12,0,0,1,156,112Zm76.49,120.49a12,12,0,0,1-17,0L168,185a92.12,92.12,0,1,1,17-17l47.54,47.53A12,12,0,0,1,232.49,232.49ZM112,180a68,68,0,1,0-68-68A68.08,68.08,0,0,0,112,180Z"/>',
   zoomIn: '<path d="M156,112a12,12,0,0,1-12,12H124v20a12,12,0,0,1-24,0V124H80a12,12,0,0,1,0-24h20V80a12,12,0,0,1,24,0v20h20A12,12,0,0,1,156,112Zm76.49,120.49a12,12,0,0,1-17,0L168,185a92.12,92.12,0,1,1,17-17l47.54,47.53A12,12,0,0,1,232.49,232.49ZM112,180a68,68,0,1,0-68-68A68.08,68.08,0,0,0,112,180Z"/>',
   sun: '<path d="M116,36V20a12,12,0,0,1,24,0V36a12,12,0,0,1-24,0Zm80,92a68,68,0,1,1-68-68A68.07,68.07,0,0,1,196,128Zm-24,0a44,44,0,1,0-44,44A44.05,44.05,0,0,0,172,128ZM51.51,68.49a12,12,0,1,0,17-17l-12-12a12,12,0,0,0-17,17Zm0,119-12,12a12,12,0,0,0,17,17l12-12a12,12,0,1,0-17-17ZM196,72a12,12,0,0,0,8.49-3.51l12-12a12,12,0,0,0-17-17l-12,12A12,12,0,0,0,196,72Zm8.49,115.51a12,12,0,0,0-17,17l12,12a12,12,0,0,0,17-17ZM48,128a12,12,0,0,0-12-12H20a12,12,0,0,0,0,24H36A12,12,0,0,0,48,128Zm80,80a12,12,0,0,0-12,12v16a12,12,0,0,0,24,0V220A12,12,0,0,0,128,208Zm108-92H220a12,12,0,0,0,0,24h16a12,12,0,0,0,0-24Z"/>',
+  // A circle half filled: follow the device's light or dark setting.
+  themeSystem: '<path d="M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,192a84,84,0,1,1,84-84A84.09,84.09,0,0,1,128,212Z"/><path d="M128,56V200A72,72,0,0,0,128,56Z"/>',
   night: '<path d="M236.37,139.4a12,12,0,0,0-12-3A84.07,84.07,0,0,1,119.6,31.59a12,12,0,0,0-15-15A108.86,108.86,0,0,0,49.69,55.07,108,108,0,0,0,136,228a107.09,107.09,0,0,0,64.93-21.69,108.86,108.86,0,0,0,38.44-54.94A12,12,0,0,0,236.37,139.4Zm-49.88,47.74A84,84,0,0,1,68.86,69.51,84.93,84.93,0,0,1,92.27,48.29Q92,52.13,92,56A108.12,108.12,0,0,0,200,164q3.87,0,7.71-.27A84.79,84.79,0,0,1,186.49,187.14Z"/>',
   pinOff: '<path d="M252,128a12,12,0,0,1-12,12H219.21a91.65,91.65,0,0,1-3.56,16,12,12,0,0,1-11.43,8.35,12.19,12.19,0,0,1-3.65-.57,12,12,0,0,1-7.78-15.09A68.06,68.06,0,0,0,128,60a68.73,68.73,0,0,0-14.48,1.54,12,12,0,1,1-5.08-23.45c2.49-.54,5-1,7.56-1.31V16a12,12,0,0,1,24,0V36.78A92.21,92.21,0,0,1,219.22,116H240A12,12,0,0,1,252,128Zm-35.12,79.93a12,12,0,1,1-17.76,16.14l-18.65-20.51A91.6,91.6,0,0,1,140,219.2V240a12,12,0,0,1-24,0V219.22A92.21,92.21,0,0,1,36.78,140H16a12,12,0,0,1,0-24H36.79a92.36,92.36,0,0,1,21-47.42L39.12,48.07A12,12,0,1,1,56.88,31.93L190.69,179.11h0ZM164.14,185.6l-90-99a68,68,0,0,0,90,99Z"/>',
   map: '<path d="M231.38,46.54a12,12,0,0,0-10.29-2.18L161.4,59.28l-60-30a12,12,0,0,0-8.28-.91l-64,16A12,12,0,0,0,20,56V200a12,12,0,0,0,14.91,11.64L94.6,196.72l60,30a12,12,0,0,0,8.28.91l64-16A12,12,0,0,0,236,200V56A12,12,0,0,0,231.38,46.54ZM108,59.42l40,20V196.58l-40-20Zm-64,6,40-10V174.63l-40,10ZM212,190.63l-40,10V81.37l40-10Z"/>',
