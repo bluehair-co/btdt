@@ -976,7 +976,7 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .cctl-pins button { position: absolute; top: 1px; width: 22px; height: 24px; margin-left: -11px; padding: 0; border: 0; background: none; font-size: var(--fs-xs); line-height: 1; cursor: pointer; }
 .cctl-pins button span { position: relative; }
 /* Got out (layover with a visit, short stop): a downward pentagon above the strip. */
-.cctl-pins button.pent i { position: absolute; inset: 0; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); }
+.cctl-pins button.pent > i { position: absolute; inset: 0; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); }
 .cctl-pins button.pent span { top: -3px; }
 .cctl-pins button.pent::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 45px; margin-left: -1px; background: var(--c); opacity: .9; pointer-events: none; }
 /* True layover (stayed at the airport): a circle under the strip. */
