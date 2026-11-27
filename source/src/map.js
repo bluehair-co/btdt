@@ -828,7 +828,7 @@ function toolsMenu(open) {
   $('toolsBtn').setAttribute('aria-expanded', open ? 'true' : 'false');
   if (!open) return;
   // Above the button, lined up with its right edge, and never off the screen.
-  menu.style.bottom = Math.max(8, innerHeight - r.top + 8) + 'px';
+  menu.style.bottom = Math.max(8, innerHeight - r.top + 16) + 'px';
   menu.style.right = Math.max(8, Math.min(innerWidth - menu.offsetWidth - 8, innerWidth - r.right)) + 'px';
 }
 $('toolsBtn').addEventListener('click', function (ev) { ev.stopPropagation(); toolsMenu($('toolsMenu').hidden); });
