@@ -1023,6 +1023,13 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .cctl-pins.low { top: 70px; }
 .cctl-pins button { position: absolute; top: 1px; width: 22px; height: 24px; margin-left: -11px; padding: 0; border: 0; background: none; font-size: var(--fs-xs); line-height: 1; cursor: pointer; }
 .cctl-pins button span { position: relative; }
+/* The flag in a pin at half size; close together, a pin is a small mark without one (its country
+   picked below shows it in full again). */
+.cctl-pins button .flag { font-size: .5em; vertical-align: .35em; }
+.cctl-pins button.pent.mini:not(.hl):not(.peek) { width: 12px; height: 13px; margin-left: -6px; top: 12px; }
+.cctl-pins.low button.dot.mini:not(.hl):not(.peek) { top: 8px; width: 12px; height: 12px; margin-left: -6px; }
+.cctl-pins button.mini:not(.hl):not(.peek) span { display: none; }
+.cctl-pins.low button.dot.mini:not(.hl):not(.peek)::after { height: 52px; }
 /* Got out (layover with a visit, short stop): a downward pentagon above the strip. */
 .cctl-pins button.pent > i { position: absolute; inset: 0; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); }
 .cctl-pins button.pent span { top: -3px; }
@@ -12011,6 +12018,7 @@ function cctlDraw() {
   });
   var keep = {}, placedLow = [];
   function airside(x) { return x.layover && !x.visit; }
+  var CCTL_ROOM = 44;   // px a pin needs either side to show its flag
   order.forEach(function (k) {
     var x = CT.stops[k], px = ((x.p0 + x.p1) / 2 - CT.lo) * ppd, must = x.layover || CT.byCc[x.cc].kind, lane = airside(x) ? placedLow : placed;
     if (airside(x) && ppd < CCTL_MONTHS) return;   // true layovers only once months show
@@ -12020,9 +12028,17 @@ function cctlDraw() {
     while (lane.some(function (q) { return Math.abs(q.x - at) < 20; })) at += 22;
     lane.push({ x: at, cc: x.cc }); keep[k] = at;
   });
+  // A pin shows its flag only with room around it (or while its country is picked below); where pins
+  // sit close together they're small marks that just say there was a stop.
+  var roomy = {};
+  [placed, placedLow].forEach(function (lane) { lane.forEach(function (q, n) { q.n = n; }); });
+  Object.keys(keep).forEach(function (k) {
+    var x = CT.stops[k], lane = airside(x) ? placedLow : placed, at = keep[k];
+    roomy[k] = !lane.some(function (q) { return q.x !== at && Math.abs(q.x - at) < CCTL_ROOM; });
+  });
   function pin(x, k) {
     var c = CT.byCc[x.cc], low = airside(x);
-    return '<button type="button" data-s="' + k + '" data-cc="' + x.cc + '" class="' + (low ? 'dot' : 'pent') + (x.layover ? ' air' : '') + (CT.hl === x.cc ? ' hl' : '') + '" style="left:' + (typeof keep[k] === 'number' ? keep[k] : ((x.p0 + x.p1) / 2 - CT.lo) * ppd).toFixed(1) + 'px" aria-label="' + esc(ccName(x.cc)) + ' ' + stopKind(x) + '">' + (low ? '' : '<i></i>') + '<span>' + (flag(x.cc) || '·') + '</span></button>';
+    return '<button type="button" data-s="' + k + '" data-cc="' + x.cc + '" class="' + (low ? 'dot' : 'pent') + (x.layover ? ' air' : '') + (roomy[k] ? '' : ' mini') + (CT.hl === x.cc ? ' hl' : '') + '" style="left:' + (typeof keep[k] === 'number' ? keep[k] : ((x.p0 + x.p1) / 2 - CT.lo) * ppd).toFixed(1) + 'px" aria-label="' + esc(ccName(x.cc)) + ' ' + stopKind(x) + '">' + (low ? '' : '<i></i>') + '<span>' + (flag(x.cc) || '·') + '</span></button>';
   }
   $('cctlPins').innerHTML = CT.stops.map(function (x, k) { return (k in keep) && !airside(x) ? pin(x, k) : ''; }).join('');
   $('cctlPinsLow').innerHTML = CT.stops.map(function (x, k) { return (k in keep) && airside(x) ? pin(x, k) : ''; }).join('');

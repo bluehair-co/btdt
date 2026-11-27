@@ -1197,6 +1197,7 @@ function cctlDraw() {
   });
   var keep = {}, placedLow = [];
   function airside(x) { return x.layover && !x.visit; }
+  var CCTL_ROOM = 44;   // px a pin needs either side to show its flag
   order.forEach(function (k) {
     var x = CT.stops[k], px = ((x.p0 + x.p1) / 2 - CT.lo) * ppd, must = x.layover || CT.byCc[x.cc].kind, lane = airside(x) ? placedLow : placed;
     if (airside(x) && ppd < CCTL_MONTHS) return;   // true layovers only once months show
@@ -1206,9 +1207,17 @@ function cctlDraw() {
     while (lane.some(function (q) { return Math.abs(q.x - at) < 20; })) at += 22;
     lane.push({ x: at, cc: x.cc }); keep[k] = at;
   });
+  // A pin shows its flag only with room around it (or while its country is picked below); where pins
+  // sit close together they're small marks that just say there was a stop.
+  var roomy = {};
+  [placed, placedLow].forEach(function (lane) { lane.forEach(function (q, n) { q.n = n; }); });
+  Object.keys(keep).forEach(function (k) {
+    var x = CT.stops[k], lane = airside(x) ? placedLow : placed, at = keep[k];
+    roomy[k] = !lane.some(function (q) { return q.x !== at && Math.abs(q.x - at) < CCTL_ROOM; });
+  });
   function pin(x, k) {
     var c = CT.byCc[x.cc], low = airside(x);
-    return '<button type="button" data-s="' + k + '" data-cc="' + x.cc + '" class="' + (low ? 'dot' : 'pent') + (x.layover ? ' air' : '') + (CT.hl === x.cc ? ' hl' : '') + '" style="left:' + (typeof keep[k] === 'number' ? keep[k] : ((x.p0 + x.p1) / 2 - CT.lo) * ppd).toFixed(1) + 'px" aria-label="' + esc(ccName(x.cc)) + ' ' + stopKind(x) + '">' + (low ? '' : '<i></i>') + '<span>' + (flag(x.cc) || '·') + '</span></button>';
+    return '<button type="button" data-s="' + k + '" data-cc="' + x.cc + '" class="' + (low ? 'dot' : 'pent') + (x.layover ? ' air' : '') + (roomy[k] ? '' : ' mini') + (CT.hl === x.cc ? ' hl' : '') + '" style="left:' + (typeof keep[k] === 'number' ? keep[k] : ((x.p0 + x.p1) / 2 - CT.lo) * ppd).toFixed(1) + 'px" aria-label="' + esc(ccName(x.cc)) + ' ' + stopKind(x) + '">' + (low ? '' : '<i></i>') + '<span>' + (flag(x.cc) || '·') + '</span></button>';
   }
   $('cctlPins').innerHTML = CT.stops.map(function (x, k) { return (k in keep) && !airside(x) ? pin(x, k) : ''; }).join('');
   $('cctlPinsLow').innerHTML = CT.stops.map(function (x, k) { return (k in keep) && airside(x) ? pin(x, k) : ''; }).join('');
