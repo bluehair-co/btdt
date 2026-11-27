@@ -49,7 +49,7 @@ Every place in the app answers one question, and a new feature goes where its qu
 
 ## Honesty about data
 
-- **Never pass off a guess as a recording.** Guessed types are marked and can be checked (*Check*), fixed trips are flagged in their details, values from My Edits are tagged *Rule applied* or *Map snap*, and the user's own fixes are tagged *Edited*. Every change can be undone per trip and per rule.
+- **Never pass off a guess as a recording.** Guessed types are marked and can be checked (*Check*), fixed trips are flagged in their details, values from My Edits are tagged *Bulk edit* or *Map snap*, and the user's own fixes are tagged *Edited*. Every change can be undone per trip and per rule.
 - **Rules apply fully or not at all.** A routine sets type, line and gear together; a trip it can't fully apply to is left alone. A generic "Vehicle" counts as undefined.
 - **Show what a rule would do,** even when it is switched off, instead of a bare 0.
 - **Generic, not personal.** Fixes for one person's data (an office Google moved, a bike owned between two dates) become features driven by My Edits, never special cases in code.
