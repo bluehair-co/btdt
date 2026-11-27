@@ -63,9 +63,11 @@
   --on-image-ok: #9fe8c4;      /* About: the privacy shield */
   --on-image-err: #ffb4ac;
   --landing-hover: #f1eefb;
-  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* One family for everything: Archivo. Its width axis does the work: wide and heavy for titles,
+     narrow for labels, numbers and data, normal for reading (see *Type* in docs/design-rules.md). */
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
 
   /* Text sizes */
   --fs-3xs: 10px;   /* tags */
@@ -1374,7 +1376,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .record { position: relative; border: 1.5px solid var(--fg); border-radius: 10px; padding-right: 54px;
   background: radial-gradient(circle at 100% 50%, transparent 6px, var(--panel) 6.5px) right / 50% 100% no-repeat, radial-gradient(circle at 0 50%, transparent 6px, var(--panel) 6.5px) left / 50% 100% no-repeat; }
 .record::after { content: ""; position: absolute; top: 8px; bottom: 8px; right: 40px; border-right: 2px dashed var(--fg); }
-.record .k { font-family: "IBM Plex Sans Condensed", var(--font-body); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-2xs); }
+.record .k { font-family: var(--font-body); font-stretch: 75%; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-2xs); }
 .record .v { font-family: var(--font-display); font-weight: 800; color: var(--fg); }
 .record:hover { border-color: var(--fg); background-color: var(--grid); }
 /* Top routes: a line on a transit map, two stops, as long as its share of the trips */
@@ -1509,7 +1511,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .about details { border-top: 1.5px dotted var(--fg); }
 .about summary { color: var(--fg); font-family: var(--font-display); font-weight: 800; }
 .about summary::after { border-color: var(--fg); }
-.about h3 { font-family: "IBM Plex Sans Condensed", var(--font-body); letter-spacing: .12em; color: var(--muted); }
+.about h3 { font-family: var(--font-body); font-stretch: 75%; letter-spacing: .12em; color: var(--muted); }
 .about b { color: var(--fg); }
 .about a { color: var(--fg); text-decoration-color: var(--pink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .about-foot { border-top: 1.5px solid var(--line); }
@@ -1614,3 +1616,20 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 /* A badge's icon always takes the badge's ink, wherever the badge sits (lists set their own icon fill). */
 .mode-badge > .ic, .file-list .mode-badge > .ic, .data-row .mode-badge > .ic { fill: currentColor; }
 .file-list .mode-badge.sm > .ic { width: 18px; height: 18px; }
+
+
+/* ---------- v2.1 type: Archivo ----------
+   Labels: narrow capitals. Figures and data: a little narrow, digits all the same width. */
+.sec h3, .gear-lbl, .guess, .about h3, .ins-group-h, .record .k { font-stretch: 80%; font-weight: 650; }
+.num, .chip .n, .scrub .when, .scrub .speed, .sun-marks .lab, .bar-row .val, .bar-row .name span:last-child, .rank, .tl-trip .r, .mr-tabs .n, .ld-p, .factors input, .works-with { font-stretch: 88%; font-variant-numeric: tabular-nums; }
+/* Titles of panels, cards and dialogs: printed. Wide and heavy, each a little different (width, weight
+   and a slight tilt, seeded by its own words in inkTitles() in core.js), the ink a little uneven (the
+   #riso grain) with a faint second impression of the same ink just off it. No pink copy. */
+.sheet-head h2, .card-head h2, .card-title h2, .about-head h2, .mr-dlg h2, .mr-rad-head h2 {
+  font-family: var(--font-display); font-weight: var(--tg, 860); font-stretch: var(--tw, 118%); letter-spacing: -.01em; line-height: 1.05;
+  transform: rotate(var(--tr, 0deg)); transform-origin: left center; filter: url(#riso);
+  text-shadow: .55px .45px 0 color-mix(in srgb, currentColor 38%, transparent); }
+.card-head h2, .card-title h2 { font-size: var(--fs-2xl); }
+/* The line between a panel's head and its body: a printed dotted rule, a little out of true. */
+.sheet-head, .about-head { position: relative; border-bottom: 0 !important; }
+.sheet-head::after, .about-head::after { content: ""; position: absolute; left: var(--sp-6); right: var(--sp-6); bottom: 0; border-bottom: 1.5px dotted var(--edge); transform: translate(var(--dx, 1.5px), 0) rotate(var(--dr, -.25deg)); pointer-events: none; }

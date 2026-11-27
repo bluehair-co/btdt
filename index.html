@@ -43,7 +43,7 @@ document.documentElement.setAttribute('data-theme', t); })();</script>
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,200;12..96,600;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 /* ---------- design tokens ----------
@@ -111,9 +111,11 @@ document.documentElement.setAttribute('data-theme', t); })();</script>
   --on-image-ok: #9fe8c4;      /* About: the privacy shield */
   --on-image-err: #ffb4ac;
   --landing-hover: #f1eefb;
-  --font-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
-  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* One family for everything: Archivo. Its width axis does the work: wide and heavy for titles,
+     narrow for labels, numbers and data, normal for reading (see *Type* in docs/design-rules.md). */
+  --font-display: "Archivo", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-mono: "Archivo", "Helvetica Neue", Arial, system-ui, sans-serif;
 
   /* Text sizes */
   --fs-3xs: 10px;   /* tags */
@@ -1422,7 +1424,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .record { position: relative; border: 1.5px solid var(--fg); border-radius: 10px; padding-right: 54px;
   background: radial-gradient(circle at 100% 50%, transparent 6px, var(--panel) 6.5px) right / 50% 100% no-repeat, radial-gradient(circle at 0 50%, transparent 6px, var(--panel) 6.5px) left / 50% 100% no-repeat; }
 .record::after { content: ""; position: absolute; top: 8px; bottom: 8px; right: 40px; border-right: 2px dashed var(--fg); }
-.record .k { font-family: "IBM Plex Sans Condensed", var(--font-body); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-2xs); }
+.record .k { font-family: var(--font-body); font-stretch: 75%; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-2xs); }
 .record .v { font-family: var(--font-display); font-weight: 800; color: var(--fg); }
 .record:hover { border-color: var(--fg); background-color: var(--grid); }
 /* Top routes: a line on a transit map, two stops, as long as its share of the trips */
@@ -1557,7 +1559,7 @@ details.when-more > .sec:last-child { border-bottom: 0; }
 .about details { border-top: 1.5px dotted var(--fg); }
 .about summary { color: var(--fg); font-family: var(--font-display); font-weight: 800; }
 .about summary::after { border-color: var(--fg); }
-.about h3 { font-family: "IBM Plex Sans Condensed", var(--font-body); letter-spacing: .12em; color: var(--muted); }
+.about h3 { font-family: var(--font-body); font-stretch: 75%; letter-spacing: .12em; color: var(--muted); }
 .about b { color: var(--fg); }
 .about a { color: var(--fg); text-decoration-color: var(--pink); text-decoration-thickness: 2px; text-underline-offset: 3px; }
 .about-foot { border-top: 1.5px solid var(--line); }
@@ -1662,6 +1664,23 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 /* A badge's icon always takes the badge's ink, wherever the badge sits (lists set their own icon fill). */
 .mode-badge > .ic, .file-list .mode-badge > .ic, .data-row .mode-badge > .ic { fill: currentColor; }
 .file-list .mode-badge.sm > .ic { width: 18px; height: 18px; }
+
+
+/* ---------- v2.1 type: Archivo ----------
+   Labels: narrow capitals. Figures and data: a little narrow, digits all the same width. */
+.sec h3, .gear-lbl, .guess, .about h3, .ins-group-h, .record .k { font-stretch: 80%; font-weight: 650; }
+.num, .chip .n, .scrub .when, .scrub .speed, .sun-marks .lab, .bar-row .val, .bar-row .name span:last-child, .rank, .tl-trip .r, .mr-tabs .n, .ld-p, .factors input, .works-with { font-stretch: 88%; font-variant-numeric: tabular-nums; }
+/* Titles of panels, cards and dialogs: printed. Wide and heavy, each a little different (width, weight
+   and a slight tilt, seeded by its own words in inkTitles() in core.js), the ink a little uneven (the
+   #riso grain) with a faint second impression of the same ink just off it. No pink copy. */
+.sheet-head h2, .card-head h2, .card-title h2, .about-head h2, .mr-dlg h2, .mr-rad-head h2 {
+  font-family: var(--font-display); font-weight: var(--tg, 860); font-stretch: var(--tw, 118%); letter-spacing: -.01em; line-height: 1.05;
+  transform: rotate(var(--tr, 0deg)); transform-origin: left center; filter: url(#riso);
+  text-shadow: .55px .45px 0 color-mix(in srgb, currentColor 38%, transparent); }
+.card-head h2, .card-title h2 { font-size: var(--fs-2xl); }
+/* The line between a panel's head and its body: a printed dotted rule, a little out of true. */
+.sheet-head, .about-head { position: relative; border-bottom: 0 !important; }
+.sheet-head::after, .about-head::after { content: ""; position: absolute; left: var(--sp-6); right: var(--sp-6); bottom: 0; border-bottom: 1.5px dotted var(--edge); transform: translate(var(--dx, 1.5px), 0) rotate(var(--dr, -.25deg)); pointer-events: none; }
 </style>
 </head>
 <body>
@@ -1682,7 +1701,7 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
     <div class="welcome-art">
       <div class="stage bg"><img src="landing-bg-1672.webp" srcset="landing-bg-1000.webp 1000w, landing-bg-1672.webp 1672w" sizes="max(100vw, 178vh)" alt="" decoding="async" fetchpriority="high"></div>
       <div class="stage fg"><img src="landing-fg-1672.webp" srcset="landing-fg-1000.webp 1000w, landing-fg-1672.webp 1672w" sizes="max(100vw, 178vh)" alt="" decoding="async" fetchpriority="high"></div>
-      <h1 id="welcomeTitle" class="welcome-stamp"><span class="visually-hidden">BT•DT: been there, done that</span><svg class="stamp-svg" viewBox="0 0 240 240" aria-hidden="true" focusable="false"><defs><filter id="stw" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3" result="warp"/><feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/><feMorphology in="ink" operator="dilate" radius="0.45" result="fat"/><feGaussianBlur in="fat" stdDeviation="0.5" result="ink"/><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="9" result="grain"/><feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3.2 2.45" result="holes"/><feComposite in="ink" in2="holes" operator="in" result="ink"/><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="7" result="blot"/><feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.45" result="blotA"/><feComposite in="ink" in2="blotA" operator="in" result="ink"/></filter><linearGradient id="tgw" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#777"/></linearGradient><filter id="tbw"><feGaussianBlur stdDeviation="6"/></filter><mask id="tmw" maskUnits="userSpaceOnUse" x="-20" y="-20" width="280" height="280"><rect x="-20" y="-20" width="280" height="280" fill="url(#tgw)"/><circle cx="200" cy="38" r="22" fill="#000" filter="url(#tbw)"/></mask></defs><g mask="url(#tmw)"><g filter="url(#stw)"><g><circle cx="120" cy="120" r="113" fill="none" stroke="#24379A" stroke-width="5"/><circle cx="120" cy="120" r="104" fill="none" stroke="#24379A" stroke-width="1.6"/><path id="topw" d="M38,120 A82,82 0 0,1 202,120" fill="none"/><path id="botw" d="M25,120 A95,95 0 0,0 215,120" fill="none"/><text font-family="'IBM Plex Sans Condensed',sans-serif" font-weight="600" font-size="19" letter-spacing="4" fill="#24379A" style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:4px;fill:#24379A"><textPath href="#topw" startOffset="50%" text-anchor="middle">BEEN THERE</textPath></text><text font-family="'IBM Plex Sans Condensed',sans-serif" font-weight="600" font-size="19" letter-spacing="4" fill="#24379A" style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:19px;letter-spacing:4px;fill:#24379A"><textPath href="#botw" startOffset="50%" text-anchor="middle">DONE THAT</textPath></text><polygon points="33.0,115.0 34.9,119.5 39.7,119.8 36.0,123.0 37.1,127.7 33.0,125.2 28.9,127.7 30.0,123.0 26.3,119.8 31.1,119.5" fill="#24379A"/><polygon points="207.0,115.0 208.9,119.5 213.7,119.8 210.0,123.0 211.1,127.7 207.0,125.2 202.9,127.7 204.0,123.0 200.3,119.8 205.1,119.5" fill="#24379A"/><circle cx="120" cy="120" r="68" fill="none" stroke="#24379A" stroke-width="2"/><g transform="translate(110.0 68.0) scale(0.8333333333333334)"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="#24379A"/></g><text x="120" y="128" text-anchor="middle" font-family="'Bricolage Grotesque',sans-serif" font-weight="800" font-size="40" letter-spacing="-0.5" fill="#24379A" style="font-family:'Bricolage Grotesque',sans-serif;font-weight:800;font-size:40px;letter-spacing:-0.5px;fill:#24379A">BT•DT</text><rect x="66" y="140" width="108" height="24" rx="2" fill="none" stroke="#24379A" stroke-width="2"/><text x="120" y="157.5" text-anchor="middle" font-family="'IBM Plex Sans Condensed',sans-serif" font-weight="600" font-size="14" letter-spacing="1.5" fill="#24379A" style="font-family:'IBM Plex Sans Condensed',sans-serif;font-weight:600;font-size:14px;letter-spacing:1.5px;fill:#24379A" id="stampDate" textLength="98" lengthAdjust="spacingAndGlyphs"></text></g></g></g></svg></h1>
+      <h1 id="welcomeTitle" class="welcome-stamp"><span class="visually-hidden">BT•DT: been there, done that</span><svg class="stamp-svg" viewBox="0 0 240 240" aria-hidden="true" focusable="false"><defs><filter id="stw" x="-15%" y="-15%" width="130%" height="130%"><feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="3" result="warp"/><feDisplacementMap in="SourceGraphic" in2="warp" scale="2.4" xChannelSelector="R" yChannelSelector="G" result="ink"/><feMorphology in="ink" operator="dilate" radius="0.45" result="fat"/><feGaussianBlur in="fat" stdDeviation="0.5" result="ink"/><feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="9" result="grain"/><feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3.2 2.45" result="holes"/><feComposite in="ink" in2="holes" operator="in" result="ink"/><feTurbulence type="fractalNoise" baseFrequency="0.013" numOctaves="2" seed="7" result="blot"/><feColorMatrix in="blot" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  2.4 0 0 0 -0.45" result="blotA"/><feComposite in="ink" in2="blotA" operator="in" result="ink"/></filter><linearGradient id="tgw" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#fff"/><stop offset=".55" stop-color="#fff"/><stop offset="1" stop-color="#777"/></linearGradient><filter id="tbw"><feGaussianBlur stdDeviation="6"/></filter><mask id="tmw" maskUnits="userSpaceOnUse" x="-20" y="-20" width="280" height="280"><rect x="-20" y="-20" width="280" height="280" fill="url(#tgw)"/><circle cx="200" cy="38" r="22" fill="#000" filter="url(#tbw)"/></mask></defs><g mask="url(#tmw)"><g filter="url(#stw)"><g><circle cx="120" cy="120" r="113" fill="none" stroke="#24379A" stroke-width="5"/><circle cx="120" cy="120" r="104" fill="none" stroke="#24379A" stroke-width="1.6"/><path id="topw" d="M38,120 A82,82 0 0,1 202,120" fill="none"/><path id="botw" d="M25,120 A95,95 0 0,0 215,120" fill="none"/><text font-family="Archivo,sans-serif" font-stretch="75%" font-weight="600" font-size="19" letter-spacing="4" fill="#24379A" style="font-family:Archivo,sans-serif;font-stretch:75%;font-weight:600;font-size:19px;letter-spacing:4px;fill:#24379A"><textPath href="#topw" startOffset="50%" text-anchor="middle">BEEN THERE</textPath></text><text font-family="Archivo,sans-serif" font-stretch="75%" font-weight="600" font-size="19" letter-spacing="4" fill="#24379A" style="font-family:Archivo,sans-serif;font-stretch:75%;font-weight:600;font-size:19px;letter-spacing:4px;fill:#24379A"><textPath href="#botw" startOffset="50%" text-anchor="middle">DONE THAT</textPath></text><polygon points="33.0,115.0 34.9,119.5 39.7,119.8 36.0,123.0 37.1,127.7 33.0,125.2 28.9,127.7 30.0,123.0 26.3,119.8 31.1,119.5" fill="#24379A"/><polygon points="207.0,115.0 208.9,119.5 213.7,119.8 210.0,123.0 211.1,127.7 207.0,125.2 202.9,127.7 204.0,123.0 200.3,119.8 205.1,119.5" fill="#24379A"/><circle cx="120" cy="120" r="68" fill="none" stroke="#24379A" stroke-width="2"/><g transform="translate(110.0 68.0) scale(0.8333333333333334)"><path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="#24379A"/></g><text x="120" y="128" text-anchor="middle" font-family="Archivo,sans-serif" font-stretch="125%" font-weight="800" font-size="40" letter-spacing="-0.5" fill="#24379A" style="font-family:Archivo,sans-serif;font-stretch:125%;font-weight:800;font-size:40px;letter-spacing:-0.5px;fill:#24379A">BT•DT</text><rect x="66" y="140" width="108" height="24" rx="2" fill="none" stroke="#24379A" stroke-width="2"/><text x="120" y="157.5" text-anchor="middle" font-family="Archivo,sans-serif" font-stretch="75%" font-weight="600" font-size="14" letter-spacing="1.5" fill="#24379A" style="font-family:Archivo,sans-serif;font-stretch:75%;font-weight:600;font-size:14px;letter-spacing:1.5px;fill:#24379A" id="stampDate" textLength="98" lengthAdjust="spacingAndGlyphs"></text></g></g></g></svg></h1>
     </div>
     <div class="welcome-panel">
       <p>See where you've been and how you get around. Your files are read on this device and never uploaded.</p>
@@ -1769,7 +1788,7 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
           <li>More icons from Google's <a href="https://fonts.google.com/icons" target="_blank" rel="noopener">Material Icons</a> <small>Apache License 2.0</small></li>
           <li>Country flags from <a href="https://github.com/lipis/flag-icons" target="_blank" rel="noopener">flag-icons</a>, printed in BT•DT's inks <small>MIT License</small></li>
           <li>Landing picture made with <a href="https://gemini.google.com" target="_blank" rel="noopener">Google Gemini</a> <small>AI-generated</small></li>
-          <li>Fonts: Bricolage Grotesque and IBM Plex, via Google Fonts <small>SIL Open Font License</small></li>
+          <li>Font: Archivo by Omnibus-Type, via Google Fonts <small>SIL Open Font License</small></li>
         </ul>
       </details>
 
@@ -2191,9 +2210,9 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
     </div>
     <div class="sec" style="gap:0">
       <h3 style="margin-bottom:4px">On top</h3>
-      <label class="toggle-row"><span class="lbl">Countries visited</span><input type="checkbox" class="switch" id="layCC"></label>
       <label class="toggle-row"><span class="lbl">Regular places<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="pinNote" aria-label="About regular places" title="About regular places"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="layPins"></label>
       <p class="fine info-box" id="pinNote" hidden>A pin on each spot you stayed at in these filters and have been to at least 3 times. Home, and the work and school you marked as current, are orange; past ones and the other places you named are teal. Tap one for how often and when you go, how long you stay and every visit, or to name it. Pins show on the Mercator view.</p>
+      <label class="toggle-row"><span class="lbl">Countries visited</span><input type="checkbox" class="switch" id="layCC"></label>
       <label class="toggle-row"><span class="lbl">Explorer squares<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="squaresNote" aria-label="About explorer squares" title="About explorer squares"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="laySquares"></label>
       <p class="fine info-box" id="squaresNote" hidden>The map cut into squares of about <span data-dist-km="1.5">1.5 km</span> (zoom 14 map tiles), each one you passed through on the ground filled in. The biggest block of squares with all four neighbours visited is darker, and the biggest all-visited square is outlined. Tap a square for when you first got there. Shows on the Mercator view.</p>
     </div>
@@ -5804,7 +5823,7 @@ function stampSvg(st) {
   if (b === 'date') b = fmtDMY(n.getFullYear(), n.getMonth(), n.getDate()).toUpperCase();
   function ic(x, y, s, soft) { return '<g transform="translate(' + (x - s / 2) + ' ' + (y - s / 2) + ') scale(' + s / 256 + ')" style="fill:' + c + '">' + (PH[st[2]] || '').replace(/class="ph2"/g, 'opacity="' + (soft || .35) + '"') + '</g>'; }
   function txt(x, y, size, t, font, extra) { return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="' + size + '" style="fill:' + c + ';font-family:' + font + '"' + (extra || '') + '>' + esc(t) + '</text>'; }
-  var cond = '\'IBM Plex Sans Condensed\',sans-serif;font-weight:600', disp = 'var(--font-display);font-weight:800', mono = 'var(--font-mono);font-weight:500';
+  var cond = 'var(--font-body);font-stretch:75%;font-weight:650', disp = 'var(--font-display);font-weight:800', mono = 'var(--font-mono);font-weight:500';
   function arc(r, t, top) {
     var d = top ? 'M' + (60 - r) + ' 60A' + r + ' ' + r + ' 0 0 1 ' + (60 + r) + ' 60' : 'M' + (60 - r) + ' 60A' + r + ' ' + r + ' 0 0 0 ' + (60 + r) + ' 60', id = u + (top ? 't' : 'b');
     return '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="10" letter-spacing="2.5" style="fill:' + c + ';font-family:' + cond + '"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + esc(t) + '</textPath></text>';
@@ -6151,17 +6170,36 @@ function paperCheck(el) {
   if (on && !el._paperOn) requestAnimationFrame(function () { paperize(el); });
   el._paperOn = on;
 }
+// Printed titles: each panel, card and dialog title gets its own width, weight and slight tilt from a
+// hash of its words, so a title always lands the same way and no two land alike (the type rules in
+// app.css). The head's dotted rule gets the same treatment.
+var TITLE_SEL = '.sheet-head h2, .card-head h2, .card-title h2, .about-head h2, .mr-dlg h2, .mr-rad-head h2';
+function wordHash(t, k) { var h = 2166136261; t = t + '|' + k; for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+function inkTitle(el) {
+  var t = (el.textContent || '').trim();
+  if (el._inked === t) return;
+  el._inked = t;
+  var s = el.style;
+  s.setProperty('--tw', (110 + Math.round(wordHash(t, 'w') * 15)) + '%');
+  s.setProperty('--tg', 780 + Math.round(wordHash(t, 'g') * 120));
+  s.setProperty('--tr', ((wordHash(t, 'r') * 2 - 1) * .6).toFixed(2) + 'deg');
+  var head = el.closest('.sheet-head, .about-head');
+  if (head) { head.style.setProperty('--dr', ((wordHash(t, 'd') * 2 - 1) * .35).toFixed(2) + 'deg'); head.style.setProperty('--dx', ((wordHash(t, 'x') * 2 - 1) * 2).toFixed(1) + 'px'); }
+}
 function paperWatch() {
   document.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+  document.querySelectorAll(TITLE_SEL).forEach(inkTitle);
   new MutationObserver(function (list) {
     for (var k = 0; k < list.length; k++) {
       var m = list[k];
       if (m.type === 'attributes') { if (m.target.matches && m.target.matches(PAPER_SEL)) paperCheck(m.target); continue; }
+      if (m.target.nodeType === 1 && m.target.matches(TITLE_SEL)) inkTitle(m.target);
       for (var j = 0; j < m.addedNodes.length; j++) {
         var n = m.addedNodes[j];
         if (n.nodeType !== 1) continue;
         if (n.matches(PAPER_SEL)) paperCheck(n);
-        if (n.firstElementChild) n.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+        if (n.matches(TITLE_SEL)) inkTitle(n);
+        if (n.firstElementChild) { n.querySelectorAll(PAPER_SEL).forEach(paperCheck); n.querySelectorAll(TITLE_SEL).forEach(inkTitle); }
       }
     }
   }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'open'] });

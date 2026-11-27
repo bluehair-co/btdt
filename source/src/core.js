@@ -704,7 +704,7 @@ function stampSvg(st) {
   if (b === 'date') b = fmtDMY(n.getFullYear(), n.getMonth(), n.getDate()).toUpperCase();
   function ic(x, y, s, soft) { return '<g transform="translate(' + (x - s / 2) + ' ' + (y - s / 2) + ') scale(' + s / 256 + ')" style="fill:' + c + '">' + (PH[st[2]] || '').replace(/class="ph2"/g, 'opacity="' + (soft || .35) + '"') + '</g>'; }
   function txt(x, y, size, t, font, extra) { return '<text x="' + x + '" y="' + y + '" text-anchor="middle" font-size="' + size + '" style="fill:' + c + ';font-family:' + font + '"' + (extra || '') + '>' + esc(t) + '</text>'; }
-  var cond = '\'IBM Plex Sans Condensed\',sans-serif;font-weight:600', disp = 'var(--font-display);font-weight:800', mono = 'var(--font-mono);font-weight:500';
+  var cond = 'var(--font-body);font-stretch:75%;font-weight:650', disp = 'var(--font-display);font-weight:800', mono = 'var(--font-mono);font-weight:500';
   function arc(r, t, top) {
     var d = top ? 'M' + (60 - r) + ' 60A' + r + ' ' + r + ' 0 0 1 ' + (60 + r) + ' 60' : 'M' + (60 - r) + ' 60A' + r + ' ' + r + ' 0 0 0 ' + (60 + r) + ' 60', id = u + (top ? 't' : 'b');
     return '<path id="' + id + '" d="' + d + '" fill="none"/><text font-size="10" letter-spacing="2.5" style="fill:' + c + ';font-family:' + cond + '"><textPath href="#' + id + '" startOffset="50%" text-anchor="middle">' + esc(t) + '</textPath></text>';
@@ -1051,17 +1051,36 @@ function paperCheck(el) {
   if (on && !el._paperOn) requestAnimationFrame(function () { paperize(el); });
   el._paperOn = on;
 }
+// Printed titles: each panel, card and dialog title gets its own width, weight and slight tilt from a
+// hash of its words, so a title always lands the same way and no two land alike (the type rules in
+// app.css). The head's dotted rule gets the same treatment.
+var TITLE_SEL = '.sheet-head h2, .card-head h2, .card-title h2, .about-head h2, .mr-dlg h2, .mr-rad-head h2';
+function wordHash(t, k) { var h = 2166136261; t = t + '|' + k; for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+function inkTitle(el) {
+  var t = (el.textContent || '').trim();
+  if (el._inked === t) return;
+  el._inked = t;
+  var s = el.style;
+  s.setProperty('--tw', (110 + Math.round(wordHash(t, 'w') * 15)) + '%');
+  s.setProperty('--tg', 780 + Math.round(wordHash(t, 'g') * 120));
+  s.setProperty('--tr', ((wordHash(t, 'r') * 2 - 1) * .6).toFixed(2) + 'deg');
+  var head = el.closest('.sheet-head, .about-head');
+  if (head) { head.style.setProperty('--dr', ((wordHash(t, 'd') * 2 - 1) * .35).toFixed(2) + 'deg'); head.style.setProperty('--dx', ((wordHash(t, 'x') * 2 - 1) * 2).toFixed(1) + 'px'); }
+}
 function paperWatch() {
   document.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+  document.querySelectorAll(TITLE_SEL).forEach(inkTitle);
   new MutationObserver(function (list) {
     for (var k = 0; k < list.length; k++) {
       var m = list[k];
       if (m.type === 'attributes') { if (m.target.matches && m.target.matches(PAPER_SEL)) paperCheck(m.target); continue; }
+      if (m.target.nodeType === 1 && m.target.matches(TITLE_SEL)) inkTitle(m.target);
       for (var j = 0; j < m.addedNodes.length; j++) {
         var n = m.addedNodes[j];
         if (n.nodeType !== 1) continue;
         if (n.matches(PAPER_SEL)) paperCheck(n);
-        if (n.firstElementChild) n.querySelectorAll(PAPER_SEL).forEach(paperCheck);
+        if (n.matches(TITLE_SEL)) inkTitle(n);
+        if (n.firstElementChild) { n.querySelectorAll(PAPER_SEL).forEach(paperCheck); n.querySelectorAll(TITLE_SEL).forEach(inkTitle); }
       }
     }
   }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['hidden', 'class', 'open'] });
