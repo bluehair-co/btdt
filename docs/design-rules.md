@@ -39,6 +39,15 @@ Every place in the app answers one question, and a new feature goes where its qu
 | Where it goes | A filter › Filters · how the map looks › map sheet · an action on the map › *Map tools* · a change to how trips are cleaned › *Menu › Trip cleanup* · an action on one trip › its pencil menu · a new Insights card › one of its groups (Scores, Overview, Places, Countries, Fitness, CO₂) |
 | Lists of trips | One tap opens the trip. Where the main map isn't in view, the sheet shows the trip's own map at the top. |
 
+## Transitions: standard UI and focused tasks
+
+The standard UI is the top bar, the dock, the buttons by the dock (zoom to all, ⋮), the legend, the map's zoom, the playback bar and the side panels. A **focused task** has its own UI: playback, *Select trips*, making a map snap, *Ignore GPS points*, *Walks that may be stays*, *This was a stay…*.
+
+- **Starting a focused task, the standard UI slides away, each piece toward its own edge.** The top bar goes up. The dock, the buttons, the legend and the playback bar go down. The map's zoom goes off to its side. Open panels close.
+- **The task's own bars slide in from their edges:** a top bar from the top, a bottom bar from the bottom, a side panel from its side.
+- **Nothing else of the standard UI shows during the task.** When the task is done or cancelled, the task's bars go and the standard UI slides back.
+- **In code:** a task sets its body class (`play-mode`, `sel-mode`, `snap-mode`). The slides are in the *Focused tasks* block at the end of `app.css`, using the individual `translate` property so each element keeps its own transform. A new focused task uses one of these classes, or adds its class to that block. Its top bar comes from `promptBar({ mode: true })` and its bottom bar is a `.sel-bar`, so both slide in by themselves. Reduced motion turns the slides off.
+
 ## Feedback while the app works
 
 - **Every action that saves shows the "Working on it…" pill at once** (`saving(fn)` or `working(text, fn)` in `core.js`): a spinner pill and a veil over the page, fading in after 150 ms so quick changes don't flash. That covers switches (applying rules, snapping trains to tracks or cars to roads, splitting trips) and every tap that saves: *[type] is right*, *Undo*, *Not this trip*, *Hide this trip*, *Keep as one trip*, *Use Google's location*, merging places, and the *Save*, *Delete* and *Remove* buttons of every dialog (`mrAsk` does this for its primary and danger buttons). A tap must never look like nothing happened.

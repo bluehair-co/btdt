@@ -1321,6 +1321,7 @@ function renderMyRules() {
   $('mrExportData').hidden = !MR;
   var intro = infoBox('mrIntro', 'What you know that your files don\'t: your gear over time, your places, your routines, and fixes to trips. Gear periods, routines and other bulk edits fill in what your files leave out (gear, a guessed type, a cleaner line) and show as <span class="guess inf">Bulk edit</span>, trips a map snap drew as <span class="guess inf">Map snap</span>; a trip you fixed on its own in Trip info shows as <span class="guess inf">Edited</span>. Switch an edit off to see your data without it.');
   if (!MR) {
+    $('mrFoot').innerHTML = '';
     el.innerHTML = '<p class="fine">' + infoMore('Add what only you know, like which bike you rode when or where home was.', 'BT•DT fills in what your files leave out and marks it <span class="guess inf">Bulk edit</span>. Fix a trip\'s type or title with <b>Trip info</b>, or hide it, from the pencil in its details; those changes are marked <span class="guess inf">Edited</span>. Load a <b>BTDT-Edits.json</b> file with your location files, or set a ride\'s gear or edit a trip to start.', 'About My Edits') + '</p>' + (DEMO ? '' : driveRow());
     driveWire();
     return;
@@ -1331,8 +1332,9 @@ function renderMyRules() {
   el.innerHTML = '<div class="mr-card"><div class="mr-card-head"><span class="mr-ic">' + icon('edit') + '</span><span class="file-txt"><b>' + esc(MR.name) + ' ' + infoBtn('mrIntro', 'About My Edits') + '</b><small>' + mrCount(MR.doc) + '</small></span>' +
     '<input type="checkbox" class="switch" id="mrOn" aria-label="Apply My Edits"' + (MR.on ? ' checked' : '') + '></div>' + intro +
     '<p class="fine" style="margin:8px 0 0">' + (!MR.on ? 'Switched off: everything shows as your files have it.' : D ? 'Gear filled in on ' + tripsText(nGear) + (nEd ? ', ' + tripsText(nEd) + ' edited' : '') + '.' + (MR_AMB ? ' ' + tripsText(MR_AMB) + ' fit two gear periods equally, so got none.' : '') + ' Recorded data is never overwritten.' : 'Applied once you load your location files.') + '</p></div>' +
-    driveRow() +
-    (DEMO ? '' : '<div class="mr-export-row"><button type="button" class="btn mr-export" id="mrSheetExport">' + icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '') + '</button>' +
+    driveRow();
+  // Export sits at the bottom of the panel, under all the edits.
+  $('mrFoot').innerHTML = (DEMO ? '' : '<div class="mr-export-row"><button type="button" class="btn mr-export" id="mrSheetExport">' + icon('upload') + 'Export' + (unsaved ? '<i class="mr-dot"></i>' : '') + '</button>' +
       '<span class="fine mr-unsaved">' + (DRIVE.on && DRIVE.at ? '' : unsaved ? unsaved + ' change' + (unsaved === 1 ? '' : 's') + ' not exported' : '') + '</span></div>');
   driveWire();
   $('mrOn').addEventListener('change', function () { var on = this.checked; working(on ? 'Applying My Edits…' : 'Switching My Edits off…', function () { MR.on = on; mrSave(); mrReapply(); }); });
@@ -1701,7 +1703,7 @@ $('mrBody').addEventListener('click', function (ev) {
     }], ['Cancel', 'quiet', null]]
   });
 });
-$('mrCard').addEventListener('click', function (ev) { if (ev.target.closest('#mrSheetExport')) mrExport(); });
+$('mrFoot').addEventListener('click', function (ev) { if (ev.target.closest('#mrSheetExport')) mrExport(); });
 $('mrExportData').addEventListener('click', mrExport);
 
 // ---------- trip details ----------
