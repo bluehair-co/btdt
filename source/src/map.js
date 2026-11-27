@@ -397,6 +397,7 @@ function layerToggles() {
   }
   if (hlLayer && !map.hasLayer(hlLayer)) map.addLayer(hlLayer);
   if (beaconLayer && !map.hasLayer(beaconLayer)) map.addLayer(beaconLayer);
+  if (PREFS.squares && PREFS.cc) PREFS.cc = false;  // explorer squares and countries are never on together
   [[sqLayer, PREFS.squares], [pathLayer, PREFS.paths], [speedLayer, PREFS.speedPaths || PREFS.hrPaths], [ccLayer, PREFS.cc], [heatLayer, PREFS.heat], [pinLayer, PREFS.pins]].forEach(function (x) {
     if (x[1] && !map.hasLayer(x[0])) map.addLayer(x[0]);
     if (!x[1] && map.hasLayer(x[0])) map.removeLayer(x[0]);
@@ -404,7 +405,7 @@ function layerToggles() {
   if (PREFS.cc && ccLayer._ver !== ccVer()) buildCC();
   if (PREFS.pins && (pinLayer._ver !== selVer() || pinLayer._d !== D)) buildPins();
   else if (PREFS.pins && !pinLayer.getLayers().length) renderPins();
-  if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D)) buildSquares();
+  if (PREFS.squares && (sqLayer._ver !== applyCount || sqLayer._d !== D || sqLayer._c !== cssVar('--sq'))) buildSquares();
   if ((PREFS.speedPaths || PREFS.hrPaths) && (speedLayer._ver !== applyCount || speedLayer._d !== D || speedLayer._m !== pathsKey() || speedLayer._z !== map.getZoom() || !speedLayer._b || !speedLayer._b.contains(map.getBounds()))) buildSpeed();
   buildBeacons();
 }
@@ -478,7 +479,8 @@ function sqRing(key) {
 function buildSquares() {
   sqLayer.clearLayers();
   sqLayer._ver = applyCount; sqLayer._d = D;
-  var E = explorer(), plain = [], clus = [], acc = cssVar('--accent');
+  var E = explorer(), plain = [], clus = [], acc = cssVar('--sq');
+  sqLayer._c = acc;
   E.sq.forEach(function (_, key) { (E.cluster.has(key) ? clus : plain).push(sqRing(key)); });
   var o = { renderer: renderer, color: acc, weight: 0.6, opacity: 0.5, fillColor: acc, interactive: false };
   if (plain.length) sqLayer.addLayer(L.polygon(plain, Object.assign({}, o, { fillOpacity: 0.18 })));
@@ -497,9 +499,9 @@ function squareAt(pt, ev) {
   return true;
 }
 function sqLegend() {
-  var E = explorer(), acc = 'var(--accent)';
-  return '<span><i style="background:' + acc + ';opacity:.3;height:10px"></i>' + fmt(E.sq.size) + ' squares</span>' + (E.cluster.size ? '<span><i style="background:' + acc + ';opacity:.6;height:10px"></i>Cluster ' + fmt(E.cluster.size) + '</span>' : '') +
-    (E.max > 1 ? '<span><i style="border:2px solid ' + acc + ';background:none;height:8px;width:8px"></i>Max square ' + E.max + '×' + E.max + '</span>' : '');
+  var E = explorer(), acc = 'var(--sq)';
+  return '<span><i class="lg-area" style="background:' + acc + ';opacity:.3;height:10px"></i>' + fmt(E.sq.size) + ' squares</span>' + (E.cluster.size ? '<span><i class="lg-area" style="background:' + acc + ';opacity:.6;height:10px"></i>Cluster ' + fmt(E.cluster.size) + '</span>' : '') +
+    (E.max > 1 ? '<span><i class="lg-area" style="border:2px solid ' + acc + ';background:none;height:8px;width:8px"></i>Max square ' + E.max + '×' + E.max + '</span>' : '');
 }
 
 // ---------- speed paths ----------
@@ -2623,10 +2625,11 @@ $('linesSeg').addEventListener('click', function (ev) {
   }
 });
 $('layHr').addEventListener('change', function () { colouredPaths('hrPaths', this.checked); });
-$('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
+// Explorer squares and countries visited are never shown together: turning one on turns the other off.
+$('laySquares').addEventListener('change', function () { PREFS.squares = this.checked; if (this.checked) { PREFS.cc = false; $('layCC').checked = false; } if (this.checked && PREFS.proj !== 'merc') setProj('merc'); if (!this.checked) hideTip(); layersChanged(); });
 $('layHeat').addEventListener('change', function () { PREFS.heat = this.checked; layersChanged(); });
 $('layLegend').addEventListener('change', function () { PREFS.legend = this.checked; layersChanged(); });
-$('layCC').addEventListener('change', function () { PREFS.cc = this.checked; layersChanged(); });
+$('layCC').addEventListener('change', function () { PREFS.cc = this.checked; if (this.checked && PREFS.squares) { PREFS.squares = false; $('laySquares').checked = false; hideTip(); } layersChanged(); });
 $('layPins').addEventListener('change', function () { PREFS.pins = this.checked; if (this.checked && PREFS.proj !== 'merc') setProj('merc'); layersChanged(); });
 $('heatSrc').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-src]'); if (b) { PREFS.heatSrc = b.dataset.src; layersChanged(); } });
 $('heatBy').addEventListener('click', function (ev) { var b = ev.target.closest('button[data-by]'); if (b && !b.disabled) { PREFS.heatBy = b.dataset.by; layersChanged(); } });

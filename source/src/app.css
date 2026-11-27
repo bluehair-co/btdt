@@ -37,7 +37,7 @@
   --m-bike: var(--bike-light); --m-water: var(--water-light); --m-other: var(--other-light); --m-unknown: var(--unknown-light);
   /* Countries visited, in order of first visit */
   /* Countries on the map: visited in pink, only a layover at the airport in blue (yellow at night) */
-  --cc-visit: var(--pink); --cc-air: var(--m-road); --cc1: var(--m-road); --cc2: var(--m-air); --cc3: var(--m-transit); --cc4: var(--m-foot);
+  --cc-visit: var(--pink); --cc-air: var(--m-road); --sq: var(--pink); --cc1: var(--m-road); --cc2: var(--m-air); --cc3: var(--m-transit); --cc4: var(--m-foot);
   --cc5: var(--m-water); --cc6: #008300; --cc7: var(--m-bike); --cc8: #e34948;
   --rule: #0f7c8c;             /* MyRules: its icon, named places, place radius */
   --check: #B89400; --check-bg: #FFF8D6;            /* "Check" box for guessed types */
