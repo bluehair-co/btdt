@@ -788,7 +788,8 @@ function renderPins() {
   });
   pinStyle();
 }
-function ccVer() { return selVer() + '|' + ccReach().key; }
+// The countries are drawn again when the theme changes too, since their colours follow it.
+function ccVer() { return selVer() + '|' + ccReach().key + '|' + cssVar('--cc-visit') + cssVar('--cc-air'); }
 function selVer() { return sel.length + ':' + (sel[0] || 0) + ':' + (sel[sel.length - 1] || 0) + ':' + selV.length; }
 // all: every trip, the far-off ends too (the zoom to all button).
 function fitAll(all) {
@@ -2310,7 +2311,7 @@ function legend() {
   h += PREFS.paths ? GROUPS.filter(function (g) { return seen[g.key]; }).map(function (g) { return '<span><i style="background:' + g.color + '"></i>' + g.label + '</span>'; }).join('') : '';
   if (PREFS.heat) h += '<span>' + heatLabel() + ' <i class="heat-scale" style="background:linear-gradient(90deg,' + heatStops().join(',') + ')"></i></span>';
   if (PREFS.cc) {
-    h += '<span><i class="lg-area" style="background:var(--accent);opacity:.5;height:10px"></i>Countries visited</span>';
+    h += '<span><i class="lg-area" style="background:var(--cc-visit);opacity:.5;height:10px"></i>Countries visited</span>';
     if (visitedCountries().some(function (c) { return c.layover; })) h += '<span><i class="lg-area" style="background:var(--cc-air);opacity:.5;height:10px"></i>Only a layover at the airport</span>';
   }
   $('mapLegend').innerHTML = h;
@@ -2356,7 +2357,7 @@ function buildCC() {
   ccLayer.clearLayers();
   ccLayer._ver = ccVer();
   if (!CB) decodeCountries();
-  var list = visitedCountries(), maxD = list.reduce(function (m, c) { return Math.max(m, c.days); }, 1), green = cssVar('--accent'), blue = cssVar('--cc-air');
+  var list = visitedCountries(), maxD = list.reduce(function (m, c) { return Math.max(m, c.days); }, 1), green = cssVar('--cc-visit'), blue = cssVar('--cc-air');
   list.forEach(function (c) {
     var rings = CB.rings[c.cc], color = c.layover ? blue : green;
     if (!rings) return;
@@ -2810,7 +2811,7 @@ function paintProj(fast) {
   });
   if (PREFS.cc) {
     var list = visitedCountries(), maxD = list.reduce(function (m, c) { return Math.max(m, c.days); }, 1);
-    var green = cssVar('--accent'), blue = cssVar('--cc-air');
+    var green = cssVar('--cc-visit'), blue = cssVar('--cc-air');
     list.forEach(function (c) {
       var polys = P.landBy[c.cc];
       if (!polys) return;

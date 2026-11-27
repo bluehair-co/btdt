@@ -36,7 +36,8 @@
   --m-road: var(--road-light); --m-air: var(--air-light); --m-transit: var(--transit-light); --m-foot: var(--foot-light);
   --m-bike: var(--bike-light); --m-water: var(--water-light); --m-other: var(--other-light); --m-unknown: var(--unknown-light);
   /* Countries visited, in order of first visit */
-  --cc-air: var(--m-road); --cc1: var(--m-road); --cc2: var(--m-air); --cc3: var(--m-transit); --cc4: var(--m-foot);
+  /* Countries on the map: visited in pink, only a layover at the airport in blue (yellow at night) */
+  --cc-visit: var(--pink); --cc-air: var(--m-road); --cc1: var(--m-road); --cc2: var(--m-air); --cc3: var(--m-transit); --cc4: var(--m-foot);
   --cc5: var(--m-water); --cc6: #008300; --cc7: var(--m-bike); --cc8: #e34948;
   --rule: #0f7c8c;             /* MyRules: its icon, named places, place radius */
   --check: #B89400; --check-bg: #FFF8D6;            /* "Check" box for guessed types */
@@ -108,7 +109,7 @@
 /* The dark theme: only what differs from the light one. */
 :root[data-theme="dark"] {
   --bg: #121C52; --panel: #1B2766; --glass: rgba(27, 39, 102, .94); --fg: #F2E8D9; --muted: #A9B0D8; --line: #2E3C86; --grid: #24317A;
-  --chip-on-bg: #FEDF02; --chip-on-fg: #121C52; --accent: #FF72B4; --accent-fg: #121C52; --danger: #FF7A85; --on-bike: #121C52;
+  --cc-air: #FEDF02; --chip-on-bg: #FEDF02; --chip-on-fg: #121C52; --accent: #FF72B4; --accent-fg: #121C52; --danger: #FF7A85; --on-bike: #121C52;
   --pink: #FF72B4; --edge: #3F51A8; --badge-ink: #121C52; --offset: rgba(255, 114, 180, .55);
   --m-road: var(--road-dark); --m-air: var(--air-dark); --m-transit: var(--transit-dark); --m-foot: var(--foot-dark);
   --m-bike: var(--bike-dark); --m-water: var(--water-dark); --m-other: var(--other-dark); --m-unknown: var(--unknown-dark);
