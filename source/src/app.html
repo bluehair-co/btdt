@@ -595,6 +595,15 @@
     <div class="mr-rad-btns"><button type="button" class="btn quiet" id="mrRadCancel">Cancel</button><button type="button" class="btn primary" id="mrRadSave">Save radius</button></div>
   </div>
 </dialog>
+<!-- Country packs: pick a country, then its download and the snapping, all here -->
+<dialog class="mr-dlg paper" id="cpDlg" aria-labelledby="cpTitle"><div class="mr-dlg-body">
+  <div class="info-head pack-head"><span id="cpIcon"></span><h2 id="cpTitle">Add a country</h2></div>
+  <p id="cpText"></p>
+  <select id="cpSel" aria-label="Country" hidden></select>
+  <div class="cp-status" id="cpStatus" aria-live="polite" hidden><span class="spin" aria-hidden="true"><i></i><i></i></span><span id="cpMsg"></span></div>
+  <div class="dl-bar" id="cpBar" hidden><i></i></div>
+  <div class="mr-dlg-btns"><button type="button" class="btn" id="cpClose">Close</button></div>
+</div></dialog>
 <dialog class="mr-dlg paper" id="mrDlg" aria-labelledby="mrDlgTitle"><div class="mr-dlg-body">
   <div class="info-head"><h2 id="mrDlgTitle"></h2><button type="button" id="mrDlgInfoBtn" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrDlgInfo" aria-label="More about this" title="More about this"><span data-icon="info"></span></button></div>
   <p id="mrDlgText"></p>
@@ -674,28 +683,29 @@
       <p class="fine" id="driftNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
-      <div class="info-head pack-head"><span data-icon="TRAIN"></span><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="packInfo" hidden>A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine's line along the railway without going online. A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
-      <ul class="file-list pack-list" id="packList" hidden></ul>
-      <p class="fine" id="packNote"></p>
-      <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
-      <div class="dl-bar" id="packBar" hidden><i></i></div>
-      <p class="fine" id="packMsg" aria-live="polite"></p>
+      <div class="info-head"><h3>Country packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About country packs" title="About country packs"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="packInfo" hidden>A country pack lets BT•DT work out your trips without going online, from OpenStreetMap data. A <b>station pack</b> holds a country's railway stations, tram and metro stops and lines: it places and names the stations where Timeline merged two trips, tells a train from a tram, and draws train trips and routines along the railway. A <b>road pack</b> holds a country's motorways, trunk and main roads (in the United States and Canada, a state's or province's): it draws car, taxi, motorcycle and bus trips along the roads they took. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <p class="fine">Kept on this device, so they work offline.</p>
+      <div class="cp-part" id="packPart">
+        <div class="info-head pack-head"><span data-icon="TRAIN"></span><h3>Stations</h3></div>
       <label class="toggle-row"><span class="lbl">Snap train trips to the tracks<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="trackSnapInfo" aria-label="About snap train trips to the tracks" title="About snap train trips to the tracks"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="trackSnap"></label>
       <p class="fine info-box" id="trackSnapInfo" hidden>Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</p>
-      <p class="fine" id="trackNote" aria-live="polite"></p>
-    </div>
-    <div class="sec" id="roadSec">
-      <div class="info-head pack-head"><span data-icon="CAR"></span><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi, motorcycle and bus trips along the roads they took, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
-      <ul class="file-list pack-list" id="roadList" hidden></ul>
-      <p class="fine" id="roadPackNote"></p>
-      <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="earth"></span>Add a country</button><select id="roadSel" aria-label="Country, state or province" hidden></select></div>
-      <div class="dl-bar" id="roadBar" hidden><i></i></div>
-      <p class="fine" id="roadMsg" aria-live="polite"></p>
+        <p class="fine" id="trackNote" aria-live="polite"></p>
+        <div class="cp-on" id="packOn" hidden>
+          <ul class="file-list pack-list" id="packList" hidden></ul>
+          <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="plus"></span>Add a country</button></div>
+        </div>
+      </div>
+      <div class="cp-part" id="roadSec">
+        <div class="info-head pack-head"><span data-icon="CAR"></span><h3>Roads</h3></div>
       <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
       <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Buses too, when the trip is longer than <span data-dist-km="10">10 km</span> and runs mostly on main roads, like a coach or an airport bus; city buses keep their own path. Routines, map snaps and your fixes come first.</p>
-      <p class="fine" id="roadNote" aria-live="polite"></p>
+        <p class="fine" id="roadNote" aria-live="polite"></p>
+        <div class="cp-on" id="roadOnBox" hidden>
+          <ul class="file-list pack-list" id="roadList" hidden></ul>
+          <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="plus"></span>Add a country</button></div>
+        </div>
+      </div>
     </div>
   </div>
 </aside>

@@ -396,19 +396,78 @@ function refreshData() {
   mapKeep = false;
 }
 
-// ---------- Settings: station packs ----------
+// ---------- Settings: Country packs ----------
+// Stations and roads work the same way. Each has its snapping switch at the top; the packs and Add a
+// country show only while it is on (switching off keeps the packs, just out of sight). Adding a
+// country (or switching on with no pack yet) opens one dialog that shows the choice of country, the
+// download and then the snapping, till it's done.
+var CP = { kind: null, wait: false };
+function cpStatus(text, frac, spin) {
+  var box = $('cpStatus');
+  box.hidden = !text;
+  $('cpMsg').textContent = text || '';
+  box.querySelector('.spin').hidden = !spin;
+  dlShow($('cpBar'), null, '', frac == null ? null : frac);
+}
+function cpOpen(kind) {
+  var d = $('cpDlg'), sel = $('cpSel'), rail = kind === 'rail', have = {};
+  CP.kind = kind; CP.wait = false;
+  $('cpIcon').innerHTML = icon(rail ? 'TRAIN' : 'CAR');
+  $('cpTitle').textContent = rail ? 'Add a station pack' : 'Add a road pack';
+  $('cpText').textContent = rail ? 'Pick a country. Its stations and railways are downloaded once and kept on this device.' : 'Pick a country, state or province. Its main roads are downloaded once and kept on this device.';
+  sel.hidden = true; sel.disabled = false; sel.setAttribute('aria-label', rail ? 'Country' : 'Country, state or province');
+  cpStatus('Getting the list of countries…', null, true);
+  packCodes().forEach(function (cc) { have[cc] = 1; });
+  (rail ? packOptions(sel, have) : roadOptions(sel)).then(function (n) {
+    cpStatus(n ? '' : 'You have every pack there is.');
+    sel.hidden = !n;
+    if (n) sel.focus();
+  }, function () { cpStatus('The list of packs couldn\'t be fetched. Check your connection and try again.'); });
+  if (!d.open) d.showModal();
+}
+// The snapping after a download is done: what it came to, in the dialog.
+function cpDone(kind, text) {
+  if (!CP.wait || CP.kind !== kind) return;
+  CP.wait = false;
+  cpStatus(text || 'Done.');
+}
+$('cpSel').addEventListener('change', function () {
+  var key = this.value, sel = this, kind = CP.kind;
+  if (!key) return;
+  sel.disabled = true;
+  var note = function (t, f) { if (t) cpStatus(t, f, f == null); };
+  var name = kind === 'rail' ? packName(key) : roadLabel(key);
+  if (kind === 'rail' && !PREFS.trackSnap) { PREFS.trackSnap = true; savePrefs(); }
+  (kind === 'rail' ? packDownload([key], note) : roadDownload([key], note)).then(function (r) {
+    sel.disabled = false; sel.value = '';
+    if (!r.got.length) { cpStatus(name + ' couldn\'t be downloaded. Check your connection and try again.'); return; }
+    sel.hidden = true;
+    CP.wait = true;
+    cpStatus(name + ' is ready. ' + (kind === 'rail' ? 'Snapping train trips to the tracks…' : 'Snapping car trips to roads…'), null, true);
+    // If the trips were already worked out before this point, say so anyway.
+    setTimeout(function () { cpDone(kind, $(kind === 'rail' ? 'trackNote' : 'roadNote').textContent); }, 4000);
+  });
+});
+$('cpClose').addEventListener('click', function () { $('cpDlg').close(); });
+$('cpDlg').addEventListener('close', function () {
+  var kind = CP.kind;
+  CP.kind = null; CP.wait = false;
+  // Switched on but no pack chosen: the switch goes off again.
+  if (kind === 'rail' && !packCodes().length && PREFS.trackSnap) { PREFS.trackSnap = false; savePrefs(); }
+  renderPacks(); roadSettings();
+});
 function renderPacks() {
   var box = $('packList');
   if (!box) return;
   var ccs = packCodes();
   box.innerHTML = ccs.map(function (cc) {
     var p = PACKS[cc], x = PACK_LIST && PACK_LIST.packs[cc], newer = x && x.built && p.built && x.built > p.built;
-    return '<li><span class="file-txt"><b>' + flag(cc) + ' ' + esc(p.name || cc) + '</b><small>' + packSize(p.bytes || 0) + ' · ' + fmt((p.stations || []).length / 4) + ' stations and stops · OpenStreetMap data of ' + esc(p.built || '?') + '</small></span>' +
+    return '<li><span class="file-txt"><b>' + flag(cc) + ' ' + esc(p.name || cc) + '</b></span>' +
       '<span class="pack-acts">' + (newer ? '<button type="button" class="link-btn" data-pack-act="update" data-cc="' + cc + '">Update</button>' : '') + '<button type="button" class="link-btn" data-pack-act="remove" data-cc="' + cc + '">Remove</button></span></li>';
   }).join('');
   box.hidden = !ccs.length;
+  $('packOn').hidden = !PREFS.trackSnap;
   trackSettings();
-  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet.';
 }
 function packOptions(sel, have) {
   return packList().then(function (L) {
@@ -417,33 +476,13 @@ function packOptions(sel, have) {
     return rows.length;
   });
 }
-$('packAdd').addEventListener('click', function () {
-  var sel = $('packSel'), btn = this, have = {};
-  packCodes().forEach(function (cc) { have[cc] = 1; });
-  btn.disabled = true; $('packMsg').textContent = 'Getting the list of countries…';
-  packOptions(sel, have).then(function (n) {
-    btn.disabled = false;
-    $('packMsg').textContent = n ? '' : 'You have every pack there is.';
-    sel.hidden = !n;
-    if (n) sel.focus();
-    renderPacks();
-  }, function () { btn.disabled = false; $('packMsg').textContent = 'The list of packs couldn\'t be fetched. Check your connection and try again.'; });
-});
-$('packSel').addEventListener('change', function () {
-  var cc = this.value, sel = this;
-  if (!cc) return;
-  sel.disabled = true;
-  packDownload([cc], function (t, f) { dlShow($('packBar'), $('packMsg'), t, f); }).then(function (r) {
-    sel.disabled = false; sel.hidden = true; sel.value = '';
-    $('packMsg').textContent = r.got.length ? packName(cc) + ' is ready.' : packName(cc) + ' couldn\'t be downloaded. Check your connection and try again.';
-  });
-});
+$('packAdd').addEventListener('click', function () { cpOpen('rail'); });
 $('packList').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-pack-act]');
   if (!b) return;
   var cc = b.dataset.cc;
-  if (b.dataset.packAct === 'remove') packRemove(cc).then(function () { $('packMsg').textContent = packName(cc) + ' removed.'; packsChanged(); });
-  else packDownload([cc], function (t, f) { dlShow($('packBar'), $('packMsg'), t, f); }).then(function (r) { $('packMsg').textContent = r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
+  if (b.dataset.packAct === 'remove') packRemove(cc).then(function () { packsChanged(); });
+  else { cpOpen('rail'); $('cpSel').hidden = true; packDownload([cc], function (t, f) { if (t) cpStatus(t, f, f == null); }).then(function (r) { cpStatus(r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'); }); }
 });
 
 // ---------- offered after an import ----------

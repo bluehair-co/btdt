@@ -1092,15 +1092,22 @@ div.hit-row:hover { background: none; }
 .pack-offer { margin: var(--sp-2) 0 var(--sp-3); }
 /* Station packs and road packs as one timeline: each header has its transport icon, a 2px ink line runs
    from the station icon down to the road icon, and the contents under each header are indented from it */
-#packSec, #roadSec { position: relative; }
-#packSec { border-bottom: 0; }
-#roadSec { margin-top: 0; }
+/* Country packs: Stations and Roads, each with its icon, joined by a line from the train icon down to
+   the car icon; what's under each header is indented from the line. */
+.cp-part { position: relative; }
+.cp-part > :not(.pack-head) { margin-left: 30px; }
 .pack-head { gap: var(--sp-3); }
 .pack-head > .ic { flex: none; width: 22px; height: 22px; fill: var(--fg); }
-#packSec > :not(.pack-head), #roadSec > :not(.pack-head) { margin-left: 30px; }
-#packSec::before, #roadSec::before { content: ""; position: absolute; left: 10px; width: 2px; background: var(--fg); }
-#packSec::before { top: 38px; bottom: 0; }
-#roadSec::before { top: 0; height: 14px; }
+#packPart::before { content: ""; position: absolute; left: 10px; top: 30px; bottom: -14px; width: 2px; background: var(--fg); }
+#roadSec { margin-top: var(--sp-6); }
+.cp-on[hidden] { display: none; }
+.cp-status { display: flex; align-items: center; gap: var(--sp-5); margin: var(--sp-5) 0 var(--sp-3); }
+.cp-status[hidden] { display: none; }
+.cp-status .spin { width: 26px; height: 26px; }
+.cp-status .spin i { border-width: 3.5px; }
+.cp-status .spin[hidden] { display: none; }
+#cpDlg select { width: 100%; margin: var(--sp-3) 0; }
+#cpDlg .pack-head h2 { margin: 0; }
 .pack-offer-h { margin: var(--sp-5) 0 var(--sp-1); font: 600 var(--fs-sm) var(--font-body); color: rgba(255, 255, 255, .85); }
 .pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: var(--sp-2); }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }

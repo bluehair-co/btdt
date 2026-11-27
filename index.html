@@ -904,15 +904,12 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
      the top bar moves over into the space left of it. */
   .sheet.right { left: auto; right: 16px; top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); width: 360px; max-height: none; transform: translateX(12px); }
   .sheet.right.open { transform: none; }
-  body:has(#layersSheet.open) :is(.topbar, .playbar) { left: calc((100% - 376px) / 2); }
   /* Filters is the same full-height panel on the left, where its button sits in the top bar;
      the top bar moves over into the space right of it, narrowing when it has to. */
   /* Imported data opens in the same place, from the top of the filters. */
   :is(#filtersSheet, #importsSheet, #mrHereSheet) { top: calc(16px + var(--safe-t)); bottom: calc(16px + var(--safe-b)); max-height: none; transform: translateX(-12px); }
   :is(#filtersSheet, #importsSheet, #mrHereSheet).open { transform: none; }
-  body:has(:is(#filtersSheet, #importsSheet, #mrHereSheet).open) :is(.topbar, .playbar) { left: calc(436px + (100% - 436px) / 2); width: min(560px, calc(100% - 436px - 24px)); }
   /* Settings is a right-hand panel like Views and layers, opened from the right of the top bar. */
-  body:has(#settingsSheet.open) :is(.topbar, .playbar) { left: calc((100% - 376px) / 2); }
   /* The zoom buttons on the left move out from under the filters panel. */
   #map .leaflet-top.leaflet-left, .proj-zoom { transition: left .2s ease; }
   body:has(:is(#filtersSheet, #importsSheet, #mrHereSheet).open) #map .leaflet-top.leaflet-left { left: 436px; }
@@ -1143,15 +1140,22 @@ div.hit-row:hover { background: none; }
 .pack-offer { margin: var(--sp-2) 0 var(--sp-3); }
 /* Station packs and road packs as one timeline: each header has its transport icon, a 2px ink line runs
    from the station icon down to the road icon, and the contents under each header are indented from it */
-#packSec, #roadSec { position: relative; }
-#packSec { border-bottom: 0; }
-#roadSec { margin-top: 0; }
+/* Country packs: Stations and Roads, each with its icon, joined by a line from the train icon down to
+   the car icon; what's under each header is indented from the line. */
+.cp-part { position: relative; }
+.cp-part > :not(.pack-head) { margin-left: 30px; }
 .pack-head { gap: var(--sp-3); }
 .pack-head > .ic { flex: none; width: 22px; height: 22px; fill: var(--fg); }
-#packSec > :not(.pack-head), #roadSec > :not(.pack-head) { margin-left: 30px; }
-#packSec::before, #roadSec::before { content: ""; position: absolute; left: 10px; width: 2px; background: var(--fg); }
-#packSec::before { top: 38px; bottom: 0; }
-#roadSec::before { top: 0; height: 14px; }
+#packPart::before { content: ""; position: absolute; left: 10px; top: 30px; bottom: -14px; width: 2px; background: var(--fg); }
+#roadSec { margin-top: var(--sp-6); }
+.cp-on[hidden] { display: none; }
+.cp-status { display: flex; align-items: center; gap: var(--sp-5); margin: var(--sp-5) 0 var(--sp-3); }
+.cp-status[hidden] { display: none; }
+.cp-status .spin { width: 26px; height: 26px; }
+.cp-status .spin i { border-width: 3.5px; }
+.cp-status .spin[hidden] { display: none; }
+#cpDlg select { width: 100%; margin: var(--sp-3) 0; }
+#cpDlg .pack-head h2 { margin: 0; }
 .pack-offer-h { margin: var(--sp-5) 0 var(--sp-1); font: 600 var(--fs-sm) var(--font-body); color: rgba(255, 255, 255, .85); }
 .pack-dlg .about-lead .info-btn { vertical-align: middle; margin-left: var(--sp-2); }
 .pack-offer .toggle-row + .toggle-row { border-top-color: rgba(255, 255, 255, .14); }
@@ -1689,6 +1693,29 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 .mr-dlg-body { max-height: calc(100vh - 48px); overflow-y: auto; padding: var(--sp-10); box-sizing: border-box; }
 .mr-dlg-body > p { margin: 0 0 var(--sp-5); }
 .map-legend, .play-date { --bleed: 0px; }
+
+/* ---------- Side panels on a desktop: everything else moves into the space left ----------
+   With a panel open on the left (Filters, Your data) or the right (Menu, Views and layers, …), the top
+   bar, the dock with the buttons beside it, the playback bar and the Insights and Timeline pages centre
+   themselves in the remaining space, narrowing if they must. Insights drops to one column when that
+   space gets too narrow for two. */
+@media (min-width: 960px) {
+  body { --side-l: 0px; --side-r: 0px; }
+  body:has(:is(#filtersSheet, #importsSheet, #mrHereSheet).open) { --side-l: 436px; }
+  body:has(.sheet.right.open:not(#importsSheet):not(#mrHereSheet)) { --side-r: 376px; }
+  .topbar, .playbar, .dock { left: calc(var(--side-l) + (100% - var(--side-l) - var(--side-r)) / 2); transition: left .2s ease, width .2s ease; }
+  .topbar, .playbar { width: min(560px, calc(100% - var(--side-l) - var(--side-r) - 24px)); }
+  #mapPage .fab.fit-all { left: calc(var(--side-l) + (100% - var(--side-l) - var(--side-r)) / 2 - var(--dock-w) / 2 - 12px - 44px); }
+  #mapPage .fab.tools-fab { right: calc(var(--side-r) + (100% - var(--side-l) - var(--side-r)) / 2 - var(--dock-w) / 2 - 12px - 44px); }
+  #insightsPage, #timelinePage { box-sizing: border-box; padding-left: var(--side-l); padding-right: var(--side-r); transition: padding .2s ease; }
+  .page-inner { container-type: inline-size; }
+}
+@container (max-width: 720px) {
+  .cards { grid-template-columns: minmax(0, 1fr); }
+  .cards .wide, .cards .span { grid-column: auto; }
+}
+/* The hover card for trips on the map is a slip of paper too (it stays fixed to the pointer). */
+.tip.paper { position: fixed; border-radius: var(--paper-r); }
 </style>
 </head>
 <body>
@@ -2289,6 +2316,15 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
     <div class="mr-rad-btns"><button type="button" class="btn quiet" id="mrRadCancel">Cancel</button><button type="button" class="btn primary" id="mrRadSave">Save radius</button></div>
   </div>
 </dialog>
+<!-- Country packs: pick a country, then its download and the snapping, all here -->
+<dialog class="mr-dlg paper" id="cpDlg" aria-labelledby="cpTitle"><div class="mr-dlg-body">
+  <div class="info-head pack-head"><span id="cpIcon"></span><h2 id="cpTitle">Add a country</h2></div>
+  <p id="cpText"></p>
+  <select id="cpSel" aria-label="Country" hidden></select>
+  <div class="cp-status" id="cpStatus" aria-live="polite" hidden><span class="spin" aria-hidden="true"><i></i><i></i></span><span id="cpMsg"></span></div>
+  <div class="dl-bar" id="cpBar" hidden><i></i></div>
+  <div class="mr-dlg-btns"><button type="button" class="btn" id="cpClose">Close</button></div>
+</div></dialog>
 <dialog class="mr-dlg paper" id="mrDlg" aria-labelledby="mrDlgTitle"><div class="mr-dlg-body">
   <div class="info-head"><h2 id="mrDlgTitle"></h2><button type="button" id="mrDlgInfoBtn" class="icon-btn info-btn" aria-expanded="false" aria-controls="mrDlgInfo" aria-label="More about this" title="More about this"><span data-icon="info"></span></button></div>
   <p id="mrDlgText"></p>
@@ -2368,28 +2404,29 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
       <p class="fine" id="driftNote" aria-live="polite"></p>
     </div>
     <div class="sec" id="packSec">
-      <div class="info-head pack-head"><span data-icon="TRAIN"></span><h3>Station packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About station packs" title="About station packs"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="packInfo" hidden>A pack places and names the stations where Timeline merged two trips, tells a train from a tram, and draws a routine's line along the railway without going online. A country's railway stations, tram and metro stops and lines, from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
-      <ul class="file-list pack-list" id="packList" hidden></ul>
-      <p class="fine" id="packNote"></p>
-      <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="earth"></span>Add a country</button><select id="packSel" aria-label="Country" hidden></select></div>
-      <div class="dl-bar" id="packBar" hidden><i></i></div>
-      <p class="fine" id="packMsg" aria-live="polite"></p>
+      <div class="info-head"><h3>Country packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="packInfo" aria-label="About country packs" title="About country packs"><span data-icon="info"></span></button></div>
+      <p class="fine info-box" id="packInfo" hidden>A country pack lets BT•DT work out your trips without going online, from OpenStreetMap data. A <b>station pack</b> holds a country's railway stations, tram and metro stops and lines: it places and names the stations where Timeline merged two trips, tells a train from a tram, and draws train trips and routines along the railway. A <b>road pack</b> holds a country's motorways, trunk and main roads (in the United States and Canada, a state's or province's): it draws car, taxi, motorcycle and bus trips along the roads they took. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
+      <p class="fine">Kept on this device, so they work offline.</p>
+      <div class="cp-part" id="packPart">
+        <div class="info-head pack-head"><span data-icon="TRAIN"></span><h3>Stations</h3></div>
       <label class="toggle-row"><span class="lbl">Snap train trips to the tracks<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="trackSnapInfo" aria-label="About snap train trips to the tracks" title="About snap train trips to the tracks"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="trackSnap"></label>
       <p class="fine info-box" id="trackSnapInfo" hidden>Draws each train trip along the railway it followed, from the station nearest its start to the one nearest its end, when its GPS points stay close to the tracks. Routines, map snaps and your fixes come first.</p>
-      <p class="fine" id="trackNote" aria-live="polite"></p>
-    </div>
-    <div class="sec" id="roadSec">
-      <div class="info-head pack-head"><span data-icon="CAR"></span><h3>Road packs</h3><button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadInfo" aria-label="About road packs" title="About road packs"><span data-icon="info"></span></button></div>
-      <p class="fine info-box" id="roadInfo" hidden>A pack draws car, taxi, motorcycle and bus trips along the roads they took, without going online. A country's motorways, trunk and main roads (in the United States and Canada, a state's or province's), from OpenStreetMap. Downloading one tells GitHub, where the packs are kept, which country you chose and nothing else.</p>
-      <ul class="file-list pack-list" id="roadList" hidden></ul>
-      <p class="fine" id="roadPackNote"></p>
-      <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="earth"></span>Add a country</button><select id="roadSel" aria-label="Country, state or province" hidden></select></div>
-      <div class="dl-bar" id="roadBar" hidden><i></i></div>
-      <p class="fine" id="roadMsg" aria-live="polite"></p>
+        <p class="fine" id="trackNote" aria-live="polite"></p>
+        <div class="cp-on" id="packOn" hidden>
+          <ul class="file-list pack-list" id="packList" hidden></ul>
+          <div class="pack-add"><button type="button" class="btn" id="packAdd"><span data-icon="plus"></span>Add a country</button></div>
+        </div>
+      </div>
+      <div class="cp-part" id="roadSec">
+        <div class="info-head pack-head"><span data-icon="CAR"></span><h3>Roads</h3></div>
       <label class="toggle-row"><span class="lbl">Snap car trips to roads<button type="button" class="icon-btn info-btn" aria-expanded="false" aria-controls="roadSnapInfo" aria-label="About snap car trips to roads" title="About snap car trips to roads"><span data-icon="info"></span></button></span><input type="checkbox" class="switch" id="roadSnap"></label>
       <p class="fine info-box" id="roadSnapInfo" hidden>Draws car, taxi and motorcycle trips along the motorways and main roads they drove, where their GPS points stay close to them; side streets keep their own path. Buses too, when the trip is longer than <span data-dist-km="10">10 km</span> and runs mostly on main roads, like a coach or an airport bus; city buses keep their own path. Routines, map snaps and your fixes come first.</p>
-      <p class="fine" id="roadNote" aria-live="polite"></p>
+        <p class="fine" id="roadNote" aria-live="polite"></p>
+        <div class="cp-on" id="roadOnBox" hidden>
+          <ul class="file-list pack-list" id="roadList" hidden></ul>
+          <div class="pack-add"><button type="button" class="btn" id="roadAdd"><span data-icon="plus"></span>Add a country</button></div>
+        </div>
+      </div>
     </div>
   </div>
 </aside>
@@ -2405,7 +2442,7 @@ body:has(#playBar:not([hidden])) #mapPage .fab { bottom: calc(var(--dock-gap) + 
 <div class="cal-scrim" id="calScrim" hidden></div>
 <div class="cal-pop" id="calPop" role="dialog" aria-label="Pick a day" hidden></div>
 
-<div id="tip" class="tip" hidden></div>
+<div id="tip" class="tip paper" hidden></div>
 <div id="busy" class="loader" role="status" aria-live="polite" hidden>
   <div class="ld-box">
     <div class="ld-stamps" aria-hidden="true"></div>
@@ -5775,7 +5812,9 @@ function working(text, fn) {
   if (!WORKING.n++) WORKING.at = performance.now();
   $('workingText').textContent = text || 'Working on it…';
   $('workingBar').hidden = true;
-  workingShow(true);
+  // The Country packs dialog shows its own work (the snapping after a download) instead of the pill.
+  var cp = $('cpDlg');
+  if (cp && cp.open && typeof cpStatus === 'function') cpStatus(text || 'Working on it…', null, true); else workingShow(true);
   var done = false;
   function go() {
     if (done) return;
@@ -16450,19 +16489,78 @@ function refreshData() {
   mapKeep = false;
 }
 
-// ---------- Settings: station packs ----------
+// ---------- Settings: Country packs ----------
+// Stations and roads work the same way. Each has its snapping switch at the top; the packs and Add a
+// country show only while it is on (switching off keeps the packs, just out of sight). Adding a
+// country (or switching on with no pack yet) opens one dialog that shows the choice of country, the
+// download and then the snapping, till it's done.
+var CP = { kind: null, wait: false };
+function cpStatus(text, frac, spin) {
+  var box = $('cpStatus');
+  box.hidden = !text;
+  $('cpMsg').textContent = text || '';
+  box.querySelector('.spin').hidden = !spin;
+  dlShow($('cpBar'), null, '', frac == null ? null : frac);
+}
+function cpOpen(kind) {
+  var d = $('cpDlg'), sel = $('cpSel'), rail = kind === 'rail', have = {};
+  CP.kind = kind; CP.wait = false;
+  $('cpIcon').innerHTML = icon(rail ? 'TRAIN' : 'CAR');
+  $('cpTitle').textContent = rail ? 'Add a station pack' : 'Add a road pack';
+  $('cpText').textContent = rail ? 'Pick a country. Its stations and railways are downloaded once and kept on this device.' : 'Pick a country, state or province. Its main roads are downloaded once and kept on this device.';
+  sel.hidden = true; sel.disabled = false; sel.setAttribute('aria-label', rail ? 'Country' : 'Country, state or province');
+  cpStatus('Getting the list of countries…', null, true);
+  packCodes().forEach(function (cc) { have[cc] = 1; });
+  (rail ? packOptions(sel, have) : roadOptions(sel)).then(function (n) {
+    cpStatus(n ? '' : 'You have every pack there is.');
+    sel.hidden = !n;
+    if (n) sel.focus();
+  }, function () { cpStatus('The list of packs couldn\'t be fetched. Check your connection and try again.'); });
+  if (!d.open) d.showModal();
+}
+// The snapping after a download is done: what it came to, in the dialog.
+function cpDone(kind, text) {
+  if (!CP.wait || CP.kind !== kind) return;
+  CP.wait = false;
+  cpStatus(text || 'Done.');
+}
+$('cpSel').addEventListener('change', function () {
+  var key = this.value, sel = this, kind = CP.kind;
+  if (!key) return;
+  sel.disabled = true;
+  var note = function (t, f) { if (t) cpStatus(t, f, f == null); };
+  var name = kind === 'rail' ? packName(key) : roadLabel(key);
+  if (kind === 'rail' && !PREFS.trackSnap) { PREFS.trackSnap = true; savePrefs(); }
+  (kind === 'rail' ? packDownload([key], note) : roadDownload([key], note)).then(function (r) {
+    sel.disabled = false; sel.value = '';
+    if (!r.got.length) { cpStatus(name + ' couldn\'t be downloaded. Check your connection and try again.'); return; }
+    sel.hidden = true;
+    CP.wait = true;
+    cpStatus(name + ' is ready. ' + (kind === 'rail' ? 'Snapping train trips to the tracks…' : 'Snapping car trips to roads…'), null, true);
+    // If the trips were already worked out before this point, say so anyway.
+    setTimeout(function () { cpDone(kind, $(kind === 'rail' ? 'trackNote' : 'roadNote').textContent); }, 4000);
+  });
+});
+$('cpClose').addEventListener('click', function () { $('cpDlg').close(); });
+$('cpDlg').addEventListener('close', function () {
+  var kind = CP.kind;
+  CP.kind = null; CP.wait = false;
+  // Switched on but no pack chosen: the switch goes off again.
+  if (kind === 'rail' && !packCodes().length && PREFS.trackSnap) { PREFS.trackSnap = false; savePrefs(); }
+  renderPacks(); roadSettings();
+});
 function renderPacks() {
   var box = $('packList');
   if (!box) return;
   var ccs = packCodes();
   box.innerHTML = ccs.map(function (cc) {
     var p = PACKS[cc], x = PACK_LIST && PACK_LIST.packs[cc], newer = x && x.built && p.built && x.built > p.built;
-    return '<li><span class="file-txt"><b>' + flag(cc) + ' ' + esc(p.name || cc) + '</b><small>' + packSize(p.bytes || 0) + ' · ' + fmt((p.stations || []).length / 4) + ' stations and stops · OpenStreetMap data of ' + esc(p.built || '?') + '</small></span>' +
+    return '<li><span class="file-txt"><b>' + flag(cc) + ' ' + esc(p.name || cc) + '</b></span>' +
       '<span class="pack-acts">' + (newer ? '<button type="button" class="link-btn" data-pack-act="update" data-cc="' + cc + '">Update</button>' : '') + '<button type="button" class="link-btn" data-pack-act="remove" data-cc="' + cc + '">Remove</button></span></li>';
   }).join('');
   box.hidden = !ccs.length;
+  $('packOn').hidden = !PREFS.trackSnap;
   trackSettings();
-  $('packNote').textContent = ccs.length ? 'Kept on this device, so they work offline.' : 'None yet.';
 }
 function packOptions(sel, have) {
   return packList().then(function (L) {
@@ -16471,33 +16569,13 @@ function packOptions(sel, have) {
     return rows.length;
   });
 }
-$('packAdd').addEventListener('click', function () {
-  var sel = $('packSel'), btn = this, have = {};
-  packCodes().forEach(function (cc) { have[cc] = 1; });
-  btn.disabled = true; $('packMsg').textContent = 'Getting the list of countries…';
-  packOptions(sel, have).then(function (n) {
-    btn.disabled = false;
-    $('packMsg').textContent = n ? '' : 'You have every pack there is.';
-    sel.hidden = !n;
-    if (n) sel.focus();
-    renderPacks();
-  }, function () { btn.disabled = false; $('packMsg').textContent = 'The list of packs couldn\'t be fetched. Check your connection and try again.'; });
-});
-$('packSel').addEventListener('change', function () {
-  var cc = this.value, sel = this;
-  if (!cc) return;
-  sel.disabled = true;
-  packDownload([cc], function (t, f) { dlShow($('packBar'), $('packMsg'), t, f); }).then(function (r) {
-    sel.disabled = false; sel.hidden = true; sel.value = '';
-    $('packMsg').textContent = r.got.length ? packName(cc) + ' is ready.' : packName(cc) + ' couldn\'t be downloaded. Check your connection and try again.';
-  });
-});
+$('packAdd').addEventListener('click', function () { cpOpen('rail'); });
 $('packList').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-pack-act]');
   if (!b) return;
   var cc = b.dataset.cc;
-  if (b.dataset.packAct === 'remove') packRemove(cc).then(function () { $('packMsg').textContent = packName(cc) + ' removed.'; packsChanged(); });
-  else packDownload([cc], function (t, f) { dlShow($('packBar'), $('packMsg'), t, f); }).then(function (r) { $('packMsg').textContent = r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
+  if (b.dataset.packAct === 'remove') packRemove(cc).then(function () { packsChanged(); });
+  else { cpOpen('rail'); $('cpSel').hidden = true; packDownload([cc], function (t, f) { if (t) cpStatus(t, f, f == null); }).then(function (r) { cpStatus(r.got.length ? packName(cc) + ' is up to date.' : 'The update couldn\'t be downloaded.'); }); }
 });
 
 // ---------- offered after an import ----------
@@ -16992,13 +17070,16 @@ function trackSettings() {
   var el = $('trackSnap');
   if (!el) return;
   el.checked = !!PREFS.trackSnap;
-  el.disabled = !packCodes().length;
   var n = 0;
   if (D && D.mrTrack) D.mrTrack.forEach(function (x) { if (x) n++; });
-  $('trackNote').textContent = !packCodes().length ? 'Add a country first.' : PREFS.trackSnap ? (D ? tripsText(n) + ' drawn along the railway.' : '') : '';
+  $('trackNote').textContent = PREFS.trackSnap && packCodes().length && D ? tripsText(n) + ' drawn along the railway.' : '';
+  cpDone('rail', $('trackNote').textContent);
 }
 $('trackSnap').addEventListener('change', function () {
   var on = this.checked;
+  $('packOn').hidden = !on;
+  // On with no pack yet: pick a country first (the dialog downloads it and snaps).
+  if (on && !packCodes().length) { PREFS.trackSnap = true; savePrefs(); cpOpen('rail'); return; }
   working(on ? 'Snapping train trips to the tracks…' : 'Taking train trips off the tracks…', function () {
     PREFS.trackSnap = on; savePrefs();
     mrReapply();
@@ -17266,6 +17347,8 @@ function roadRun(todo) {
 // The spin pill in the middle of the screen: how far the snapping is (done of all), or a text alone;
 // nothing hides it.
 function roadPill(done, all, text) {
+  // While the Country packs dialog is open for roads, its progress shows there instead.
+  if (CP.kind === 'road' && $('cpDlg').open) { if (done != null || text) cpStatus(text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all), done == null ? null : done / Math.max(1, all), done == null); spinPill('roadPill', null); return; }
   if (done == null && !text) { spinPill('roadPill', null); return; }
   spinPill('roadPill', text || 'Snapping car trips to roads… ' + fmt(done) + ' of ' + fmt(all), done == null ? null : done / Math.max(1, all));
 }
@@ -17357,19 +17440,19 @@ function roadSettings() {
   if (!box) return;
   var keys = Object.keys(ROAD_KEPT).sort(function (a, b) { return roadLabel(a).localeCompare(roadLabel(b)); });
   box.innerHTML = keys.map(function (key) {
-    var p = ROAD_KEPT[key], x = roadAvail()[key], newer = x && x.built && p.built && x.built > p.built, kmv = p.km || x && x.km;
-    return '<li><span class="file-txt"><b>' + roadFlag(key) + ' ' + esc(roadLabel(key)) + '</b><small>' + packSize(p.bytes || 0) + (kmv ? ' · ' + dist(kmv) + ' of main roads' : '') + ' · OpenStreetMap data of ' + esc(p.built || '?') + '</small></span>' +
+    var p = ROAD_KEPT[key], x = roadAvail()[key], newer = x && x.built && p.built && x.built > p.built;
+    return '<li><span class="file-txt"><b>' + roadFlag(key) + ' ' + esc(roadLabel(key)) + '</b></span>' +
       '<span class="pack-acts">' + (newer ? '<button type="button" class="link-btn" data-road-act="update" data-key="' + key + '">Update</button>' : '') + '<button type="button" class="link-btn" data-road-act="remove" data-key="' + key + '">Remove</button></span></li>';
   }).join('');
   box.hidden = !keys.length;
-  $('roadPackNote').textContent = keys.length ? 'Kept on this device, so they work offline.' : 'None yet.';
-  // The switch, as Snap train trips to the tracks: off and greyed out until there is a pack.
-  var el = $('roadSnap'), n = 0;
-  el.checked = roadOn() && keys.length > 0;
-  el.disabled = !keys.length;
+  // The switch at the top: the packs and Add a country show only while it's on.
+  var el = $('roadSnap'), n = 0, on = (roadOn() && keys.length > 0) || CP.kind === 'road';
+  el.checked = on;
+  $('roadOnBox').hidden = !on;
   if (D && D.mrRoad) D.mrRoad.forEach(function (x) { if (x) n++; });
-  $('roadNote').textContent = !keys.length ? 'Add a country first.' : !roadOn() ? '' : !RG ? (ROAD_LOADING || ROAD_WAIT ? 'Loading the road packs…' : '') :
+  $('roadNote').textContent = !keys.length || !roadOn() ? '' : !RG ? (ROAD_LOADING || ROAD_WAIT ? 'Loading the road packs…' : '') :
     ROAD_RUN ? 'Snapping your car trips…' : D ? tripsText(n) + ' drawn along the roads.' : '';
+  if (RG && !ROAD_RUN && !ROAD_LOADING && !ROAD_WAIT) cpDone('road', $('roadNote').textContent);
 }
 function roadOptions(sel) {
   return packList().then(function () {
@@ -17378,34 +17461,19 @@ function roadOptions(sel) {
     return rows.length;
   });
 }
-$('roadAdd').addEventListener('click', function () {
-  var sel = $('roadSel'), btn = this;
-  btn.disabled = true; $('roadMsg').textContent = 'Getting the list of countries…';
-  roadOptions(sel).then(function (n) {
-    btn.disabled = false;
-    $('roadMsg').textContent = n ? '' : 'You have every pack there is.';
-    sel.hidden = !n;
-    if (n) sel.focus();
-    roadSettings();
-  }, function () { btn.disabled = false; $('roadMsg').textContent = 'The list of packs couldn\'t be fetched. Check your connection and try again.'; });
-});
-$('roadSel').addEventListener('change', function () {
-  var key = this.value, sel = this;
-  if (!key) return;
-  sel.disabled = true;
-  roadDownload([key], function (t, f) { dlShow($('roadBar'), $('roadMsg'), t, f); }).then(function (r) {
-    sel.disabled = false; sel.hidden = true; sel.value = '';
-    $('roadMsg').textContent = r.got.length ? roadLabel(key) + ' is ready.' : roadLabel(key) + ' couldn\'t be downloaded. Check your connection and try again.';
-  });
-});
+$('roadAdd').addEventListener('click', function () { cpOpen('road'); });
 $('roadList').addEventListener('click', function (ev) {
   var b = ev.target.closest('[data-road-act]');
   if (!b) return;
   var key = b.dataset.key;
-  if (b.dataset.roadAct === 'remove') roadRemovePack(key).then(function () { $('roadMsg').textContent = roadLabel(key) + ' removed.'; });
-  else roadDownload([key], function (t, f) { dlShow($('roadBar'), $('roadMsg'), t, f); }).then(function (r) { $('roadMsg').textContent = r.got.length ? roadLabel(key) + ' is up to date.' : 'The update couldn\'t be downloaded.'; });
+  if (b.dataset.roadAct === 'remove') roadRemovePack(key);
+  else { cpOpen('road'); $('cpSel').hidden = true; roadDownload([key], function (t, f) { if (t) cpStatus(t, f, f == null); }).then(function (r) { cpStatus(r.got.length ? roadLabel(key) + ' is up to date.' : 'The update couldn\'t be downloaded.'); }); }
 });
-$('roadSnap').addEventListener('change', function () { if (this.checked) roadTurnOn(); else roadTurnOff(); });
+$('roadSnap').addEventListener('change', function () {
+  $('roadOnBox').hidden = !this.checked;
+  if (this.checked && !Object.keys(ROAD_KEPT).length) { cpOpen('road'); return; }
+  if (this.checked) roadTurnOn(); else roadTurnOff();
+});
 roadKeptLoad();
 if (roadOn()) roadsLoad().then(function () { roadSettings(); });
 
