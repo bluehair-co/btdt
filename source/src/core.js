@@ -1057,6 +1057,7 @@ function paperCheck(el) {
 // app.css). The head's dotted rule gets the same treatment.
 var TITLE_SEL = '.sheet-head h2, .card-head h2, .card-title h2, .about-head h2, .mr-dlg h2, .mr-rad-head h2';
 function wordHash(t, k) { var h = 2166136261; t = t + '|' + k; for (var i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) / 4294967295; }
+var INK_PURPLE = /(over time|^Weekly rhythm|^Records|^Heart rate|^Your gear|^CO₂ from travel)$/i;
 function inkTitle(el) {
   var t = (el.textContent || '').trim();
   if (el._inked === t) return;
@@ -1065,6 +1066,10 @@ function inkTitle(el) {
   s.setProperty('--tw', (110 + Math.round(wordHash(t, 'w') * 15)) + '%');
   s.setProperty('--tg', 780 + Math.round(wordHash(t, 'g') * 120));
   s.setProperty('--tr', ((wordHash(t, 'r') * 2 - 1) * .6).toFixed(2) + 'deg');
+  // Insights card titles print in two inks, a solid one with the blue screened over it in fine dots
+  // (multiplied on paper): green (yellow + blue) for travel and places, purple (pink + blue) for
+  // time, records and scores. app.css draws the dots from data-t.
+  if (el.closest('#insightsPage .card')) { el.dataset.t = t; el.dataset.ink = INK_PURPLE.test(t) || el.id === 'farTitle' ? 'purple' : 'green'; }
   var head = el.closest('.sheet-head, .about-head');
   if (head) { head.style.setProperty('--dr', ((wordHash(t, 'd') * 2 - 1) * .35).toFixed(2) + 'deg'); head.style.setProperty('--dx', ((wordHash(t, 'x') * 2 - 1) * 2).toFixed(1) + 'px'); }
 }

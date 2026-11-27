@@ -101,6 +101,8 @@ The standard UI is the top bar, the dock, the buttons by the dock (zoom to all, 
 - Phone first, desktop too: sheets slide up from the bottom on a phone and open as side panels on desktop. Every touch interaction (lasso, one-finger zoom, sliders) must work with a finger.
 - **Local settings everywhere.** Units, dates and times follow the device's region by default and can be changed in *Menu › Preferences*. Every label follows them: distances, speeds and per-distance figures (km or miles), short distances (m or ft), date order and 12/24-hour time, in results and also in form fields, their labels, info texts and examples. Nothing is hard-coded to km or to one date format. Check new UI in both kilometres and miles.
 
+- **Insights card titles in two inks.** A solid ink with the blue screened over it in fine dots, multiplied like riso inks: green (yellow + blue) for travel and places, purple (pink + blue) for time, records and scores (`INK_PURPLE` in `core.js`). On night paper the dots sit on top of the ink. Panel and dialog titles stay blue.
+
 ## Process
 
 - When David asks for a mockup first, make the mockup (screenshots or a small HTML page), wait for his pick, then build.

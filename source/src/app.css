@@ -1810,3 +1810,16 @@ body.play-mode .playbar { transition: bottom .6s var(--ease-bounce), left 0s lin
   body:is(.sel-mode, .snap-mode, .play-mode) :is(.dock, .topbar, .playbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu, .prompt:not(.prompt-mode)) { translate: none; }
 }
 #mrFoot .mr-export-row { margin: var(--sp-10) 0 var(--sp-6); padding-top: var(--sp-6); border-top: 1.5px dotted var(--fg); }
+
+/* Insights card titles in halftone: a solid ink with the blue screened over it in fine dots, the two
+   multiplied like riso inks on paper (green = yellow + blue, purple = pink + blue, as in the landing
+   picture). The dots are the title again (data-t, set by inkTitle) clipped to a two-grid dot screen.
+   On night paper the dots sit on top of the ink instead. */
+#insightsPage .card h2[data-ink] { position: relative; isolation: isolate; --dot: #1E3A9E; --blend: multiply; }
+#insightsPage .card h2[data-ink="green"] { color: #FEDF02; }
+#insightsPage .card h2[data-ink="purple"] { color: #FF72B4; }
+:root[data-theme="dark"] #insightsPage .card h2[data-ink] { --dot: #2F6BFF; --blend: normal; }
+#insightsPage .card h2[data-ink]::after { content: attr(data-t); position: absolute; inset: 0; pointer-events: none; color: transparent; text-shadow: none;
+  background-image: radial-gradient(circle at center, var(--dot) 1.05px, transparent 1.5px), radial-gradient(circle at center, var(--dot) 1.05px, transparent 1.5px);
+  background-size: 4.2px 4.2px, 4.2px 4.2px; background-position: 0 0, 2.1px 2.1px;
+  -webkit-background-clip: text; background-clip: text; mix-blend-mode: var(--blend); }
