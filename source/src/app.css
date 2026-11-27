@@ -185,6 +185,10 @@ svg.stroke { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: 
 .seg.full { display: flex; width: 100%; }
 .seg button[disabled] { opacity: .4; cursor: default; }
 .seg.full button { flex: 1; }
+/* Theme: three options of the same width, each with its icon */
+#themeSeg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+#themeSeg button { display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-3); }
+#themeSeg .ic { width: 18px; height: 18px; flex: none; fill: currentColor; }
 .quick { display: flex; gap: var(--sp-1); }
 .quick button { font-size: var(--fs-xs); color: var(--accent); background: none; border: 0; padding: var(--sp-2) var(--sp-4); border-radius: 6px; cursor: pointer; }
 .quick button:hover { background: var(--grid); }
