@@ -1754,6 +1754,8 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
 .mr-acc-on .mr-acc .sec + .sec > h3 { display: block; }
 .mr-acc > summary + .sec > .sec-head h3 { display: none; } .mr-acc > summary + .sec > .sec-head { justify-content: flex-end; }
 
+/* Easing for the focused-task slides: a little overshoot coming in, a small wind-up going out. */
+:root { --ease-bounce: cubic-bezier(.34, 1.45, .64, 1); --ease-back-in: cubic-bezier(.5, -0.35, .75, .3); }
 /* ---------- Focused tasks: playback, selecting trips, map snaps, ignoring GPS points, stays ----------
    The general rule (docs/design-rules.md, Transitions): when a focused task starts, the standard UI
    steps out of the way, each piece sliding off toward its own edge (the top bar up, the dock, buttons,
@@ -1762,11 +1764,14 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
    the task is done or cancelled; then it all slides back. The individual `translate` property is used,
    so the elements' own transforms (centring and the like) stay as they are. */
 .dock, .topbar, .playbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu, .prompt:not(.prompt-mode) {
-  transition: left .2s ease, width .2s ease, bottom .25s ease, transform .3s cubic-bezier(.2, .7, .2, 1), translate .32s cubic-bezier(.2, .7, .2, 1), opacity .22s ease, visibility 0s linear 0s; }
+  transition: left .2s ease, right .2s ease, width .2s ease, bottom .25s ease, transform .3s cubic-bezier(.2, .7, .2, 1), translate .6s var(--ease-bounce), opacity .3s ease, visibility 0s linear 0s; }
 body:is(.sel-mode, .snap-mode) :is(.dock, .topbar, .playbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu, .prompt:not(.prompt-mode)),
 body.play-mode:has(#mapPage:not([hidden])) :is(.dock, .topbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu) {
   opacity: 0; visibility: hidden; pointer-events: none;
-  transition: left .2s ease, width .2s ease, bottom .25s ease, transform .3s cubic-bezier(.4, 0, .8, .4), translate .3s cubic-bezier(.4, 0, .8, .4), opacity .25s ease .05s, visibility 0s linear .32s; }
+  /* Straight up or down from where they are: a side panel closing doesn't move them sideways until
+     they're out of sight (left, right and width wait till then). */
+  transition: left 0s linear .5s, right 0s linear .5s, width 0s linear .5s, bottom .25s ease, transform .3s cubic-bezier(.2, .7, .2, 1), translate .45s var(--ease-back-in), opacity .2s ease .25s, visibility 0s linear .5s; }
+body.task-leaving :is(.dock, .topbar, .playbar, #mapPage .fab) { transition: left 0s linear .55s, right 0s linear .55s, width 0s linear .55s, bottom .25s ease, transform .3s ease, translate .45s var(--ease-back-in), opacity .2s ease .25s, visibility 0s linear .5s; }
 /* Where each one goes: the top bar up, everything at the bottom down, the zoom to its side. */
 body:is(.sel-mode, .snap-mode, .play-mode) .topbar { translate: 0 calc(-100% - 24px - var(--safe-t)); }
 body:is(.sel-mode, .snap-mode, .play-mode) :is(.dock, #mapPage .fab, .map-legend, .tools-menu) { translate: 0 calc(100% + 120px + var(--safe-b)); }
@@ -1779,11 +1784,11 @@ body:is(.sel-mode, .snap-mode, .play-mode) .proj-zoom { translate: 150% 0; }
 @keyframes task-in-top { from { translate: 0 calc(-100% - 24px - var(--safe-t)); opacity: 0; } to { translate: 0 0; opacity: 1; } }
 @keyframes task-in-bottom { from { translate: 0 calc(100% + 40px + var(--safe-b)); opacity: 0; } to { translate: 0 0; opacity: 1; } }
 @keyframes task-in-right { from { translate: calc(100% + 32px) 0; opacity: 0; } to { translate: 0 0; opacity: 1; } }
-.prompt-mode, #playHead:not([hidden]) .play-date, #playHead:not([hidden]) .play-close { animation: task-in-top .34s cubic-bezier(.2, .7, .2, 1) both; }
-.sel-bar:not([hidden]) { animation: task-in-bottom .34s cubic-bezier(.2, .7, .2, 1) both; }
+.prompt-mode, #playHead:not([hidden]) .play-date, #playHead:not([hidden]) .play-close { animation: task-in-top .6s var(--ease-bounce) .12s both; }
+.sel-bar:not([hidden]) { animation: task-in-bottom .6s var(--ease-bounce) .12s both; }
 @media (min-width: 960px) { body.drift-mode .dr-bar { animation-name: task-in-right; } }
 /* Playback: the playback bar is the task's own bar; it moves down into the dock's place. */
-body.play-mode .playbar { transition: bottom .32s cubic-bezier(.2, .7, .2, 1), left .2s ease, width .2s ease; }
+body.play-mode .playbar { transition: bottom .6s var(--ease-bounce), left 0s linear, width 0s linear; }
 @media (prefers-reduced-motion: reduce) {
   .dock, .topbar, .playbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu, .prompt { transition-duration: .01s !important; animation: none !important; }
   body:is(.sel-mode, .snap-mode, .play-mode) :is(.dock, .topbar, .playbar, #mapPage .fab, .map-legend, #map .leaflet-top, .proj-zoom, .tools-menu, .prompt:not(.prompt-mode)) { translate: none; }

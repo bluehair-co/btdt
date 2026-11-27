@@ -86,7 +86,7 @@ var SN = null;
 function snapStart(r) {
   if (!D) { toast('Load your Timeline file first'); return; }
   if (!packCodes().length) { toast('Map snaps follow the lines of a station pack: add one in Menu › Trip cleanup first'); return; }
-  closeSheets(true);
+  taskStart(); closeSheets(true);
   if (PREFS.proj !== 'merc') setProj('merc');
   setTab('map');
   if (!initMap()) return;

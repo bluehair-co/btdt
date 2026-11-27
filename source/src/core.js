@@ -639,6 +639,17 @@ function spinPill(id, text, frac) {
   bar.hidden = frac == null;
   if (frac != null) bar.firstElementChild.style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
 }
+// A focused task (playback, map snaps…) is starting: for a moment the bars keep where they are
+// sideways while a side panel closes, so they slide straight up or down out of view (app.css,
+// Focused tasks). Call it before closing the panels.
+var TASK_T = 0;
+function taskStart() {
+  var b = document.body;
+  b.classList.add('task-leaving');
+  void getComputedStyle($('topbar') || b).transition;  // the delayed transitions apply before the panels close
+  clearTimeout(TASK_T);
+  TASK_T = setTimeout(function () { b.classList.remove('task-leaving'); }, 800);
+}
 function workingShow(on) {
   var el = $('working');
   el.hidden = !on;
