@@ -2100,7 +2100,7 @@ function rollOn() {
 }
 function setScrub(on) {
   // Playback takes the whole map: a side panel or the ⋮ menu open at the time closes first.
-  if (on) { closeSheets(true); toolsMenu(false); }
+  if (on) { taskStart(); closeSheets(true); toolsMenu(false); }
   PREFS.scrub = on;
   // Hiding the slider shows every trip again.
   if (!PREFS.scrub) { stopPlay(); if (scrubV < 1000) scrubTo(1000); }
