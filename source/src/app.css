@@ -977,14 +977,17 @@ svg text { font-family: var(--font-body); font-size: var(--fs-2xs); fill: var(--
 .cctl-pins button span { position: relative; }
 /* The flag in a pin at half size; close together, a pin is a small mark without one (its country
    picked below shows it in full again). */
-.cctl-pins button .flag { font-size: .5em; vertical-align: .35em; }
+.cctl-pins button > span { position: absolute; inset: 2px; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+.cctl-pins button.pent > span { top: 2px; clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); bottom: 2.5px; }
+.cctl-pins.low button.dot > span { inset: 0; border-radius: 50%; }
+/* The flag fills the marker, cut to its shape, with the marker's colour as a thin line around it. */
+.cctl-pins button > span > .flag { flex: none; height: 100%; width: auto; aspect-ratio: 4 / 3; font-size: inherit; border: 0; border-radius: 0; vertical-align: 0; }
 .cctl-pins button.pent.mini:not(.hl):not(.peek) { width: 12px; height: 13px; margin-left: -6px; top: 12px; }
 .cctl-pins.low button.dot.mini:not(.hl):not(.peek) { top: 8px; width: 12px; height: 12px; margin-left: -6px; }
 .cctl-pins button.mini:not(.hl):not(.peek) span { display: none; }
 .cctl-pins.low button.dot.mini:not(.hl):not(.peek)::after { height: 52px; }
 /* Got out (layover with a visit, short stop): a downward pentagon above the strip. */
 .cctl-pins button.pent > i { position: absolute; inset: 0; background: var(--c); clip-path: polygon(0 0, 100% 0, 100% 58%, 50% 100%, 0 58%); }
-.cctl-pins button.pent span { top: -3px; }
 .cctl-pins button.pent::after { content: ""; position: absolute; left: 50%; top: 100%; width: 2px; height: 45px; margin-left: -1px; background: var(--c); opacity: .9; pointer-events: none; }
 /* True layover (stayed at the airport): a circle under the strip. */
 .cctl-pins.low button.dot { top: 3px; height: 22px; border-radius: 50%; border: 2px solid var(--c); background: var(--panel); }
