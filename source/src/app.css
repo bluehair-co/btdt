@@ -1719,3 +1719,13 @@ select:focus, select:focus-visible { background: var(--chev) no-repeat right 12p
 .card-head h2, .card-title h2 { font-size: 24px; }
 .daynav .date-btn b, .summary-pill b { font-family: var(--font-display); font-weight: 850; font-stretch: 112%; font-size: 21px; line-height: 1.1; letter-spacing: -.01em; }
 .daynav .date-btn small, .summary-pill small { display: none; }
+
+/* The main navigation (the dock): the open tab is stamped in the dry yellow ink, like the tabs. */
+.dock button { position: relative; isolation: isolate; }
+.dock button[aria-current="page"] { background: none; color: var(--chip-on-fg); }
+.dock button[aria-current="page"]::before { content: ""; position: absolute; inset: 3px 2px 1px 4px; z-index: -1; background: var(--chip-on-bg); border-radius: 2px; mix-blend-mode: multiply; transform: rotate(-1.2deg) translate(1.5px, 1px); filter: url(#inkDry0); }
+.dock button:nth-child(3n+2)[aria-current="page"]::before { transform: rotate(.9deg) translate(-1px, 1px); filter: url(#inkDry1); }
+.dock button:nth-child(3n)[aria-current="page"]::before { transform: rotate(-.6deg) translate(1px, -.5px); filter: url(#inkDry2); }
+:root[data-theme="dark"] .dock button[aria-current="page"]::before { mix-blend-mode: normal; filter: url(#inkDry3); }
+:root[data-theme="dark"] .dock button:nth-child(3n+2)[aria-current="page"]::before { filter: url(#inkDry4); }
+:root[data-theme="dark"] .dock button:nth-child(3n)[aria-current="page"]::before { filter: url(#inkDry5); }
